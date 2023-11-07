@@ -23,6 +23,7 @@ systemstatus= '''[&](std::string statusCode) {
     }'''
 partitionstatus= '''[&](std::string statusCode,uint8_t partition) {
       alarm_panel::publishTextState("ps_",partition,&statusCode); 
+      alarm_panel::publishBinaryState("al_",partition,(statusCode.compare("triggered")==0));        
     }'''    
 partitionmsg= '''[&](std::string msg,uint8_t partition) {
       alarm_panel::publishTextState("msg_",partition,&msg); 
@@ -59,8 +60,7 @@ eventinfo='''[&](std::string msg) {
     }''' 
     
 firestatus='''[&]( bool open,uint8_t partition) {
-      std::string sensor = "fa" ;
-      alarm_panel::publishBinaryState(sensor.c_str(),partition,open);    
+      alarm_panel::publishBinaryState("fa_",partition,open);    
     }'''
 zonebinary='''[&](int zone, bool open) {
       std::string sensor = "z" + std::to_string(zone) ;
