@@ -95,7 +95,8 @@ CONFIG_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-    if config[CONF_CLEAN]:
+    old_dir = CORE.relative_build_path("src")
+    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
     
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN])
