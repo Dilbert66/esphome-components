@@ -40,6 +40,9 @@ dsc_alarm_panel:
   #dscClockPin: "5"
   #dscReadPin: "4"
   #dscWritePin: "15"  
+  
+
+  clean_build: "false" #default is false.  set to true if getting duplication errors in linking step or first time install of this yaml file  
 
 esp32: 
   board: nodemcu-32s
@@ -59,7 +62,7 @@ external_components:
   - source: github://Dilbert66/esphome-components@main #uncomment to use github repository
   #- source:  my_components #uncomment to use local directory 
     components: [dsc_alarm_panel,binary_sensor,text_sensor] 
-    refresh: 1h
+    refresh: 10min
   
 esphome:
   name: $name
