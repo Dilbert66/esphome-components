@@ -1,5 +1,6 @@
 #pragma once
 
+
 #if !defined(ARDUINO_MQTT)
 #include "esphome.h"
 #include "esphome/core/component.h"

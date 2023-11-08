@@ -1,6 +1,5 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome import automation, core
 from esphome.const import CONF_ID
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
@@ -34,8 +33,6 @@ CONF_FIRE="fire_text"
 CONF_CHECK="check_text"
 CONF_TRBL="trbl_text"
 CONF_HITSTAR="hitstar_text"
-
-
 
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
       alarm_panel::publishTextState("ss_",partition,&statusCode); 
@@ -75,7 +72,8 @@ statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
                 case alarm_panel::sarmednight: sensor="armn_";break;  
                 case alarm_panel::sarmed: sensor="arm_";break;  
                 case alarm_panel::soffline: break;       
-                case alarm_panel::sunavailable: break;                        
+                case alarm_panel::sunavailable: break; 
+                default: break;
          };
       alarm_panel::publishBinaryState(sensor.c_str(),partition,open);
     }'''
@@ -91,7 +89,6 @@ relay='''[&](uint8_t addr,int channel,bool open) {
       std::string sensor = "r"+std::to_string(addr) + std::to_string(channel);
       alarm_panel::publishBinaryState(sensor.c_str(),0,open);       
     }'''
-
 
 
 CONFIG_SCHEMA = cv.Schema(

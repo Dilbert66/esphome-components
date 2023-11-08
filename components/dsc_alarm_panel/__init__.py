@@ -1,6 +1,5 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome import automation, core
 from esphome.const import CONF_ID
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
@@ -71,8 +70,6 @@ relay='''[&](uint8_t channel,bool open) {
       alarm_panel::publishBinaryState(sensor.c_str(),0,open);       
     }'''
 
-
-
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(Component),
@@ -107,8 +104,7 @@ async def to_code(config):
         cg.add(var.set_expanderAddr(1,config[CONF_EXPANDER1]));
     if CONF_EXPANDER2 in config:
         cg.add(var.set_expanderAddr(2,config[CONF_EXPANDER2]));
-     
-        
+       
     cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))  
     cg.add(var.onPartitionStatusChange(cg.RawExpression(partitionstatus)))  
     cg.add(var.onPartitionMsgChange(cg.RawExpression(partitionmsg)))  
