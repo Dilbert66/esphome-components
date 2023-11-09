@@ -22,7 +22,6 @@ CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
 CONF_CLEAN="clean_build"
 
-
 systemstatus= '''[&](std::string statusCode) {
       alarm_panel::publishTextState("ss",0,&statusCode); 
     }'''
