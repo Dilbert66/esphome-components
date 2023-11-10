@@ -16,7 +16,6 @@
 
 #include "dscKeybusInterface.h"
 
-
 #ifdef ESP32
 
 #define dscClockPinDefault 22 // esp32: GPIO22
