@@ -4,10 +4,13 @@
 
 #if !defined(ARDUINO_MQTT)
 #include "esphome.h"
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
-#include "esphome/components/time/real_time_clock.h"
 #include "esphome/components/api/custom_api_device.h"
+#if defined(USE_TIME)
+#include "esphome/components/time/real_time_clock.h"
+#endif
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -15,6 +18,7 @@
 #endif
 
 #include "dscKeybusInterface.h"
+
 
 #ifdef ESP32
 
@@ -43,17 +47,21 @@ void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   if (partition) str=str + std::to_string(partition);
   std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
   for (auto *obj : bs ) {
+#if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
     if (id.find(str) != std::string::npos){
       obj->publish_state(open) ;
       break;
-    } else {      
+    } else {   
+#endif    
         std::string name=obj->get_name();
         if (name.find("(" + str + ")") != std::string::npos){
             obj->publish_state(open) ;
             break;;
         }
+#if defined(USE_CUSTOM_ID)             
     }
+#endif    
   }
 }
     
@@ -62,17 +70,21 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
   if (partition) str=str + std::to_string(partition);    
  std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
  for (auto *obj : ts ) {
+#if defined(USE_CUSTOM_ID)         
    std::string id=obj->get_type_id();
    if (id.find(str) != std::string::npos ){
     obj->publish_state(*text) ;
     return;
    } else { 
+#endif   
      std::string name=obj->get_name();
      if (name.find("(" + str + ")") != std::string::npos ){
         obj->publish_state(*text) ;
         return;
      }
-   }
+#if defined(USE_CUSTOM_ID)             
+    }
+#endif
  }
 }
 #endif
@@ -239,16 +251,16 @@ enum panelStatus {
 
 
 
-#if defined(ESPHOME_MQTT) && defined(ESP8266)
+#if defined(ESPHOME_MQTT)
 class DSCkeybushome: public api::CustomMQTTDevice, public Component { 
-#elif defined(ESPHOME_MQTT) && defined(ESP32)
-class DSCkeybushome: public api::CustomMQTTDevice, public time::RealTimeClock {
 #elif defined(ARDUINO_MQTT)
 class DSCkeybushome { 
-#elif defined(ESP32)
+#else
+#if defined(USE_TIME)
 class DSCkeybushome: public api::CustomAPIDevice, public time::RealTimeClock {
 #else
-class DSCkeybushome: public api::CustomAPIDevice, public Component {  
+class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
+#endif
 #endif
   public: DSCkeybushome(byte dscClockPin = 0, byte dscReadPin = 0, byte dscWritePin = 0): dscClockPin(dscClockPin),
   dscReadPin(dscReadPin),
@@ -313,15 +325,24 @@ class DSCkeybushome: public api::CustomAPIDevice, public Component {
     beepsCallback = callback;
   }
   
-#if defined(ESP32) && !defined(ARDUINO_MQTT)
+#if !defined(ARDUINO_MQTT) && defined(USE_TIME)
   void set_panel_time() {
     ESPTime rtc = now();
     if (!rtc.is_valid()) return;
     ESP_LOGI("info","Setting panel time...");    
     dsc.setDateTime(rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
   }
+  void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
+      #if !defined(ARDUINO_MQTT)
+    ESP_LOGI("info","Setting panel time..."); 
+    #else
+          Serial.printf("Setting panel time...\n");   
+    #endif
+    dsc.setDateTime(year, month, day, hour, minute);
+  }    
   #else
-  void set_panel_time(int year,int month,int day,int hour,int minute) {
+  void set_panel_time() {}
+  void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
       #if !defined(ARDUINO_MQTT)
     ESP_LOGI("info","Setting panel time..."); 
     #else
@@ -440,7 +461,7 @@ void begin() {
     
     if (debug > 2)
       Serial.begin(115200);
-#if defined(ESP32) && !defined(ARDUINO_MQTT)     
+#if !defined(ARDUINO_MQTT)     
     set_update_interval(16);
 #endif
 
@@ -459,10 +480,10 @@ void begin() {
     register_service( & DSCkeybushome::alarm_disarm, "alarm_disarm", {
       "code"
     });
-#if defined(ESP32) && !defined(ARDUINO_MQTT)
+#if  !defined(ARDUINO_MQTT) && defined(USE_TIME)
     register_service( & DSCkeybushome::set_panel_time, "set_panel_time", {});
 #else
-    register_service( & DSCkeybushome::set_panel_time, "set_panel_time", {
+    register_service( & DSCkeybushome::set_panel_time_manual, "set_panel_time_manual", {
      "year","month","day","hour","minute"
     });
 #endif
@@ -489,14 +510,13 @@ void begin() {
     });
 #endif
 
-
     firstrun = true;
     systemStatusChangeCallback(String(FPSTR(STATUS_OFFLINE)).c_str());
     forceDisconnect = false;
     #ifdef MODULESUPERVISION
     dsc.enableModuleSupervision = 1;
     #endif
-#if defined(EXPANDER)      
+#if not defined(DISABLE_EXPANDER)      
     dsc.addModule(expanderAddr1);
     dsc.addModule(expanderAddr2);
 #endif    
@@ -568,7 +588,7 @@ public:
   }
 
   void set_zone_fault(int zone, bool fault) {
-#if defined(EXPANDER) 
+#if not defined(DISABLE_EXPANDER) 
  #if !defined(ARDUINO_MQTT)     
     ESP_LOGI("Debug", "Setting Zone Fault: %d,%d", zone, fault);
  #else
@@ -1392,11 +1412,9 @@ private:
 
 #else   
   
-#if defined(ESP32)
+
 void update() override {
-#else     
-  void loop() override {
-#endif 
+
 #endif     
 
     if (forceDisconnect) return;
@@ -1447,7 +1465,7 @@ void update() override {
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
 
-#if defined(EXPANDER)          
+#if not defined(DISABLE_EXPANDER)          
        // dsc.clearZoneRanges(); // start with clear expanded zones
 #endif
       }

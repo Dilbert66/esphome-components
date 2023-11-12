@@ -48,7 +48,8 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
   pauseStatus = false;
 
   // start expander
-#if defined(EXPANDER)   
+
+#if not defined(DISABLE_EXPANDER)   
   maxFields05 = 4;
   maxFields11 = 4;
   enableModuleSupervision = false;
@@ -98,7 +99,7 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   #endif // ESP32
   // Generates an interrupt when the Keybus clock rises or falls - requires a hardware interrupt pin on Arduino/AVR
   attachInterrupt(digitalPinToInterrupt(dscClockPin), dscClockInterrupt, CHANGE);
-#if defined(EXPANDER)  
+#if not defined(DISABLE_EXPANDER)  
   if (maxZones > 32) {
     maxFields05 = 6;
     maxFields11 = 6;
@@ -209,7 +210,7 @@ bool dscKeybusInterface::loop() {
     else if (panelData[0] == 0x05 || panelData[0] == 0x1B) {
       if (panelByteCount == 6) keybusVersion1 = true;
       startupCycle = false;
-#if defined(EXPANDER) 
+#if not defined(DISABLE_EXPANDER) 
       updateModules();
 #endif      
 
@@ -768,7 +769,7 @@ dscKeybusInterface::dscKeybusInterface::processPendingResponses(byte cmd) {
   case 0x05:
     processPendingQueue(cmd);
     return;
-#if defined(EXPANDER)    
+#if not defined(DISABLE_EXPANDER)    
   case 0x11:
     if (!enableModuleSupervision) return;
     updateWriteBuffer((byte * ) moduleSlots, 9,1,maxFields11 );
@@ -821,7 +822,7 @@ dscKeybusInterface::processPendingResponses_0xE6(byte subcmd) {
  
   switch (subcmd) {
 
-#if defined(EXPANDER)
+#if not defined(DISABLE_EXPANDER)
   case 0x08:
     prepareModuleResponse(12, 17);
     break;

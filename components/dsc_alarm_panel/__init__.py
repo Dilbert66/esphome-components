@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID,CONF_TIME_ID
 from esphome.core import CORE
 import os
 import logging
@@ -21,6 +21,7 @@ CONF_CLOCKPIN="dscclockpin"
 CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
 CONF_CLEAN="clean_build"
+
 
 systemstatus= '''[&](std::string statusCode) {
       alarm_panel::publishTextState("ss",0,&statusCode); 
@@ -86,18 +87,20 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_READPIN, default=""): cv.int_, 
     cv.Optional(CONF_WRITEPIN, default=""): cv.int_, 
     cv.Optional(CONF_CLOCKPIN, default=""): cv.int_, 
-    cv.Optional(CONF_EXPANDER1, default=""): cv.int_, 
-    cv.Optional(CONF_EXPANDER2, default=""): cv.int_, 
-    cv.Optional(CONF_CLEAN,default='false'): cv.boolean,     
+    cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
+    cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
+    cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     
     }
 )
 
 async def to_code(config):
     old_dir = CORE.relative_build_path("src")
+    cg.add_define("USE_CUSTOM_ID")      
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
-    
+    if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
+        cg.add_define("DISABLE_EXPANDER")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN])
     
     if CONF_ACCESSCODE in config:
@@ -114,6 +117,7 @@ async def to_code(config):
         cg.add(var.set_expanderAddr(1,config[CONF_EXPANDER1]));
     if CONF_EXPANDER2 in config:
         cg.add(var.set_expanderAddr(2,config[CONF_EXPANDER2]));
+
        
     cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))  
     cg.add(var.onPartitionStatusChange(cg.RawExpression(partitionstatus)))  
