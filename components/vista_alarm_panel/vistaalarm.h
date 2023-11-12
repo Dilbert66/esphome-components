@@ -6,6 +6,7 @@
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
 #include "esphome/components/api/custom_api_device.h"
+#include "esphome/core/defines.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -78,17 +79,21 @@ void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   if (partition) str=str + std::to_string(partition);
   std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
   for (auto *obj : bs ) {
+#if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
     if (id.find(str) != std::string::npos){
       obj->publish_state(open) ;
       break;
-    } else {      
+    } else {   
+#endif    
         std::string name=obj->get_name();
         if (name.find("(" + str + ")") != std::string::npos){
             obj->publish_state(open) ;
             break;;
         }
+#if defined(USE_CUSTOM_ID)             
     }
+#endif    
   }
 }
     
@@ -97,17 +102,21 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
   if (partition) str=str + std::to_string(partition);    
  std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
  for (auto *obj : ts ) {
+#if defined(USE_CUSTOM_ID)         
    std::string id=obj->get_type_id();
    if (id.find(str) != std::string::npos ){
     obj->publish_state(*text) ;
     return;
    } else { 
+#endif   
      std::string name=obj->get_name();
      if (name.find("(" + str + ")") != std::string::npos ){
         obj->publish_state(*text) ;
         return;
      }
-   }
+#if defined(USE_CUSTOM_ID)             
+    }
+#endif
  }
 }
 #endif
@@ -522,6 +531,7 @@ void setup() override {
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (uint8_t x = 1; x <= maxZones; x++) {
             zoneStatusChangeBinaryCallback(x,false);
+            zoneStatusChangeCallback(z,"C");
         }
       }
       
