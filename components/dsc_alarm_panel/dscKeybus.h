@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define EXPANDER  //enable zone virtual zone expander functionality
+//#define DISABLE_EXPANDER  //disable zone virtual zone expander functionality
 //#define DEBOUNCE //filters out bad cmd05/1B's by ensuring we get 2 the same in a row to accept as valid
 
 //#define SERIALDEBUGCOMMANDS  //enable to use verbose debug cmd decoding  to serial port
@@ -25,6 +25,10 @@
 #define dscKeybus_h
 
 #include <Arduino.h>
+
+#if !defined(ARDUINO_MQTT)
+#include "esphome/core/defines.h"
+#endif
 
 #if defined(ESP8266)
 const byte dscPartitions = 4;
@@ -55,7 +59,7 @@ const byte partitionToBits[]={0,9,17,57,65,9,17,57,65};
         byte idx;
         byte mask;
     };
-#if defined(EXPANDER)     
+   
     struct moduleType {
         byte address;
         byte fields[4];
@@ -63,7 +67,7 @@ const byte partitionToBits[]={0,9,17,57,65,9,17,57,65};
         byte zoneStatusMask;
         byte zoneStatusByte;
     };
-#endif    
+
     
 
 
@@ -216,9 +220,8 @@ class dscKeybusInterface {
     void updateModules();
     void addRelayModule(); 
     void clearZoneRanges();
+    static bool enableModuleSupervision;  
     static byte maxZones;
-    static bool enableModuleSupervision;    
-
     //end expander
     static volatile pgmBufferType pgmBuffer;
     bool keybusVersion1;  
@@ -409,7 +412,7 @@ class dscKeybusInterface {
     static volatile byte isrModuleData[dscReadSize];
     
     //start expander
-#if defined(EXPANDER)      
+   
     const byte zoneOpen=3; //fault 
     const byte zoneClosed=2;// Normal 
     static byte moduleIdx;    
@@ -422,7 +425,7 @@ class dscKeybusInterface {
     static byte maxFields11;
     static moduleType modules[maxModules];
     static byte moduleSlots[6];
-#endif    
+  
     static void processCmd70();
     unsigned int dec2bcd(unsigned int);
      //end expander

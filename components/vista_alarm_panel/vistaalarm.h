@@ -5,7 +5,11 @@
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
+#if defined(USE_MQTT)
+#include "esphome/components/mqtt/mqtt_client.h"
+#else
 #include "esphome/components/api/custom_api_device.h"
+#endif
 #include "esphome/core/defines.h"
 
 #if defined(USE_MQTT)
@@ -48,9 +52,21 @@ void disconnectVista() {
 
 }
 
+    
+#if defined(ESPHOME_MQTT)
+const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
+#endif
+    
+
+  
+#if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
+std::function<void(const std::string &, JsonObject)> mqtt_callback;
+void * vistaPtr;        
     
+#endif   
+ 
 enum sysState {
   soffline,
   sarmedaway,
@@ -122,7 +138,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
 #endif
 
 #if defined(ESPHOME_MQTT) 
-class vistaECPHome: public api::CustomMQTTDevice, public time::RealTimeClock {
+class vistaECPHome:  public time::RealTimeClock {
 #elif defined(ARDUINO_MQTT)
 class vistaECPHome { 
 #else
@@ -139,6 +155,10 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
          partitionKeypads = new char[maxPartitions+1];
          partitions = new uint8_t[maxPartitions];
          partitionStates = new partitionStateType[maxPartitions];
+#if defined(USE_MQTT) 
+      vistaPtr=this;
+      mqtt_callback=on_json_message; 
+#endif           
     }
     
 
@@ -241,13 +261,8 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
 
     sysState currentSystemState,
     previousSystemState;
-    
-#if defined(ESPHOME_MQTT)
-const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
-#endif
-    
 
-    private:
+  private:
     
     int TTL = 30000;
     uint8_t debug;
@@ -272,7 +287,7 @@ const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
     char p2[18];
 
     uint8_t * partitions;
-
+    std::string topic_prefix,topic;
     char msg[50];
     
 
@@ -448,9 +463,9 @@ serialType getRfSerialLookup(char * serialCode) {
 
 
 #if defined(ESPHOME_MQTT) 
-    void on_json_message(const std::string &topic, JsonObject payload) {
+static void on_json_message(const std::string &topic, JsonObject payload) {
     int p=0;
-
+      vistaECPHome * v=static_cast<vistaECPHome*>(vistaPtr);
       if (topic.find(String(FPSTR(setalarmcommandtopic)).c_str())!=std::string::npos) { 
         if (payload.containsKey("partition"))
           p=payload["partition"];
@@ -461,19 +476,19 @@ serialType getRfSerialLookup(char * serialCode) {
                 c=payload["code"];
             std::string code=c;
             std::string s=payload["state"];  
-            set_alarm_state(s,code,p); 
+            v->set_alarm_state(s,code,p); 
         } else if (payload.containsKey("keys")) {
             std::string s=payload["keys"]; 
-            alarm_keypress_partition(s,p);
+            v->alarm_keypress_partition(s,p);
         } else if (payload.containsKey("fault") && payload.containsKey("zone")) {
             bool b=false;
             std::string s1= (const char*) payload["fault"];
             if (s1=="ON" || s1=="on" || s1=="1")
                 b=true;
             std::string s=payload["zone"];
-            p=toInt(s,10);
+            p=v->toInt(s,10);
            // ESP_LOGE("info","set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
-            set_zone_fault(p,b);
+            v->set_zone_fault(p,b);
 
         }
         
@@ -494,10 +509,11 @@ void setup() override {
 #endif     
 
 #if defined(ESPHOME_MQTT)
-
-   topic_prefix = mqtt_mqttclientcomponent->get_topic_prefix();
-   topic="homeassistant/alarm_control_panel/"+ topic_prefix + "/config"; 
-   subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),&vistaECPHome::on_json_message);   
+   topic_prefix =mqtt::global_mqtt_client->get_topic_prefix();
+   mqtt::MQTTDiscoveryInfo mqttDiscInfo=mqtt::global_mqtt_client->get_discovery_info();
+   std::string discovery_prefix=mqttDiscInfo.prefix;
+   topic=discovery_prefix+"/alarm_control_panel/"+ topic_prefix + "/config"; 
+   mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);     
    
 #elif !defined(ARDUINO_MQTT)
       register_service( & vistaECPHome::alarm_keypress, "alarm_keypress", {
@@ -609,6 +625,7 @@ void setup() override {
 
     void alarm_keypress_partition(std::string keystring, int partition) {
       const char * keys = strcpy(new char[keystring.length() + 1], keystring.c_str());
+      if (!partition) partition = defaultPartition;      
       if (debug > 0)
           #if defined(ARDUINO_MQTT)
           Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(),partition);      
@@ -910,8 +927,8 @@ void update() override {
       }
     
       #if defined(ESPHOME_MQTT)
-        if (firstRun) {
-         publish(topic,"{\"name\":" +  topic_prefix + "alarm panel, \"cmd_t\":" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "}",0,1);
+        if (firstRun && mqtt::global_mqtt_client->is_connected()) {
+         mqtt::global_mqtt_client->publish(topic,"{\"name\":\"command\", \"cmd_t\":\"" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "\"}",0,1);
         }
       #endif   
 
@@ -2150,6 +2167,6 @@ private:
       }
     }
   };
-
+#if !defined(ARDUINO_MQTT)
 }} //namespaces
-
+#endif
