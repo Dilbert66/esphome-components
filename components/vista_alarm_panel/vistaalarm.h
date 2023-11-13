@@ -62,9 +62,10 @@ const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
+#if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
 void * vistaPtr;        
-    
+#endif    
 #endif   
  
 enum sysState {
