@@ -46,8 +46,10 @@ dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault
 
 namespace esphome {
 namespace alarm_panel {
+#if defined(ESPHOME_MQTT)    
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
-void * dscPtr;    
+void * dscPtr;  
+#endif
 #endif
 
 #if !defined(ARDUINO_MQTT)
