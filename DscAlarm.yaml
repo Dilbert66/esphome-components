@@ -68,12 +68,11 @@ esphome:
   name: $name
   friendly_name: $friendlyName
 
+#debug output sympols to output.map for debugging
   platformio_options:
     build_flags: 
         - "-Wl,-Map,output.map"  
   
-
-#ESP32 only .  Syncs the time with the panel every 7200 seconds ( 2hours)
 interval:
   - interval: 7200s
     then:
@@ -105,9 +104,7 @@ api:
   #username: mqttuser
   #password: mqttuser
   #discovery_prefix: "homeassistant"
-  #ssl_fingerprints:
-   # - 0ce84a11a63779b30119724776ecf4703de083b5      
-   
+ 
 
 ota:
    password: !secret ota_password

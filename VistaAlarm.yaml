@@ -85,7 +85,8 @@ external_components:
 esphome:
   name: $name
   friendly_name: $friendlyName
-
+  
+#debug output sympols to output.map for debugging
   platformio_options:
     build_flags: 
         - "-Wl,-Map,output.map"  
@@ -105,7 +106,14 @@ logger:
 api:
    encryption:
      key: !secret encryption_key   
-   
+ 
+#mqtt:
+ # broker: 192.168.2.175
+  #port: 1883
+  #username: mqttuser
+  #password: mqttuser
+  #discovery_prefix: "homeassistant" 
+       
 ota:
    password: !secret ota_password
    safe_mode: True

@@ -1,6 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID,CONF_TIME_ID
+from esphome.const import CONF_ID
+#from esphome.components import mqtt
 from esphome.core import CORE
 import os
 import logging
@@ -21,6 +22,7 @@ CONF_CLOCKPIN="dscclockpin"
 CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
 CONF_CLEAN="clean_build"
+#CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
 
 systemstatus= '''[&](std::string statusCode) {
@@ -79,6 +81,7 @@ relay='''[&](uint8_t channel,bool open) {
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(Component),
+    #cv.GenerateID(CONF_MQTT_PARENT_ID): cv.use_id(mqtt.MQTTClientComponent),
     cv.Optional(CONF_ACCESSCODE, default=""): cv.string  ,
     cv.Optional(CONF_MAXZONES, default=""): cv.int_, 
     cv.Optional(CONF_USERCODES, default=""): cv.string, 
@@ -97,12 +100,14 @@ CONFIG_SCHEMA = cv.Schema(
 async def to_code(config):
     old_dir = CORE.relative_build_path("src")
     cg.add_define("USE_CUSTOM_ID")      
+  
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN])
-    
+    #mqtt_id = await cg.get_variable(config[CONF_MQTT_PARENT_ID])
+    #cg.add(var.set_mqtt_id(mqtt_id))      
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
     if CONF_MAXZONES in config:
