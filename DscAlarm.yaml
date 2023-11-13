@@ -42,7 +42,7 @@ dsc_alarm_panel:
   #dscwritepin: "15" 
   
 
-  clean_build: "false" #default is false.  set to true if getting duplication errors in linking step or first time install of this yaml file  
+  clean_build: "false" #default is false.  set to true if getting duplication errors in linking step.  
 
 esp32: 
   board: nodemcu-32s
@@ -68,11 +68,12 @@ esphome:
   name: $name
   friendly_name: $friendlyName
 
-#debug output sympols to output.map for debugging
+#output sympols to output.map for debugging. You can remove if not needed
   platformio_options:
     build_flags: 
         - "-Wl,-Map,output.map"  
-  
+
+#you can remove/disable this section if you don't want your panel time updated automatically  
 interval:
   - interval: 7200s
     then:
@@ -92,18 +93,22 @@ logger:
   level: DEBUG
 
 api:
-   #password: !secret api_password  
    encryption:
     key: !secret encryption_key
     
     
-#exmple mqtt setup. Replaces api
+#to use mqtt disable the api: section above. This enables you to use esphome with 
+#non homeassistant systems
+#modify the mqtt section to your needs
+#See: https://esphome.io/components/mqtt.html
+
 #mqtt:
- # broker: 192.168.2.175
+  #broker: 192.168.2.175
   #port: 1883
   #username: mqttuser
   #password: mqttuser
   #discovery_prefix: "homeassistant"
+  #topic_prefix: $name
  
 
 ota:

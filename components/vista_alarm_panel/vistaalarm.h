@@ -509,9 +509,11 @@ void setup() override {
 #endif     
 
 #if defined(ESPHOME_MQTT)
-   topic_prefix = mqtt::global_mqtt_client->get_topic_prefix();
-   topic="homeassistant/alarm_control_panel/"+ topic_prefix + "/config"; 
-   mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);   
+   topic_prefix =mqtt::global_mqtt_client->get_topic_prefix();
+   mqtt::MQTTDiscoveryInfo mqttDiscInfo=mqtt::global_mqtt_client->get_discovery_info();
+   std::string discovery_prefix=mqttDiscInfo.prefix;
+   topic=discovery_prefix+"/alarm_control_panel/"+ topic_prefix + "/config"; 
+   mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);     
    
 #elif !defined(ARDUINO_MQTT)
       register_service( & vistaECPHome::alarm_keypress, "alarm_keypress", {
@@ -926,7 +928,7 @@ void update() override {
     
       #if defined(ESPHOME_MQTT)
         if (firstRun && mqtt::global_mqtt_client->is_connected()) {
-         mqtt::global_mqtt_client->publish(topic,"{\"name\":" +  topic_prefix + "alarm panel, \"cmd_t\":" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "}",0,1);
+         mqtt::global_mqtt_client->publish(topic,"{\"name\":\"command\", \"cmd_t\":\"" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "\"}",0,1);
         }
       #endif   
 

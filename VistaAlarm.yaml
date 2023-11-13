@@ -86,7 +86,7 @@ esphome:
   name: $name
   friendly_name: $friendlyName
   
-#debug output sympols to output.map for debugging
+# output sympols to output.map for debugging. you can remove if not needed
   platformio_options:
     build_flags: 
         - "-Wl,-Map,output.map"  
@@ -107,12 +107,18 @@ api:
    encryption:
      key: !secret encryption_key   
  
+#to use mqtt disable the api: section above. This enables you to use esphome with 
+#non homeassistant systems
+#modify the mqtt section to your needs
+#See: https://esphome.io/components/mqtt.html
+
 #mqtt:
- # broker: 192.168.2.175
+  #broker: 192.168.2.175
   #port: 1883
   #username: mqttuser
   #password: mqttuser
   #discovery_prefix: "homeassistant" 
+  #topic_prefix: $name
        
 ota:
    password: !secret ota_password
@@ -123,7 +129,7 @@ ota:
 time:
  - platform: sntp
 
-###########################################################################################################   
+######################################################################## 
 # Edit binary and text sensors below to suit your alarm setup.
 # You can safely add or remove any sensor as needed. 
 # The id code is entered using the "id_code:" tag.  Alternatively you can

@@ -488,8 +488,20 @@ void begin() {
 
    
 #if defined(ESPHOME_MQTT)
+
+/*
+struct MQTTDiscoveryInfo {
+  std::string prefix;  ///< The Home Assistant discovery prefix. Empty means disabled.
+  bool retain;         ///< Whether to retain discovery messages.
+  bool clean;
+  MQTTDiscoveryUniqueIdGenerator unique_id_generator;
+  MQTTDiscoveryObjectIdGenerator object_id_generator;
+};
+*/
    topic_prefix =mqtt::global_mqtt_client->get_topic_prefix();
-   topic="homeassistant/alarm_control_panel/"+ topic_prefix + "/config"; 
+   mqtt::MQTTDiscoveryInfo mqttDiscInfo=mqtt::global_mqtt_client->get_discovery_info();
+   std::string discovery_prefix=mqttDiscInfo.prefix;
+   topic=discovery_prefix+"/alarm_control_panel/"+ topic_prefix + "/config"; 
    mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);   
 #elif !defined(ARDUINO_MQTT)
     register_service( & DSCkeybushome::set_alarm_state, "set_alarm_state", {
@@ -1443,8 +1455,7 @@ void update() override {
 #if defined(ESPHOME_MQTT)
    static bool firstrunmqtt=true;
    if (mqtt::global_mqtt_client->is_connected() && firstrunmqtt)	{
-         mqtt::global_mqtt_client->publish(topic,"{\"name\":" +  topic_prefix + "alarm panel, \"cmd_t\":" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "}",0,1);
-       // ESP_LOGI("test","published %s,%s",topic.c_str(),"{\"name\":" +  topic_prefix + "alarm panel, \"cmd_t\":" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "}");
+         mqtt::global_mqtt_client->publish(topic,"{\"name\":\"command\", \"cmd_t\":\"" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "\"}",0,1);
          firstrunmqtt=false;
        }
 #endif      
