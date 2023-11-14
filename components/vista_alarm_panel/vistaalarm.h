@@ -52,19 +52,14 @@ void disconnectVista() {
 
 }
 
-    
-#if defined(ESPHOME_MQTT)
-const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
-#endif
-    
-
-  
+ 
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
-void * vistaPtr;        
+void * vistaPtr;       
+ const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif    
 #endif   
  
@@ -510,7 +505,7 @@ static void on_json_message(const std::string &topic, JsonObject payload) {
 
     char cmd[30];
     sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,rtc.minute,ampm,rtc.year%100,rtc.month,rtc.day_of_month);
-    ESP_LOG("debug","Send time string: %s",cmd);
+    ESP_LOGD("debug","Send time string: %s",cmd);
     int addr=partitionKeypads[defaultPartition]; 
     vista.write(cmd,addr);
 #endif    
@@ -663,7 +658,7 @@ void setup() override {
       if (!partition) partition = defaultPartition;      
       if (debug > 0)
           #if defined(ARDUINO_MQTT)
-          Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(),partition);      
+          Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(),partition);     
           #else
           ESP_LOGE("Debug", "Writing keys: %s to partition %d", keystring.c_str(),partition);
           #endif
@@ -1231,7 +1226,7 @@ void update() override {
 
         //zone fire status
         uint32_t tz;
-        if (!vista.statusFlags.systemFlag && vista.statusFlags.fireZone) {
+        if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && vista.statusFlags.fireZone) {
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
         //if (promptContains(p1,FIRE,tz) && !vista.statusFlags.systemFlag) {
           fireStatus.zone = vista.statusFlags.zone;
@@ -1258,7 +1253,7 @@ void update() override {
             ESP_LOGD("test","alarm found for zone %d,status=%d",vista.statusFlags.zone,zt->alarm );
         }
         //device check status 
-         if (!vista.statusFlags.systemFlag && vista.statusFlags.check) {
+         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && vista.statusFlags.check) {
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);       
        // if (promptContains(p1,CHECK,tz) || promptContains(p1,TRBL,tz)) {
              zoneType * zt=getZone(vista.statusFlags.zone);
@@ -1273,7 +1268,7 @@ void update() override {
       }
          
         //zone fault status 
-         if (!vista.statusFlags.systemFlag && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
+         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
@@ -1286,7 +1281,7 @@ void update() override {
         }
         
         //zone bypass status
-         if (!vista.statusFlags.systemFlag && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && vista.statusFlags.bypass) {  
+         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && vista.statusFlags.bypass) {  
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,BYPAS,tz) && !vista.statusFlags.systemFlag) {
            zoneType * zt=getZone(vista.statusFlags.zone);            

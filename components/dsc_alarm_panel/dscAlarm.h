@@ -43,13 +43,9 @@
 
 dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault);
 #if !defined(ARDUINO_MQTT)
-
 namespace esphome {
 namespace alarm_panel {
-#if defined(ESPHOME_MQTT)    
-std::function<void(const std::string &, JsonObject)> mqtt_callback;
-void * dscPtr;  
-#endif
+
 #endif
 
 #if !defined(ARDUINO_MQTT)
@@ -167,6 +163,8 @@ const char STATUS_READY[] PROGMEM = "ready";
 const char STATUS_NOT_READY[] PROGMEM = "not_ready"; //ha alarm panel likes to see "unavailable" instead of not_ready when the system can't be armed
 
 #if defined(ESPHOME_MQTT)
+std::function<void(const std::string &, JsonObject)> mqtt_callback;
+void * dscPtr;  
 const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif
 
@@ -484,15 +482,6 @@ void begin() {
    
 #if defined(ESPHOME_MQTT)
 
-/*
-struct MQTTDiscoveryInfo {
-  std::string prefix;  ///< The Home Assistant discovery prefix. Empty means disabled.
-  bool retain;         ///< Whether to retain discovery messages.
-  bool clean;
-  MQTTDiscoveryUniqueIdGenerator unique_id_generator;
-  MQTTDiscoveryObjectIdGenerator object_id_generator;
-};
-*/
    topic_prefix =mqtt::global_mqtt_client->get_topic_prefix();
    mqtt::MQTTDiscoveryInfo mqttDiscInfo=mqtt::global_mqtt_client->get_discovery_info();
    std::string discovery_prefix=mqttDiscInfo.prefix;
@@ -1436,13 +1425,8 @@ private:
 #if defined(ARDUINO_MQTT)
   public:
   void loop()  {
-      
-
 #else   
-  
-
 void update() override {
-
 #endif     
 
     if (forceDisconnect) return;
