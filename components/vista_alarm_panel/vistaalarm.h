@@ -1268,7 +1268,7 @@ void update() override {
       }
          
         //zone fault status 
-         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
+         if (!vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
@@ -1281,7 +1281,7 @@ void update() override {
         }
         
         //zone bypass status
-         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && vista.statusFlags.bypass) {  
+         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.fire || vista.statusFlags.check || vista.statusFlags.alarm) && vista.statusFlags.bypass) {  
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,BYPAS,tz) && !vista.statusFlags.systemFlag) {
            zoneType * zt=getZone(vista.statusFlags.zone);            
