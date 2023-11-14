@@ -81,10 +81,24 @@ external_components:
   #- source:  my_components #uncomment to use local directory  
     components: [vista_alarm_panel,binary_sensor,text_sensor] 
     refresh: 10min
+    
+#you can remove/disable this section if you don't want your panel time updated automatically. 
+#interval:
+  #- interval: 7200s
+   # then:
+    #  - lambda: |-
+     #     $panelId->set_panel_time();     
   
 esphome:
   name: $name
   friendly_name: $friendlyName
+
+#Example of how to set the panel time from the esp time on bootup  
+  #on_boot:
+    #priority: 600
+    #then:
+      #- lambda: |-
+         #   $panelId->set_panel_time();  
   
 # output sympols to output.map for debugging. you can remove if not needed
   platformio_options:

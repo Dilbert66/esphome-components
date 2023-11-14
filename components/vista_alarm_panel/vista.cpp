@@ -19,12 +19,12 @@ Vista::Vista(Stream * stream) {
   outStream = stream;
 
   #ifdef MONITORTX
-  szExt = 20;
+  szExt = 30;
   extbuf = (char * ) malloc(szExt);
   extcmd = (char * ) malloc(szExt);
   #endif
 
-  szOutbuf = 15;
+  szOutbuf = 30;
   szCbuf = 50;
   inbufIdx = 0;
   outbufIdx = 0;
@@ -32,6 +32,7 @@ Vista::Vista(Stream * stream) {
   pointerToVistaClass = this;
   cbuf = (char * ) malloc(szCbuf);
   outbuf = new keyType[szOutbuf];
+  tmpOutBuf = new char[szOutbuf];
   szFaultQueue = 5;
   faultQueue = (uint8_t * ) malloc(szFaultQueue);
   lrrSupervisor = false;
@@ -563,7 +564,7 @@ void Vista::writeChars() {
     int sz = 0;
     tmpIdx=2;
     uint8_t lastkpaddr=0;
-    while (charAvail()) {
+    while (charAvail() && sz<12) {
     if (!(lastkpaddr==0 || lastkpaddr==peekNextKpAddr())) break;
       kt = getChar();
       c=kt.key;

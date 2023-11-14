@@ -498,6 +498,39 @@ static void on_json_message(const std::string &topic, JsonObject payload) {
   }
 #endif
  public:
+ 
+ void set_panel_time() {
+#if defined(USE_TIME)      
+    ESPTime rtc = now();
+    if (!rtc.is_valid()) return;
+    int hour=rtc.hour;
+    int year=rtc.year;
+    char ampm=hour<12?2:1;
+    if (hour > 12) hour-=12;
+
+    char cmd[30];
+    sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,rtc.minute,ampm,rtc.year%100,rtc.month,rtc.day_of_month);
+    ESP_LOG("debug","Send time string: %s",cmd);
+    int addr=partitionKeypads[defaultPartition]; 
+    vista.write(cmd,addr);
+#endif    
+  }
+
+  void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
+    char ampm=hour<12?2:1;
+    if (hour > 12) hour-=12;
+    char cmd[30];
+    sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,minute,ampm,year%100,month,day);
+    #if defined(ARDUINO_MQTT)
+        Serial.printf("Setting panel time...\n");      
+    #else
+       ESP_LOGD("debug","Send time string: %s",cmd);
+    #endif
+
+    int addr=partitionKeypads[defaultPartition]; 
+    vista.write(cmd,addr);    
+  } 
+
 #if defined(ARDUINO_MQTT)
 void begin() {
 #else
@@ -517,6 +550,7 @@ void setup() override {
    mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);     
    
 #elif !defined(ARDUINO_MQTT)
+      register_service( & vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service( & vistaECPHome::alarm_keypress, "alarm_keypress", {
         "keys"
       });

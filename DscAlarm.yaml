@@ -67,18 +67,25 @@ external_components:
 esphome:
   name: $name
   friendly_name: $friendlyName
+  
+#Example of how to set the panel time from the esp time on bootup  
+  #on_boot:
+    #priority: 600
+    #then:
+      #- lambda: |-
+         #   $panelId->set_panel_time();    
 
 #output sympols to output.map for debugging. You can remove if not needed
   platformio_options:
     build_flags: 
         - "-Wl,-Map,output.map"  
 
-#you can remove/disable this section if you don't want your panel time updated automatically  
-interval:
-  - interval: 7200s
-    then:
-      - lambda: |-
-          $panelId->set_panel_time();
+#you can remove/disable this section if you don't want your panel time updated automatically. 
+#interval:
+  #- interval: 7200s
+   # then:
+    #  - lambda: |-
+     #     $panelId->set_panel_time();  
   
 wifi:
   ssid: !secret wifi_ssid

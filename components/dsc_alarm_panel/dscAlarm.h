@@ -345,32 +345,26 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
     beepsCallback = callback;
   }
   
-#if !defined(ARDUINO_MQTT) && defined(USE_TIME)
+
   void set_panel_time() {
+#if defined(USE_TIME)      
     ESPTime rtc = now();
     if (!rtc.is_valid()) return;
     ESP_LOGI("info","Setting panel time...");    
     dsc.setDateTime(rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
+#endif       
   }
+
+
   void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
-      #if !defined(ARDUINO_MQTT)
-    ESP_LOGI("info","Setting panel time..."); 
+      #if defined(ARDUINO_MQTT)
+          Serial.printf("Setting panel time...\n");       
     #else
-          Serial.printf("Setting panel time...\n");   
+        ESP_LOGI("info","Setting panel time..."); 
     #endif
     dsc.setDateTime(year, month, day, hour, minute);
-  }    
-  #else
-  void set_panel_time() {}
-  void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
-      #if !defined(ARDUINO_MQTT)
-    ESP_LOGI("info","Setting panel time..."); 
-    #else
-          Serial.printf("Setting panel time...\n");   
-    #endif
-    dsc.setDateTime(year, month, day, hour, minute);
-  }  
-#endif   
+  } 
+
 #if defined(USE_MQTT)
   void set_mqtt_id(mqtt::MQTTClientComponent *mqtt_id) { mqttId = mqtt_id; }
 #endif  
@@ -454,7 +448,6 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
   std::string previousZoneStatusMsg,eventStatusMsg; 
   
   private:
-  mqtt::MQTTClientComponent *mqttId;
   byte  lastStatus[dscPartitions];  
   bool relayStatus[16],
   previousRelayStatus[16];
