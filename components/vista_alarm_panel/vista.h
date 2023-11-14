@@ -148,8 +148,8 @@ class Vista {
 
     private:
     keyType * outbuf;
+    char * tmpOutBuf;
     volatile uint8_t outbufIdx, inbufIdx;
-    char tmpOutBuf[20];
     int rxPin, txPin;
     volatile char kpAddr;
     char monitorPin;
