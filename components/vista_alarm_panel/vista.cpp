@@ -174,6 +174,7 @@ void Vista::onDisplay(char cbuf[], int * idx) {
     statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
     statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_AC_LOSS) > 0);
   } else {
+    statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);      
     statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
     statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
   }
@@ -187,6 +188,8 @@ void Vista::onDisplay(char cbuf[], int * idx) {
     statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
     statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);
   } else {
+    statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
+    statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);      
     statusFlags.alarm = ((cbuf[8] & BIT_MASK_BYTE3_ZONE_ALARM) > 0);
   }
   /*
