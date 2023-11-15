@@ -49,18 +49,19 @@ Vista vista(OutputStream);
 
 void disconnectVista() {
   vista.stop();
-
 }
 
  
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
-namespace alarm_panel {
+namespace alarm_panel 
+
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
 void * vistaPtr;       
- const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
-#endif    
+const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
+#endif  
+  
 #endif   
  
 enum sysState {
@@ -151,7 +152,7 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
          partitionKeypads = new char[maxPartitions+1];
          partitions = new uint8_t[maxPartitions];
          partitionStates = new partitionStateType[maxPartitions];
-#if defined(USE_MQTT) 
+#if defined(ESPHOME_MQTT) 
       vistaPtr=this;
       mqtt_callback=on_json_message; 
 #endif           
@@ -496,6 +497,7 @@ static void on_json_message(const std::string &topic, JsonObject payload) {
  
  void set_panel_time() {
 #if defined(USE_TIME)      
+    if (vista.statusFlags.programMode) return;
     ESPTime rtc = now();
     if (!rtc.is_valid()) return;
     int hour=rtc.hour;
@@ -512,6 +514,7 @@ static void on_json_message(const std::string &topic, JsonObject payload) {
   }
 
   void set_panel_time_manual(int year,int month,int day,int hour,int minute) {
+    if (vista.statusFlags.programMode) return;
     char ampm=hour<12?2:1;
     if (hour > 12) hour-=12;
     char cmd[30];
@@ -700,12 +703,12 @@ private:
       return true;
     }
     
- uint8_t getZoneFromPrompt(char *p1) {
+  int getZoneFromPrompt(char *p1) {
   int x=0;
   int y=0;
-            uint8_t zone=0;
+            int zone=0;
            
-            while(x<16 && p1[x]!=0x20) {
+            while(x<15 && p1[x]!=0x20) {
                 x++; //skip any prompt letter
             }
             if (p1[x] !=0x20 || !( p1[x+1] > 0x2f && p1[x+1] < 0x3a)) return false;
@@ -717,7 +720,7 @@ private:
            if (debug > 1)              
             ESP_LOGE("debug","The prompt was matched - vista zone is %d",vista.statusFlags.zone);   
         #endif        
-              char s[4]; 
+              char s[5]; 
               x++;
               for (y=0;y<4;y++) {
                 if (p1[y+x] > 0x2F && p1[y+x] < 0x3A) 
@@ -756,7 +759,7 @@ private:
            if (debug > 1)              
             ESP_LOGE("debug","The prompt  %s was matched - vista zone is %d",msg,vista.statusFlags.zone);   
         #endif        
-              char s[4]; 
+              char s[5]; 
               x++;
               for (y=0;y<4;y++) {
                 if (p1[y+x] > 0x2F && p1[y+x] < 0x3A) 
@@ -1268,7 +1271,7 @@ void update() override {
       }
          
         //zone fault status 
-         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
+         if (!vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
@@ -1281,7 +1284,7 @@ void update() override {
         }
         
         //zone bypass status
-         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && vista.statusFlags.bypass) {  
+         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.fire || vista.statusFlags.check || vista.statusFlags.alarm) && vista.statusFlags.bypass) {  
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,BYPAS,tz) && !vista.statusFlags.systemFlag) {
            zoneType * zt=getZone(vista.statusFlags.zone);            

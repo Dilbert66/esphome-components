@@ -45,7 +45,11 @@ dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
+#endif
 
+#if defined(ESPHOME_MQTT)
+std::function<void(const std::string &, JsonObject)> mqtt_callback;
+void * dscPtr;  
 #endif
 
 #if !defined(ARDUINO_MQTT)
@@ -161,12 +165,6 @@ const char STATUS_OFFLINE[] PROGMEM = "offline";
 const char STATUS_TRIGGERED[] PROGMEM = "triggered";
 const char STATUS_READY[] PROGMEM = "ready";
 const char STATUS_NOT_READY[] PROGMEM = "not_ready"; //ha alarm panel likes to see "unavailable" instead of not_ready when the system can't be armed
-
-#if defined(ESPHOME_MQTT)
-std::function<void(const std::string &, JsonObject)> mqtt_callback;
-void * dscPtr;  
-const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
-#endif
 
 const char *
   const mainMenu[] PROGMEM = {
