@@ -168,13 +168,13 @@ void Vista::onDisplay(char cbuf[], int * idx) {
   statusFlags.fire = ((cbuf[7] & BIT_MASK_BYTE2_FIRE) > 0);
   statusFlags.systemFlag = ((cbuf[7] & BIT_MASK_BYTE2_SYSTEM_FLAG) > 0);
   statusFlags.ready = ((cbuf[7] & BIT_MASK_BYTE2_READY) > 0);
-
+  
+  statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
+  
   if (statusFlags.systemFlag) {
-    statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
     statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
     statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_AC_LOSS) > 0);
   } else {
-    statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);      
     statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
     statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
   }
@@ -184,12 +184,11 @@ void Vista::onDisplay(char cbuf[], int * idx) {
   statusFlags.chime = ((cbuf[8] & BIT_MASK_BYTE3_CHIME_MODE) > 0);
   statusFlags.bypass = ((cbuf[8] & BIT_MASK_BYTE3_BYPASS) > 0);
   statusFlags.programMode = (cbuf[8] & BIT_MASK_BYTE3_PROGRAM);
-  if (statusFlags.systemFlag) {
-    statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
-    statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);
-  } else {
-    statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
-    statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);      
+  
+  statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
+  statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);  
+  
+  if (!statusFlags.systemFlag) {
     statusFlags.alarm = ((cbuf[8] & BIT_MASK_BYTE3_ZONE_ALARM) > 0);
   }
   /*
