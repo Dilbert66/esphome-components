@@ -378,8 +378,6 @@ private:
     alarmStatusType fireStatus,
     panicStatus,
     alarmStatus;
-    lrrType lrr,
-    previousLrr;
     uint8_t partitionTargets;
     unsigned long sendWaitTime;
     bool firstRun;
@@ -1187,10 +1185,9 @@ void update() override {
 
         vista.newCmd = false;
 
-        // we also return if it's not an f7, f9 
-        if (!(vista.cbuf[0] == 0xf7 || vista.cbuf[0] == 0xf9 ) || vista.cbuf[12]==0x77) return;
+        // done other cmd processing.  Process f7 now
+        if (vista.cbuf[0] != 0xf7 ||  vista.cbuf[12]==0x77) return;
 
-       if (vista.cbuf[0]== 0xf7) {
         currentSystemState = sunavailable;
         currentLightState.stay = false;
         currentLightState.away = false;
@@ -1203,7 +1200,7 @@ void update() override {
        // currentLightState.trouble = false;  
         currentLightState.bypass = false; 
         currentLightState.chime = false; 
-       }
+        
         //armed status lights
         if (vista.cbuf[0] == 0xf7 && vista.statusFlags.systemFlag && (vista.statusFlags.armedAway || vista.statusFlags.armedStay  )) {
           if (vista.statusFlags.night) {
@@ -1504,13 +1501,12 @@ void update() override {
         if ((zoneStatusMsg != previousZoneStatusMsg  || forceRefreshZones) && zoneExtendedStatusCallback != NULL)
           zoneExtendedStatusCallback(zoneStatusMsg);
         previousZoneStatusMsg = zoneStatusMsg;
-
-        previousLrr = lrr;
-       
+        
         if (millis() - refreshLrrTime > 30000) {
           lrrMsgChangeCallback("");
           refreshLrrTime = millis();
-        }
+        }  
+
         if (millis() - refreshRfTime > 30000) {
           rfMsgChangeCallback("");
           refreshRfTime = millis();
