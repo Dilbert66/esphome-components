@@ -92,7 +92,7 @@ void Vista::onStatus(char cbuf[], int * idx) {
   //byte 3 is length of headers
   //last byte of headers is counter
   //remaining bytes are body
-
+  return;// no need for to process these for now until more info is gathered
   //F2 messages with 18 bytes or less don't seem to have
   // any important information
   if (18 >= (uint8_t) cbuf[1]) {
