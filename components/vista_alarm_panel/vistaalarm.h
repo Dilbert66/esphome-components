@@ -577,7 +577,7 @@ void setup() override {
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin);
 
       if (zoneStatusChangeBinaryCallback != NULL) {
-        for (uint8_t x = 1; x <= maxZones; x++) {
+        for (int x = 1; x <= maxZones; x++) {
             zoneStatusChangeBinaryCallback(x,false);
             zoneStatusChangeCallback(x,"C");
         }
@@ -1273,6 +1273,7 @@ void update() override {
         ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
          if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass  ) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
+         if (vista.statusFlags.zone==4) vista.statusFlags.zone=900;
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
             if (!zt->open) {
