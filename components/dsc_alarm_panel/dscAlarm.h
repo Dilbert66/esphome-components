@@ -1469,7 +1469,7 @@ void update() override {
       static unsigned long startWait = millis();
       if (millis() - startWait > 60000 && delayedStart) {
         delayedStart = false;
-        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked) {
+        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !partitionStatus[defaultPartition-1].armed) {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
@@ -1824,13 +1824,14 @@ void update() override {
       if (bitRead(system1, 5)) {
         system1Msg.append(String(PSTR("RF ")).c_str());
       }
+      /*
       if (bitRead(system1, 6)) {
         system1Msg.append(String(PSTR("B4 ")).c_str());
       }
       if (bitRead(system1, 7)) {
         system1Msg.append(String(PSTR("A4 ")).c_str());
       }
-
+*/
       
       if (system0Changed) 
           previousSystem0=system0;

@@ -394,7 +394,6 @@ zoneType nz;
 
 zoneType * getZone(uint32_t z) {
    zoneType * zt = &nz;//just an empty zone.  
-   if (!z) z=0;
    std::map<uint32_t,zoneType>::iterator it=extZones.find(z);
    if (it != extZones.end())  
        zt=&it->second;
@@ -1205,7 +1204,7 @@ void update() override {
         currentLightState.chime = false; 
         
         //armed status lights
-        if (vista.cbuf[0] == 0xf7 && vista.statusFlags.systemFlag && (vista.statusFlags.armedAway || vista.statusFlags.armedStay)) {
+        if (vista.cbuf[0] == 0xf7 && vista.statusFlags.systemFlag && (vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.armed)) {
           if (vista.statusFlags.night) {
             currentSystemState = sarmednight;
             currentLightState.night = true;
@@ -1228,8 +1227,8 @@ void update() override {
         }
 
         //zone fire status
-        int tz;
-        if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && vista.statusFlags.fireZone) {
+        //int tz;
+        if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.armed) && vista.statusFlags.fireZone) {
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
         //if (promptContains(p1,FIRE,tz) && !vista.statusFlags.systemFlag) {
           fireStatus.zone = vista.statusFlags.zone;
@@ -1256,7 +1255,7 @@ void update() override {
             ESP_LOGD("test","alarm found for zone %d,status=%d",vista.statusFlags.zone,zt->alarm );
         }
         //device check status 
-         if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && vista.statusFlags.check) {
+         if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.armed) && vista.statusFlags.check) {
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);       
        // if (promptContains(p1,CHECK,tz) || promptContains(p1,TRBL,tz)) {
              zoneType * zt=getZone(vista.statusFlags.zone);
@@ -1271,7 +1270,7 @@ void update() override {
       }
          
         //zone fault status 
-         if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass) { 
+         if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass && !vista.statusFlags.armed) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
@@ -1284,7 +1283,7 @@ void update() override {
         }
         
         //zone bypass status
-         if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.fire || vista.statusFlags.check || vista.statusFlags.alarm) && vista.statusFlags.bypass) {  
+         if (vista.cbuf[0] == 0xf7 && !(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay || vista.statusFlags.fire || vista.statusFlags.check || vista.statusFlags.alarm || vista.statusFlags.armed) && vista.statusFlags.bypass) {  
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
        // if (promptContains(p1,BYPAS,tz) && !vista.statusFlags.systemFlag) {
            zoneType * zt=getZone(vista.statusFlags.zone);            

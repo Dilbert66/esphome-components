@@ -156,7 +156,9 @@ void Vista::onDisplay(char cbuf[], int * idx) {
 
   statusFlags.keypad[2] = cbuf[3]; //16 - 23
 
-  statusFlags.keypad[3] = cbuf[4]; //24 - 30.  High bit is unkown flag.
+  statusFlags.keypad[3] = cbuf[4] & 0x0f; //24 - 27.
+  
+  statusFlags.armed = cbuf[4] & 0x10;
 
   statusFlags.zone = (int) toDec(cbuf[5]);
 
