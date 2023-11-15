@@ -163,28 +163,23 @@ void Vista::onDisplay(char cbuf[], int * idx) {
   statusFlags.zone = (int) toDec(cbuf[5]);
 
   statusFlags.beeps = cbuf[6] & BIT_MASK_BYTE1_BEEP;
-  statusFlags.night = ((cbuf[6] & BIT_MASK_BYTE1_NIGHT) > 0);
 
   statusFlags.fire = ((cbuf[7] & BIT_MASK_BYTE2_FIRE) > 0);
   statusFlags.systemFlag = ((cbuf[7] & BIT_MASK_BYTE2_SYSTEM_FLAG) > 0);
   statusFlags.ready = ((cbuf[7] & BIT_MASK_BYTE2_READY) > 0);
   
+  statusFlags.night = ((cbuf[6] & BIT_MASK_BYTE1_NIGHT) > 0);   
   statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
-  
-  if (statusFlags.systemFlag) {
-    statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
-    statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_AC_LOSS) > 0);
-  } else {
-    statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
-    statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
-  }
+  statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
+  statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_AC_LOSS) > 0);
+  statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
+  statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
 
   statusFlags.inAlarm = ((cbuf[8] & BIT_MASK_BYTE3_IN_ALARM) > 0);
   statusFlags.acPower = ((cbuf[8] & BIT_MASK_BYTE3_AC_POWER) > 0);
   statusFlags.chime = ((cbuf[8] & BIT_MASK_BYTE3_CHIME_MODE) > 0);
   statusFlags.bypass = ((cbuf[8] & BIT_MASK_BYTE3_BYPASS) > 0);
   statusFlags.programMode = (cbuf[8] & BIT_MASK_BYTE3_PROGRAM);
-  
   statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
   statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);  
   
