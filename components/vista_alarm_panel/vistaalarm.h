@@ -54,7 +54,7 @@ void disconnectVista() {
  
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
-namespace alarm_panel 
+namespace alarm_panel {
 
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
@@ -744,7 +744,7 @@ private:
         
     }
    
-  bool promptContains(char * p1, const char * msg, uint32_t & zone) {
+  bool promptContains(char * p1, const char * msg, int & zone) {
             int x,y;
             zone=0;
             for (x=0;x<strlen(msg);x++) {
@@ -1228,7 +1228,7 @@ void update() override {
         }
 
         //zone fire status
-        uint32_t tz;
+        int tz;
         if (!(vista.statusFlags.systemFlag  || vista.statusFlags.armedAway || vista.statusFlags.armedStay) && vista.statusFlags.fireZone) {
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
         //if (promptContains(p1,FIRE,tz) && !vista.statusFlags.systemFlag) {
