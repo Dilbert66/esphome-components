@@ -1190,6 +1190,7 @@ void update() override {
         // we also return if it's not an f7, f9 
         if (!(vista.cbuf[0] == 0xf7 || vista.cbuf[0] == 0xf9 ) || vista.cbuf[12]==0x77) return;
 
+       if (vista.cbuf[0]== 0xf7) {
         currentSystemState = sunavailable;
         currentLightState.stay = false;
         currentLightState.away = false;
@@ -1202,7 +1203,7 @@ void update() override {
        // currentLightState.trouble = false;  
         currentLightState.bypass = false; 
         currentLightState.chime = false; 
-        
+       }
         //armed status lights
         if (vista.cbuf[0] == 0xf7 && vista.statusFlags.systemFlag && (vista.statusFlags.armedAway || vista.statusFlags.armedStay  )) {
           if (vista.statusFlags.night) {
@@ -1270,10 +1271,10 @@ void update() override {
       }
          
         //zone fault status 
-        ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
+        //ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
          if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass  ) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
-         if (vista.statusFlags.zone==4) vista.statusFlags.zone=900;
+        // if (vista.statusFlags.zone==4) vista.statusFlags.zone=900;
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
             if (!zt->open) {
