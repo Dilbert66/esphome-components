@@ -365,7 +365,7 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
   } 
 
 #if defined(USE_MQTT)
-  void set_mqtt_id(mqtt::MQTTClientComponent *mqtt_id) { mqttId = mqtt_id; }
+  //void set_mqtt_id(mqtt::MQTTClientComponent *mqtt_id) { mqttId = mqtt_id; }
 #endif  
   void set_accessCode(const char * ac) { accessCode=ac; }
   void set_maxZones(int mz) {maxZones=mz;}
@@ -439,7 +439,9 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
    
 
   };
-  mqtt::MQTTClientComponent *mqttId;
+  #if defined(ESPHOME_MQTT)
+ // mqtt::MQTTClientComponent *mqttId;
+  #endif
   
   public:
   zoneType * zoneStatus;
