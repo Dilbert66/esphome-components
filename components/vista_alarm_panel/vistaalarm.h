@@ -378,8 +378,6 @@ private:
     alarmStatusType fireStatus,
     panicStatus,
     alarmStatus;
-    lrrType lrr,
-    previousLrr;
     uint8_t partitionTargets;
     unsigned long sendWaitTime;
     bool firstRun;
@@ -577,7 +575,7 @@ void setup() override {
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin);
 
       if (zoneStatusChangeBinaryCallback != NULL) {
-        for (uint8_t x = 1; x <= maxZones; x++) {
+        for (int x = 1; x <= maxZones; x++) {
             zoneStatusChangeBinaryCallback(x,false);
             zoneStatusChangeCallback(x,"C");
         }
@@ -1187,8 +1185,8 @@ void update() override {
 
         vista.newCmd = false;
 
-        // we also return if it's not an f7, f9 
-        if (!(vista.cbuf[0] == 0xf7 || vista.cbuf[0] == 0xf9 ) || vista.cbuf[12]==0x77) return;
+        // done other cmd processing.  Process f7 now
+        if (vista.cbuf[0] != 0xf7 ||  vista.cbuf[12]==0x77) return;
 
         currentSystemState = sunavailable;
         currentLightState.stay = false;
@@ -1270,9 +1268,10 @@ void update() override {
       }
          
         //zone fault status 
-        ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
+        //ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
          if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass  ) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
+        // if (vista.statusFlags.zone==4) vista.statusFlags.zone=900;
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
             if (!zt->open) {
@@ -1502,13 +1501,12 @@ void update() override {
         if ((zoneStatusMsg != previousZoneStatusMsg  || forceRefreshZones) && zoneExtendedStatusCallback != NULL)
           zoneExtendedStatusCallback(zoneStatusMsg);
         previousZoneStatusMsg = zoneStatusMsg;
-
-        previousLrr = lrr;
-       
+        
         if (millis() - refreshLrrTime > 30000) {
           lrrMsgChangeCallback("");
           refreshLrrTime = millis();
-        }
+        }  
+
         if (millis() - refreshRfTime > 30000) {
           rfMsgChangeCallback("");
           refreshRfTime = millis();
