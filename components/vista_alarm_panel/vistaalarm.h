@@ -86,6 +86,8 @@ enum sysState {
   sarmed
 };
 
+
+
 #if !defined(ARDUINO_MQTT)
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
@@ -382,11 +384,56 @@ private:
        int zone;
        int mask;
     };
+
+bool zoneActive(int zone) {
+
+  std::string str = "z" + std::to_string(zone) ;
+  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
+  
+  for (auto *obj : bs ) {
+#if defined(USE_CUSTOM_ID)      
+    std::string id=obj->get_type_id();
+    if (id.compare(str) == 0){
+      return true;
+    } else {   
+#endif    
+        std::string name=obj->get_name();
+        if (name.find("(" + str + ")") != std::string::npos){
+            return true;
+        }
+#if defined(USE_CUSTOM_ID)             
+    }
+#endif    
+  }
+
+ std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
+ for (auto *obj : ts ) {
+#if defined(USE_CUSTOM_ID)         
+   std::string id=obj->get_type_id();
+   if (id.compare(str) ==0 ){
+     return true;
+   } else { 
+#endif   
+     std::string name=obj->get_name();
+     if (name.find("(" + str + ")") != std::string::npos ){
+        return true;
+     }
+#if defined(USE_CUSTOM_ID)             
+    }
+#endif
+ }
+
+    return false;
     
+}    
+
+
 std::map<uint32_t,zoneType> extZones;
 zoneType nz;
 
 zoneType * getZone(uint32_t z) {
+    
+    
    zoneType * zt = &nz;//just an empty zone.  
    std::map<uint32_t,zoneType>::iterator it=extZones.find(z);
    if (it != extZones.end())  
@@ -1441,6 +1488,8 @@ void update() override {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
+           if (!zoneActive(x.first)) continue;
+           
            if ( x.second.bypass && !partitionStates[ x.second.partition].previousLightState.bypass) {
              x.second.bypass=false;  
            } 
