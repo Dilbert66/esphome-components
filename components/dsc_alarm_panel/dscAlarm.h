@@ -60,7 +60,7 @@ void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   for (auto *obj : bs ) {
 #if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
-    if (id.find(str) != std::string::npos){
+    if (id.compare(str) == 0){
       obj->publish_state(open) ;
       break;
     } else {   
@@ -83,7 +83,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
  for (auto *obj : ts ) {
 #if defined(USE_CUSTOM_ID)         
    std::string id=obj->get_type_id();
-   if (id.find(str) != std::string::npos ){
+    if (id.compare(str) == 0){
     obj->publish_state(*text) ;
     return;
    } else { 
