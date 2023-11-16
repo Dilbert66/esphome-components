@@ -94,7 +94,7 @@ void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   for (auto *obj : bs ) {
 #if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
-    if (id.find(str) != std::string::npos){
+    if (id.compare(str) == 0){
       obj->publish_state(open) ;
       break;
     } else {   
@@ -117,7 +117,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
  for (auto *obj : ts ) {
 #if defined(USE_CUSTOM_ID)         
    std::string id=obj->get_type_id();
-   if (id.find(str) != std::string::npos ){
+   if (id.compare(str) ==0 ){
     obj->publish_state(*text) ;
     return;
    } else { 
@@ -1258,10 +1258,10 @@ void update() override {
       }
          
         //zone fault status 
-        //ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
+       // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
          if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass  ) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
-        // if (vista.statusFlags.zone==4) vista.statusFlags.zone=997;
+         //if (vista.statusFlags.zone==4) vista.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
             if (!zt->open) {
@@ -1441,7 +1441,6 @@ void update() override {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
-           
            if ( x.second.bypass && !partitionStates[ x.second.partition].previousLightState.bypass) {
              x.second.bypass=false;  
            } 
