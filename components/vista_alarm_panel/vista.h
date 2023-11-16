@@ -87,8 +87,7 @@ struct statusFlagType {
         int zone;
         uint8_t user;
         uint8_t partition;
-    }
-    lrr;
+    } lrr;
 
 };
 
