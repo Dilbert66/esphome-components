@@ -100,6 +100,9 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
 }
 #endif
 
+#if defined(ESPHOME_MQTT)
+const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
+#endif
 
 const char mm0[] PROGMEM = "Press # to exit";
 const char mm1[] PROGMEM = "Zone Bypass";
@@ -436,7 +439,8 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
    
 
   };
-
+  mqtt::MQTTClientComponent *mqttId;
+  
   public:
   zoneType * zoneStatus;
   partitionType partitionStatus[dscPartitions];
