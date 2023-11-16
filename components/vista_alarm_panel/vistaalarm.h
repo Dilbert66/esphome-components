@@ -312,10 +312,6 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
     } otherSup;
         
 
-public:
-    //zoneType * zones;
-    //zoneType extended;
-    
 private:    
     unsigned long lowBatteryTime;
 
@@ -705,7 +701,7 @@ private:
   int y=0;
             int zone=0;
            
-            while(x<15 && p1[x]!=0x20) {
+            while(x<12 && p1[x]!=0x20) {
                 x++; //skip any prompt letter
             }
             if (p1[x] !=0x20 || !( p1[x+1] > 0x2f && p1[x+1] < 0x3a)) return false;
@@ -1100,13 +1096,7 @@ void update() override {
         p2[0]='\0';
         if (vista.cbuf[0] == 0xf7 && vista.newCmd) {
           getPartitionsFromMask();
-          /*test code
-          if (vista.statusFlags.prompt[0]==70) {
-                    vista.statusFlags.prompt[2]=0x88;
-                    vista.statusFlags.prompt[3]=0x8b;
-          }
-          */
-          translatePrompt(vista.statusFlags.prompt);
+          //translatePrompt(vista.statusFlags.prompt);
           memcpy(p1, vista.statusFlags.prompt, 16);
           memcpy(p2, & vista.statusFlags.prompt[16], 16);
           p1[16] = '\0';
@@ -1271,7 +1261,7 @@ void update() override {
         //ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vista.statusFlags.armed,vista.statusFlags.systemFlag,vista.statusFlags.armedStay,vista.statusFlags.armedAway);
          if (vista.cbuf[0] == 0xf7 && !vista.statusFlags.systemFlag  && !vista.statusFlags.armedAway && !vista.statusFlags.armedStay && !vista.statusFlags.fire && !vista.statusFlags.check && !vista.statusFlags.alarm && !vista.statusFlags.bypass  ) { 
          if (vista.cbuf[5] > 0x90) getZoneFromPrompt(p1);
-        // if (vista.statusFlags.zone==4) vista.statusFlags.zone=900;
+        // if (vista.statusFlags.zone==4) vista.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vista.statusFlags.systemFlag) {
              zoneType * zt=getZone(vista.statusFlags.zone);            
             if (!zt->open) {
