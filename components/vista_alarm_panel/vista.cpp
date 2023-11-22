@@ -936,14 +936,16 @@ bool Vista::handle() {
     memset(cbuf, 0, szCbuf); //clear buffer mem  
     
     if (expectByte && x) {
-      retries = 0;  
+
       if (x == expectByte) {
+        retries = 0;            
         expectByte = 0;
         cbuf[0] = 0x78; //for flagging an expect byte found ok
         cbuf[1] = x;
         return 1;    // 1 for logging. 0 for normal
-      } else
-          expectByte=0;
+      } else {
+            //we did not get the expect byte response. So assume this byte is another cmd
+      }
     }
     
     //expander request command
