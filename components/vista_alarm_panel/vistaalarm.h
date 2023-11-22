@@ -385,7 +385,7 @@ private:
        int mask;
     };
 
-bool zoneActive(int zone) {
+bool zoneActive(uint32_t zone) {
 
   std::string str = "z" + std::to_string(zone) ;
   std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
