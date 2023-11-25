@@ -1145,7 +1145,7 @@ private:
   bool getEnabledZonesE6(byte inputByte, byte startZone, byte partitionByte) {
     bool zonesEnabled = false;
     byte zone;
-    byte partition = getPanelBitNumber(partitionByte, 1);
+    byte partition = getPanelBitNumber(partitionByte, 1) + 1;
     for (byte panelByte = inputByte; panelByte <= inputByte + 3; panelByte++) {
       if (dsc.panelData[panelByte] != 0) {
         zonesEnabled = true;
@@ -2548,7 +2548,7 @@ void update() override {
     switch (dsc.panelData[0]) {
     case 0x0F:
     case 0x0A:
-      processProgramZones(4);
+      processProgramZones(4,0);
       if (dsc.panelData[3] == 0xBA)
         processLowBatteryZones();
       if (dsc.panelData[3] == 0xA1) { //system status
@@ -2565,7 +2565,7 @@ void update() override {
     case 0x63:
 
       if ((dsc.panelData[2] & 0x04) == 0x04) { // Alarm memory zones 1-32
-        processProgramZones(3);
+        processProgramZones(30);
       }
       break;
 
@@ -2599,6 +2599,11 @@ void update() override {
 
       switch (dsc.panelData[2]) {
       case 0x01:
+        if (!(dsc.panelData[9] & 0x80))
+           processProgramZones(5,0);
+        else
+          processProgramZones(5,4); 
+           break;
       case 0x02:
       case 0x03:
       case 0x04:
@@ -2613,12 +2618,12 @@ void update() override {
         break;
       case 0x20:
       case 0x21:
-        processProgramZones(5);
+        processProgramZones(5,4);
         break; // Programming zone lights 33-64 //bypass?
       case 0x18:
         //ESP_LOGI("info", "zone lights 33");
         if ((dsc.panelData[4] & 0x04) == 0x04)
-          processProgramZones(5);
+          processProgramZones(5,4);
         break; // Alarm memory zones 33-64
       case 0x2B:
         getEnabledZonesE6(4, 1, dsc.panelData[3]);
@@ -2740,14 +2745,12 @@ void update() override {
 
   }
 
-  void processProgramZones(byte startByte) {
+  void processProgramZones(byte startByte,byte zoneStart) {
     byte byteCount = 0;
-    byte zoneStart = 0;
     byte zone;
   //  std::string group1msg,group2msg;
     
 
-    if (startByte == 5) zoneStart = 4;
     for (byte zoneGroup = zoneStart; zoneGroup < zoneStart + 4; zoneGroup++) {
       programZones[zoneGroup] = dsc.panelData[startByte + byteCount];
       byteCount++;
@@ -2758,29 +2761,7 @@ void update() override {
             programZones[x] = 0;
         }  
     }    
-/*
-    byteCount = 0;
-    char s1[5];
-   std::string  group1msg="";
-   std::string  group2msg="";    
-    //if (startByte == 4 || startByte == 3) group1msg = "";
-   // if (startByte == 5) group2msg = "";
-    for (byte zoneGroup = zoneStart; zoneGroup < zoneStart + 4; zoneGroup++) {
-      for (byte zoneBit = 0; zoneBit < 8; zoneBit++) {
-        zone = (zoneBit + 1) + (zoneGroup * 8);
-        if (bitRead(dsc.panelData[startByte + byteCount], zoneBit)) {
-          sprintf(s1, "%02d ", zone);
-          if (startByte == 4 || startByte == 3) group1msg.append(s1);
-          if (startByte == 5) group2msg.append(s1);
 
-        }
-      }
-      byteCount++;
-    }
-   // group1msg.append(group2msg);
-    ESP_LOGI("info","procesprogramzones: %02X, %s,%S",startByte,group1msg.c_str(),group2msg.c_str());
-    //lightsCallback(group1msg, defaultPartition);
-    */
     if (options)
       dsc.statusChanged = true;
   }
