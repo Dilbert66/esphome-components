@@ -2565,7 +2565,7 @@ void update() override {
     case 0x63:
 
       if ((dsc.panelData[2] & 0x04) == 0x04) { // Alarm memory zones 1-32
-        processProgramZones(30);
+        processProgramZones(3,0);
       }
       break;
 
