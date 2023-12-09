@@ -167,7 +167,7 @@ const char STATUS_ONLINE[] PROGMEM = "online";
 const char STATUS_OFFLINE[] PROGMEM = "offline";
 const char STATUS_TRIGGERED[] PROGMEM = "triggered";
 const char STATUS_READY[] PROGMEM = "ready";
-const char STATUS_NOT_READY[] PROGMEM = "not_ready"; //ha alarm panel likes to see "unavailable" instead of not_ready when the system can't be armed
+const char STATUS_NOT_READY[] PROGMEM = "unavailable"; //ha alarm panel likes to see "unavailable" instead of not_ready when the system can't be armed
 
 const char *
   const mainMenu[] PROGMEM = {
