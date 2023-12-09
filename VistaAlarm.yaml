@@ -82,6 +82,28 @@ external_components:
     components: [vista_alarm_panel,binary_sensor,text_sensor] 
     refresh: 10min
     
+## web keypad component
+## each included files will be downloaded automatically and compiled within the flash.  
+## there will be no need for internet access when running. 
+#For www.js build details and source: https://github.com/Dilbert66/esphome-webserver-custom/tree/keypad
+#Component source: https://github.com/Dilbert66/esphome-components/tree/keypad/components/web_keypad
+### Note: this is an ESP32 only component. The esp8266 does not support the resources needed.
+web_keypad:
+  port: 80 
+  partitions: 1  # a keypad will be shown for each partition
+  log: false
+  config_url: https://dilbert66.github.io/config_files/config_vista.yml
+  js_url: https://dilbert66.github.io/js_files/www.js
+  ## If you prefer to use locally hosted compile time files comment two lines above and uncomment below  
+  #config_local: ./config_vista.yml     
+  #js_include: ./www.js    
+  
+   ## custom function call to send keypresses if other than dsc/vista components are used. Parmeters are a string keys and int partition
+  #service_lambda: |- 
+      #$panelId->alarm_keypress_partition(keys,partition);    
+     
+    
+    
 #you can remove/disable this section if you don't want your panel time updated automatically. 
 #interval:
   #- interval: 7200s
