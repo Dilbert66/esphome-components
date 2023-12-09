@@ -20,6 +20,62 @@
 #include "dscKeybus.h"
 
 
+byte dscKeybusInterface::dscClockPin;
+byte dscKeybusInterface::dscReadPin;
+byte dscKeybusInterface::dscWritePin;
+char dscKeybusInterface::writeKey;
+bool dscKeybusInterface::virtualKeypad;
+bool dscKeybusInterface::processModuleData;
+byte dscKeybusInterface::panelData[dscReadSize];
+byte dscKeybusInterface::panelByteCount;
+byte dscKeybusInterface::panelBitCount;
+volatile byte dscKeybusInterface::moduleData[dscReadSize];
+volatile bool dscKeybusInterface::moduleDataCaptured;
+volatile bool dscKeybusInterface::moduleDataDetected;
+volatile byte dscKeybusInterface::moduleByteCount;
+volatile byte dscKeybusInterface::moduleBitCount;
+volatile bool dscKeybusInterface::writeAlarm;
+volatile bool dscKeybusInterface::bufferOverflow;
+volatile byte dscKeybusInterface::panelBufferLength;
+volatile byte dscKeybusInterface::panelBuffer[dscBufferSize][dscReadSize];
+volatile byte dscKeybusInterface::panelBufferBitCount[dscBufferSize];
+volatile byte dscKeybusInterface::panelBufferByteCount[dscBufferSize];
+volatile byte dscKeybusInterface::isrPanelData[dscReadSize];
+volatile byte dscKeybusInterface::isrPanelByteCount;
+volatile byte dscKeybusInterface::isrPanelBitCount;
+volatile byte dscKeybusInterface::isrPanelBitTotal;
+volatile byte dscKeybusInterface::isrModuleData[dscReadSize];
+volatile byte dscKeybusInterface::moduleCmd;
+volatile byte dscKeybusInterface::moduleSubCmd;
+volatile unsigned long dscKeybusInterface::keybusTime;
+byte dscKeybusInterface::moduleSlots[6];
+moduleType dscKeybusInterface::modules[maxModules];
+byte dscKeybusInterface::moduleIdx;
+bool dscKeybusInterface::enableModuleSupervision;
+byte dscKeybusInterface::maxFields05; 
+byte dscKeybusInterface::maxFields11;
+
+writeQueueType dscKeybusInterface::writeQueue[writeQueueSize];
+Stream* dscKeybusInterface::stream;
+
+
+byte * dscKeybusInterface::writeBuffer;
+byte dscKeybusInterface::cmdD0buffer[6];
+bool dscKeybusInterface::pendingD0;
+bool dscKeybusInterface::pending70;
+bool dscKeybusInterface::pending6E;
+
+volatile byte dscKeybusInterface::writePartition;
+volatile byte dscKeybusInterface::writeBufferIdx;
+volatile byte dscKeybusInterface::writeBufferLength;
+volatile bool dscKeybusInterface::writeDataPending;
+byte dscKeybusInterface::writeDataBit;
+volatile pgmBufferType dscKeybusInterface::pgmBuffer;
+volatile byte dscKeybusInterface::inIdx;
+volatile byte dscKeybusInterface::outIdx;
+byte dscKeybusInterface::maxZones;
+byte dscKeybusInterface::panelVersion;
+
 #if defined(ESP32)
 portMUX_TYPE dscKeybusInterface::timer1Mux = portMUX_INITIALIZER_UNLOCKED;
 

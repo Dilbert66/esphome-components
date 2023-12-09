@@ -135,7 +135,8 @@ CONFIG_SCHEMA = cv.Schema(
 
 async def to_code(config):
     old_dir = CORE.relative_build_path("src")
-    cg.add_define("USE_CUSTOM_ID")    
+    cg.add_define("USE_CUSTOM_ID") 
+    cg.add_define("USE_VISTA_PANEL")  
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     

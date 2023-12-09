@@ -100,7 +100,7 @@ CONFIG_SCHEMA = cv.Schema(
 async def to_code(config):
     old_dir = CORE.relative_build_path("src")
     cg.add_define("USE_CUSTOM_ID")      
-  
+    cg.add_define("USE_DSC_PANEL")    
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:

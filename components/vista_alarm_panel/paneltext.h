@@ -1,38 +1,36 @@
-#ifndef __PANELTEXT_H
-#define __PANELTEXT_H
-
+#pragma once
  //EN
  
     //lookups for determining zone status as strings.  Must include complete word before zone#. No spaces. obsolete now. No longer needed. Using flags to identify type
     
-    const char * FAULT = "FAULT";    
-    const char * BYPAS = "BYPAS";
-    const char * ALARM = "ALARM";
-    const char * FIRE = "FIRE";
-    const char * CHECK = "CHECK";
-    const char * TRBL = "TRBL";    
+    extern const char * FAULT;    
+    extern const char * BYPAS;
+    extern const char * ALARM;
+    extern const char * FIRE;
+    extern const char * CHECK;
+    extern const char * TRBL;    
     
     
     //Looks for the <space>*<space> found in the "Hit * to view messages".
-    const char * HITSTAR = " * ";      
+    extern const char * HITSTAR;      
     
  //messages to display to home assistant
 
-    const char * STATUS_ARMED = "armed_away";
-    const char * STATUS_STAY = "armed_home";
-    const char * STATUS_NIGHT = "armed_night";
-    const char * STATUS_OFF = "disarmed";
-    const char * STATUS_ONLINE = "online";
-    const char * STATUS_OFFLINE = "offline";
-    const char * STATUS_TRIGGERED = "triggered";
-    const char * STATUS_READY = "ready";
+    extern const char * STATUS_ARMED;
+    extern const char * STATUS_STAY;
+    extern const char * STATUS_NIGHT ;
+    extern const char * STATUS_OFF ;
+    extern const char * STATUS_ONLINE;
+    extern const char * STATUS_OFFLINE;
+    extern const char * STATUS_TRIGGERED;
+    extern const char * STATUS_READY;
       
     //the default ha alarm panel card likes to see "unavailable" instead of not_ready when the system can't be armed
-    const char * STATUS_NOT_READY = "not_ready";
-    const char * MSG_ZONE_BYPASS = "zone_bypass_entered";
-    const char * MSG_ARMED_BYPASS = "armed_custom_bypass";
-    const char * MSG_NO_ENTRY_DELAY = "no_entry_delay";
-    const char * MSG_NONE = "no_messages";
+    extern const char * STATUS_NOT_READY;
+    extern const char * MSG_ZONE_BYPASS;
+    extern const char * MSG_ARMED_BYPASS;
+    extern const char * MSG_NO_ENTRY_DELAY;
+    extern const char * MSG_NONE;
     
-#endif
+
     

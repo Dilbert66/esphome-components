@@ -143,6 +143,7 @@ volatile unsigned long dscClassicKeypadInterface::alarmKeyInterval;
 #else
 #include "dscKeybus.h"
 
+/*
 byte dscKeybusInterface::dscClockPin;
 byte dscKeybusInterface::dscReadPin;
 byte dscKeybusInterface::dscWritePin;
@@ -200,6 +201,6 @@ byte dscKeybusInterface::maxZones;
 byte dscKeybusInterface::panelVersion;
 // Interrupt function called after 250us by dscClockInterrupt() using AVR Timer1, disables the timer and calls
 // dscDataInterrupt() to read the data line
-
+*/
 #endif  // dscClassicSeries, dscKeypadInterface
 #endif  // dscKeybusInterface_h
