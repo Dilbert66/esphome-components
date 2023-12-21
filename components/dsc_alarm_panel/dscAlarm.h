@@ -42,6 +42,8 @@
 #define maxRelays 8
 
 dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault);
+bool forceDisconnect;
+
 void disconnectKeybus() {
   dsc.stop();
   dsc.keybusConnected = false;
@@ -245,7 +247,6 @@ const char *
     ml1
   };
 
-bool forceDisconnect;
 
 
 enum panelStatus {
