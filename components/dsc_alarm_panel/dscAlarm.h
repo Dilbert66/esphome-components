@@ -42,6 +42,13 @@
 #define maxRelays 8
 
 dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault);
+void disconnectKeybus() {
+  dsc.stop();
+  dsc.keybusConnected = false;
+  dsc.statusChanged = false;
+  forceDisconnect = true;
+
+}
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
@@ -240,13 +247,7 @@ const char *
 
 bool forceDisconnect;
 
-void disconnectKeybus() {
-  dsc.stop();
-  dsc.keybusConnected = false;
-  dsc.statusChanged = false;
-  forceDisconnect = true;
 
-}
 enum panelStatus {
   acStatus,
   batStatus,
