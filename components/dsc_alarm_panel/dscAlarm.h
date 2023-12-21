@@ -8,11 +8,11 @@
 #include "esphome/core/application.h"
 
 #if defined(USE_MQTT)
-#include "esphome/components/mqtt/mqtt_client.h"
+//#include "esphome/components/mqtt/mqtt_client.h"
 #endif
 
 #if defined(USE_API)
-#include "esphome/components/api/custom_api_device.h"
+//#include "esphome/components/api/custom_api_device.h"
 #endif
 
 #if defined(USE_TIME)

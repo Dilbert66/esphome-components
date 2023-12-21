@@ -136,6 +136,7 @@ std::string WebServer::get_config_json() {
     root["log"] = this->expose_log_;
     root["lang"] = "en";
     root["partitions"]=this->partitions_;
+    root["keypad"]=this->show_keypad_;
   });
 }
 
@@ -263,7 +264,7 @@ void WebServer::loop() {
     char addr[50];
     sprintf(addr,"http://0.0.0.0:%d",port_);
     printf("Starting web server on %s:%d\n", network::get_use_address().c_str(),port_);
-   if ((c = mg_http_listen(&mgr, addr, ev_handler, &mgr)) == NULL) {
+   if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL) {
      printf("Cannot listen on address..");
       return;
     }
@@ -1117,11 +1118,9 @@ std::string WebServer::text_json(text::Text *obj, const std::string &value, Json
     }
     
 bool WebServer::callKeyService(const char *buf,int partition) {
-#if defined(USE_DSC_PANEL) || defined (USE_VISTA_PANEL)
-
-#ifdef USE_DSC_PANEL
+#if defined(USE_DSC_PANEL)
      auto * alarmPanel=static_cast< alarm_panel::DSCkeybushome*>(alarm_panel::alarmPanelPtr);
-   #else     
+#elif defined(USE_VISTA_PANEL)
      auto * alarmPanel=static_cast<alarm_panel::vistaECPHome*>(alarm_panel::alarmPanelPtr);
 #endif 
       std::string keys=buf;
@@ -1170,9 +1169,6 @@ void WebServer::handle_alarm_panel_request(struct mg_connection *c, void *ev_dat
     }
    mg_http_reply(c,404,"","");
 }
-
-#endif
-
 
 
 #ifdef USE_SELECT
@@ -1537,6 +1533,7 @@ uint8_t WebServer::matchIndex=0;
 
 void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     WebServer * srv=static_cast<WebServer*>(webServerPtr);
+    //WebServer * srv=static_cast<WebServer*>(fn_data);   
     bool final=false;
     if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!

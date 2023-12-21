@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Arduino.h"
-
+#include <queue>
 #include "ECPSoftwareSerial.h"
 
 //#define DEBUG
@@ -103,9 +103,17 @@ struct keyType {
     uint8_t kpaddr;
 };
 
+struct cmdQueueItem {
+    char cbuf[50];
+    char extcmd[16];
+    bool newCmd;
+    bool newExtCmd;
+    struct statusFlagType statusFlags;
+};
+
 class Vista {
 
-    public:
+  public:
         Vista(Stream * OutStream);
     ~Vista();
     void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin);
@@ -144,8 +152,9 @@ class Vista {
     char b; //used in isr
     bool charAvail();
     bool sendPending();
-
-    private:
+    std::queue<struct cmdQueueItem> cmdQueue;
+    
+  private:
     keyType * outbuf;
     char * tmpOutBuf;
     volatile uint8_t outbufIdx, inbufIdx;
@@ -185,6 +194,7 @@ class Vista {
     bool decodePacket();
     bool getExtBytes();
     volatile bool is2400;
+    void pushCmdQueueItem();
 
     char IRAM_ATTR addrToBitmask1(char addr) {
         if (addr > 7) return 0xFF;

@@ -4,8 +4,6 @@ import yaml
 import requests
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import web_server_base
-from esphome.components.web_server_base import CONF_WEB_SERVER_BASE_ID
 from esphome.const import (
     CONF_CSS_INCLUDE,
     CONF_CSS_URL,
@@ -29,12 +27,14 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 
-AUTO_LOAD = ["json", "web_server_base"]
+DEPENDENCIES = ["network"]
+AUTO_LOAD = ["json"]
 
 CONF_CONFIG ="config_local"
 CONF_KEYPAD_URL="config_url"
 CONF_PARTITIONS="partitions"
 CONF_SERVICE_LAMBDA="service_lambda"
+CONF_KEYPAD="show_keypad"
 
 
 web_server_ns = cg.esphome_ns.namespace("web_server")
@@ -74,6 +74,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_PARTITIONS): cv.int_,            
             cv.Optional(CONF_JS_INCLUDE): cv.file_,
             cv.Optional(CONF_CONFIG):cv.file_,
+            cv.Optional(CONF_KEYPAD, default=True):cv.boolean,
             cv.Optional(CONF_KEYPAD_URL):cv.string,  
             cv.Optional(CONF_SERVICE_LAMBDA): cv.lambda_,
             cv.Optional(CONF_ENABLE_PRIVATE_NETWORK_ACCESS, default=True): cv.boolean,
@@ -86,9 +87,6 @@ CONFIG_SCHEMA = cv.All(
                         cv.string_strict, cv.Length(min=1)
                     ),
                 }
-            ),
-            cv.GenerateID(CONF_WEB_SERVER_BASE_ID): cv.use_id(
-                web_server_base.WebServerBase
             ),
             cv.Optional(CONF_INCLUDE_INTERNAL, default=False): cv.boolean,
             cv.SplitDefault(
@@ -149,11 +147,9 @@ def add_resource_as_progmem(
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    paren = await cg.get_variable(config[CONF_WEB_SERVER_BASE_ID])
-
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-
+    cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=1.0.0") 
     cg.add_define("USE_WEBSERVER")
     version = config[CONF_VERSION]
 
@@ -161,7 +157,6 @@ async def to_code(config):
     cg.add_define("USE_WEBSERVER")
     cg.add_define("USE_WEBSERVER_PORT", config[CONF_PORT])
     cg.add_define("USE_WEBSERVER_VERSION", version)
-   # cg.add_define("MG_DATA_SIZE",32)
     
     if lambda_config := config.get(CONF_SERVICE_LAMBDA):
         lambda_ = await cg.process_lambda(
@@ -176,13 +171,15 @@ async def to_code(config):
         cg.add(var.set_js_url(config[CONF_JS_URL]))
     cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
+    cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
+    
     if CONF_PARTITIONS in config:
         cg.add(var.set_partitions(config[CONF_PARTITIONS]))   
     if config[CONF_ENABLE_PRIVATE_NETWORK_ACCESS]:
         cg.add_define("USE_WEBSERVER_PRIVATE_NETWORK_ACCESS")
     if CONF_AUTH in config:
-        cg.add(paren.set_auth_username(config[CONF_AUTH][CONF_USERNAME]))
-        cg.add(paren.set_auth_password(config[CONF_AUTH][CONF_PASSWORD]))
+        cg.add(set_auth_username(config[CONF_AUTH][CONF_USERNAME]))
+        cg.add(set_auth_password(config[CONF_AUTH][CONF_PASSWORD]))
     if CONF_CSS_INCLUDE in config:
         cg.add_define("USE_WEBSERVER_CSS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_CSS_INCLUDE])
@@ -201,7 +198,7 @@ async def to_code(config):
             add_resource_as_progmem("JS_INCLUDE", js_file.read())
            
     cg.add(var.set_include_internal(config[CONF_INCLUDE_INTERNAL]))
-        
+       
     if CONF_KEYPAD_URL in config and config[CONF_KEYPAD_URL]:
         response = requests.get(config[CONF_KEYPAD_URL])
         configuration = yaml.safe_load(response.text)

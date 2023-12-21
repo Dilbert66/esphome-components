@@ -4,9 +4,9 @@
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
 #if defined(USE_MQTT)
-#include "esphome/components/mqtt/mqtt_client.h"
+//#include "esphome/components/mqtt/mqtt_client.h"
 #else
-#include "esphome/components/api/custom_api_device.h"
+//#include "esphome/components/api/custom_api_device.h"
 #endif
 #include "esphome/core/defines.h"
 #include "paneltext.h"
@@ -18,7 +18,7 @@
 
 #include "vista.h"
 #include <string>
-
+#include <queue>
 
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
@@ -26,6 +26,8 @@
 #define MAX_ZONES 48
 #define MAX_PARTITIONS 3  
 #define DEFAULTPARTITION 1
+
+#define ASYNC_CORE 1
 
 //default pins to use for serial comms to the panel
 //The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.
@@ -54,7 +56,6 @@ namespace alarm_panel {
 extern void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
-const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif  
   
 #endif   
@@ -304,16 +305,17 @@ private:
     panicStatus,
     alarmStatus;
     uint8_t partitionTargets;
-    unsigned long sendWaitTime;
     bool firstRun;
     
     struct serialType {
        int zone;
        int mask;
     };
+    struct cmdQueueItem vistaCmd;    
 
 bool zoneActive(uint32_t zone);
 
+static void cmdQueueTask(void * args);
 
 std::map<uint32_t,zoneType> extZones;
 zoneType nz;

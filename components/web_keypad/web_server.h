@@ -1,9 +1,8 @@
 #pragma once
 #include "list_entities.h"
-#include "mongoose.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
-
+#include "mongoose.h"
 
 #include <vector>
 #ifdef USE_ESP32
@@ -28,8 +27,12 @@ extern const uint8_t ESPHOME_WEBSERVER_JS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBSERVER_JS_INCLUDE_SIZE;
 #endif
 
+
+
 namespace esphome {
 namespace web_server {
+
+
 
 extern void * webServerPtr;
 /// Internal helper struct that is used to parse incoming URLs
@@ -46,6 +49,11 @@ enum msgType {
   CONFIG,
   PING ,
   OTA  
+};
+
+struct Credentials {
+  std::string username;
+  std::string password;
 };
 
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
@@ -110,16 +118,21 @@ class WebServer : public Controller, public Component {
    *
    * @param expose_log.
    */
+   
+  Credentials *credentials_;
   using key_service_t = std::function<void(std::string,int)>;
   optional<key_service_t> key_service_func_{}; 
   
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
+  void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
   void set_keypad_config(const char * json_keypad_config);
   void set_port(uint8_t port) { this->port_=port;};
   void set_service_lambda(key_service_t &&lambda) { 
    this->key_service_func_ = lambda;
   }
+    void set_auth_username(std::string auth_username) { credentials_->username = std::move(auth_username); }
+  void set_auth_password(std::string auth_password) { credentials_->password = std::move(auth_password); }  
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -337,6 +350,7 @@ static void webPollTask(void * args);
   bool expose_log_{true};
   uint8_t partitions_{1};
   uint8_t port_{80};
+  bool show_keypad_{true};
   
 #ifdef USE_ESP32
   std::deque<std::function<void()>> to_schedule_;

@@ -222,6 +222,31 @@ int Vista::toDec(int n) {
   return (int) li;
 }
 
+/*
+struct cmdQueueItem {
+    char cbuf[40];
+    char extCmd[16];
+    bool newCmd;
+    bool newExtCmd;
+    bool lrrSupervisor;
+    struct statusFlagType statusFlags;
+}
+*/
+void Vista::pushCmdQueueItem() {
+    struct cmdQueueItem q;
+    q.statusFlags=statusFlags;
+    q.newCmd=newCmd;
+    q.newExtCmd=newExtCmd;
+    for (int x=0;x<45;x++) {
+      q.cbuf[x]=cbuf[x];  
+    }
+    for (int x=0;x<16;x++) {
+      q.extcmd[x]=extcmd[x];  
+    }
+    cmdQueue.push(q);
+}
+
+
 /**
  * Typical packet
  * positions 8 and 9 hold the report code
@@ -918,9 +943,13 @@ bool Vista::getExtBytes() {
 
 bool Vista::handle() {
   uint8_t x;
-
+  newCmd=false;
+  newExtCmd=false;
   #ifdef MONITORTX
-  if (getExtBytes()) return 1;
+  if (getExtBytes()) {
+      pushCmdQueueItem();
+      return 1;
+  }
   #endif
 
   if (is2400)
@@ -928,7 +957,7 @@ bool Vista::handle() {
   else
     vistaSerial -> setBaud(4800);
 
-  newCmd=false;
+
   if (vistaSerial -> available()) {
 
     x = vistaSerial -> read();
@@ -942,6 +971,7 @@ bool Vista::handle() {
         expectByte = 0;
         cbuf[0] = 0x78; //for flagging an expect byte found ok
         cbuf[1] = x;
+        pushCmdQueueItem();        
         return 1;    // 1 for logging. 0 for normal
       } else {
             //we did not get the expect byte response. So assume this byte is another cmd
@@ -972,6 +1002,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
       #endif
+      pushCmdQueueItem();      
       return 1;
     }
 
@@ -990,6 +1021,7 @@ bool Vista::handle() {
         newCmd = true; //new valid cmd, process it
         gidx=0;
       }
+      pushCmdQueueItem();      
       return 1; // return 1 to log packet        
     }
 
@@ -1012,6 +1044,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
+      pushCmdQueueItem();      
       return 1;
     }
     //key ack
@@ -1029,6 +1062,7 @@ bool Vista::handle() {
       memcpy(extcmd, cbuf, 7);
 
       #endif
+      pushCmdQueueItem();      
       return 1;
     }
 
@@ -1044,6 +1078,7 @@ bool Vista::handle() {
       else
         onStatus(cbuf, & gidx);
       newCmd = true;
+      pushCmdQueueItem();      
       return 1;
     }
 /*
@@ -1069,7 +1104,8 @@ bool Vista::handle() {
       #ifdef MONITORTX
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 2);
-      #endif      
+      #endif 
+      pushCmdQueueItem();
       return 1;
     }    
 
@@ -1086,6 +1122,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
+      pushCmdQueueItem();      
       return 1;
     }
 
@@ -1105,6 +1142,7 @@ bool Vista::handle() {
        i++;
      }
     }
+    pushCmdQueueItem();
     return 1;
   }
 
