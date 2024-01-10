@@ -237,12 +237,8 @@ void Vista::pushCmdQueueItem() {
     q.statusFlags=statusFlags;
     q.newCmd=newCmd;
     q.newExtCmd=newExtCmd;
-    for (int x=0;x<45;x++) {
-      q.cbuf[x]=cbuf[x];  
-    }
-    for (int x=0;x<16;x++) {
-      q.extcmd[x]=extcmd[x];  
-    }
+    memcpy(q.cbuf, cbuf, 45); 
+    memcpy(q.extcmd,extcmd,16);
     cmdQueue.push(q);
 }
 
