@@ -1282,6 +1282,7 @@ void DSCkeybushome::update()  {
         }
 
         // Publishes armed/disarmed status
+     //   ESP_LOGD("test","partition=%d,armed=%d,armedstay=%d,armedAway=%d,noentrydelay=%d",partition,dsc.armed[partition],dsc.armedStay[partition],dsc.armedAway[partition],dsc.noEntryDelay[partition]);
         if (dsc.armedChanged[partition] || forceRefresh ) {
           dsc.armedChanged[partition] = false; // Resets the partition armed status flag
 

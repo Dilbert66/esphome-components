@@ -746,7 +746,7 @@ void vistaECPHome::setup()  {
         for (uint8_t p=1;p <= maxPartitions;p++) {
             for (int8_t i=3;i>=0;i--) {
                 int8_t shift=partitionKeypads[p]-(8*i);
-                if (shift > 0 && (vistaCmd.statusFlags.keypad[i] & (0x01 << shift))) {
+                if (shift >= 0 && (vistaCmd.statusFlags.keypad[i] & (0x01 << shift))) {
                     partitionTargets=partitionTargets+1;
                     partitions[p-1] = 1;
                     break;
