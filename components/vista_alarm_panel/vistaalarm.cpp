@@ -33,7 +33,9 @@ void disconnectVista() {
 #include "esphome.h"
 namespace esphome {
 namespace alarm_panel {
-    
+ 
+static const char *const TAG = "vista_alarm_control_panel"; 
+ 
 void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
@@ -686,7 +688,7 @@ void vistaECPHome::setup()  {
           vista.write("600",addr);
         }
       } 
-      else if (state.compare("D") == 0 && partitionStates[partition-1].previousLightState.armed) {
+      else if (state.compare("D") == 0) {
         if (code.length() == 4) { // ensure we get 4 digit code
           vista.write(code.c_str(),addr);
           vista.write("1",addr);

@@ -53,6 +53,7 @@ extern void disconnectVista();
 namespace esphome {
 namespace alarm_panel {
  
+
 extern void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
