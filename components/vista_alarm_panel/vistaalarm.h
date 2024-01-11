@@ -909,7 +909,7 @@ public:
         //todo
       }
       // Disarm
-      else if (state.compare("D") == 0 && partitionStates[partition-1].previousLightState.armed) {
+      else if (state.compare("D") == 0 ) {
         if (code.length() == 4) { // ensure we get 4 digit code
           vista.write(code.c_str(),addr);
           vista.write("1",addr);
