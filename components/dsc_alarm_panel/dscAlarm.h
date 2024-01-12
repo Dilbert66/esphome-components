@@ -8,11 +8,11 @@
 #include "esphome/core/application.h"
 
 #if defined(USE_MQTT)
-//#include "esphome/components/mqtt/mqtt_client.h"
+#include "esphome/components/mqtt/mqtt_client.h"
 #endif
 
 #if defined(USE_API)
-//#include "esphome/components/api/custom_api_device.h"
+#include "esphome/components/api/custom_api_device.h"
 #endif
 
 #if defined(USE_TIME)
@@ -121,6 +121,7 @@ const char ml0[] PROGMEM = "System is Ready:Ready to Arm <>";
 const char ml1[] PROGMEM = "Secure System:Before Arming <>";
 
 const char STATUS_PENDING[] PROGMEM = "pending";
+const char STATUS_ARMING[] PROGMEM = "arming";
 const char STATUS_ARM[] PROGMEM = "armed_away";
 const char STATUS_STAY[] PROGMEM = "armed_home";
 const char STATUS_NIGHT[] PROGMEM = "armed_night";

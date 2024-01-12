@@ -1330,7 +1330,7 @@ void DSCkeybushome::update()  {
           if (dsc.exitDelay[partition]) {
        
               partitionStatus[partition].armed=false;              
-              partitionStatusChangeCallback( String(FPSTR(STATUS_PENDING)).c_str(), partition + 1);
+              partitionStatusChangeCallback( String(FPSTR(STATUS_ARMING)).c_str(), partition + 1);
               partitionStatus[partition].exitdelay=true;   
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=false;
