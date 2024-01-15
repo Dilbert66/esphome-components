@@ -19,6 +19,7 @@ CONF_DEBUGLEVEL="dscdebuglevel"
 CONF_READPIN="dscreadpin"
 CONF_WRITEPIN="dscwritepin"
 CONF_CLOCKPIN="dscclockpin"
+CONF_INVERT_WRITE="invert_write"
 CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
 CONF_CLEAN="clean_build"
@@ -89,7 +90,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_DEBUGLEVEL, default=""): cv.int_, 
     cv.Optional(CONF_READPIN, default=""): cv.int_, 
     cv.Optional(CONF_WRITEPIN, default=""): cv.int_, 
-    cv.Optional(CONF_CLOCKPIN, default=""): cv.int_, 
+    cv.Optional(CONF_CLOCKPIN, default=""): cv.int_,
+    cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
@@ -105,7 +107,7 @@ async def to_code(config):
         real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
-    var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN])
+    var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN],config[CONF_INVERT_WRITE])
     #mqtt_id = await cg.get_variable(config[CONF_MQTT_PARENT_ID])
     #cg.add(var.set_mqtt_id(mqtt_id))      
     if CONF_ACCESSCODE in config:

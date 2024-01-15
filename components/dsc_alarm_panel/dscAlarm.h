@@ -239,7 +239,7 @@ class DSCkeybushome: public api::CustomAPIDevice, public PollingComponent {
 #endif
 
 public:
-DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin );
+DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInvertWrite=true);
 
   std:: function < void(uint8_t, bool) > zoneStatusChangeCallback;
   std:: function < void(std::string ) > systemStatusChangeCallback;
@@ -337,6 +337,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin );
   byte dscClockPin,
   dscReadPin,
   dscWritePin;
+  bool invertWrite;
   bool firstrun;
   bool options;
   unsigned long beepTime,

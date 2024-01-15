@@ -14,27 +14,24 @@ void IRAM_ATTR txISRHandler() { // define global handler
 }
 #endif
 
-//Vista::Vista(Stream *stream):outStream(stream)
-Vista::Vista(Stream * stream) {
-  outStream = stream;
+Vista::Vista() {
 
   #ifdef MONITORTX
   szExt = 30;
-  extbuf = (char * ) malloc(szExt);
-  extcmd = (char * ) malloc(szExt);
+  extbuf= new char[szExt];
+  extcmd= new char[szExt];
   #endif
-
   szOutbuf = 30;
   szCbuf = 50;
   inbufIdx = 0;
   outbufIdx = 0;
+  szFaultQueue = 5;  
   rxState = sNormal;
   pointerToVistaClass = this;
-  cbuf = (char * ) malloc(szCbuf);
+  cbuf = new char[szCbuf];
   outbuf = new keyType[szOutbuf];
   tmpOutBuf = new char[szOutbuf];
-  szFaultQueue = 5;
-  faultQueue = (uint8_t * ) malloc(szFaultQueue);
+  faultQueue = new uint8_t[szFaultQueue];
   lrrSupervisor = false;
 
 }
@@ -222,16 +219,7 @@ int Vista::toDec(int n) {
   return (int) li;
 }
 
-/*
-struct cmdQueueItem {
-    char cbuf[40];
-    char extCmd[16];
-    bool newCmd;
-    bool newExtCmd;
-    bool lrrSupervisor;
-    struct statusFlagType statusFlags;
-}
-*/
+
 void Vista::pushCmdQueueItem() {
     struct cmdQueueItem q;
     q.statusFlags=statusFlags;
@@ -418,7 +406,6 @@ void Vista::onExp(char cbuf[]) {
     for (idx = 0; idx < MAX_MODULES; idx++) {
       expansionAddr = zoneExpanders[idx].expansionAddr;
       if (!expansionAddr) continue;
-//outStream->printf("expander address=%d, cbuf=%d,decoded=%d\n",expansionAddr,cbuf[2],(0x01 << (expansionAddr - 6)));      
       if (cbuf[2] == (0x01 << (expansionAddr - 6))) break; //for us - address range 7 -13
     }
   }
@@ -739,7 +726,7 @@ bool Vista::decodePacket() {
       extcmd[4] = extbuf[4];
       extcmd[5] = extbuf[5];
       extcmd[6] = extbuf[6];
-      extcmd[12] = 0x71; //flag to identify chksum error
+      extcmd[12] = 0x77; //flag to identify chksum error
       newExtCmd = true;
       return 1; // for debugging return what was sent so we can see why the chcksum failed
     }
@@ -881,7 +868,6 @@ bool Vista::decodePacket() {
         extcmd[12] = 0x73; //flag to identify cheksum failed             
         newExtCmd = true;
         return 1;
-        // outStream->println("RF Checksum failed.");
       }
       //  #endif
 
@@ -1171,7 +1157,7 @@ void Vista::stop() {
   keybusConnected = false;
 }
 
-void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin) {
+void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx,bool invertTx) {
   #ifndef ESP32
   //hw_wdt_disable(); //debugging only
   //ESP.wdtDisable(); //debugging only
@@ -1187,7 +1173,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 
   //panel data rx interrupt - yellow line
   if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, true, 10,100);
+    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 10,100);
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
@@ -1195,7 +1181,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, true, 10,100);
+    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertRx,invertTx, 10,100);
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;

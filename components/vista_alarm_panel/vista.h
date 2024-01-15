@@ -114,9 +114,9 @@ struct cmdQueueItem {
 class Vista {
 
   public:
-        Vista(Stream * OutStream);
+        Vista();
     ~Vista();
-    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin);
+    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx=true,bool invertTx=true);
     void stop();
     bool handle();
     void printStatus();
@@ -162,7 +162,6 @@ class Vista {
     volatile char kpAddr;
     char monitorPin;
     volatile char ackAddr;
-    Stream * outStream;
     volatile char rxState;
     volatile unsigned long lowTime,highTime;
     uint8_t * faultQueue;

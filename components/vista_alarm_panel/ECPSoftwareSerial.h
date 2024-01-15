@@ -54,7 +54,7 @@ enum SoftwareSerialConfig {
 // Baudrates up to 115200 can be used.
 
 class SoftwareSerial: public Stream {
-    public: SoftwareSerial(int receivePin, int transmitPin, bool inverse_logic = false, int bufSize = 64, int isrBufSize = 0);
+    public: SoftwareSerial(int receivePin, int transmitPin, bool invertRx=false,bool invertTx=false, int bufSize = 64, int isrBufSize = 0);
     virtual~SoftwareSerial();
 
     void begin(int32_t baud = 2400) {
@@ -65,9 +65,6 @@ class SoftwareSerial: public Stream {
     void setBaud(int32_t baud);
     // Transmit control pin
     void setTransmitEnablePin(int transmitEnablePin);
-    // Enable or disable interrupts during tx
-    void enableIntTx(bool on);
-
     bool overflow();
     bool processSingle=false;
 
@@ -122,17 +119,16 @@ class SoftwareSerial: public Stream {
     bool m_oneWire;
     int m_rxPin = SW_SERIAL_UNUSED_PIN;
     int m_txPin = SW_SERIAL_UNUSED_PIN;
-    int m_txEnablePin = SW_SERIAL_UNUSED_PIN;
     bool m_rxValid = false;
     bool m_rxEnabled = false;
     bool m_txValid = false;
-    bool m_txEnableValid = false;
     bool m_invert;
+    bool m_invert_tx;
+    bool m_invert_rx;
     bool m_overflow = false;
     int8_t m_dataBits;
     int32_t m_bitCycles;
     int32_t m_4800_bitCycles;
-    bool m_intTxEnabled;
     int m_inPos, m_outPos;
     int m_bufSize = 0;
     uint8_t * m_buffer = 0;

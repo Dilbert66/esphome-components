@@ -46,7 +46,6 @@
 
 
 extern Vista vista;
-extern Stream * OutputStream;
 extern void disconnectVista();
 
 #if !defined(ARDUINO_MQTT)
@@ -102,7 +101,7 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
 
     public: 
     
-    vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN,int maxzones=MAX_ZONES,int maxpartitions=MAX_PARTITIONS);
+    vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN,int maxzones=MAX_ZONES,int maxpartitions=MAX_PARTITIONS,bool invertrx=true,bool inverttx=true);
     
 
     std:: function < void(int, std::string) > zoneStatusChangeCallback;
@@ -197,7 +196,9 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
     char keypadAddr1=0;
     int rxPin=0;
     int txPin=0;
-    int monitorPin=0;    
+    int monitorPin=0;  
+    bool invertRx=false;
+    bool invertTx=false;    
     
     const char * accessCode;
     const char * rfSerialLookup;    

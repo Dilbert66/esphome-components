@@ -26,12 +26,13 @@ Modified for 4800 8E2
 #include "ECPSoftwareSerial.h"
 
 SoftwareSerial::SoftwareSerial(
-    int receivePin, int transmitPin, bool inverse_logic, int bufSize, int isrBufSize) {
+    int receivePin, int transmitPin, bool invertRx,bool invertTx, int bufSize, int isrBufSize) {
     m_isrBuffer = 0;
     m_isrOverflow = false;
     m_isrLastCycle = 0;
     m_oneWire = (receivePin == transmitPin);
-    m_invert = inverse_logic;
+    m_invert_tx=invertTx;
+    m_invert_rx=invertRx;
     if (isValidGPIOpin(receivePin)) {
         m_rxPin = receivePin;
         m_bufSize = bufSize;
@@ -85,8 +86,6 @@ void SoftwareSerial::setConfig(int32_t baud, SoftwareSerialConfig config) {
 void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config) {
     m_dataBits = 5 + (config % 4);
     setBaud(baud);
-    m_intTxEnabled = true;
-
     if (m_buffer != 0 && m_isrBuffer != 0) {
         m_rxValid = true;
         m_inPos = m_outPos = 0;
@@ -96,7 +95,7 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config) {
     }
     if (m_txValid && !m_oneWire) {
         pinMode(m_txPin, OUTPUT);
-        digitalWrite(m_txPin, !m_invert);
+        digitalWrite(m_txPin, !m_invert_tx);
     }
 
     if (!m_rxEnabled) {
@@ -110,27 +109,12 @@ void SoftwareSerial::end() {
 
 }
 
-void SoftwareSerial::setTransmitEnablePin(int transmitEnablePin) {
-    if (isValidGPIOpin(transmitEnablePin)) {
-        m_txEnableValid = true;
-        m_txEnablePin = transmitEnablePin;
-        pinMode(m_txEnablePin, OUTPUT);
-        digitalWrite(m_txEnablePin, LOW);
-    } else {
-        m_txEnableValid = false;
-    }
-}
-
-void SoftwareSerial::enableIntTx(bool on) {
-    m_intTxEnabled = on;
-}
-
 void SoftwareSerial::enableTx(bool on) {
     if (m_txValid && m_oneWire) {
         if (on) {
             enableRx(false);
             pinMode(m_txPin, OUTPUT);
-            digitalWrite(m_txPin, !m_invert);
+            digitalWrite(m_txPin, !m_invert_tx);
         } else {
             pinMode(m_rxPin, INPUT);
             enableRx(true);
@@ -225,12 +209,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity) {
 size_t IRAM_ATTR SoftwareSerial::write(uint8_t b) {
     uint8_t parity = 0;
     if (!m_txValid) return 0;
-    if (m_invert) b = ~b;
-    if (m_txEnableValid) digitalWrite(m_txEnablePin, HIGH);
+    if (m_invert_tx) b = ~b;
     unsigned long wait = m_bitCycles;
     unsigned long start = ESP.getCycleCount();
     // Start bit;
-    if (m_invert)
+    if (m_invert_tx)
         digitalWrite(m_txPin, HIGH);
     else
         digitalWrite(m_txPin, LOW);
@@ -249,13 +232,13 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b) {
     // parity bit
     if (m_parity) {
         if (parity == 0) {
-            if (m_invert && m_dataBits !=5) {
+            if (m_invert_tx && m_dataBits !=5) {
                 digitalWrite(m_txPin, HIGH);
             } else {
                 digitalWrite(m_txPin, LOW);
             }
         } else {
-            if (m_invert && m_dataBits !=5) {
+            if (m_invert_tx && m_dataBits !=5) {
                 digitalWrite(m_txPin, LOW);
             } else {
                 digitalWrite(m_txPin, HIGH);
@@ -265,7 +248,7 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b) {
     }
 
     // restore pin to natural state
-    if (m_invert) {
+    if (m_invert_tx) {
         digitalWrite(m_txPin, LOW);
     } else {
         digitalWrite(m_txPin, HIGH);
@@ -273,8 +256,6 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b) {
     WAIT; //1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
         WAIT;
-    if (m_txEnableValid) digitalWrite(m_txEnablePin, LOW);
-
     return 1;
 }
 
@@ -328,7 +309,7 @@ void SoftwareSerial::rxBits() {
             // cycle's LSB is repurposed for the level bit
             int next = (m_isrInPos.load() + 1) % m_isrBufSize;
             if (next != m_isrOutPos.load()) {
-                m_isrBuffer[m_isrInPos.load()].store((expectedCycle | 1) ^ !m_invert);
+                m_isrBuffer[m_isrInPos.load()].store((expectedCycle | 1) ^ !m_invert_rx);
                 m_isrInPos.store(next);
                 ++avail;
             } else {
@@ -345,7 +326,7 @@ void SoftwareSerial::rxBits() {
         // error introduced by edge value in LSB is negligible
         uint32_t isrCycle = m_isrBuffer[m_isrOutPos.load()].load();
         // extract inverted edge value
-        bool level = (isrCycle & 1) == m_invert;
+        bool level = (isrCycle & 1) == m_invert_rx;
         m_isrOutPos.store((m_isrOutPos.load() + 1) % m_isrBufSize);
 
         int32_t cycles =  static_cast<int32_t>(isrCycle - m_isrLastCycle.load()) -  (m_bitCycles/2);

@@ -75,10 +75,11 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
 
 
 
-DSCkeybushome::DSCkeybushome(byte dscClockPin = 0, byte dscReadPin = 0, byte dscWritePin = 0)
+DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin,bool invertWrite)
 : dscClockPin(dscClockPin),
   dscReadPin(dscReadPin),
-  dscWritePin(dscWritePin) {
+  dscWritePin(dscWritePin),
+  invertWrite(invertWrite)  {
       
      alarmPanelPtr=this;
      
@@ -197,7 +198,7 @@ void DSCkeybushome::begin() {
     dsc.processModuleData = true;
 
     if (dscClockPin && dscReadPin && dscWritePin)
-      dsc.begin(Serial, dscClockPin, dscReadPin, dscWritePin);
+      dsc.begin(Serial, dscClockPin, dscReadPin, dscWritePin,invertWrite);
     else
       dsc.begin(Serial);
 
@@ -926,7 +927,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
     for (int x = partitionStatus[partition - 1].currentSelection; x >= 0; x--) {
 
-      if ((x == 6) && !dsc.armed[partition - 1] && !dsc.armed[partition - 1]) { //openzones
+      if ((x == 6) ) { //openzones
         menu = 5;
         zone = 0;
         break;
@@ -1014,7 +1015,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
         menu = 4;
         zone = 0;
         break;
-      } else if (x == 4 && !dsc.armed[partition - 1] && !dsc.armed[partition - 1]) { //open
+      } else if (x == 4 ) { //open
         menu = 5;
         zone = 0;
         break;

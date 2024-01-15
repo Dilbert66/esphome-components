@@ -23,6 +23,7 @@
 byte dscKeybusInterface::dscClockPin;
 byte dscKeybusInterface::dscReadPin;
 byte dscKeybusInterface::dscWritePin;
+bool dscKeybusInterface::invertWrite;
 char dscKeybusInterface::writeKey;
 bool dscKeybusInterface::virtualKeypad;
 bool dscKeybusInterface::processModuleData;
@@ -91,10 +92,11 @@ const esp_timer_create_args_t timer0Parameters = {
 #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
 
-dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin) {
+dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   dscClockPin = setClockPin;
   dscReadPin = setReadPin;
   dscWritePin = setWritePin;
+  invertWrite=setInvertWrite;
   if (dscWritePin != 255) virtualKeypad = true;
   //writeReady = false;
   processRedundantData = true;
@@ -120,12 +122,13 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
 
 }
 
-void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPin, byte setWritePin) {
+void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   
   if (setClockPin > 0 && setReadPin > 0 && setWritePin > 0) {  
     dscClockPin = setClockPin;
     dscReadPin = setReadPin;
     dscWritePin = setWritePin;
+    invertWrite=setInvertWrite;
   }
   
   pinMode(dscClockPin, INPUT);
@@ -588,8 +591,9 @@ dscKeybusInterface::dscClockInterrupt() {
 
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
-    if (virtualKeypad) 
-        digitalWrite(dscWritePin, LOW); // Restores the data line after a virtual keypad write
+    if (virtualKeypad ){
+        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
+    }
     previousClockHighTime = micros();
   }
 
@@ -674,7 +678,7 @@ dscKeybusInterface::dscClockInterrupt() {
       if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
 
         writeStart = true;
-        if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, HIGH);
+        if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, invertWrite);
 
         if (isrPanelBitCount == 7) {
           writeBufferIdx++;
@@ -713,7 +717,6 @@ dscKeybusInterface::dscDataInterrupt() {
   #endif
   portENTER_CRITICAL( & timer1Mux);
   #endif
-
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
 
@@ -722,6 +725,7 @@ dscKeybusInterface::dscDataInterrupt() {
       if (isrPanelBitCount < 8) {
         // Data is captured in each byte by shifting left by 1 bit and writing to bit 0
         isrPanelData[isrPanelByteCount] <<= 1;
+
         if (digitalRead(dscReadPin) == HIGH) {
           isrPanelData[isrPanelByteCount] |= 1;
         }
@@ -780,6 +784,7 @@ dscKeybusInterface::dscDataInterrupt() {
       }
     }
   }
+
   #if defined(ESP32)
   portEXIT_CRITICAL( & timer1Mux);
   #endif

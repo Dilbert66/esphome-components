@@ -21,8 +21,7 @@
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
-Stream * OutputStream = & Serial;
-Vista vista(OutputStream);
+Vista vista;
 
 void disconnectVista() {
   vista.stop();
@@ -89,12 +88,14 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
 }
 #endif
 
- vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin,int maxzones,int maxpartitions): 
+ vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin,int maxzones,int maxpartitions,bool invertrx,bool inverttx): 
     keypadAddr1(kpaddr),
     rxPin(receivePin),
     txPin(transmitPin),
     monitorPin(monitorTxPin),
     maxZones(maxzones),
+    invertRx(invertrx),
+    invertTx(inverttx),
     maxPartitions(maxpartitions)
     {
          partitionKeypads = new char[maxPartitions+1];
@@ -352,7 +353,7 @@ void vistaECPHome::setup()  {
 #endif      
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);
-      vista.begin(rxPin, txPin, keypadAddr1, monitorPin);
+      vista.begin(rxPin, txPin, keypadAddr1, monitorPin,invertRx,invertTx);
 
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
