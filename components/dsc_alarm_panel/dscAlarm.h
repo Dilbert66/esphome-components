@@ -401,8 +401,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   system1,previousSystem0,previousSystem1;
   byte programZones[dscZones];
   char decimalInputBuffer[6];
-  byte line2Digit,
-  line2Status;
+  byte line2Digit;
   byte beeps,
   previousBeeps;
   bool refresh;

@@ -1173,8 +1173,8 @@ void DSCkeybushome::update()  {
     if (!forceDisconnect && ( dsc.statusChanged || forceRefresh) && dsc.panelData[0]) { // Processes data only when a valid Keybus command has been read and statuses were changed
       dsc.statusChanged = false; // Reset the status tracking flag
 
-      if (debug  > 0)
-        printPacket("Paneldata: ", dsc.panelData[0], dsc.panelData, 16);
+     // if (debug  > 0)
+      //  printPacket("Paneldata: ", dsc.panelData[0], dsc.panelData, 16);
 
       for (byte partition = 0; partition < dscPartitions; partition++) {
         if (firstrun) {
@@ -1283,7 +1283,7 @@ void DSCkeybushome::update()  {
         }
 
         // Publishes armed/disarmed status
-     //   ESP_LOGD("test","partition=%d,armed=%d,armedstay=%d,armedAway=%d,noentrydelay=%d",partition,dsc.armed[partition],dsc.armedStay[partition],dsc.armedAway[partition],dsc.noEntryDelay[partition]);
+        //ESP_LOGD("test","partition=%d,armed=%d,armedstay=%d,armedAway=%d,noentrydelay=%d,forced=%d",partition,dsc.armed[partition],dsc.armedStay[partition],dsc.armedAway[partition],dsc.noEntryDelay[partition],forceRefresh);
         if (dsc.armedChanged[partition] || forceRefresh ) {
           dsc.armedChanged[partition] = false; // Resets the partition armed status flag
 
@@ -1575,7 +1575,7 @@ void DSCkeybushome::update()  {
   
 
   void DSCkeybushome::setStatus(byte partition, bool force , bool skip ) {
-
+    if (partition >= dscPartitions) return;
     if (dsc.status[partition] == partitionStatus[partition].lastStatus && beeps == 0 && !force) return;
     byte * currentSelection = & partitionStatus[partition].currentSelection;
  
@@ -1587,10 +1587,10 @@ void DSCkeybushome::update()  {
     partitionStatus[partition].decimalInput = false;
 #if !defined(ARDUINO_MQTT) 
     if (debug > 1)     
-    ESP_LOGI("info", "status %02X, last status %02X,line2status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, line2Status, * currentSelection, partition + 1, skip,force);
+    ESP_LOGI("info", "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, * currentSelection, partition + 1, skip,force);
    #else
          if (debug > 1)     
-    Serial.printf("status %02X, last status %02X,line2status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus, line2Status, * currentSelection, partition + 1, skip,force);  
+    Serial.printf("status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus,  * currentSelection, partition + 1, skip,force);  
 #endif    
     switch (dsc.status[partition]) {
     case 0x01:
@@ -2360,7 +2360,7 @@ void DSCkeybushome::update()  {
 
 
   void DSCkeybushome::printPanel_0x6E() {
-    if (dsc.pgmBuffer.partition) {
+    if (dsc.pgmBuffer.partition && dsc.pgmBuffer.partition <= dscPartitions) {
       if (dsc.pgmBuffer.idx == dsc.pgmBuffer.len) 
           setStatus(dsc.pgmBuffer.partition - 1, true);
     }

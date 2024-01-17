@@ -98,7 +98,7 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
   dscWritePin = setWritePin;
   invertWrite=setInvertWrite;
   if (dscWritePin != 255) virtualKeypad = true;
-  //writeReady = false;
+  if (dscWritePin == dscReadPin) invertWrite=false;
   processRedundantData = true;
   displayTrailingBits = false;
   processModuleData = false;
@@ -133,7 +133,7 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   
   pinMode(dscClockPin, INPUT);
   pinMode(dscReadPin, INPUT);
-  if (virtualKeypad) pinMode(dscWritePin, OUTPUT);
+  if (virtualKeypad && dscWritePin != dscReadPin) pinMode(dscWritePin, OUTPUT);
   stream = & _stream;
 
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
@@ -592,7 +592,10 @@ dscKeybusInterface::dscClockInterrupt() {
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
-        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
+        if (dscWritePin == dscReadPin && !writeDataPending)
+           pinMode(dscReadPin, INPUT);
+        else
+           digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     }
     previousClockHighTime = micros();
   }
@@ -675,9 +678,12 @@ dscKeybusInterface::dscClockInterrupt() {
     // Virtual keypad
     if (virtualKeypad && writeDataPending && writeBufferIdx < writeBufferLength) {
       static bool writeStart = false;
+      if (dscWritePin == dscReadPin )
+            pinMode(dscWritePin, OUTPUT);  
       if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
 
         writeStart = true;
+        
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, invertWrite);
 
         if (isrPanelBitCount == 7) {
