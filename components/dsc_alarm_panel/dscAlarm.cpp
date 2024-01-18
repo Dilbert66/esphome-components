@@ -978,15 +978,13 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   byte DSCkeybushome::getPreviousOpenZone(byte start, byte partition) {
     if (start == 1) return 0;
-    byte z=0;
     if (start == 0 || start > maxZones) start = maxZones;
     for (int zone = start - 2; zone >= 0; zone--) {
       if (zoneStatus[zone].enabled && zoneStatus[zone].partition == partition && zoneStatus[zone].open) {
-          z= zone + 1;
-          break;
+          return (byte) zone + 1;
       }
     }
-    return z;
+    return 0;
   }
 
   void DSCkeybushome::getNextMainOption(byte partition) {
@@ -1042,12 +1040,19 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
     if (start < 2 || start > maxZones) start = maxZones;
     byte z=0;
-    for (int zone = start - 2; zone >= 0 && zone < maxZones; zone--) {
+    int zone;
+    for (zone=start-2;zone>=0;zone--) {
+       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+          return (byte) zone+1;
+       }
+    }
+    if (zone<0) start=maxZones;
+    for (zone = start - 2; zone >= 0 ; zone--) {
       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
-         z=zone + 1;
-         break;
+         return (byte) zone+1;
       }
     }
+    
     return z;
   }
 
@@ -1065,14 +1070,20 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   byte DSCkeybushome::getPreviousAlarmedZone(byte start, byte partition) {
     if (start < 2 || start > maxZones) start = maxZones;
-    byte z=0;
-    for (int zone = start - 2; zone >= 0 && zone < maxZones; zone--) {
-      if (zoneStatus[zone].partition == partition && zoneStatus[zone].alarm) {
-         z=zone + 1;
-         break;
-      }
+    int zone;
+    for (zone=start-2;zone>=0;zone--) {
+       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+          return (byte) zone+1;
+       }
     }
-    return z;
+    if (zone<0) start=maxZones;
+    for (zone = start - 2; zone >= 0 && zone < maxZones; zone--) {
+      if (zoneStatus[zone].partition == partition && zoneStatus[zone].alarm) {
+        return (byte) zone + 1;
+      }
+      
+    }
+    return 0;
   }
   void DSCkeybushome::getBypassZones(byte partition) {
 
