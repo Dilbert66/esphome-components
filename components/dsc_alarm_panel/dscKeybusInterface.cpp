@@ -572,7 +572,6 @@ dscKeybusInterface::dscClockInterrupt() {
         }  
 #endif        
        } else {
-          skipData = false;           
 #ifdef DEBOUNCE              
           skipFirst = false;
 #endif          
