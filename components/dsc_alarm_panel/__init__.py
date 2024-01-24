@@ -21,6 +21,7 @@ CONF_WRITEPIN="dscwritepin"
 CONF_CLOCKPIN="dscclockpin"
 CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
+CONF_DEBOUNCE="debounce"
 CONF_CLEAN="clean_build"
 #CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
@@ -92,6 +93,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_CLOCKPIN, default=""): cv.int_, 
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
+    cv.Optional(CONF_DEBOUNCE,default='true'): cv.boolean,       
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     
     }
@@ -99,8 +101,9 @@ CONFIG_SCHEMA = cv.Schema(
 
 async def to_code(config):
     old_dir = CORE.relative_build_path("src")
-    cg.add_define("USE_CUSTOM_ID")      
-  
+    cg.add_define("USE_CUSTOM_ID")  
+    if config[CONF_DEBOUNCE]:
+       cg.add_build_flag("-DDEBOUNCE")   
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
