@@ -571,6 +571,11 @@ dscKeybusInterface::dscClockInterrupt() {
           skipFirst = true;
         }  
 #endif        
+       } else {
+          skipData = false;           
+#ifdef DEBOUNCE              
+          skipFirst = false;
+#endif          
        }
       }
       // Stores new panel data in the panel buffer
