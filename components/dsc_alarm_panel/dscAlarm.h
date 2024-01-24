@@ -507,7 +507,7 @@ void update() override;
 #endif
 
 
-  
+ std::string getZoneName(int zone); 
 
   void setStatus(byte partition, bool force = false, bool skip = false);
 

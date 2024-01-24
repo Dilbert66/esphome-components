@@ -629,7 +629,7 @@ dscKeybusInterface::dscClockInterrupt() {
               skipData = true;
         } 
 #ifdef DEBOUNCE        
-       else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005
+       else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005 and pc1832
           skipData = true;
           skipFirst = true;
         }  
