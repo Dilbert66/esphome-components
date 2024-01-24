@@ -623,18 +623,25 @@ dscKeybusInterface::dscClockInterrupt() {
         if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
 #ifdef DEBOUNCE            
           if (skipFirst) 
-            skipFirst = false;
+            skipFirst = false; //second copy, we clear skipfirst, and process this copy
            else 
-#endif              
-              skipData = true;
+#endif             
+              skipData = true;  //3rd or more copy, so we skip
         } 
 #ifdef DEBOUNCE        
        else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005 and pc1832
-          skipData = true;
-          skipFirst = true;
+          skipData = true; //skip this cmd
+          skipFirst = true; //set flag to indicate 1st copy was skipped
         }  
 #endif        
+       } else {
+           //not a 05/1b so reset flags
+          skipData = false;           
+#ifdef DEBOUNCE              
+          skipFirst = false;
+#endif          
        }
+        
       }
       // Stores new panel data in the panel buffer
       if (panelBufferLength == dscBufferSize) 
