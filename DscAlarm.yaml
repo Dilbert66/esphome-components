@@ -40,9 +40,7 @@ dsc_alarm_panel:
   #dscclockpin: "5"
   #dscreadpin: "4"
   #dscwritepin: "15" 
-  
-  debounce: "false"; #if you find that you get bogus armed statuses, set to true
-  
+ 
   clean_build: "false" #default is false.  set to true if getting duplication errors in linking step.  
 
 esp32: 
