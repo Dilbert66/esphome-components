@@ -577,7 +577,33 @@ void begin() {
     eventInfoCallback("ESP module start");  
     zoneMsgStatusCallback("");
   }
- private:  
+ private: 
+
+std::string getZoneName(int zone) {
+  std::string sid = "z" + std::to_string(zone) ;
+  std::string name="";
+  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
+  for (auto *obj : bs ) {
+#if defined(USE_CUSTOM_ID)      
+    std::string id=obj->get_type_id();
+    if (id.compare(sid) == 0){
+      name = obj->get_name();
+      break;
+    } else {   
+#endif    
+        std::string sname=obj->get_name();
+        if (sname.find("(" + sid + ")") != std::string::npos){
+          name= sname;
+          break;
+        }
+#if defined(USE_CUSTOM_ID)             
+    }
+#endif    
+  }
+  return name;
+}
+
+ 
   std::string getUserName(char * code) {
   std::string name = code;
   
@@ -2427,8 +2453,12 @@ void update() override {
         }
 
         if (partitionStatus[partition].selectedZone && partitionStatus[partition].selectedZone < maxZones) {
-          char s[16];
-          sprintf(s, PSTR("Zone %02d  <>"), partitionStatus[partition].selectedZone);
+          char s[50];
+          std::string name=getZoneName(partitionStatus[partition].selectedZone);
+          if (name !="")
+            snprintf(s, 50,PSTR("%s <>"),name.c_str());
+          else
+            snprintf(s,50, PSTR("zone %02d  <>"), partitionStatus[partition].selectedZone);
           lcdLine2 = s;
         }
 
@@ -2437,13 +2467,17 @@ void update() override {
           *
           currentSelection = getNextEnabledZone(0xFF, partition + 1);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
-          char s[16];
+          char s[50];
           char bypassStatus = ' ';
           if (zoneStatus[ * currentSelection - 1].bypassed)
             bypassStatus = 'B';
           else if (zoneStatus[ * currentSelection - 1].open)
             bypassStatus = 'O';
-          sprintf(s, PSTR("%02d   %c"), * currentSelection, bypassStatus);
+          std::string name=getZoneName(* currentSelection);
+          if (name !="")
+            snprintf(s,50, PSTR("%s  %c"), name.c_str(), bypassStatus);
+          else
+            snprintf(s,50, PSTR("%02d  %c"), * currentSelection, bypassStatus);  
           lcdLine2 = s;
         }
       } else if (dsc.status[partition] == 0x11) { //alarms
@@ -2452,8 +2486,12 @@ void update() override {
           *
           currentSelection = getNextAlarmedZone(0xFF, partition + 1);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
-          char s[16];
-          sprintf(s, PSTR("zone %02d"), * currentSelection);
+           char s[50];
+          std::string name=getZoneName(* currentSelection);
+          if (name !="")
+            snprintf(s, 50,PSTR("%s <>"),name.c_str());
+          else
+          snprintf(s,50, PSTR("zone %02d"), * currentSelection);          
           lcdLine2 = s;
         } else lcdLine2 = " ";
       } else if (dsc.status[partition] == 0xA2) { //alarm memory
