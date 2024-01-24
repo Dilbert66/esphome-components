@@ -22,6 +22,7 @@ CONF_CLOCKPIN="dscclockpin"
 CONF_INVERT_WRITE="invert_write"
 CONF_EXPANDER1="expanderaddr1"
 CONF_EXPANDER2="expanderaddr2"
+CONF_DEBOUNCE="debounce"
 CONF_CLEAN="clean_build"
 #CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
@@ -94,6 +95,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
+    cv.Optional(CONF_DEBOUNCE,default='true'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     
     }
@@ -105,6 +107,8 @@ async def to_code(config):
     cg.add_define("USE_DSC_PANEL")    
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
+    if config[CONF_DEBOUNCE]:
+       cg.add_build_flag("-DDEBOUNCE")  
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN],config[CONF_INVERT_WRITE])
