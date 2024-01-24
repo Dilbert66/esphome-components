@@ -207,7 +207,7 @@ void dscKeybusInterface::processPanelStatus() {
       // Armed
       case 0x04:         // Armed stay
       case 0x05: {       // Armed away
-    /*    if (panelData[messageByte] == 0x04) {
+        if (panelData[messageByte] == 0x04) {
           armedStay[partitionIndex] = true;
           armedAway[partitionIndex] = false;
         }
@@ -230,7 +230,6 @@ void dscKeybusInterface::processPanelStatus() {
         processExitDelayStatus(partitionIndex, false);
         exitState[partitionIndex] = 0;
         processEntryDelayStatus(partitionIndex, false);
-        */
         break;
       }
 
@@ -286,7 +285,6 @@ void dscKeybusInterface::processPanelStatus() {
       // Partition armed with no entry delay
       case 0x06:
       case 0x16: {
-          /*
         armed[partitionIndex] = true;
 
         // Sets an armed mode if not already set, used if interface is initialized while the panel is armed
@@ -300,7 +298,6 @@ void dscKeybusInterface::processPanelStatus() {
 
         processNoEntryDelayStatus(partitionIndex, true);
         processReadyStatus(partitionIndex, false);
-        */
         break;
       }
 

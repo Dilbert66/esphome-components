@@ -635,8 +635,7 @@ dscKeybusInterface::dscClockInterrupt() {
         }  
 #endif        
        } else {
-           //not a 05/1b so reset flags
-          skipData = false;           
+           //not a 05/1b so reset flag
 #ifdef DEBOUNCE              
           skipFirst = false;
 #endif          
