@@ -201,6 +201,12 @@ void dscKeybusInterface::processPanelStatus() {
 
       // Zones open
       case 0x03: {
+          
+        armedStay[partitionIndex] = false;
+        armedAway[partitionIndex] = false;
+        armed[partitionIndex] = false;
+        processAlarmStatus(partitionIndex, false);  
+        
         processReadyStatus(partitionIndex, false);
         processEntryDelayStatus(partitionIndex, false);
         break;

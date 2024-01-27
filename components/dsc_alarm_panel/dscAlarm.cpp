@@ -2,6 +2,8 @@
 
 #include "dscAlarm.h"
 
+static const char *const TAG = "dscalarm";
+
 dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault);
 
 bool forceDisconnect;
@@ -118,7 +120,7 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 #if defined(USE_TIME)      
     ESPTime rtc = now();
     if (!rtc.is_valid()) return;
-    ESP_LOGI("info","Setting panel time...");    
+    ESP_LOGI(TAG,"Setting panel time...");    
     dsc.setDateTime(rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
 #endif       
   }
@@ -128,7 +130,7 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
       #if defined(ARDUINO_MQTT)
           Serial.printf("Setting panel time...\n");       
     #else
-        ESP_LOGI("info","Setting panel time..."); 
+        ESP_LOGI(TAG,"Setting panel time..."); 
     #endif
     dsc.setDateTime(year, month, day, hour, minute);
   } 
@@ -288,7 +290,7 @@ void DSCkeybushome::begin() {
   void DSCkeybushome::set_zone_fault(int zone, bool fault) {
 #if not defined(DISABLE_EXPANDER) 
  #if !defined(ARDUINO_MQTT)     
-    ESP_LOGI("Debug", "Setting Zone Fault: %d,%d", zone, fault);
+    ESP_LOGI(TAG, "Setting Zone Fault: %d,%d", zone, fault);
  #else
       Serial.printf("Setting Zone Fault: %d,%d\n", zone, fault);
  #endif
@@ -649,7 +651,7 @@ void DSCkeybushome::begin() {
         return;
     }
 #if !defined(ARDUINO_MQTT)         
-    if (debug > 0) ESP_LOGI("Debug", "Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d", keystring.c_str(), partition,dsc.disabled[partition - 1],partitionStatus[partition-1].locked);
+    if (debug > 0) ESP_LOGI(TAG, "Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d", keystring.c_str(), partition,dsc.disabled[partition - 1],partitionStatus[partition-1].locked);
     #else
           if (debug > 0) Serial.printf("Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d\n", keystring.c_str(), partition,dsc.disabled[partition - 1],partitionStatus[partition-1].locked);  
 #endif
@@ -690,7 +692,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
                 b=true;
             std::string s=payload["zone"];
             p = atoi(s.c_str());
-           // ESP_LOGI("info","set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
+           // ESP_LOGI(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             d->set_zone_fault(p,b);
 
         }
@@ -715,7 +717,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     if (!partition) partition = defaultPartition;
 
 #if !defined(ARDUINO_MQTT)  
-    ESP_LOGI("debug","Setting Alarm state: %s to partition %d",state.c_str(),partition);
+    ESP_LOGI(TAG,"Setting Alarm state: %s to partition %d",state.c_str(),partition);
 #else
     Serial.printf("Setting Alarm state: %s to partition %d\n",state.c_str(),partition);    
 #endif
@@ -726,21 +728,21 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     // Arm stay
     if (state.compare("S") == 0 && !dsc.armed[partition - 1] && !dsc.exitDelay[partition - 1]) {
 #if !defined(ARDUINO_MQTT)          
-         if (debug > 1) ESP_LOGI("debug","Arming stay");   
+         if (debug > 1) ESP_LOGI(TAG,"Arming stay");   
 #endif         
       dsc.write('s', partition); // Virtual keypad arm stay
     }
     // Arm away
     else if ((state.compare("A") == 0 || state.compare("W") == 0) && !dsc.armed[partition - 1] && !dsc.exitDelay[partition - 1]) {
 #if !defined(ARDUINO_MQTT)          
-     if (debug > 1) ESP_LOGI("debug","Arming away");  
+     if (debug > 1) ESP_LOGI(TAG,"Arming away");  
 #endif     
       dsc.write('w', partition); // Virtual keypad arm away
     }
     // Arm night  ** this depends on the accessCode setup in the yaml
     else if (state.compare("N") == 0 && !dsc.armed[partition - 1] && !dsc.exitDelay[partition - 1]) {
 #if !defined(ARDUINO_MQTT)          
-       if (debug > 1) ESP_LOGI("debug","Arming night");  
+       if (debug > 1) ESP_LOGI(TAG,"Arming night");  
 #endif
       //ensure you have the accessCode setup correctly in the yaml for this to work
       dsc.write('n', partition); // Virtual keypad arm away
@@ -761,7 +763,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     else if (state.compare("D") == 0 && (dsc.armed[partition-1] || dsc.exitDelay[partition-1])) {
       if (code.length() == 4) { // ensure we get 4 digit code
 #if !defined(ARDUINO_MQTT)        
-      if (debug > 1) ESP_LOGI("debug","Disarming ... ");  
+      if (debug > 1) ESP_LOGI(TAG,"Disarming ... ");  
 #endif      
         dsc.write(alarmCode, partition);
       }
@@ -785,7 +787,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
         ESP_LOGI(label, "%02X: %s", cmd, s);
     #else
     if (debug > 0)
-        Serial.printf("%s %02X: %s\n",label, cmd, s); 
+        Serial.printf("%s: %02X: %s\n",label, cmd, s); 
     #endif
   }
 
@@ -866,7 +868,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
         }
       }
     }
-    ESP_LOGI("info"," in get options %s",options.c_str());
+    ESP_LOGI(TAG," in get options %s",options.c_str());
     //Serial.printf("in get options %s\n",options.c_str());
     return options.c_str();
   }
@@ -1163,6 +1165,10 @@ void DSCkeybushome::update()  {
     if (!firstrun && millis() - refreshTime > 60000 ) {
               refreshTime=millis();
               forceRefresh=true;
+      if (debug > 1)   {      
+        UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+        ESP_LOGD(TAG,"Free memory: %5d,freeheap: %5d,minheap: %5d,maxfree:%5d\n", (uint16_t) uxHighWaterMark,esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));  
+      }      
              
     }
 
@@ -1184,7 +1190,7 @@ void DSCkeybushome::update()  {
       }
 
       if (debug > 1)
-        printPacket("Paneldata: ", dsc.panelData[0], dsc.panelData, 16);
+        printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
       #ifdef SERIALDEBUGCOMMANDS
       if (debug > 2) {
         Serial.print(" ");
@@ -1210,7 +1216,7 @@ void DSCkeybushome::update()  {
       dsc.statusChanged = false; // Reset the status tracking flag
 
      // if (debug  > 0)
-      //  printPacket("Paneldata: ", dsc.panelData[0], dsc.panelData, 16);
+      //  printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
 
       for (byte partition = 0; partition < dscPartitions; partition++) {
         if (firstrun) {
@@ -1224,7 +1230,7 @@ void DSCkeybushome::update()  {
 
       }
 #if !defined(ARDUINO_MQTT)     
-      if (dsc.bufferOverflow) ESP_LOGI("Error", "Keybus buffer overflow");
+      if (dsc.bufferOverflow) ESP_LOGE(TAG, "Keybus buffer overflow");
       #else
                 if (dsc.bufferOverflow) Serial.printf( "Keybus buffer overflow\n");
 #endif      
@@ -1589,7 +1595,7 @@ void DSCkeybushome::update()  {
       }
 
       if (debug > 1)
-        printPacket("Moduledata:", dsc.moduleCmd, dsc.moduleData, 16);
+        printPacket("Moduledata", dsc.moduleCmd, dsc.moduleData, 16);
 
       #ifdef DEBUGCOMMANDS
       if (debug > 2) {
@@ -1623,7 +1629,7 @@ void DSCkeybushome::update()  {
     partitionStatus[partition].decimalInput = false;
 #if !defined(ARDUINO_MQTT) 
     if (debug > 1)     
-    ESP_LOGI("info", "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, * currentSelection, partition + 1, skip,force);
+    ESP_LOGI(TAG, "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, * currentSelection, partition + 1, skip,force);
    #else
          if (debug > 1)     
     Serial.printf("status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus,  * currentSelection, partition + 1, skip,force);  
@@ -2240,7 +2246,7 @@ void DSCkeybushome::update()  {
         if (dsc.status[partition] == 0x9F && dsc.accessCodePrompt && isInt(accessCode, 10)) {
         dsc.accessCodePrompt = false;
         dsc.write(accessCode, partition + 1);
-        //if (debug > 0) ESP_LOGI("Debug", "got access code prompt for partition %d", partition + 1);
+        //if (debug > 0) ESP_LOGI(TAG, "got access code prompt for partition %d", partition + 1);
       }  
 
       if (options) {
@@ -2301,7 +2307,7 @@ void DSCkeybushome::update()  {
       break;
     case 0x75: //tones 1
     case 0x7D:
-      //ESP_LOGI("info", "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[3]);
+      //ESP_LOGI(TAG, "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[3]);
       break; //tones 2
     case 0x87: //relay cmd
       processRelayCmd();
@@ -2324,7 +2330,7 @@ void DSCkeybushome::update()  {
       case 0x04:
       case 0x05:
       case 0x06:
-      case 0x1D: //ESP_LOGI("info", "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[4]);
+      case 0x1D: //ESP_LOGI(TAG, "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[4]);
         break; //tones 3-8
       case 0x19:
         printBeeps(4);
@@ -2336,7 +2342,7 @@ void DSCkeybushome::update()  {
         processProgramZones(5,4);
         break; // Programming zone lights 33-64 //bypass?
       case 0x18:
-        //ESP_LOGI("info", "zone lights 33");
+        //ESP_LOGI(TAG, "zone lights 33");
         if ((dsc.panelData[4] & 0x04) == 0x04)
           processProgramZones(5,4);
         break; // Alarm memory zones 33-64

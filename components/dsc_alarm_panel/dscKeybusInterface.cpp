@@ -130,7 +130,7 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
     dscWritePin = setWritePin;
     invertWrite=setInvertWrite;
   }
-  if (dscWritePin == dscReadPin) invertWrite=false;
+  
   pinMode(dscClockPin, INPUT);
   pinMode(dscReadPin, INPUT);
   if (virtualKeypad && dscWritePin != dscReadPin) pinMode(dscWritePin, OUTPUT);
@@ -592,10 +592,11 @@ dscKeybusInterface::dscClockInterrupt() {
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
+        
         if (dscWritePin == dscReadPin && !writeDataPending)
            pinMode(dscReadPin, INPUT);
-       else
-           digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
+       
+        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     }
     previousClockHighTime = micros();
   }
