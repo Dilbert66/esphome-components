@@ -153,7 +153,7 @@ bool WebNotify::processMessage(const char *payload) {
    return success;
 }
 
-void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
+void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
   if (global_notify == NULL) {
       ESP_LOGD("test","telegram: global pointer is null");
@@ -200,6 +200,7 @@ void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data, void *
       struct mg_tls_opts opts = {.name = host};
       mg_tls_init(c, &opts);
     }
+      MG_ERROR(("\nfreeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
    MG_INFO((" tls init done"));
       if (global_notify->messages.size()) {
         global_notify->sending=true;       //we are connecting so flag connection as open           
@@ -244,7 +245,7 @@ void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data, void *
 
           }
     global_notify->sending=false;
-    c->is_draining = 1;        // Tell mongoose to close this connection
+    c->is_closing = 1;        // Tell mongoose to close this connection
   
   } else if (ev == MG_EV_ERROR) {
        global_notify->retryDelay=millis();

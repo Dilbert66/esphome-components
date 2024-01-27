@@ -13,6 +13,8 @@ MQTTBackendESP32::MQTTBackendESP32() {
     mg_backend=this;
 }
 
+
+
 /*
 struct mg_mqtt_opts {
   struct mg_str user;               // Username, can be empty
@@ -31,6 +33,18 @@ struct mg_mqtt_opts {
   size_t num_will_props;            // Number of will props
 };
 */
+void mg_mqtt_unsub(struct mg_connection *c, const struct mg_mqtt_opts *opts) {
+  uint8_t qos_ = opts->qos & 3;
+  size_t plen = c->is_mqtt5 ? get_props_size(opts->props, opts->num_props) : 0;
+  size_t len = 2 + opts->topic.len + 2 + 1 + plen;
+  mg_mqtt_send_header(c, MQTT_CMD_UNSUBSCRIBE, 2, (uint32_t) len);
+  if (++c->mgr->mqtt_id == 0) ++c->mgr->mqtt_id;
+  mg_send_u16(c, mg_htons(c->mgr->mqtt_id));
+  if (c->is_mqtt5) mg_send_mqtt_properties(c, opts->props, opts->num_props);
+
+  mg_send_u16(c, mg_htons((uint16_t) opts->topic.len));
+  mg_send(c, opts->topic.ptr, opts->topic.len);
+}
 
 
 bool MQTTBackendESP32::initialize_() {
@@ -161,7 +175,7 @@ MG_INFO(("mqtt use ssl is on"))   ;
     } else if (mm->cmd == MQTT_CMD_UNSUBACK) {
       ESP_LOGV(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", mm->id);
       // hardcode QoS to 0. QoS is not used in this context but required to mirror the AsyncMqtt interface
-     // on_unsubscribe_.call(int(mm->id), 0);
+      on_unsubscribe_.call((int)mm->id);
     }        
       
   }
@@ -194,20 +208,9 @@ struct mg_mqtt_message {
   size_t props_size;    // Length of the properties
 };
 */
-/*
-void mg_mqtt_unsub(struct mg_connection *c, const struct mg_mqtt_opts *opts) {
-  uint8_t qos_ = opts->qos & 3;
-  size_t plen = c->is_mqtt5 ? get_props_size(opts->props, opts->num_props) : 0;
-  size_t len = 2 + opts->topic.len + 2 + 1 + plen;
-  mg_mqtt_send_header(c, MQTT_CMD_UNSUBSCRIBE, 2, (uint32_t) len);
-  if (++c->mgr->mqtt_id == 0) ++c->mgr->mqtt_id;
-  mg_send_u16(c, mg_htons(c->mgr->mqtt_id));
-  if (c->is_mqtt5) mg_send_mqtt_properties(c, opts->props, opts->num_props);
 
-  mg_send_u16(c, mg_htons((uint16_t) opts->topic.len));
-  mg_send(c, opts->topic.ptr, opts->topic.len);
-}
-*/
+
+
 }  // namespace mqtt
 }  // namespace esphome
 #endif  // USE_ESP32

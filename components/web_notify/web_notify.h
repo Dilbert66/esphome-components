@@ -68,7 +68,7 @@ class WebNotify : public Controller, public Component {
   
 private:
   struct mg_mgr mgr;
-  static void notify_fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data); 
+  static void  notify_fn(struct mg_connection *c, int ev, void *ev_data); 
 
 
   std::string apiHost_ = "https://api.telegram.org/";

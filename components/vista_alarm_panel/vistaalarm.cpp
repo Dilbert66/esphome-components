@@ -22,7 +22,7 @@
 #endif
 
 Vista vista;
-
+static const char *const TAG = "vistaalarm";
 void disconnectVista() {
   vista.stop();
 }
@@ -263,7 +263,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
                 b=true;
             std::string s=payload["zone"];
             p=v->toInt(s,10);
-           // ESP_LOGE("info","set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
+           // ESP_LOGE(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             v->set_zone_fault(p,b);
 
         }
@@ -285,7 +285,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
 
     char cmd[30];
     sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,rtc.minute,ampm,rtc.year%100,rtc.month,rtc.day_of_month);
-    ESP_LOGD("debug","Send time string: %s",cmd);
+    ESP_LOGD(TAG,"Send time string: %s",cmd);
     int addr=partitionKeypads[defaultPartition]; 
     vista.write(cmd,addr);
 #endif    
@@ -300,7 +300,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
     #if defined(ARDUINO_MQTT)
         Serial.printf("Setting panel time...\n");      
     #else
-       ESP_LOGD("debug","Send time string: %s",cmd);
+       ESP_LOGD(TAG,"Send time string: %s",cmd);
     #endif
 
     int addr=partitionKeypads[defaultPartition]; 
@@ -466,7 +466,7 @@ void vistaECPHome::setup()  {
           #if defined(ARDUINO_MQTT)
           Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(),partition);     
           #else
-          ESP_LOGD("Debug", "Writing keys: %s to partition %d", keystring.c_str(),partition);
+          ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(),partition);
           #endif
       uint8_t addr=0;
       if (partition > maxPartitions || partition < 1) return;
@@ -521,7 +521,7 @@ void vistaECPHome::setup()  {
             Serial.printf("The prompt was matched - vista zone is %d\n",vistaCmd.statusFlags.zone);         
           #else   
            if (debug > 1)              
-            ESP_LOGD("debug","The prompt was matched - vista zone is %d",vistaCmd.statusFlags.zone);   
+            ESP_LOGD(TAG,"The prompt was matched - vista zone is %d",vistaCmd.statusFlags.zone);   
         #endif        
               char s[5]; 
               x++;
@@ -537,7 +537,7 @@ void vistaECPHome::setup()  {
           #if defined(ARDUINO_MQTT)
                       Serial.printf("The zone match is: %d\n",zone);       
           #else                       
-                      ESP_LOGD("test","The zone match is: %d",zone); 
+                      ESP_LOGD(TAG,"The zone match is: %d",zone); 
           #endif
                    break;
   
@@ -560,7 +560,7 @@ void vistaECPHome::setup()  {
             Serial.printf("The prompt  %s was matched - vista zone is %d\n",msg,vistaCmd.statusFlags.zone);         
           #else   
            if (debug > 1)              
-            ESP_LOGD("debug","The prompt  %s was matched - vista zone is %d",msg,vistaCmd.statusFlags.zone);   
+            ESP_LOGD(TAG,"The prompt  %s was matched - vista zone is %d",msg,vistaCmd.statusFlags.zone);   
         #endif        
               char s[5]; 
               x++;
@@ -576,7 +576,7 @@ void vistaECPHome::setup()  {
           #if defined(ARDUINO_MQTT)
                       Serial.printf("The zone match is: %d\n",zone);       
           #else                       
-                      ESP_LOGD("test","The zone match is: %d",zone); 
+                      ESP_LOGD(TAG,"The zone match is: %d",zone); 
           #endif
                    break;
   
@@ -804,7 +804,7 @@ void vistaECPHome::update()  {
                    
 
              }
-             ESP_LOGD("test","Force refresh....");
+             ESP_LOGD(TAG,"Force refresh....");
            
       }
     
@@ -882,7 +882,7 @@ void vistaECPHome::update()  {
           #if defined(ARDUINO_MQTT)
                   Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);      
           #else                    
-                  ESP_LOGD("debug", "Got relay address %d channel %d = %d", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+                  ESP_LOGD(TAG, "Got relay address %d channel %d = %d", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
           #endif
               }
             } else if (vistaCmd.extcmd[2] == 0x0d) { //relay update z = 1 to 4 - 1sec on / 1 sec off
@@ -892,7 +892,7 @@ void vistaECPHome::update()  {
           #if defined(ARDUINO_MQTT)
                  Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);      
           #else                    
-                  ESP_LOGD("debug", "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+                  ESP_LOGD(TAG, "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
           #endif
               }
             } else if (vistaCmd.extcmd[2] == 0xf7) { //30 second zone expander module status update
@@ -924,7 +924,7 @@ void vistaECPHome::update()  {
           #if defined(ARDUINO_MQTT)
                 Serial.printf("RFX: %s,%02x\n", rf_serial_char,vistaCmd.extcmd[5]);          
           #else                
-                ESP_LOGI("info", "RFX: %s,%02x", rf_serial_char,vistaCmd.extcmd[5]);
+                ESP_LOGI(TAG, "RFX: %s,%02x", rf_serial_char,vistaCmd.extcmd[5]);
           #endif
             }  
             if (z && !(vistaCmd.extcmd[5]&4) && !(vistaCmd.extcmd[5]&1)) { //ignore heartbeat
@@ -969,7 +969,7 @@ void vistaECPHome::update()  {
           #if defined(ARDUINO_MQTT)
               Serial.printf("Display to partition: %02X\n", partition);          
           #else              
-              ESP_LOGI("INFO", "Display to partition: %02X", partition);
+              ESP_LOGI(TAG, "Display to partition: %02X", partition);
           #endif
               if (partitionStates[partition - 1].lastp1 != p1 || forceRefresh)
                 line1DisplayCallback(p1, partition);
@@ -996,9 +996,9 @@ void vistaECPHome::update()  {
           Serial.printf("Prompt: %s\n", p2);
           Serial.printf("Beeps: %d\n", vistaCmd.statusFlags.beeps);          
           #else    
-          ESP_LOGI("INFO", "Prompt: %s %s", p1,s.c_str());
-          ESP_LOGI("INFO", "Prompt: %s", p2);
-          ESP_LOGI("INFO", "Beeps: %d\n", vistaCmd.statusFlags.beeps);
+          ESP_LOGI(TAG, "Prompt: %s %s", p1,s.c_str());
+          ESP_LOGI(TAG, "Prompt: %s", p2);
+          ESP_LOGI(TAG, "Beeps: %d\n", vistaCmd.statusFlags.beeps);
           #endif
         }
 
@@ -1084,7 +1084,7 @@ void vistaECPHome::update()  {
           fireStatus.time = millis();
           fireStatus.state = true;
           getZone(vistaCmd.statusFlags.zone)->fire=true;  
-         ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);          
+         //ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);          
 
         }
         //zone alarm status 
@@ -1101,7 +1101,7 @@ void vistaECPHome::update()  {
             alarmStatus.time = millis();
             alarmStatus.state = true;
             assignPartitionToZone(vistaCmd.statusFlags.zone);   
-            ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
+            //ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
         }
         //device check status 
          if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay ) && vistaCmd.statusFlags.check) {
@@ -1114,7 +1114,7 @@ void vistaECPHome::update()  {
                 zt->open=false;
                 zt->alarm=false;
                 zoneStatusUpdate(vistaCmd.statusFlags.zone);
-              ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );              
+              //ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );              
              }
       }
          
@@ -1129,7 +1129,7 @@ void vistaECPHome::update()  {
                 zt->open=true;  
                 zoneStatusUpdate(vistaCmd.statusFlags.zone);
             }
-            ESP_LOGD("test","fault found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->open);
+           // ESP_LOGD("test","fault found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->open);
             zt->time = millis();
         }
         
@@ -1144,7 +1144,7 @@ void vistaECPHome::update()  {
           }
             zt->time = millis();
             assignPartitionToZone(vistaCmd.statusFlags.zone);      
-          ESP_LOGD("test","bypass found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->bypass); 
+          //ESP_LOGD("test","bypass found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->bypass); 
         }
 
         //trouble lights 
@@ -1156,7 +1156,7 @@ void vistaECPHome::update()  {
           currentLightState.bat = true;
           lowBatteryTime = millis();
         } 
-        // ESP_LOGE("info","ac=%d,batt status = %d,systemflag=%d,lightbat status=%d,trouble=%d", currentLightState.ac,vistaCmd.statusFlags.lowBattery,vistaCmd.statusFlags.systemFlag,currentLightState.bat,currentLightState.trouble);
+        // ESP_LOGE(TAG,"ac=%d,batt status = %d,systemflag=%d,lightbat status=%d,trouble=%d", currentLightState.ac,vistaCmd.statusFlags.lowBattery,vistaCmd.statusFlags.systemFlag,currentLightState.bat,currentLightState.trouble);
 
         if (vistaCmd.statusFlags.fire) {
           currentLightState.fire = true;

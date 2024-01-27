@@ -104,9 +104,10 @@ MG_INFO((" mqtt in connect url=%s",s_url.c_str()));
        };
 
        mg_mqtt_disconnect(this->s_conn, &opts);
+      this->s_conn=NULL;
+      this->is_connected_=false;       
     } 
-    this->s_conn=NULL;
-    this->is_connected_=false;
+
   }
 
   bool subscribe(const char *topic, uint8_t qos) final {
@@ -178,7 +179,6 @@ MG_INFO((" mqtt in connect url=%s",s_url.c_str()));
   CallbackManager<on_unsubscribe_callback_t> on_unsubscribe_;
   CallbackManager<on_message_callback_t> on_message_;
   CallbackManager<on_publish_user_callback_t> on_publish_;
- // std::queue<Event> mqtt_events_;
 };
 extern MQTTBackendESP32 * mg_backend;
 }  // namespace mqtt
