@@ -570,6 +570,7 @@ dscKeybusInterface::dscClockInterrupt() {
   // 250us to read the data line.
 
   // AVR Timer1 calls dscDataInterrupt() via ISR(TIMER1_OVF_vect) when the Timer1 counter overflows
+  
   #if defined(ESP8266)
   timer1_write(1250);
 
@@ -620,6 +621,7 @@ dscKeybusInterface::dscClockInterrupt() {
         case 0x05: pcmd=previousCmd05;break;
         case 0x1B: pcmd=previousCmd1B;break;
      }
+     
       if (pcmd!=NULL) {
         if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
 #ifdef DEBOUNCE            
@@ -635,13 +637,18 @@ dscKeybusInterface::dscClockInterrupt() {
           skipFirst = true; //set flag to indicate 1st copy was skipped
         }  
 #endif        
-       } else {
+       } 
+#ifdef DEBOUNCE       
+       else {
            //not a 05/1b so reset flag
-#ifdef DEBOUNCE  
+
           skipFirst = false;
-#endif          
+         
        }
-        
+ #endif   
+
+
+ 
       }
       // Stores new panel data in the panel buffer
       if (panelBufferLength == dscBufferSize) 

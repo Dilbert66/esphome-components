@@ -422,11 +422,11 @@ void DSCkeybushome::begin() {
     }
 
     if (key == '#') {
-      * currentSelection = 0xFF;
-      partitionStatus[partition - 1].selectedZone = 0;
-      dsc.write(key, partition);
+      * currentSelection = 0xF0;        
+      partitionStatus[partition - 1].selectedZone = 0;      
       partitionStatus[partition - 1].eventViewer = false;
-      activePartition = 1;
+      activePartition = defaultPartition;
+      dsc.write(key, partition);      
       setStatus(partition - 1, true);
       return;
     }
@@ -2038,7 +2038,7 @@ void DSCkeybushome::update()  {
     if (dsc.status[partition] < 0x8B) {
       partitionStatus[partition].locked = false;
       partitionStatus[partition].inprogram = false;
-      activePartition = 1;
+      activePartition = defaultPartition;
     }
     
 
@@ -2141,8 +2141,7 @@ void DSCkeybushome::update()  {
 
       } else if (dsc.status[partition] == 0xA0) { //bypass
         if ( * currentSelection == 0xFF || * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
-          *
-          currentSelection = getNextEnabledZone(0xFF, partition + 1);
+          * currentSelection = getNextEnabledZone(0xFF, partition + 1);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
           char s[50];
           char bypassStatus = ' ';
