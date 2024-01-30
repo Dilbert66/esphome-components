@@ -146,12 +146,16 @@ const char *
     mm9,
     mm10
   };
+#define mmsize 11
+
 const char *
   const outputMenu[] PROGMEM = {
     om0,
     om1,
     om2
   };
+#define omsize 3
+
 const char *
   const troubleMenu[] PROGMEM = {
     tm0,
@@ -164,6 +168,7 @@ const char *
     tm7,
     tm8
   };
+#define tmsize 9
 const char *
   const serviceMenu[] PROGMEM = {
     sm0,
@@ -176,6 +181,8 @@ const char *
     sm7,
     sm8
   };
+#define smsize 9
+
 const char *
   const userMenu[] PROGMEM = {
     um0,
@@ -186,6 +193,8 @@ const char *
     um5,
     um6
   };
+#define umsize 7
+
 const char *
   const statusMenu[] PROGMEM = {
     am0,
@@ -195,13 +204,15 @@ const char *
     am4,
     am5
   };
+#define amsize 6
+
 const char *
   const statusMenuLabels[] PROGMEM = {
     ml0,
     ml1
   };
 
-
+#define mlsize 2
 
 
 enum panelStatus {

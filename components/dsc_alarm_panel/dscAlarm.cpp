@@ -340,7 +340,8 @@ void DSCkeybushome::begin() {
 
     if (partition < 1) partition = defaultPartition;
     byte * currentSelection = & partitionStatus[partition - 1].currentSelection;
-
+    byte * selectedZone = & partitionStatus[partition - 1].selectedZone;
+    
     if (partitionStatus[partition - 1].locked) {
       line1DisplayCallback(String(F("System")).c_str(), partition);
       line2DisplayCallback(String(F("not available")).c_str(), partition);
@@ -422,8 +423,8 @@ void DSCkeybushome::begin() {
     }
 
     if (key == '#') {
-      * currentSelection = 0xF0;        
-      partitionStatus[partition - 1].selectedZone = 0;      
+      * currentSelection = 0xFF;        
+      * selectedZone = 0;      
       partitionStatus[partition - 1].eventViewer = false;
       activePartition = defaultPartition;
       dsc.write(key, partition);      
@@ -448,43 +449,43 @@ void DSCkeybushome::begin() {
 
     } else if (dsc.status[partition - 1] == 0x9E) { // * mainmenu
       if (key == '<') {
-        * currentSelection = * currentSelection >= 11 ? 10 : ( * currentSelection > 0 ? * currentSelection - 1 : 10);
+        * currentSelection = * currentSelection >= mmsize ? mmsize - 1 : ( * currentSelection > 0 ? * currentSelection - 1 : mmsize - 1);
         if (*currentSelection == 8) *currentSelection-=1; //skip empty item
-        if ( * currentSelection < 11)
+        if ( * currentSelection < mmsize)
           line2DisplayCallback(String(FPSTR(mainMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '>') {
-        * currentSelection = * currentSelection >= 10 ? 0 : * currentSelection + 1;
+        * currentSelection = * currentSelection >= (mmsize - 1)  ? 0 : * currentSelection + 1;
         if (*currentSelection == 8) *currentSelection+=1;
-        if ( * currentSelection < 11)
+        if ( * currentSelection < mmsize)
           line2DisplayCallback(String(FPSTR(mainMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '*' && * currentSelection > 0) {
         dsc.write(key, partition);
         char s[5];
-        sprintf(s, "%d", * currentSelection % 10);
+        sprintf(s, "%d", * currentSelection % (mmsize - 1));
         //const char * out = strcpy(new char[3], s);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(s, partition);
       } else {
         dsc.write(key, partition);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
       }
     } else if (dsc.status[partition - 1] == 0xA1) { //trouble
       if (key == '*' && * currentSelection > 0) {
         char s[5];
         sprintf(s, "%d", * currentSelection);
        // const char * out = strcpy(new char[3], s);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(s, partition);
       } else if (key == '>') {
         * currentSelection = getNextOption( * currentSelection);
-        if ( * currentSelection < 9)
+        if ( * currentSelection < tmsize)
           line2DisplayCallback(String(FPSTR(troubleMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '<') {
         * currentSelection = getPreviousOption( * currentSelection);
-        if ( * currentSelection < 9)
+        if ( * currentSelection < tmsize)
           line2DisplayCallback(String(FPSTR(troubleMenu[ * currentSelection])).c_str(), partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
     } else if (dsc.status[partition - 1] == 0xC8) { //service
@@ -492,29 +493,29 @@ void DSCkeybushome::begin() {
         char s[5];
         sprintf(s, "%d", * currentSelection);
         //const char * out = strcpy(new char[3], s);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(s, partition);
       } else if (key == '>') {
         * currentSelection = getNextOption( * currentSelection);
-        if ( * currentSelection < 9)
+        if ( * currentSelection < smsize)
           line2DisplayCallback(String(FPSTR(serviceMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '<') {
         * currentSelection = getPreviousOption( * currentSelection);
-        if ( * currentSelection < 9)
+        if ( * currentSelection < smsize)
           line2DisplayCallback(String(FPSTR(serviceMenu[ * currentSelection])).c_str(), partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
 
     } else if (dsc.status[partition - 1] == 0xA9 && !partitionStatus[partition - 1].eventViewer) { // * user functions
       if (key == '<') {
-        * currentSelection = * currentSelection >= 7 ? 6 : ( * currentSelection > 0 ? * currentSelection - 1 : 6);
-        if ( * currentSelection < 7)
+        * currentSelection = * currentSelection >= umsize ? (umsize - 1) : ( * currentSelection > 0 ? * currentSelection - 1 : (umsize - 1));
+        if ( * currentSelection < umsize)
           line2DisplayCallback(String(FPSTR(userMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '>') {
-        * currentSelection = * currentSelection >= 6 ? 0 : * currentSelection + 1;
-        if ( * currentSelection < 7)
+        * currentSelection = * currentSelection >= (umsize - 1) ? 0 : * currentSelection + 1;
+        if ( * currentSelection < umsize)
           line2DisplayCallback(String(FPSTR(userMenu[ * currentSelection])).c_str(), partition);
       } else if (key == '*' && * currentSelection > 0) {
         char s[5];
@@ -523,14 +524,14 @@ void DSCkeybushome::begin() {
           activePartition = partition;
           dsc.write('b', partition);
         } else {
-          sprintf(s, "%d", * currentSelection % 6);
+          sprintf(s, "%d", * currentSelection % (umsize - 1));
           //const char * out = strcpy(new char[3], s);
-          * currentSelection = 0xFF;
+          * currentSelection = 0;
           dsc.write(s, partition);
         }
       } else {
         dsc.write(key, partition);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
       }
     } else if (dsc.status[partition - 1] == 0xA2) { //alarm memory
       if (key == '>') {
@@ -540,7 +541,7 @@ void DSCkeybushome::begin() {
         * currentSelection = getPreviousOption( * currentSelection);
         dsc.write(key, partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
     } else if (dsc.status[partition - 1] == 0xA6) { //user codes
@@ -556,7 +557,7 @@ void DSCkeybushome::begin() {
         * currentSelection = getPreviousUserCode( * currentSelection);
         dsc.write(key, partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
       setStatus(partition - 1, true);
@@ -568,7 +569,7 @@ void DSCkeybushome::begin() {
         * currentSelection = getPreviousAlarmedZone( * currentSelection, partition);
         dsc.write(key, partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
       setStatus(partition - 1, true);
@@ -585,30 +586,30 @@ void DSCkeybushome::begin() {
         * currentSelection = getPreviousEnabledZone( * currentSelection, partition);
         dsc.write(key, partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
       setStatus(partition - 1, true);
 
     } else if (dsc.status[partition - 1] == 0xB2) { //output control
       if (key == '<') {
-        * currentSelection = * currentSelection >= 3 ? 2 : ( * currentSelection > 0 ? * currentSelection - 1 : 2);
-        if ( * currentSelection < 3)
+        * currentSelection = * currentSelection >= omsize ? (omsize - 1) : ( * currentSelection > 0 ? * currentSelection - 1 : (omsize - 1));
+        if ( * currentSelection < omsize)
           line2DisplayCallback(String(FPSTR(outputMenu[ * currentSelection])).c_str(), partition);
         dsc.write(key, partition);
       } else if (key == '>') {
-        * currentSelection = * currentSelection >= 2 ? 0 : * currentSelection + 1;
-        if ( * currentSelection < 3)
+        * currentSelection = * currentSelection >= (omsize - 1) ? 0 : * currentSelection + 1;
+        if ( * currentSelection < omsize)
           line2DisplayCallback(String(FPSTR(outputMenu[ * currentSelection])).c_str(), partition);
         dsc.write(key, partition);
       } else if (key == '*' && * currentSelection > 0) {
         char s[5];
         sprintf(s, "%d", * currentSelection);
        // const char * out = strcpy(new char[3], s);
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(s, partition);
       } else {
-        * currentSelection = 0xFF;
+        * currentSelection = 0;
         dsc.write(key, partition);
       }
       setStatus(partition - 1, true);
@@ -794,15 +795,13 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
   byte DSCkeybushome::getPanelBitNumber(byte panelByte, byte startNumber) {
 
     byte bitCount = 0;
-    byte p=defaultPartition;
     for (byte bit = 0; bit <= 7; bit++) {
       if (bitRead(dsc.panelData[panelByte], bit)) {
-        p = startNumber + bitCount;
-        break;
+       return (byte) startNumber + bitCount;
       }
       bitCount++;
     }
-    return p;
+    return defaultPartition;
   }
 
   bool DSCkeybushome::getEnabledZonesB1(byte inputByte, byte startZone, byte partition) {
@@ -875,52 +874,46 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   bool DSCkeybushome::checkUserCode(byte code) {
     byte option, optionGroup;
-    bool r=false;
     for (optionGroup = 0; optionGroup < dscZones; optionGroup++) {
       for (byte optionBit = 0; optionBit < 8; optionBit++) {
         option = optionBit + 1 + (optionGroup * 8);
         if (bitRead(programZones[optionGroup], optionBit) && option == code) {
-          r=true;
-          break;
+         return true;
         }
 
       }
     }
-    return r;
+    return false;
   }
 
   byte DSCkeybushome::getNextOption(byte start) {
     byte option, optionGroup, s;
     s = start >= maxZones ? 0 : start;
-    byte r=0;
     for (optionGroup = 0; optionGroup < dscZones; optionGroup++) {
       for (byte optionBit = 0; optionBit < 8; optionBit++) {
         option = optionBit + 1 + (optionGroup * 8);
         if (bitRead(programZones[optionGroup], optionBit) && option > s) {
-            r= option;
-            break;
+            return option;
       }
-      }
+     }
     }
-    return r;
+    return 0;
   }
 
   byte DSCkeybushome::getPreviousOption(byte start) {
     byte s;
     s = start >= maxZones || start == 0 ? maxZones : start;
-    byte r=0;
     for (int optionGroup = dscZones - 1; optionGroup >= 0 && optionGroup < dscZones; optionGroup--) {
       for (int optionBit = 7; optionBit >= 0 && optionBit < 8; optionBit--) {
         byte option = optionBit + 1 + (optionGroup * 8);
         if (bitRead(programZones[optionGroup], optionBit)) {
           if (option < s){
-              r=option;
-              break;
+              return option;
           }
         }
       }
     }
-    return r;
+    return 0;
   }
 
   byte DSCkeybushome::getNextUserCode(byte start) {
@@ -932,7 +925,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   byte DSCkeybushome::getPreviousUserCode(byte start) {
     if (start > 1)
-      return start - 1;
+      return (byte) start - 1;
     else
       return 95;
   }
@@ -993,14 +986,12 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   byte DSCkeybushome::getNextOpenZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
-    byte z=0;
     for (int zone = start; zone < maxZones; zone++) {
       if (zoneStatus[zone].enabled && zoneStatus[zone].partition == partition && zoneStatus[zone].open) {
-          z= zone + 1;
-          break;
+      return (byte)zone + 1;
     }
     }
-    return z;
+    return 0;
   }
 
   byte DSCkeybushome::getPreviousOpenZone(byte start, byte partition) {
@@ -1053,20 +1044,17 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   byte DSCkeybushome::getNextEnabledZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
-    byte z=0;
     for (int zone = start; zone < maxZones; zone++) {
       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
-         z=zone + 1;
-         break;
+         return (byte) zone + 1;
       }
     }
-    return z;
+    return 0;
   }
 
   byte DSCkeybushome::getPreviousEnabledZone(byte start, byte partition) {
 
     if (start < 2 || start > maxZones) start = maxZones;
-    byte z=0;
     int zone;
     for (zone=start-2;zone>=0;zone--) {
        if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
@@ -1080,19 +1068,17 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       }
     }
     
-    return z;
+    return 0;
   }
 
   byte DSCkeybushome::getNextAlarmedZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
-    byte z=0;
     for (int zone = start; zone < maxZones; zone++) {
       if (zoneStatus[zone].partition == partition && zoneStatus[zone].alarm) {
-         z=zone + 1;
-         break;
+         return (byte) zone + 1;
       }
     }
-    return z;
+    return 0;
   }
 
   byte DSCkeybushome::getPreviousAlarmedZone(byte start, byte partition) {
@@ -1620,7 +1606,7 @@ void DSCkeybushome::update()  {
     if (partition >= dscPartitions) return;
     if (dsc.status[partition] == partitionStatus[partition].lastStatus && beeps == 0 && !force) return;
     byte * currentSelection = & partitionStatus[partition].currentSelection;
- 
+    byte * selectedOpenZone = & partitionStatus[partition].selectedZone;
     String lcdLine1;
     String lcdLine2;
     options = false;
@@ -2061,7 +2047,6 @@ void DSCkeybushome::update()  {
 
         //ok, we should have the data now so display it
       } else if (partitionStatus[partition].digits && partitionStatus[partition].newData && dsc.pgmBuffer.dataPending) {
-
         char s[8];
         if (partitionStatus[partition].digits > 16)
         lcdLine1 =" ";
@@ -2076,7 +2061,6 @@ void DSCkeybushome::update()  {
           else
             sprintf(decimalInputBuffer, PSTR("%03d"), dsc.pgmBuffer.data[0]);
         }
-   
         for (int x = 0; x < partitionStatus[partition].digits ; x++) { 
           y = (x / 2)  + (x/8); //skip every 5th byte since it's a checksum
           if (partitionStatus[partition].decimalInput)
@@ -2108,14 +2092,13 @@ void DSCkeybushome::update()  {
                lcdLine2+=s;
           }
         }
-
       } else if (partitionStatus[partition].digits) {
         lcdLine1 = "";
         lcdLine2 = "";
       }
 
-      if (dsc.status[partition] < 0x04) {
-        if ( * currentSelection > 1 && * currentSelection < 6) {
+      if (dsc.status[partition] < 0x04) {  // status menu/open zones
+        if ( * currentSelection > 1 && * currentSelection < amsize) {
           std::string s = String(FPSTR(statusMenu[ * currentSelection])).c_str();
           int pos = s.find(":");
           lcdLine1 = (s.substr(0, pos)).c_str();
@@ -2128,20 +2111,19 @@ void DSCkeybushome::update()  {
           lcdLine2 = (s.substr(pos + 1)).c_str();
           * currentSelection = 1;
         }
-
-        if (partitionStatus[partition].selectedZone && partitionStatus[partition].selectedZone < maxZones) {
+        if (*selectedOpenZone && *selectedOpenZone < maxZones) { //open zones 
           char s[50];
-          std::string name=getZoneName(partitionStatus[partition].selectedZone);
+          std::string name=getZoneName(*selectedOpenZone);
           if (name !="")
             snprintf(s, 50,PSTR("%s <>"),name.c_str());
           else
-            snprintf(s,50, PSTR("zone %02d  <>"), partitionStatus[partition].selectedZone);
+            snprintf(s,50, PSTR("zone %02d  <>"), *selectedOpenZone);
           lcdLine2 = s;
         }
 
       } else if (dsc.status[partition] == 0xA0) { //bypass
-        if ( * currentSelection == 0xFF || * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
-          * currentSelection = getNextEnabledZone(0xFF, partition + 1);
+        if ( * currentSelection == 0 ||  dsc.status[partition] != partitionStatus[partition].lastStatus)
+          * currentSelection = getNextEnabledZone(0, partition + 1);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
           char s[50];
           char bypassStatus = ' ';
@@ -2156,11 +2138,10 @@ void DSCkeybushome::update()  {
             snprintf(s,50, PSTR("%02d  %c"), * currentSelection, bypassStatus);       
           lcdLine2 = s;
         }
+        
       } else if (dsc.status[partition] == 0x11) { //alarms
-
-        if ( * currentSelection == 0xFF || * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
-          *
-          currentSelection = getNextAlarmedZone(0xFF, partition + 1);
+        if ( * currentSelection == 0 ||  dsc.status[partition] != partitionStatus[partition].lastStatus)
+          * currentSelection = getNextAlarmedZone(0, partition + 1);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
            char s[50];
           std::string name=getZoneName(* currentSelection);
@@ -2170,12 +2151,10 @@ void DSCkeybushome::update()  {
           snprintf(s,50, PSTR("zone %02d"), * currentSelection);          
           lcdLine2 = s;
         } else lcdLine2 = " ";
+        
       } else if (dsc.status[partition] == 0xA2) { //alarm memory
-
-        if ( * currentSelection == 0xFF || dsc.status[partition] != partitionStatus[partition].lastStatus)
-          *
-          currentSelection = getNextOption(0xFF);
-
+        if ( * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
+          * currentSelection = getNextOption(0);
         if ( * currentSelection < maxZones && * currentSelection > 0) {
            char s[50];
           std::string name=getZoneName(* currentSelection);
@@ -2185,54 +2164,50 @@ void DSCkeybushome::update()  {
             snprintf(s,50, PSTR("zone %02d"), * currentSelection);             
          
           lcdLine2 = s;
-          
         } else {
           lcdLine1 = F("No alarms");
           lcdLine2 = F("in memory");
         }
       } else if (dsc.status[partition] == 0x9E) { // main menu
-
-        if ( * currentSelection == 0xFF || dsc.status[partition] != partitionStatus[partition].lastStatus) {
+        if ( * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus) {
           * currentSelection = 1;
         }
-        lcdLine2 = String(FPSTR(mainMenu[ * currentSelection]));
+        if (*currentSelection < mmsize)
+            lcdLine2 = String(FPSTR(mainMenu[ * currentSelection]));
 
       } else if (dsc.status[partition] == 0xB2) { // output menu
-
-        if ( * currentSelection == 0xFF || dsc.status[partition] != partitionStatus[partition].lastStatus) {
+        if ( * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus) {
           * currentSelection = 1;
         }
-        lcdLine2 = String(FPSTR(outputMenu[ * currentSelection]));
+        if (*currentSelection < omsize)
+            lcdLine2 = String(FPSTR(outputMenu[ * currentSelection]));
 
       } else if (dsc.status[partition] == 0xA9 && !partitionStatus[partition].eventViewer) { // user menu
-
-        if ( * currentSelection == 0xFF || dsc.status[partition] != partitionStatus[partition].lastStatus) {
+        if ( * currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus) {
           * currentSelection = 1;
         }
-        lcdLine2 = String(FPSTR(userMenu[ * currentSelection]));
+        if (*currentSelection < umsize)        
+            lcdLine2 = String(FPSTR(userMenu[ * currentSelection]));
 
       } else if (dsc.status[partition] == 0xA1) { //trouble
-
-        if ( * currentSelection == 0xFF) {
-          * currentSelection = getNextOption(0xFF);
+        if ( * currentSelection == 0) {
+          * currentSelection = getNextOption(0);
         }
-        if ( * currentSelection < 9) {
+        if ( * currentSelection < tmsize) {
           lcdLine2 = String(FPSTR(troubleMenu[ * currentSelection]));
-
         }
 
       } else if (dsc.status[partition] == 0xC8) { //service
 
-        if ( * currentSelection == 0xFF)
-          * currentSelection = getNextOption(0xFF);
-        if ( * currentSelection < 9) {
+        if ( * currentSelection == 0)
+          * currentSelection = getNextOption(0);
+        if ( * currentSelection < smsize) {
           lcdLine2 = String(FPSTR(serviceMenu[ * currentSelection]));
-
         }
 
       } else if (dsc.status[partition] == 0xA6) { //user code
-        if ( * currentSelection == 0xFF)
-          * currentSelection = getNextUserCode(0xFF);
+        if ( * currentSelection == 0)
+          * currentSelection = getNextUserCode(0);
         if ( * currentSelection < 96) {
           char s[16];
           char programmed = ' ';
@@ -2241,19 +2216,19 @@ void DSCkeybushome::update()  {
           sprintf(s, PSTR("%02d   %c"), * currentSelection, programmed);
           lcdLine2 = s;
         }
+        
       } else                 // Sends the access code when needed by the panel for arming
         if (dsc.status[partition] == 0x9F && dsc.accessCodePrompt && isInt(accessCode, 10)) {
         dsc.accessCodePrompt = false;
         dsc.write(accessCode, partition + 1);
         //if (debug > 0) ESP_LOGI(TAG, "got access code prompt for partition %d", partition + 1);
-      }  
-
+      }
+      
       if (options) {
         lcdLine2 = getOptionsString();
       }
       
-     }
-    
+     } //if skip
 
     if (lcdLine1 != "") line1DisplayCallback(lcdLine1.c_str(), partition + 1);
     if (lcdLine2 != "") line2DisplayCallback(lcdLine2.c_str(), partition + 1);
