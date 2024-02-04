@@ -15,6 +15,13 @@ vista_alarm_panel:
   # RF device programming (*56 program) to see what loop and zones are assigned to your RF devices. 
   # You can refer to the pdf link below for more details on loop numbers 
   # https://advancedsecurityllc.com/wp-content/uploads/5800%20Wireless%20Device%20List.pdf
+  #
+  # Note: These entries are used to identify and report immediate open/close/battery
+  # activities directly from your RF devices, bypassing the panel. This is beneficial
+  # since the panel only reports open events to the keypads. The firmware will work fine
+  # without these entries except you will have a delay of TTL milliseconds before 
+  # the report of closed zones. 
+  
   rfseriallookup: "0019994:2:66,0818433:4:22,0123456:1:55,0399512:1:17" # serial1:loop#:zone1,serial2:loop#:zone2
  
   defaultpartition: "1" #set to your main partition
