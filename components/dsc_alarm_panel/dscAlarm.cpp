@@ -1135,6 +1135,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
            dsc.panelData[11]=0x77;
            *ccount=0; // get a new updated bit count
            *bcount=0; 
+           *lbcount=0;           
            return false;
        } else {
            if (*ccount < 3) {   
@@ -1143,8 +1144,11 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
               if (*ccount>=3)
                  *bcount=dsc.panelBitCount;
             } else  {
+               dsc.panelData[11]=0x76;                
                *ccount=0; //reset since we did not get 3 in a row
                *bcount=0;
+               *lbcount=0;  
+               return false;
             }
             *lbcount=dsc.panelBitCount;
            }
