@@ -226,6 +226,7 @@ class dscKeybusInterface {
     static volatile pgmBufferType pgmBuffer;
     bool keybusVersion1;  
     bool validCRC();    
+    static byte panelBitCount, panelByteCount;
     
   private:
 
@@ -400,7 +401,7 @@ class dscKeybusInterface {
     //static byte writeByte, writeBit;
     static bool virtualKeypad;
     static char writeKey;
-    static byte panelBitCount, panelByteCount;
+
     static volatile bool writeAlarm;
     static volatile bool moduleDataDetected, moduleDataCaptured;
     static volatile unsigned long keybusTime;

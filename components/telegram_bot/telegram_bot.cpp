@@ -1,4 +1,4 @@
-#include "web_notify.h"
+#include "telegram_bot.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/network/util.h"
 #include "esphome/core/application.h"
@@ -170,8 +170,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
       mg_error(c, "Connect timeout");
     }
      if (c->data[0]=='T') {
-        //if (global_notify->msgAvailable() && !c->is_draining && !global_notify->sending ) {
-        if (global_notify->messages.size() && !c->is_draining && !global_notify->sending ) {            
+        if ((!global_notify->enableBot_ || global_notify->messages.size()) && !c->is_draining && !global_notify->sending ) {            
              c->is_draining=1; //close long poll so we can send
              ESP_LOGD("test","Pending message closing poll connection from poll");
         }
@@ -182,25 +181,23 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
       MG_INFO(("Got ev close,enablebot %d, ma %d, sending=%d",global_notify->enableBot_, global_notify->messages.size(),global_notify->sending));   
       
   } else if (ev == MG_EV_CONNECT) {
-       global_notify->connected=true;
       if (c->data[0]=='T') {
-        if (global_notify->messages.size() && !c->is_draining && !global_notify->sending) {
-             c->is_draining=1; //close long poll so we can send
-             ESP_LOGD("test","Pending message closing poll connection from connect");
-        }
+        c->is_closing=1; //close long poll if opened so we can send
+        ESP_LOGD("test","Pending message closing poll connection from connect");
         return;
        }
       c->data[0]='T'; 
-     
+      global_notify->connected=true;
       MG_INFO(("got ev connect"));
     // Connected to server. Extract host name from URL
     struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
     if (mg_url_is_ssl(global_notify->apiHost_.c_str())) {
-    
+     MG_ERROR(("\nbefore: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
       struct mg_tls_opts opts = {.name = host};
       mg_tls_init(c, &opts);
+      if (c->tls==NULL) return;
     }
-      MG_ERROR(("\nfreeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
+      MG_ERROR(("\nAfter: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
    MG_INFO((" tls init done"));
       if (global_notify->messages.size()) {
         global_notify->sending=true;       //we are connecting so flag connection as open           
@@ -273,7 +270,7 @@ void WebNotify::loop() {
           ESP_LOGD("test","Telegram connecting to %s",apiHost_.c_str());
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
-      mg_mgr_poll(&mgr, 0);
+      mg_mgr_poll(&mgr, 10);
    }
  
 }

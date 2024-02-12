@@ -35,7 +35,9 @@ CONF_KEYPAD_URL="config_url"
 CONF_PARTITIONS="partitions"
 CONF_SERVICE_LAMBDA="service_lambda"
 CONF_KEYPAD="show_keypad"
-
+CONF_CERTIFICATE="certificate"
+CONF_CERTIFICATE_KEY="certificate_key"
+CONF_ENCRYPTION="encryption"
 
 web_server_ns = cg.esphome_ns.namespace("web_server")
 WebServer = web_server_ns.class_("WebServer", cg.Component, cg.Controller)
@@ -78,6 +80,12 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_KEYPAD_URL):cv.string,  
             cv.Optional(CONF_SERVICE_LAMBDA): cv.lambda_,
             cv.Optional(CONF_ENABLE_PRIVATE_NETWORK_ACCESS, default=True): cv.boolean,
+            cv.Optional(CONF_CERTIFICATE): cv.All(
+                cv.string
+            ),
+            cv.Optional(CONF_CERTIFICATE_KEY): cv.All(
+                cv.string
+            ),
             cv.Optional(CONF_AUTH): cv.Schema(
                 {
                     cv.Required(CONF_USERNAME): cv.All(
@@ -86,7 +94,8 @@ CONFIG_SCHEMA = cv.All(
                     cv.Required(CONF_PASSWORD): cv.All(
                         cv.string_strict, cv.Length(min=1)
                     ),
-                }
+                    cv.Optional(CONF_ENCRYPTION, default=False):cv.boolean,                     
+                    },
             ),
             cv.Optional(CONF_INCLUDE_INTERNAL, default=False): cv.boolean,
             cv.SplitDefault(
@@ -149,7 +158,8 @@ def add_resource_as_progmem(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=1.0.0") 
+    #cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git",">=7.12.6") 
+    cg.add_library("Crypto", None) 
     cg.add_define("USE_WEBSERVER")
     version = config[CONF_VERSION]
 
@@ -172,14 +182,20 @@ async def to_code(config):
     cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
     cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
+
     
     if CONF_PARTITIONS in config:
         cg.add(var.set_partitions(config[CONF_PARTITIONS]))   
     if config[CONF_ENABLE_PRIVATE_NETWORK_ACCESS]:
         cg.add_define("USE_WEBSERVER_PRIVATE_NETWORK_ACCESS")
+
+    if CONF_CERTIFICATE in config:
+        cg.add(var.set_certificate(config[CONF_CERTIFICATE]))
+        cg.add(var.set_certificate_key(config[CONF_CERTIFICATE_KEY]))
+        
     if CONF_AUTH in config:
-        cg.add(set_auth_username(config[CONF_AUTH][CONF_USERNAME]))
-        cg.add(set_auth_password(config[CONF_AUTH][CONF_PASSWORD]))
+        cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION]));    
+               
     if CONF_CSS_INCLUDE in config:
         cg.add_define("USE_WEBSERVER_CSS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_CSS_INCLUDE])
@@ -213,5 +229,5 @@ async def to_code(config):
     if CORE.using_arduino:
         if CORE.is_esp32:        
             cg.add_library("Update", None)        
-         
+    cg.add_library("rweather/Crypto", "0.4.0")
 

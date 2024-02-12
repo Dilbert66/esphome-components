@@ -1237,7 +1237,7 @@ void WebServer::handle_alarm_panel_request(mg_connection *c,JsonObject doc) {
     
       
     if (doc["method"]=="GET") {
-     if (doc["action"]=="getconfig") {
+     if (doc["action"]=="getconfig" && _json_keypad_config != NULL) {
       std::string data = _json_keypad_config;
          ws_reply(c,data.c_str(),true); 
       return;
@@ -2123,35 +2123,35 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
               mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
               */
 
-             
-             bufsize=strlen(srv->_json_keypad_config)*2;
-             char *buf2 = new char [bufsize]; 
-             snprintf(buf2,bufsize,"{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", srv->_json_keypad_config);
-             
-            srv->encrypt(buf2,"key_config",config);
-            mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str());  
-            
+             if (srv->_json_keypad_config != NULL) {
+                bufsize=strlen(srv->_json_keypad_config)*2;
+                char *buf2 = new char [bufsize]; 
+                snprintf(buf2,bufsize,"{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", srv->_json_keypad_config);
+                srv->encrypt(buf2,"key_config",config);
+                mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
+                delete [] buf2;
+             }
             delete [] buf;            
-            delete [] buf2;
+ 
             
             srv->entities_iterator_.begin(srv->include_internal_);
             
         } else if (mg_http_match_uri(hm, "/events") && !c->is_websocket) {
             mg_str *hdr =mg_http_get_header(hm, "Accept"); 
-            if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
+           // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
               c->data[0]='E';
               mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\ndata: %s\r\n\r\n", "Subscribed to Events");
               c->is_resp=0;
               std::string enc;  
               srv->encrypt(srv->get_config_json().c_str(),"",enc);
               mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",millis(),30000,"ping", enc.c_str());
-
-              srv->encrypt(srv->_json_keypad_config,"",enc);
-              mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", enc.c_str());   
-              
+             if (srv->_json_keypad_config != NULL) {
+                srv->encrypt(srv->_json_keypad_config,"",enc);
+                mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", enc.c_str());   
+             } 
                srv->entities_iterator_.begin(srv->include_internal_);
-            } else
-                mg_http_reply(c, 404,"", ""); 
+           // } else
+            //   mg_http_reply(c, 404,"", ""); 
         
         } else {
             MG_INFO(("before handle request"));

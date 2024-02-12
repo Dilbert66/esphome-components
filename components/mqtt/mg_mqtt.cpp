@@ -100,12 +100,13 @@ void MQTTBackendESP32::loop() {
 void MQTTBackendESP32::instance_fn(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_OPEN) {
     MG_INFO(("mqtt %lu CREATED", c->id));
+
     // c->is_hexdumping = 1;
   } else if (ev == MG_EV_ERROR) {
     // On error, log error message
     MG_ERROR(("mqtt %lu ERROR %s", c->id, (char *) ev_data));
-    //this->is_connected_=false;
     //this->s_conn = NULL;
+    //c->is_closing=1;
   } else if (ev == MG_EV_CONNECT) {
       ESP_LOGV(TAG, "MQTT_EVENT_BEFORE_CONNECT");
     // If target URL is SSL/TLS, command client connection to use TLS
@@ -144,7 +145,6 @@ MG_INFO(("mqtt use ssl is on"))   ;
   } else if (ev == MG_EV_CLOSE) {
     //calls subs
      this->is_connected_ = false;
-     this->s_conn = NULL;  // Mark that we're closed     
      on_disconnect_.call(MQTTClientDisconnectReason::TCP_DISCONNECTED);
      MG_INFO(("mqtt %lu CLOSED", c->id));
 

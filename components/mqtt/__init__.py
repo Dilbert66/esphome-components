@@ -292,7 +292,7 @@ async def to_code(config):
          cg.add_build_flag("-DUSE_MG")   
    
     cg.add_global(mqtt_ns.using)
-    cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=1.0.0") 
+    #cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=7.12.6") 
     cg.add(var.set_broker_address(config[CONF_BROKER]))
     cg.add(var.set_broker_port(config[CONF_PORT]))
     cg.add(var.set_username(config[CONF_USERNAME]))
@@ -368,6 +368,7 @@ async def to_code(config):
     if CONF_USESSL in config and config[CONF_USESSL]:
         cg.add_build_flag("-DMG_USE_SSL")
         cg.add_build_flag("-DUSE_MG")
+        cg.add_build_flag("-DMG_IO_SIZE=512")        
     cg.add(var.set_keep_alive(config[CONF_KEEPALIVE]))
 
     cg.add(var.set_reboot_timeout(config[CONF_REBOOT_TIMEOUT]))

@@ -590,6 +590,7 @@ dscKeybusInterface::dscClockInterrupt() {
   static bool skipFirst = false;
   #endif  
 
+  
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
@@ -616,39 +617,35 @@ dscKeybusInterface::dscClockInterrupt() {
       byte * pcmd=NULL;
       static byte previousCmd05[dscReadSize];
       static byte previousCmd1B[dscReadSize]; 
-      
+
       switch (isrPanelData[0]) {
         case 0x05: pcmd=previousCmd05;break;
         case 0x1B: pcmd=previousCmd1B;break;
      }
-     
+
       if (pcmd!=NULL) {
-        if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
-#ifdef DEBOUNCE            
-          if (skipFirst) 
-            skipFirst = false; //second copy, we clear skipfirst, and process this copy
-           else 
+          if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
+            #ifdef DEBOUNCE            
+            if (skipFirst) 
+              skipFirst = false; //second copy, we clear skipfirst, and process this copy
+             else 
 #endif             
               skipData = true;  //3rd or more copy, so we skip
-        } 
+          } 
 #ifdef DEBOUNCE        
-       else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005 and pc1832
-          skipData = true; //skip this cmd
-          skipFirst = true; //set flag to indicate 1st copy was skipped
-        }  
-#endif        
-       } 
+           else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005 and pc1832
+            skipData = true; //skip this cmd
+            skipFirst = true; //set flag to indicate 1st copy was skipped
+          }  
+#endif      
+      } 
 #ifdef DEBOUNCE       
        else {
            //not a 05/1b so reset flag
-
-          skipFirst = false;
+        skipFirst = false;
          
        }
  #endif   
-
-
- 
       }
       // Stores new panel data in the panel buffer
       if (panelBufferLength == dscBufferSize) 

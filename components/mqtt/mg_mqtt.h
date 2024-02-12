@@ -111,25 +111,24 @@ MG_INFO((" mqtt in connect url=%s",s_url.c_str()));
   
   void disconnect() final {
       
-          MG_INFO(("mqtt disconnect")); 
+          MG_INFO(("mqtt disconnect command")); 
     if ( this->s_conn != NULL && this->is_connected_) {
-       struct mg_mqtt_opts opts = {
-                               .version = 4
-       };
+      struct mg_mqtt_opts opts;
+      opts.version=4;
+      opts.message=mg_str("bye");
+      opts.clean=true;
 
        mg_mqtt_disconnect(this->s_conn, &opts);
-      this->s_conn=NULL;
-      this->is_connected_=false;       
+       
     } 
 
   }
 
   bool subscribe(const char *topic, uint8_t qos) final {
    if (this->s_conn == NULL ) return false;
-    struct mg_str subt = mg_str(topic);
     struct mg_mqtt_opts sub_opts;
     memset(&sub_opts, 0, sizeof(sub_opts));
-    sub_opts.topic = subt;
+    sub_opts.topic = mg_str(topic);
     sub_opts.qos = qos;
     mg_mqtt_sub(this->s_conn, &sub_opts); 
     return true;    
@@ -153,6 +152,7 @@ MG_INFO((" mqtt in connect url=%s",s_url.c_str()));
     pub_opts.version=4;
     pub_opts.qos = qos, pub_opts.retain = false;
     mg_mqtt_pub(this->s_conn, &pub_opts);
+    mg_mgr_poll(&mgr,1);    //we need to clear the iobuf right away or it grows too large on startup
     //MG_INFO(("%lu PUBLISHED %.*s -> %.*s", this->s_conn->id, length, payload,             strlen(topic), topic));
     return true;
   }

@@ -469,6 +469,9 @@ public:
   void set_alarm_state(std::string state, std::string code = "", int partition = 0) ;
 
 private:
+
+  bool check05Cmd();
+  
   void printPacket(const char * label, char cmd, volatile byte cbuf[], int len) ;
 
   byte getPanelBitNumber(byte panelByte, byte startNumber) ;

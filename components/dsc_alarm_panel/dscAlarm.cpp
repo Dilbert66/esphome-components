@@ -785,7 +785,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     s[x]=0;
     #if !defined(ARDUINO_MQTT)
     if (debug > 0)
-        ESP_LOGI(label, "%02X: %s", cmd, s);
+        ESP_LOGI(label, "%02X: %s (%d)", cmd, s,dsc.panelBitCount);
     #else
     if (debug > 0)
         Serial.printf("%s: %02X: %s\n",label, cmd, s); 
@@ -941,7 +941,8 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       return;
     } else if (partitionStatus[partition - 1].currentSelection == 5) { //open zones
       partitionStatus[partition - 1].selectedZone = getPreviousOpenZone(partitionStatus[partition - 1].selectedZone, partition);
-      if (partitionStatus[partition - 1].selectedZone) return;
+      if (partitionStatus[partition - 1].selectedZone)
+        return;
     } else if (partitionStatus[partition - 1].currentSelection < 2)
       partitionStatus[partition - 1].currentSelection = 6;
 
@@ -1112,6 +1113,47 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       }
     }
   }
+  
+  bool DSCkeybushome::check05Cmd() {
+     //check to make sure cmd did not drop bits and matches previous valid 05/1b
+    byte * ccount;
+    byte * bcount;
+    byte * lbcount;
+    static byte lastbitcount05=0;
+    static byte lastbitcount1b=0;
+    static byte bitcount05=0;
+    static byte bitcount1b=0;
+    static byte count05=0;
+    static byte count1b=0;
+    
+    switch(dsc.panelData[0]) {
+        case 0x05: ccount=&count05;bcount=&bitcount05;lbcount=&lastbitcount05;break;
+        case 0x1b: ccount=&count1b;bcount=&bitcount1b;lbcount=&lastbitcount1b;break;
+        default: return true;
+    }
+    if ( *bcount > 0 && *bcount != dsc.panelBitCount) {
+           dsc.panelData[11]=0x77;
+           *ccount=0; // get a new updated bit count
+           *bcount=0; 
+           return false;
+       } else {
+           if (*ccount < 3) {   
+            if (*lbcount==dsc.panelBitCount || *lbcount==0) {
+              *ccount=*ccount+1;
+              if (*ccount>=3)
+                 *bcount=dsc.panelBitCount;
+            } else  {
+               *ccount=0; //reset since we did not get 3 in a row
+               *bcount=0;
+            }
+            *lbcount=dsc.panelBitCount;
+           }
+       }
+      
+      return true;
+  }
+  
+  
 #if defined(ARDUINO_MQTT)
 
 void DSCkeybushome::loop()  {
@@ -1174,9 +1216,10 @@ void DSCkeybushome::update()  {
        // dsc.clearZoneRanges(); // start with clear expanded zones
 #endif
       }
-
+      bool valid05=check05Cmd();
       if (debug > 1)
         printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
+      if (!valid05) return;
       #ifdef SERIALDEBUGCOMMANDS
       if (debug > 2) {
         Serial.print(" ");

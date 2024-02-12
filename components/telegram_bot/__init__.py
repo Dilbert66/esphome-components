@@ -105,7 +105,8 @@ def add_resource_as_progmem(
 @coroutine_with_priority(40.0)
 async def to_code(config):
     cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
-    cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=1.0.0")    
+    cg.add_build_flag("-DMG_IO_SIZE=512")    
+    #cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=7.12.6")    
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:

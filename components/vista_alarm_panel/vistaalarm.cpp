@@ -998,7 +998,7 @@ void vistaECPHome::update()  {
           #else    
           ESP_LOGI(TAG, "Prompt: %s %s", p1,s.c_str());
           ESP_LOGI(TAG, "Prompt: %s", p2);
-          ESP_LOGI(TAG, "Beeps: %d\n", vistaCmd.statusFlags.beeps);
+          ESP_LOGI(TAG, "Beeps: %d", vistaCmd.statusFlags.beeps);
           #endif
         }
 
