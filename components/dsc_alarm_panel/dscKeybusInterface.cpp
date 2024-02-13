@@ -130,10 +130,15 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
     dscWritePin = setWritePin;
     invertWrite=setInvertWrite;
   }
-  
-  pinMode(dscClockPin, INPUT);
-  pinMode(dscReadPin, INPUT);
+  if (dscWritePin == dscReadPin) {
+    pinMode(dscClockPin, INPUT_PULLUP);
+    pinMode(dscReadPin, INPUT_PULLUP);
+  } else {
+    pinMode(dscClockPin, INPUT);
+    pinMode(dscReadPin, INPUT);  
+  }
   if (virtualKeypad && dscWritePin != dscReadPin) pinMode(dscWritePin, OUTPUT);
+  
   stream = & _stream;
 
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
@@ -594,9 +599,8 @@ dscKeybusInterface::dscClockInterrupt() {
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
-        
         if (dscWritePin == dscReadPin && !writeDataPending)
-           pinMode(dscReadPin, INPUT);
+           pinMode(dscReadPin, INPUT_PULLUP);
        
         digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     }
