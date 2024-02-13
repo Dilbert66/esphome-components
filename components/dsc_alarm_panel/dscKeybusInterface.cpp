@@ -133,11 +133,12 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   if (dscWritePin == dscReadPin) {
     pinMode(dscClockPin, INPUT_PULLUP);
     pinMode(dscReadPin, INPUT_PULLUP);
+    invertWrite=false;
   } else {
     pinMode(dscClockPin, INPUT);
     pinMode(dscReadPin, INPUT);  
+    if (virtualKeypad) pinMode(dscWritePin, OUTPUT)    
   }
-  if (virtualKeypad && dscWritePin != dscReadPin) pinMode(dscWritePin, OUTPUT);
   
   stream = & _stream;
 
