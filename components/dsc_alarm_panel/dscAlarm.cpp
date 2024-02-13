@@ -1113,49 +1113,50 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       }
     }
   }
-  
-  bool DSCkeybushome::check05Cmd() {
-     //check to make sure cmd did not drop bits and matches previous valid 05/1b
-    byte * ccount;
-    byte * bcount;
-    byte * lbcount;
-    static byte lastbitcount05=0;
-    static byte lastbitcount1b=0;
-    static byte bitcount05=0;
-    static byte bitcount1b=0;
-    static byte count05=0;
-    static byte count1b=0;
+
+bool DSCkeybushome::check051bCmd() {
+
+    cmdCountType *cmdCount;
+    static cmdCountType count05;
+    static cmdCountType count1b;
     
     switch(dsc.panelData[0]) {
-        case 0x05: ccount=&count05;bcount=&bitcount05;lbcount=&lastbitcount05;break;
-        case 0x1b: ccount=&count1b;bcount=&bitcount1b;lbcount=&lastbitcount1b;break;
+        case 0x05: cmdCount=&count05;break;
+        case 0x1b: cmdCount=&count1b;break;
         default: return true;
     }
-    if ( *bcount > 0 && *bcount != dsc.panelBitCount) {
+    
+    if ( cmdCount->bcount > 0 && cmdCount->bcount != dsc.panelBitCount) {
            dsc.panelData[11]=0x77;
-           *ccount=0; // get a new updated bit count
-           *bcount=0; 
-           *lbcount=0;           
+           cmdCount->ecount=cmdCount->ecount+1; 
+           if (cmdCount->ecount > 1) {
+            cmdCount->ccount=0; // get a new updated bit count since we have more than 1 error count in a row
+            cmdCount->bcount=0; 
+            cmdCount->lbcount=0; 
+            cmdCount->ecount=0;
+           }    
            return false;
        } else {
-           if (*ccount < 3) {   
-            if (*lbcount==dsc.panelBitCount || *lbcount==0) {
-              *ccount=*ccount+1;
-              if (*ccount>=3)
-                 *bcount=dsc.panelBitCount;
+           cmdCount->ecount=0;//matching bit count reset error count
+           if (cmdCount->ccount < 3) {   
+            if (cmdCount->lbcount==dsc.panelBitCount || cmdCount->lbcount==0) {
+              cmdCount->ccount=cmdCount->ccount+1;
+              if (cmdCount->ccount>=3)
+                 cmdCount->bcount=dsc.panelBitCount;
             } else  {
                dsc.panelData[11]=0x76;                
-               *ccount=0; //reset since we did not get 3 in a row
-               *bcount=0;
-               *lbcount=0;  
+               cmdCount->ccount=0; //reset since we did not get 3 in a row
+               cmdCount->bcount=0;
+               cmdCount->lbcount=0;  
                return false;
             }
-            *lbcount=dsc.panelBitCount;
+            cmdCount->lbcount=dsc.panelBitCount;
            }
        }
       
       return true;
   }
+ 
   
   
 #if defined(ARDUINO_MQTT)
@@ -1220,7 +1221,7 @@ void DSCkeybushome::update()  {
        // dsc.clearZoneRanges(); // start with clear expanded zones
 #endif
       }
-      bool valid05=check05Cmd();
+      bool valid05=check051bCmd();
       if (debug > 1)
         printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
       if (!valid05) return;

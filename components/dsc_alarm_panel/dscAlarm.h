@@ -66,6 +66,13 @@ extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
 const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif
 
+typedef struct  {
+    byte lbcount=0;
+    byte bcount=0;
+    byte ccount=0;
+    byte ecount=0;
+} cmdCountType;
+
 const char mm0[] PROGMEM = "Press # to exit";
 const char mm1[] PROGMEM = "Zone Bypass";
 const char mm2[] PROGMEM = "System Troubles";
@@ -470,7 +477,7 @@ public:
 
 private:
 
-  bool check05Cmd();
+  bool check051bCmd();
   
   void printPacket(const char * label, char cmd, volatile byte cbuf[], int len) ;
 
