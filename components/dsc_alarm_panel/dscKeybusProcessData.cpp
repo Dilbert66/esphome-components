@@ -100,8 +100,6 @@ bool dscKeybusInterface::setTime(unsigned int year, byte month, byte day, byte h
 // Processes status commands: 0x05 (Partitions 1-4) and 0x1B (Partitions 5-8)
 void dscKeybusInterface::processPanelStatus() {
 
-  if (panelByteCount > 6 && panelData[0]==0x05 && panelData[panelByteCount]!=1) return; // a valid 05 has 01 in byte 10
-  
   // Trouble status  
   if (panelData[3] <= 0x06) {  // Ignores trouble light status in intermittent states
     if (bitRead(panelData[2],4)) trouble = true;
