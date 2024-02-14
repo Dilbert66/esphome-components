@@ -360,7 +360,7 @@ void DSCkeybushome::begin() {
 
       if (key == '#') {
         partitionStatus[partition - 1].newData = false;
-        if (key == '#' && partitionStatus[partition - 1].hex) {
+        if (key == '#' && partitionStatus[partition - 1].hex && partitionStatus[partition - 1].digits > 2 ) {
           dsc.setLCDSend(partition, (partitionStatus[partition - 1].digits > 8));
         } else {
           dsc.write(key, partition);
@@ -369,8 +369,7 @@ void DSCkeybushome::begin() {
 
       } else if (key == '>') {
         getNextIdx(tpl.c_str(), partition);
-
-        if (!partitionStatus[partition - 1].hex && partitionStatus[partition - 1].editIdx == 0) {
+        if (partitionStatus[partition - 1].editIdx == 0 && (!partitionStatus[partition - 1].hex || partitionStatus[partition - 1].digits < 3) ) {
           dsc.setLCDSend(partition);
           partitionStatus[partition - 1].newData = false;
           return;
@@ -403,7 +402,7 @@ void DSCkeybushome::begin() {
             dsc.pgmBuffer.data[y] = (dsc.pgmBuffer.data[y] & 0x0F) | (k << 4);
         }
         getNextIdx(tpl.c_str(), partition);
-        if (!partitionStatus[partition - 1].hex && partitionStatus[partition - 1].editIdx == 0) {
+        if ( partitionStatus[partition - 1].editIdx == 0) {
           dsc.setLCDSend(partition);
           partitionStatus[partition - 1].newData = false;
           return;
