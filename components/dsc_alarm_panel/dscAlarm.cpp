@@ -347,7 +347,16 @@ void DSCkeybushome::begin() {
       line2DisplayCallback(String(F("not available")).c_str(), partition);
       return;
     }
-
+    /*
+    if (partitionStatus[partition - 1].sectionDigits > 0) { //program mode data input 
+      if (key > 47 && key < 58) {
+          decimalInputBuffer[partitionStatus[partition - 1].editIdx] = key;
+          partitionStatus[partition - 1].editIdx = partitionStatus[partition - 1].editIdx+1         
+      }
+     dsc.write(key, partition);
+     return;
+    } 
+    */
     if (partitionStatus[partition - 1].digits > 0) { //program mode data input 
 
       String tpl=F("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
@@ -357,7 +366,7 @@ void DSCkeybushome::begin() {
       if (dsc.status[partition - 1] == 0xAB) { //time entry
         tpl = F("XXXX                            ");
       }      
-
+      
       if (key == '#') {
         partitionStatus[partition - 1].newData = false;
         if (key == '#' && partitionStatus[partition - 1].hex && partitionStatus[partition - 1].digits > 2 ) {
@@ -866,8 +875,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
         }
       }
     }
-    ESP_LOGI(TAG," in get options %s",options.c_str());
-    //Serial.printf("in get options %s\n",options.c_str());
+    //ESP_LOGI(TAG," in get options %s",options.c_str());
     return options.c_str();
   }
 
@@ -1940,61 +1948,60 @@ void DSCkeybushome::update()  {
       lcdLine2 = F("RF Delinquency  ");
       break;
     case 0xE4:
-      lcdLine1 = F("*8: Installer menu");
-      lcdLine2 = F("Section? ");
-      partitionStatus[partition].decimalInput = false;
+      lcdLine1 = F("Section:");
+       lcdLine2 = F("(3 digits)  ");
       break;
     case 0xE5:
       lcdLine1 = F("Keypad       ");
       lcdLine2 = F("slot assignment ");
       break;
     case 0xE6:
-      lcdLine1 = F("Input (2 digits)");
-      lcdLine2 = F(" ");
+      lcdLine1 = F("Input:");
+      lcdLine2 = F("(2 digits) ");
       partitionStatus[partition].digits = 2;
       break;
     case 0xE7:
       lcdLine1 = F("Input:       ");
       partitionStatus[partition].digits = 3;
-      lcdLine2 = F("3 digits    ");
+      lcdLine2 = F("(3 digits)   ");
       partitionStatus[partition].decimalInput = true;
       break;
     case 0xE8:
       lcdLine1 = F("Input:       ");
       partitionStatus[partition].digits = 4;
-      lcdLine2 = F("4 digits        ");
+      lcdLine2 = F("(4 digits)   ");
       break;
     case 0xE9:
       lcdLine1 = F("Input:       ");
       partitionStatus[partition].digits = 5;
-      lcdLine2 = F("5 digits    ");
+      lcdLine2 = F("(5 digits)    ");
       break;
     case 0xEA:
-      lcdLine1 = F("Input HEX:   ");
+      lcdLine1 = F("Input hex:   ");
       partitionStatus[partition].digits = 2;
       partitionStatus[partition].hex = true;
-      lcdLine2 = F("2 digits    ");
+      lcdLine2 = F("(2 digits)    ");
       break;
     case 0xEB:
-      lcdLine1 = F("Input hex(4dig)");
+      lcdLine1 = F("Input hex:");
       partitionStatus[partition].digits = 4;
       partitionStatus[partition].hex = true;
-      lcdLine2 = F(" ");
+      lcdLine2 = F("(4 digits) ");
       break;
     case 0xEC:
-      lcdLine1 = F("Input hex(6dig)");
+      lcdLine1 = F("Input hex:");
       partitionStatus[partition].digits = 6;
       partitionStatus[partition].hex = true;
-      lcdLine2 = F(" ");
+      lcdLine2 = F("(6 digits)");
       break;
     case 0xED:
-      lcdLine1 = F("Input HEX:   ");
+      lcdLine1 = F("Input hex:   ");
       partitionStatus[partition].digits = 32;
       partitionStatus[partition].hex = true;
-      lcdLine2 = F("32 digits  ");
+      lcdLine2 = F("(32 digits)  ");
       break;
     case 0xEE:
-      lcdLine1 = F("Input: options     ");
+      lcdLine1 = F("options:     ");
       options = true;
       lcdLine2 = F("option per zone ");
       break;
@@ -2031,10 +2038,8 @@ void DSCkeybushome::update()  {
       lcdLine2 = F("device for test ");
       break;
     case 0xF7:
-      lcdLine1 = F("*8: Installer");
-      partitionStatus[partition].decimalInput = false;
-      partitionStatus[partition].digits = 0;
-      lcdLine2 = F("menu, 2 digits  ");
+      lcdLine1 = F("Sub-section: ");
+      lcdLine2 = F("(2 digits)  ");
       break;
     case 0xF8:
       lcdLine1 = F("Keypad    ");
@@ -2043,7 +2048,7 @@ void DSCkeybushome::update()  {
     case 0xFA:
       lcdLine1 = F("Input:   ");
       partitionStatus[partition].digits = 6;
-      lcdLine2 = F("6 digits ");
+      lcdLine2 = F("(6 digits) ");
       break;
     default:
       lcdLine2 = dsc.status[partition];
