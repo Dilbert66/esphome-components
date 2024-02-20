@@ -270,8 +270,8 @@ void WebNotify::loop() {
           ESP_LOGD("test","Telegram connecting to %s",apiHost_.c_str());
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
-      mg_mgr_poll(&mgr, 10);
    }
+       mg_mgr_poll(&mgr, 1);
  
 }
 

@@ -91,10 +91,7 @@ void MQTTBackendESP32::webPollTask(void * args) {
 */
 
 void MQTTBackendESP32::loop() {
-   if (network::is_connected() && this->is_initalized_ ) {
-    mg_mgr_poll(&mgr,0);
-   }
-
+      mg_mgr_poll(&mgr,1);
 }
 
 void MQTTBackendESP32::instance_fn(struct mg_connection *c, int ev, void *ev_data) {

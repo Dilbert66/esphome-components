@@ -325,10 +325,7 @@ void WebServer::loop() {
     }
     firstrun_=false;
    }
-   
- 
-   if (network::is_connected() && c != NULL)
-      mg_mgr_poll(&mgr, 0);
+   mg_mgr_poll(&mgr, 1);
 
 
 }
