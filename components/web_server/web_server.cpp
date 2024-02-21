@@ -9,7 +9,6 @@
 #include "ArduinoJson.h"
 #include <Crypto.h>
 
-
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
 #endif
@@ -1570,6 +1569,7 @@ void WebServer::handle_alarm_control_panel_request(mg_connection *c, JsonObject 
 void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect) {
   struct mg_connection *c;
   
+  bool crypt=false; //testing - no encryption for now
 
   std::string type;
   switch (mt) {
@@ -1580,107 +1580,36 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
       case OTA:    type="ota";break;
       default: return;
   }
-  int bufsize=strlen(data) > 0?strlen(data)*2:100;  
-
-  char *buf = new char[bufsize]; //create on heap  
+  
+  std::string enc;
+  if (crypt)
+      encrypt(data,"",enc);
+  else
+      enc=std::string(data);
+  
   for (c = mgr.conns; c != NULL; c = c->next) {
-    *buf=0;
     if (c->data[0] =='E') {
         
-          std::string enc;         
-          encrypt(data,"",enc);     
- 
          if (id && reconnect)
            mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",id,reconnect,type.c_str(), enc.c_str());
         else
            mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n",type.c_str(),enc.c_str());
-       
 
    }       
       
     if (c->data[0] != 'W') continue;
 
     if (mt==PING) 
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%d\"}", "type",type.c_str(),"data",id); 
-    else if (mt==STATE ) 
-        snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);    
-    else if(mt==LOG )
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);
-    else if (mt==CONFIG )
-        snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);
-    else if (mt==OTA )
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);
-   
-    if (strlen(buf) > 0) {
-          std::string enc;         
-          encrypt(buf,type.c_str(),enc);     
-          mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",enc.c_str());
-    }
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%d\"}", "type",type.c_str(),"data",id); 
+    else if ((mt ==LOG || mt==OTA) && !crypt) 
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);  
+     else
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", enc.c_str());   
 
  }
-    delete [] buf; //clear buf from heap 
+
 }
-/*
-void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect) {
-  struct mg_connection *c;
   
-
-  std::string type;
-  switch (mt) {
-      case PING: type="ping";break;
-      case STATE: type="state";break;
-      case LOG:   type="log";break;
-      case CONFIG: type="config";break;
-      case OTA:    type="ota";break;
-      default: type="";break;
-  }
-  int bufsize=strlen(data)?strlen(data)*2:100;  
-  for (c = mgr.conns; c != NULL; c = c->next) {
-      
-    if (c->data[0] =='E') {
-        
-         if (id && reconnect)
-           snprintf(buf,bufsize,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",id,reconnect,type.c_str(), data);
-        else
-           snprintf(buf,bufsize,"event: %s\r\ndata: %s\r\n\r\n",type.c_str(),data);
-       
-        if (strlen(buf) > 0) {
-          std::string enc;         
-          encrypt(buf,type.c_str(),enc);     
-          mg_printf(c, "%s",enc.c_str());
-        }
-       continue;
-   }       
-      
-    if (c->data[0] != 'W') continue;
-
-
-    char *buf = new char[bufsize]; //create on heap
-    if (mt==PING) 
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%d\"}", "type",type.c_str(),"data",id); 
-    else if (mt==STATE ) 
-        snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);    
-    else if(mt==LOG )
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);
-    else if (mt==CONFIG )
-        snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);
-    else if (mt==OTA )
-         snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);
-    else {
-        delete [] buf;
-        return;
-    }
-    if (strlen(buf) > 0) {
-          // std::string token=sessionTokens[c];
-         // std::string token=get_credentials()->token;
-          std::string enc;         
-          encrypt(buf,type.c_str(),enc);     
-          mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",enc.c_str());
-    }
-    delete [] buf; //clear buf from heap
- }
-}
- */  
 
 size_t mg_getMultipart(struct mg_str body, size_t ofs,
                               struct mg_http_part *part) {
@@ -1887,10 +1816,6 @@ std::string result="{\"nonce\":\"";
 result.append(noncehex);
 result.append("\",\"cipher\":\"");
 result.append(cipherhex);
-if (strlen(type)) {
-    result.append("\",\"type\":\"");
-    result.append(type);
-}
 //result.append("\",\"raw\":\"");
 //result.append(test.c_str());
 result.append("\"}");
@@ -1975,10 +1900,10 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                 srv->handleRequest(c,obj);
             }
             
-            //mg_ws_send(c, wm->data.ptr, wm->data.len, WEBSOCKET_OP_TEXT);
     } else if (ev == MG_EV_READ && !c->is_websocket && c->data[0] != 'E') {
     // Parse the incoming data ourselves. If we can parse the request,
     // store two size_t variables in the c->data: expected len and recv len.
+    //handling ota upload in blocks
     size_t *data = (size_t *) c->data;
     if (data[0]  ) {  // Already parsed, simply print received data
      if (data[2] >= c->recv.len) {
@@ -2101,13 +2026,14 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
             mg_ws_upgrade(c, hm, NULL);
             c->data[0] = 'W';
             
-          //   int bufsize=strlen(srv->get_config_json().c_str())*2 + crypto_secretbox_KEYBYTES * 2+1;
-             int bufsize=10;
-             char *buf = new char [bufsize];            
-             snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":%s}", "type","app_config","data", srv->get_config_json().c_str());
-             std::string config;
-             srv->encrypt(buf,"app_config",config);
-             mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
+              std::string enc;  
+              srv->encrypt(srv->get_config_json().c_str(),"",enc);            
+             mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","app_config","data", enc.c_str());
+             if (srv->_json_keypad_config != NULL) {
+                srv->encrypt(srv->_json_keypad_config,"",enc);             
+                mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", enc.c_str()); 
+             }                
+
              /*
              //create and send session token
              unsigned char token[crypto_secretbox_KEYBYTES];
@@ -2120,17 +2046,6 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
               mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
               */
 
-             if (srv->_json_keypad_config != NULL) {
-                bufsize=strlen(srv->_json_keypad_config)*2;
-                char *buf2 = new char [bufsize]; 
-                snprintf(buf2,bufsize,"{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", srv->_json_keypad_config);
-                srv->encrypt(buf2,"key_config",config);
-                mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
-                delete [] buf2;
-             }
-            delete [] buf;            
- 
-            
             srv->entities_iterator_.begin(srv->include_internal_);
             
         } else if (mg_http_match_uri(hm, "/events") && !c->is_websocket) {
