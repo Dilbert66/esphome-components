@@ -103,7 +103,6 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
          partitionStates = new partitionStateType[maxPartitions];
          alarmPanelPtr=this;         
 #if defined(ESPHOME_MQTT) 
-
       mqtt_callback=on_json_message; 
 #endif           
     }
@@ -381,8 +380,8 @@ void vistaECPHome::setup()  {
       lrrMsgChangeCallback("ESP Restart");
       rfMsgChangeCallback(""); 
       
-#if defined(ESP32)
-
+#if defined(ESP32) and not defined(__riscv)
+    //only for dual core esp32. Risc processors such as c3 are single core
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
     "cmdQueueTask", //Name of the task
@@ -817,7 +816,7 @@ void vistaECPHome::update()  {
       //if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
       
- #if !defined(ESP32) 
+ #if !defined(ESP32) or defined(__riscv)
       vista.handle();
       static unsigned long sendWaitTime = millis();
       while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdQueue.empty()) {

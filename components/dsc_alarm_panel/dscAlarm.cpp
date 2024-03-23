@@ -3581,29 +3581,87 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
   }
 
   void DSCkeybushome::printPanelStatus14(byte panelByte, byte partition, bool showEvent) {
-    bool decoded = true;
+    bool decoded = false;
      String lcdLine1;
      String lcdLine2;
+    char lcdMessage[20];
+    char charBuffer[4];   
+    
     switch (dsc.panelData[panelByte]) {
+    // 0x40 - 0x5F: Zone fault restored, zones 33-64
+    // 0x60 - 0x7F: Zone fault, zones 33-64
+    // 0x80 - 0x9F: Zone bypassed, zones 33-64        
     case 0xC0:
       lcdLine1 = F("TLink");
       lcdLine2 = F("com fault");
+      decoded = true;      
       break;
     case 0xC2:
       lcdLine1 = F("Tlink");
       lcdLine2 = F("net fault");
+      decoded = true;      
       break;
     case 0xC4:
       lcdLine1 = F("TLink rec");
       lcdLine2 = F("trouble");
+      decoded = true;      
       break;
     case 0xC5:
       lcdLine1 = F("TLink receiver");
       lcdLine2 = F("restored");
+      decoded = true;      
       break;
-    default:
-      decoded = false;
+    default: break;
+
     }
+    
+ if (dsc.panelData[panelByte] >= 0x40 && dsc.panelData[panelByte] <= 0x5F) {
+    lcdLine2 = F("rest"); 
+    byte dscCode = dsc.panelData[panelByte] - 31;
+    strcpy_P(lcdMessage, PSTR("Zone "));
+    itoa(dscCode, charBuffer, 10);
+    strcat(lcdMessage,charBuffer);
+   lcdLine1 = lcdMessage;
+   decoded = true;
+  }    
+/*
+   *  Zone fault, zones 33-64
+   *
+   *  Command   Partition YYY1YYY2   MMMMDD DDDHHHHH MMMMMM             Status             CRC
+   *  11101011 0 00000000 00100001 00010110 11000000 00100100 00010100 01111111 11111111 10011000 [0xEB] 2021.05.22 00:09 | Zone fault: 64
+   *  11101100 0 00000000 00100001 00010110 11000000 00100100 00010100 01111111 00001011 10100101 [0xEC] Event: 011 | 2021.05.22 00:09 | Zone fault: 64
+   *  Byte 0   1    2        3        4        5        6        7        8        9        10
+   */
+  if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F) {
+    lcdLine2 = F("fault"); 
+    byte dscCode = dsc.panelData[panelByte] - 63;
+    strcpy_P(lcdMessage, PSTR("Zone "));
+    itoa(dscCode, charBuffer, 10);
+    strcat(lcdMessage,charBuffer);
+   lcdLine1 = lcdMessage;
+   decoded = true;   
+  }
+
+  /*
+   *  Zones bypassed, zones 33-64
+   *
+   *  Command   Partition YYY1YYY2   MMMMDD DDDHHHHH MMMMMM             Status             CRC
+   *  11101011 0 00000001 00100001 00010110 11000000 00011000 00010100 10011111 00000000 10101110 [0xEB] 2021.05.22 00:06 | Partition 1 | Zone bypassed: 64
+   *  11101100 0 00000001 00100001 00010110 11000000 00011000 00010100 10011111 00010011 11000010 [0xEC] Event: 019 | 2021.05.22 00:06 | Partition 1 | Zone bypassed: 64
+   *  Byte 0   1    2        3        4        5        6        7        8        9        10
+   */
+  if (dsc.panelData[panelByte] >= 0x80 && dsc.panelData[panelByte] <= 0x9F) {
+    lcdLine2 = F("bypassed"); 
+    byte dscCode = dsc.panelData[panelByte] - 95;
+    strcpy_P(lcdMessage, PSTR("Zone "));
+    itoa(dscCode, charBuffer, 10);
+    strcat(lcdMessage,charBuffer);
+   lcdLine1 = lcdMessage;
+   decoded = true;      
+;
+  }     
+    
+    
 
     if (!decoded) {
       lcdLine1 = F("Unknown data14");
@@ -3630,15 +3688,17 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
     case 0x81:
       lcdLine1 = F("RF delin");
       lcdLine2 = F("trouble");
+  
       break;
     case 0x82:
       lcdLine1 = F("RF delin");
       lcdLine2 = F("rest");
-      break;
-    default:
-      decoded = false;
-    }
 
+      break;
+    default: decoded=false;
+            break;
+    }
+    
     if (!decoded) {
       lcdLine1 = F("Unknown data16");
       lcdLine2 = F("");

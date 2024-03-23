@@ -4,6 +4,8 @@ from esphome.const import CONF_ID
 from esphome.core import CORE
 import os
 import logging
+from esphome.components.esp32 import get_esp32_variant
+from esphome.components.esp32.const import ( VARIANT_ESP32C3 )
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -138,9 +140,14 @@ CONFIG_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-    old_dir = CORE.relative_build_path("src")
+    variant = get_esp32_variant()
+    if variant in (VARIANT_ESP32C3):
+        cg.add_build_flag("-include \"src/risc_fix.h\"");
+
     cg.add_define("USE_CUSTOM_ID") 
     cg.add_define("USE_VISTA_PANEL")  
+    
+    old_dir = CORE.relative_build_path("src")    
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     
