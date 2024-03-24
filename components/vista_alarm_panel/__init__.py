@@ -142,7 +142,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 async def to_code(config):
     variant = get_esp32_variant()
-    if variant in (VARIANT_ESP32C3):
+    if variant in [VARIANT_ESP32C3]:
         cg.add_build_flag("-include \"src/risc_fix.h\"");
         copy_file_if_changed(
             os.path.join(pathlib.Path(__file__).parent.resolve(),"risc_fix.h"),
