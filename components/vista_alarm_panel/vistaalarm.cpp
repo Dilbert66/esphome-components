@@ -283,7 +283,9 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
 
     char cmd[30];
     sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,rtc.minute,ampm,rtc.year%100,rtc.month,rtc.day_of_month);
+    #if not defined(ARDUINO_MQTT)    
     ESP_LOGD(TAG,"Send time string: %s",cmd);
+    #endif
     int addr=partitionKeypads[defaultPartition]; 
     vista.write(cmd,addr);
 #endif    
@@ -776,8 +778,10 @@ void vistaECPHome::cmdQueueTask(void * args) {
            vh=false;
            if (millis() - checkTime > 30000) {
             UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            printf("\nTaskupdates free memory: %5d\n", (uint16_t) uxHighWaterMark);
+            #if not defined(ARDUINO_MQTT)             
+            ESP_LOGD(TAG,"Taskupdates free memory: %5d\n", (uint16_t) uxHighWaterMark);
             checkTime=millis();
+            #endif
         }
   }
   vTaskDelete(NULL);
@@ -802,7 +806,9 @@ void vistaECPHome::update()  {
                    
 
              }
+            #if not defined(ARDUINO_MQTT)              
              ESP_LOGD(TAG,"Force refresh....");
+            #endif
            
       }
     

@@ -192,12 +192,12 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
     // Connected to server. Extract host name from URL
     struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
     if (mg_url_is_ssl(global_notify->apiHost_.c_str())) {
-     ESP_LOGD(TAG,"\nTLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
+     ESP_LOGD(TAG,"TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       struct mg_tls_opts opts = {.name = host};
       mg_tls_init(c, &opts);
       if (c->tls==NULL) return;
     }
-      ESP_LOGD(TAG,"\nTLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
+      ESP_LOGD(TAG,"TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       if (global_notify->messages.size()) {
         global_notify->sending=true;       //we are connecting so flag connection as open           
         //String msg = global_notify->getNextMsg();
