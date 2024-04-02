@@ -26,11 +26,11 @@ WebNotify::WebNotify()
 void WebNotify::publish(std::string to,std::string message) {
   std::string outmsg;
   if (message.length() > 200) {
-          ESP_LOGE("webnotify","Message %s to %s too long",message.c_str(),to.c_str());
+          ESP_LOGE("telegram","Message %s to %s too long",message.c_str(),to.c_str());
       
   }
   if (!enableSend_) {
-      ESP_LOGE("webnotify","Message sending is not enabled");
+      ESP_LOGE("telegram","Message sending is not enabled");
       return;
   }
   StaticJsonDocument < 300 > doc;
@@ -38,7 +38,7 @@ void WebNotify::publish(std::string to,std::string message) {
   doc["text"] =message;
   serializeJson(doc, outmsg); 
   messages.push(outmsg);  
-    ESP_LOGD("webnotify","sent telegram message %s to %s",message.c_str(),to.c_str());
+  ESP_LOGD("telegram","Sent telegram message %s to %s",message.c_str(),to.c_str());
 }
 
 bool WebNotify::isAllowed(std::string chat_id) {
@@ -54,7 +54,7 @@ void WebNotify::parseArgs(rx_message_t *m) {
     m->cmd = s.substr(0, s.find(" "));
     m->args= s.erase(0,s.find(" ") + 1); 
     if (m->cmd == m->args) m->args=""; //if no args set to empty
-    ESP_LOGD("parse","telegram cmd=%s, args=%s",m->cmd.c_str(),m->args.c_str());    
+   // ESP_LOGD("parse","telegram cmd=%s, args=%s",m->cmd.c_str(),m->args.c_str());    
 }
 
 bool WebNotify::processMessage(const char *payload) {
@@ -105,7 +105,7 @@ bool WebNotify::processMessage(const char *payload) {
             } else if (root["result"][0]["message"]["text"]) {
               int update_id = root["result"][0]["update_id"];
               update_id = update_id + 1;
-                ESP_LOGD("test","update=%d",update_id);                
+               // ESP_LOGD("test","update=%d",update_id);                
               //we ignore the first message on initial start to avoid a reboot loop
               if (global_notify->lastMsgReceived == 0) global_notify->lastMsgReceived = update_id;
               
@@ -137,7 +137,7 @@ bool WebNotify::processMessage(const char *payload) {
                 
                 bool ok=root["ok"];
                 std::string id=root["result"]["message_id"];
-                ESP_LOGD("test","got message response2 %s,%d",id.c_str(),ok);
+               // ESP_LOGD("test","got message response2 %s,%d",id.c_str(),ok);
                 if (ok) {
                     //pop last sent message from queue as it was successful
                       global_notify->messages.pop();              
@@ -156,7 +156,7 @@ bool WebNotify::processMessage(const char *payload) {
 void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
   if (global_notify == NULL) {
-      ESP_LOGD("test","telegram: global pointer is null");
+      ESP_LOGE("telegram","Global telegram pointer is null");
       return;
   }
   
@@ -172,33 +172,32 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
      if (c->data[0]=='T') {
         if ((!global_notify->enableBot_ || global_notify->messages.size()) && !c->is_draining && !global_notify->sending ) {            
              c->is_draining=1; //close long poll so we can send
-             ESP_LOGD("test","Pending message closing poll connection from poll");
+             //ESP_LOGD("test","Pending message closing poll connection from poll");
         }
        }  
   } else if (ev== MG_EV_CLOSE) {
         global_notify->sending=false;
         global_notify->connected=false;
-      MG_INFO(("Got ev close,enablebot %d, ma %d, sending=%d",global_notify->enableBot_, global_notify->messages.size(),global_notify->sending));   
+     // MG_INFO(("Got ev close,enablebot %d, ma %d, sending=%d",global_notify->enableBot_, global_notify->messages.size(),global_notify->sending));   
       
   } else if (ev == MG_EV_CONNECT) {
       if (c->data[0]=='T') {
         c->is_closing=1; //close long poll if opened so we can send
-        ESP_LOGD("test","Pending message closing poll connection from connect");
+       // ESP_LOGD("test","Pending message closing poll connection from connect");
         return;
        }
       c->data[0]='T'; 
       global_notify->connected=true;
-      MG_INFO(("got ev connect"));
+     // MG_INFO(("got ev connect"));
     // Connected to server. Extract host name from URL
     struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
     if (mg_url_is_ssl(global_notify->apiHost_.c_str())) {
-     MG_ERROR(("\nbefore: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
+     ESP_LOGD("telegram","\nTLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       struct mg_tls_opts opts = {.name = host};
       mg_tls_init(c, &opts);
       if (c->tls==NULL) return;
     }
-      MG_ERROR(("\nAfter: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)));   
-   MG_INFO((" tls init done"));
+      ESP_LOGD("telegram","\nTLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       if (global_notify->messages.size()) {
         global_notify->sending=true;       //we are connecting so flag connection as open           
         //String msg = global_notify->getNextMsg();
@@ -209,7 +208,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Content-Type: application/json\r\n");
         mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",msg.length(),msg.c_str());
-        ESP_LOGD("test","sent telegram msg %s",msg.c_str());
+       // ESP_LOGD("test","sent telegram msg %s",msg.c_str());
       } else if ( global_notify->enableBot_) {
         global_notify->sending=false;       
         mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
@@ -217,14 +216,14 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Accept: application/json\r\n");
         mg_printf(c,"Cache-Control: no-cache\r\n\r\n");    
-         MG_INFO(("sent post data"));
+         //MG_INFO(("sent post data"));
       }
    
   } else if (ev == MG_EV_HTTP_MSG) {
   
     // Response is received. Print it
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-    printf(" response message from telegram: %.*s", (int) hm->message.len, hm->message.ptr);
+    //printf(" response message from telegram: %.*s", (int) hm->message.len, hm->message.ptr);
             
          String payload= String(hm->body.ptr,hm->body.len);    
 
@@ -253,7 +252,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
 
 void WebNotify::setup() {
-  ESP_LOGCONFIG("notify", "Setting up web client...");
+  ESP_LOGCONFIG("telegram", "Setting up web client...");
    if (telegramUserId_ !="")
        allowed_chat_ids.push_back(telegramUserId_);
    mg_mgr_init(&mgr); 
@@ -267,7 +266,7 @@ void WebNotify::loop() {
  
    if (network::is_connected() ) {
       if (((millis() - retryDelay) > delayTime) && !connected && botId_.length() > 0 &&  (enableBot_ || (messages.size() && enableSend_))) {
-          ESP_LOGD("test","Telegram connecting to %s",apiHost_.c_str());
+          ESP_LOGD("telegram","Telegram connecting to %s",apiHost_.c_str());
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
    }

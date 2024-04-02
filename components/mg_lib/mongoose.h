@@ -21,6 +21,7 @@
 #define MONGOOSE_H
 
 #define MG_VERSION "7.12.1"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1133,6 +1134,7 @@ struct mg_iobuf {
   size_t size;         // Total size available
   size_t len;          // Current number of bytes
   size_t align;        // Alignment during allocation
+  struct mg_connection *c;            // link back to connection
 };
 
 int mg_iobuf_init(struct mg_iobuf *, size_t, size_t);

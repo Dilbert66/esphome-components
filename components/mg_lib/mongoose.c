@@ -2285,7 +2285,9 @@ void mg_http_bauth(struct mg_connection *c, const char *user,
                    const char *pass) {
   struct mg_str u = mg_str(user), p = mg_str(pass);
   size_t need = c->send.len + 36 + (u.len + p.len) * 2;
-  if (c->send.size < need) mg_iobuf_resize(&c->send, need);
+  if (c->send.size < need) {
+      mg_iobuf_resize(&c->send, need);
+  }
   if (c->send.size >= need) {
     size_t i, n = 0;
     char *buf = (char *) &c->send.buf[c->send.len];
@@ -2647,7 +2649,9 @@ static void static_cb(struct mg_connection *c, int ev, void *ev_data) {
     size_t n, max = MG_IO_SIZE, space;
     size_t *cl = (size_t *) &c->data[(sizeof(c->data) - sizeof(size_t)) /
                                      sizeof(size_t) * sizeof(size_t)];
-    if (c->send.size < max) mg_iobuf_resize(&c->send, max);
+    if (c->send.size < max){
+        mg_iobuf_resize(&c->send, max);
+    }
     if (c->send.len >= c->send.size) return;  // Rate limit
     if ((space = c->send.size - c->send.len) > *cl) space = *cl;
     n = fd->fs->rd(fd->fd, c->send.buf + c->send.len, space);
@@ -3280,9 +3284,6 @@ struct mg_connection *mg_http_listen(struct mg_mgr *mgr, const char *url,
 #endif
 
 
-
-
-
 static size_t roundup(size_t size, size_t align) {
   return align == 0 ? size : (size + align - 1) / align * align;
 }
@@ -3308,10 +3309,9 @@ int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
       io->size = new_size;
     } else {
       ok = 0;
-      MG_ERROR(("%lld->%lld", (uint64_t) io->size, (uint64_t) new_size));
+      MG_ERROR(("OOM resize error: %lld->%lld, maxfree:%5d",(uint64_t) io->size,(uint64_t) new_size, heap_caps_get_largest_free_block(8)));       
     }
-   MG_ERROR(("Resized: %lld",  (uint64_t) new_size));    
-    MG_ERROR(("maxfree:%5d", heap_caps_get_largest_free_block(8)));      
+     
   }
   return ok;
 }
@@ -3327,9 +3327,6 @@ size_t mg_iobuf_add(struct mg_iobuf *io, size_t ofs, const void *buf,
                     size_t len) {
   size_t new_size = roundup(io->len + len, io->align);
   mg_iobuf_resize(io, new_size);      // Attempt to resize
-  if (new_size != io->size) {
-     MG_ERROR(("iobuf add failure - old size=%d,new_size=%d,len=%d,iolen=%d",io->size,new_size,len,io->len));       
-  }
   if (new_size != io->size) len = 0;  // Resize failure, append nothing
   if (ofs < io->len) memmove(io->buf + ofs + len, io->buf + ofs, io->len - ofs);
   if (buf != NULL) memmove(io->buf + ofs, buf, len);
@@ -5026,7 +5023,7 @@ static void rx_udp(struct mg_tcpip_if *ifp, struct pkt *pkt) {
       mg_error(c, "max_recv_buf_size reached");
     } else if (c->recv.size - c->recv.len < pkt->pay.len &&
                !mg_iobuf_resize(&c->recv, c->recv.len + pkt->pay.len)) {
-      mg_error(c, "oom");
+            mg_error(c, "oom");
     } else {
       memcpy(&c->recv.buf[c->recv.len], pkt->pay.ptr, pkt->pay.len);
       c->recv.len += pkt->pay.len;
@@ -5653,6 +5650,7 @@ bool mg_send(struct mg_connection *c, const void *buf, size_t len) {
     res = true;
   } else {
      res = mg_iobuf_add(&c->send, c->send.len, buf, len);
+  
   }
   return res;
 }
@@ -5661,12 +5659,6 @@ bool mg_send(struct mg_connection *c, const void *buf, size_t len) {
 #ifdef MG_ENABLE_LINES
 #line 1 "src/net.c"
 #endif
-
-
-
-
-
-
 
 
 
@@ -5680,6 +5672,7 @@ size_t mg_printf(struct mg_connection *c, const char *fmt, ...) {
   size_t len = 0;
   va_list ap;
   va_start(ap, fmt);
+  c->send.c=c;
   len = mg_vprintf(c, fmt, &ap);
   va_end(ap);
   return len;
@@ -5839,6 +5832,7 @@ struct mg_connection *mg_connect(struct mg_mgr *mgr, const char *url,
     MG_DEBUG(("%lu %ld %s", c->id, c->fd, url));
     mg_call(c, MG_EV_OPEN, (void *) url);
     mg_resolve(c, url);
+    c->send.c=c;
   }
   return c;
 }
@@ -6218,11 +6212,19 @@ size_t mg_queue_printf(struct mg_queue *q, const char *fmt, ...) {
 
 static void mg_pfn_iobuf_private(char ch, void *param, bool expand) {
   struct mg_iobuf *io = (struct mg_iobuf *) param;
-  if (expand && io->len + 2 > io->size) mg_iobuf_resize(io, io->len + 2);
+
+  if (expand && io->len + 2 > io->size) {
+     size_t res= mg_iobuf_resize(io, io->len + 2);
+        if (io->c != NULL && !res) {
+         //OOM so close connection
+         io->len=0;            
+         io->c->is_closing=1; 
+        }
+  }
   if (io->len + 2 <= io->size) {
     io->buf[io->len++] = (uint8_t) ch;
     io->buf[io->len] = 0;
-  } else if (io->len < io->size) {
+  } else if (io->len  < io->size) {
     io->buf[io->len++] = 0;  // Guarantee to 0-terminate
   }
 }
@@ -7177,8 +7179,8 @@ bool mg_send(struct mg_connection *c, const void *buf, size_t len) {
     iolog(c, (char *) buf, n, false);
     return n > 0;
   } else {
-     // MG_ERROR(("sending %.*s",len,buf));
-    return mg_iobuf_add(&c->send, c->send.len, buf, len);
+    size_t res= mg_iobuf_add(&c->send, c->send.len, buf, len);
+     return res;     
   }
 }
 

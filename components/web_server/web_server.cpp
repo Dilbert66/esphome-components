@@ -1589,14 +1589,16 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
   
   for (c = mgr.conns; c != NULL; c = c->next) {
     if (c->data[0] =='E') {
-        
+
          if (id && reconnect)
            mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",id,reconnect,type.c_str(), enc.c_str());
         else
            mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n",type.c_str(),enc.c_str());
+       
+          if (c->send.len > 15000 ) c->is_closing=1; //dead connection. kill it. 
 
    }       
-      
+
     if (c->data[0] != 'W') continue;
 
     if (mt==PING) 
@@ -1605,7 +1607,8 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
          mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);  
      else
          mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", enc.c_str());   
-
+     
+          if (c->send.len > 15000 ) c->is_closing=1; //dead connection. kill it.
  }
 
 }
@@ -2025,7 +2028,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       // Websocket connection, which will receive MG_EV_WS_MSG events.
             mg_ws_upgrade(c, hm, NULL);
             c->data[0] = 'W';
-            
+            c->send.c=c;
               std::string enc;  
               srv->encrypt(srv->get_config_json().c_str(),"",enc);            
              mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","app_config","data", enc.c_str());
@@ -2053,7 +2056,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
            // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
               c->data[0]='E';
               mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\ndata: %s\r\n\r\n", "Subscribed to Events");
-              c->is_resp=0;
+               c->send.c=c;              
               std::string enc;  
               srv->encrypt(srv->get_config_json().c_str(),"",enc);
               mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",millis(),30000,"ping", enc.c_str());
@@ -2066,6 +2069,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
             //   mg_http_reply(c, 404,"", ""); 
         
         } else {
+            c->send.c=c;            
             MG_INFO(("before handle request"));
             srv->handleWebRequest(c,hm);
         }
