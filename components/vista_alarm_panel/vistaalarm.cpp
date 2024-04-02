@@ -22,7 +22,6 @@
 #endif
 
 Vista vista;
-static const char *const TAG = "vistaalarm";
 void disconnectVista() {
   vista.stop();
 }
@@ -33,7 +32,7 @@ void disconnectVista() {
 namespace esphome {
 namespace alarm_panel {
  
-static const char *const TAG = "vista_alarm_control_panel"; 
+static const char *const TAG = "vista_alarm"; 
  
 void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)

@@ -554,8 +554,6 @@ void WebServer::handle_js_request(struct mg_connection *c) {
 
          
           const char * buf= (const char *) ESPHOME_WEBSERVER_JS_INCLUDE;
-          MG_INFO(("in js request %d",ESPHOME_WEBSERVER_JS_INCLUDE_SIZE));
-          
           mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n", ESPHOME_WEBSERVER_JS_INCLUDE_SIZE );
           mg_send(c,buf,ESPHOME_WEBSERVER_JS_INCLUDE_SIZE);
           c->is_resp = 0;  
@@ -1867,7 +1865,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
  
     bool final=false;
     if (ev == MG_EV_CLOSE) {
-        MG_INFO(("closed session "));
+        ESP_LOGD(TAG,"Close session");
       // srv->sessionTokens.erase(c); 
     } else if (ev == MG_EV_ACCEPT) {
         /*
@@ -2022,7 +2020,6 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
             mg_send_digest_auth_request(c,"webkeypad");
            }
         }
-        MG_INFO(("in httpmsg"));
         if (mg_http_match_uri(hm, "/ws") && c->data[0] != 'E') {
       // Upgrade to websocket. From now on, a connection is a full-duplex
       // Websocket connection, which will receive MG_EV_WS_MSG events.
@@ -2070,7 +2067,6 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         
         } else {
             c->send.c=c;            
-            MG_INFO(("before handle request"));
             srv->handleWebRequest(c,hm);
         }
   } 
@@ -2079,7 +2075,6 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
 
 void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
- MG_INFO(("in handle web request"));
   if (mg_http_match_uri(hm, "/")) { 
     this->handle_index_request(c);
     return;
@@ -2227,7 +2222,6 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
 #ifdef USE_LOCK
   if (doc["domain"] == "lock") {
     this->handle_lock_request(c,doc);
-
     return;
   }
 #endif
