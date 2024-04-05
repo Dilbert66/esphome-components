@@ -20,7 +20,7 @@
 //#define DISABLE_EXPANDER  //disable zone virtual zone expander functionality
 //#define DEBOUNCE //filters out bad cmd05/1B's by ensuring we get 2 the same in a row to accept as valid
 
-#define SERIALDEBUGCOMMANDS  //enable to use verbose debug cmd decoding  to serial port
+//#define SERIALDEBUGCOMMANDS  //enable to use verbose debug cmd decoding  to serial port
 #ifndef dscKeybus_h
 #define dscKeybus_h
 
