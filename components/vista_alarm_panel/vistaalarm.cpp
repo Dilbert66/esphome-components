@@ -359,18 +359,17 @@ void vistaECPHome::setup()  {
           vista.zoneExpanders[x].expansionAddr=expanderAddr[x];
       }
             
-
       setDefaultKpAddr(defaultPartition);
       
       for (uint8_t p=0;p < maxPartitions;p++) { 
-         partitions[p]=0;  
+        partitions[p]=0;  
         systemStatusChangeCallback(STATUS_NOT_READY,p+1);
         beepsCallback("0",p+1);
       }    
       lrrMsgChangeCallback("ESP Restart");
       rfMsgChangeCallback(""); 
       
-#if defined(ESP32) and not defined(__riscv) && defined(XX)
+#if defined(ESP32) and not defined(__riscv)
     //only for dual core esp32. Risc processors such as c3 are single core
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
@@ -811,9 +810,8 @@ void vistaECPHome::update()  {
       //if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
       
- #if !defined(ESP321) or defined(__riscv)
+ #if !defined(ESP32) or defined(__riscv)
       vista.handle();
-      
       static unsigned long sendWaitTime = millis();
       while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdQueue.empty()) {
         if (millis() - sendWaitTime > 5) break;
@@ -868,9 +866,11 @@ void vistaECPHome::update()  {
             int z = vistaCmd.extcmd[3];
             if (vistaCmd.extcmd[2] == 0xf1 && z > 0 && z <= maxZones) { // we have a zone status (zone expander address range)
                 zoneType * zt=getZone(z);
-                zt->time = millis();
-                zt->open = vistaCmd.extcmd[4];
-                zoneStatusUpdate(zt);
+                if (zt->active) {
+                    zt->time = millis();
+                    zt->open = vistaCmd.extcmd[4];
+                    zoneStatusUpdate(zt);
+                }
           
             } else if (vistaCmd.extcmd[2] == 0x00) { //relay update z = 1 to 4
               if (z > 0) {
@@ -900,7 +900,7 @@ void vistaECPHome::update()  {
                 bool zs = faults & 1 ?true : false; //check first bit . lower bit = channel 8. High bit= channel 1
                 faults = faults >> 1; //get next zone status bit from field
                   zoneType * zt=getZone(z);  
-                  if (zt->open != zs) {
+                  if (zt->open != zs && zt->active) {
                       zt->open = zs;                      
                       zoneStatusUpdate(zt);
                   }
@@ -925,11 +925,13 @@ void vistaECPHome::update()  {
           #endif
             }  
             if (z && !(vistaCmd.extcmd[5]&4) && !(vistaCmd.extcmd[5]&1)) { //ignore heartbeat
-                zoneType * zt=getZone(z);            
-                zt->time = millis();
-                zt->open = vistaCmd.extcmd[5]&rf.mask?true:false;
-                zt->lowbat=vistaCmd.extcmd[5]&2?true:false; //low bat
-                zoneStatusUpdate(zt);
+                zoneType * zt=getZone(z);
+                if (zt->active) {                
+                    zt->time = millis();
+                    zt->open = vistaCmd.extcmd[5]&rf.mask?true:false;
+                    zt->lowbat=vistaCmd.extcmd[5]&2?true:false; //low bat
+                    zoneStatusUpdate(zt);
+                }
               }
             sprintf(rf_serial_char_out,"%s,%02x",rf_serial_char,vistaCmd.extcmd[5]);
             rfMsgChangeCallback(rf_serial_char);
@@ -1302,7 +1304,9 @@ void vistaECPHome::update()  {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
-          
+#if !defined(ESP32) or defined(__riscv)          
+          vista.handle();
+#endif    
            if (!x.second.active) continue;
            
            if ( x.second.bypass && !partitionStates[ x.second.partition].previousLightState.bypass) {
@@ -1348,13 +1352,13 @@ void vistaECPHome::update()  {
             if (zoneStatusMsg != "") zoneStatusMsg.append(",");
             zoneStatusMsg.append(s1);
           }
-          vista.handle();
+      
         }
                       
         if ((zoneStatusMsg != previousZoneStatusMsg  || forceRefreshZones) && zoneExtendedStatusCallback != NULL)
           zoneExtendedStatusCallback(zoneStatusMsg);
         previousZoneStatusMsg = zoneStatusMsg;
-        unsigned long checkTimchkTimee=millis();
+        chkTime=millis();
         if (chkTime - refreshLrrTime > 30000) {
           lrrMsgChangeCallback("");
           refreshLrrTime = chkTime;
@@ -1369,9 +1373,9 @@ void vistaECPHome::update()  {
         forceRefreshZones=false;
         forceRefreshGlobal=false;
       }
-
+#if !defined(ESP32) or defined(__riscv)   
        vista.handle();
-
+#endif
     }
 
     const __FlashStringHelper * vistaECPHome::statusText(int statusCode) {
