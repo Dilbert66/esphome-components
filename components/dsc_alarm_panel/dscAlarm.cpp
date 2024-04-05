@@ -26,80 +26,30 @@ void * alarmPanelPtr;
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
-
 #if !defined(ARDUINO_MQTT)
+std::unordered_map<std::string,binary_sensor::BinarySensor*> bMap;
+std::unordered_map<std::string,text_sensor::TextSensor*> tMap;
+
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
-  for (auto *obj : bs ) {
-#if defined(USE_CUSTOM_ID)      
-    std::string id=obj->get_type_id();
-    if (id.compare(str) == 0){
-      obj->publish_state(open) ;
-      break;
-    } else {   
-#endif    
-        std::string name=obj->get_name();
-        if (name.find("(" + str + ")") != std::string::npos){
-            obj->publish_state(open) ;
-            break;;
-        }
-#if defined(USE_CUSTOM_ID)             
-    }
-#endif    
-  }
+  if (bMap.find(str)!=bMap.end()) {
+      bMap[str]->publish_state(open);
+  }  
+
 }
-
-
     
 void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
+    
   std::string str=cstr;
-  if (partition) str=str + std::to_string(partition);    
- std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
- for (auto *obj : ts ) {
-#if defined(USE_CUSTOM_ID)         
-   std::string id=obj->get_type_id();
-    if (id.compare(str) == 0){
-    obj->publish_state(*text) ;
-    return;
-   } else { 
-#endif   
-     std::string name=obj->get_name();
-     if (name.find("(" + str + ")") != std::string::npos ){
-        obj->publish_state(*text) ;
-        return;
-     }
-#if defined(USE_CUSTOM_ID)             
-    }
-#endif
- }
-}
-#endif
-
-std::string DSCkeybushome::getZoneName(int zone) {
-  std::string sid = "z" + std::to_string(zone) ;
-  std::string name="";
-  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
-  for (auto *obj : bs ) {
-#if defined(USE_CUSTOM_ID)      
-    std::string id=obj->get_type_id();
-    if (id.compare(sid) == 0){
-      name = obj->get_name();
-      break;
-    } else {   
-#endif    
-        std::string sname=obj->get_name();
-        if (sname.find("(" + sid + ")") != std::string::npos){
-          name= sname;
-          break;
-        }
-#if defined(USE_CUSTOM_ID)             
-    }
-#endif    
+  if (partition) str=str + std::to_string(partition);  
+  if (tMap.find(str)!=tMap.end()) {
+      tMap[str]->publish_state(*text);
   }
-  return name;
+        
 }
+
+#endif
 
 
 DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin,bool invertWrite)
@@ -115,8 +65,15 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 #endif      
   }
 
-
-  void DSCkeybushome::set_panel_time() {
+std::string DSCkeybushome::getZoneName(int zone) {
+    std::string str = "z" + std::to_string(zone) ;
+    std::string name="";
+    if (bMap.find(str)!=bMap.end()) 
+        name=bMap[str]->get_name();
+    return name;
+}
+  
+void DSCkeybushome::set_panel_time() {
 #if defined(USE_TIME)      
     ESPTime rtc = now();
     if (!rtc.is_valid()) return;
@@ -154,13 +111,11 @@ void DSCkeybushome::begin() {
   void DSCkeybushome::setup()  {
 #endif      
     eventStatusMsg.reserve(64);
-    
     zoneStatus = new zoneType[maxZones];
-    
     if (debug > 2)
       Serial.begin(115200);
-#if !defined(ARDUINO_MQTT)     
-    set_update_interval(16);
+#if !defined(ARDUINO_MQTT)    
+     loadSensors();
 #endif
 
    
@@ -3660,9 +3615,6 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
    decoded = true;      
 ;
   }     
-    
-    
-
     if (!decoded) {
       lcdLine1 = F("Unknown data14");
       lcdLine2 = F(" ");
@@ -3674,6 +3626,43 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       line2DisplayCallback((lcdLine1 + " " +lcdLine2).c_str(), partition);
 
   }
+  
+#if !defined(ARDUINO_MQTT)
+void DSCkeybushome::loadSensors() {
+  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
+  for (auto *obj : bs ) {
+#if defined(USE_CUSTOM_ID)      
+    std::string id=obj->get_type_id();
+    if (id!="") 
+        bMap[id]=obj;
+#else  
+    std::string name=obj->get_name();
+    const std::regex e(" \\((.+)\\)");
+    std::smatch m;
+    if (std::regex_search(name,m,e)) {
+        std::string match=m[1];
+       bMap[match]=obj; 
+    }
+#endif
+  }
+ std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
+ for (auto *obj : ts ) {
+#if defined(USE_CUSTOM_ID)         
+   std::string id=obj->get_type_id();
+    if (id!="")
+        tMap[id]=obj;
+#else 
+    std::string name=obj->get_name();
+    const std::regex e(" \\((.+)\\)");
+    std::smatch m;
+    if (std::regex_search(name,m,e)) {
+        std::string match=m[1];
+       tMap[match]=obj; 
+    }
+#endif     
+ }
+}
+#endif
 
   void DSCkeybushome::printPanelStatus16(byte panelByte, byte partition, bool showEvent ) {
     bool decoded = true;

@@ -551,8 +551,8 @@ void Vista::writeChars() {
   if (retries > 2) {
     retries = 0;
     expectByte = 0;
-    //outbufIdx = inbufIdx;
-   // return;
+    outbufIdx = inbufIdx;
+    return;
   }
   sending = true;
   delayMicroseconds(500);

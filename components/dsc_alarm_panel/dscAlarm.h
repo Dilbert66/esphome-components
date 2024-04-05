@@ -1,6 +1,7 @@
 //for project documenation visit https://github.com/Dilbert66/esphome-dsckeybus
 
 #pragma once
+
 #if !defined(ARDUINO_MQTT)
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
@@ -41,6 +42,8 @@
 #define maxZonesDefault 32 //set to 64 if your system supports it
 #define maxRelays 8
 #include "dscKeybusInterface.h"
+#include <unordered_map>
+#include <regex>
 
 extern dscKeybusInterface dsc;
 extern bool forceDisconnect;
@@ -454,6 +457,9 @@ public:
   void alarm_trigger_panic() ;
 
 private:
+
+  void loadSensors();
+  
   void processMenu(byte key, byte partition = -1) ;
 
   void getPrevIdx(const char * tpl, byte partition) ;

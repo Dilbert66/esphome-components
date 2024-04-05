@@ -5,11 +5,12 @@
 #include "esphome/components/time/real_time_clock.h"
 #if defined(USE_MQTT)
 #include "esphome/components/mqtt/mqtt_client.h"
-#else
+#elif defined(USE_API)
 #include "esphome/components/api/custom_api_device.h"
 #endif
 #include "esphome/core/defines.h"
 #include "paneltext.h"
+#include <unordered_map>
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -19,6 +20,7 @@
 #include "vista.h"
 #include <string>
 #include <queue>
+#include <regex>
 
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
@@ -52,7 +54,6 @@ extern void disconnectVista();
 namespace esphome {
 namespace alarm_panel {
  
-
 extern void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
@@ -83,7 +84,6 @@ enum sysState {
 };
 
 
-
 #if !defined(ARDUINO_MQTT)
 extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
 extern void publishTextState(const char * cstr,uint8_t partition,std::string * text);
@@ -93,8 +93,10 @@ extern void publishTextState(const char * cstr,uint8_t partition,std::string * t
 class vistaECPHome:  public time::RealTimeClock {
 #elif defined(ARDUINO_MQTT)
 class vistaECPHome { 
-#else
-class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
+#elif defined(USE_API)
+ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {  
+#else 
+ class vistaECPHome: public time::RealTimeClock {   
 #endif
 
 
@@ -155,8 +157,7 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
     void onRfMsgChange(std:: function < void(std::string msg) > callback) {
       rfMsgChangeCallback = callback;
     }
-    
-    void zoneStatusUpdate(int zone);
+
     void set_accessCode(const char * ac) { accessCode=ac; }
     void set_rfSerialLookup(const char * rf) { rfSerialLookup=rf;}
     void set_quickArm(bool qa) { quickArm=qa;}
@@ -190,7 +191,9 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
     previousSystemState;
 
   private:
-    
+
+    void loadSensors();
+    bool zoneActive(uint32_t zone);
     int TTL = 30000;
     uint8_t debug=0;
     char keypadAddr1=0;
@@ -231,6 +234,7 @@ class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {
       uint8_t panic:1;
       uint8_t trouble:1;
       uint8_t lowbat:1;
+      uint8_t active:1;
     };
     struct {
         uint8_t bell:1;
@@ -315,17 +319,18 @@ private:
     };
     struct cmdQueueItem vistaCmd;    
 
-bool zoneActive(uint32_t zone);
-
 static void cmdQueueTask(void * args);
 
 std::map<uint32_t,zoneType> extZones;
+
 zoneType nz;
 
 zoneType * getZone(uint32_t z);
 
 serialType getRfSerialLookup(char * serialCode);
 
+void zoneStatusUpdate(zoneType *zt);
+void assignPartitionToZone(zoneType * zt) ;
 
 #if defined(ESPHOME_MQTT) 
 static void on_json_message(const std::string &topic, JsonObject payload);
@@ -340,6 +345,7 @@ void begin() {
 #else
 void setup() override;
 #endif
+
     void alarm_disarm(std::string code,int partition);
 
     void alarm_arm_home(int partition);
@@ -375,7 +381,7 @@ private:
     
   int getZoneFromPrompt(char *p1);
    
-  bool promptContains(char * p1, const char * msg, int & zone);
+ // bool promptContains(char * p1, const char * msg, int & zone);
 
   void printPacket(const char * label, char cbuf[], int len) ;
 
@@ -387,8 +393,6 @@ private:
     int getZoneFromChannel(uint8_t deviceAddress, uint8_t channel) ;
     
     void translatePrompt(char * cbuf) ;
-
-    void assignPartitionToZone(int zone) ;
 
     void getPartitionsFromMask() ;
 
