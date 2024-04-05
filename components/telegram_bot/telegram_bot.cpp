@@ -270,7 +270,7 @@ void WebNotify::loop() {
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
    }
-       mg_mgr_poll(&mgr, 1);
+       mg_mgr_poll(&mgr, 0);
  
 }
 

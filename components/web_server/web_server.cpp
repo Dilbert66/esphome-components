@@ -324,7 +324,7 @@ void WebServer::loop() {
     }
     firstrun_=false;
    }
-   mg_mgr_poll(&mgr, 1);
+   mg_mgr_poll(&mgr, 0);
 
 
 }
