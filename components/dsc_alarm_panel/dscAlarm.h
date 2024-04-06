@@ -399,6 +399,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
     byte alarm:1;
     byte enabled:1;
     byte bypassed:1;
+    byte active:1;
    
 
   };

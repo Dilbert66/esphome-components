@@ -1457,31 +1457,41 @@ void DSCkeybushome::update()  {
         
           
         if (zoneStatus[x].open) {
-          sprintf(s1, PSTR("OP:%d"), x + 1);
-          if (zoneStatusMsg != "") zoneStatusMsg.append(",");
+            if (zoneStatusMsg !="") 
+                sprintf(s1,PSTR(",OP:%d"), x+1);                 
+            else
+                sprintf(s1, PSTR("OP:%d"), x+1);             
           zoneStatusMsg.append(s1);
         }
 
         if (zoneStatus[x].alarm) {
-          sprintf(s1, PSTR("AL:%d"), x + 1);
-          if (zoneStatusMsg != "") zoneStatusMsg.append(",");
+            if (zoneStatusMsg !="") 
+                sprintf(s1, PSTR(",AL:%d"), x+1);                 
+            else
+                sprintf(s1, PSTR("AL:%d"), x+1);
           zoneStatusMsg.append(s1);
         }
         if (zoneStatus[x].bypassed) {
-          sprintf(s1, PSTR("BY:%d"), x + 1);
-          if (zoneStatusMsg != "") zoneStatusMsg.append(",");
+            if (zoneStatusMsg !="") 
+                sprintf(s1, PSTR(",BY:%d"), x+1);                 
+            else
+                sprintf(s1, PSTR("BY:%d"), x+1);
           zoneStatusMsg.append(s1);
         }
 
         if (zoneStatus[x].tamper) {
-          sprintf(s1, PSTR("TA:%d"), x + 1);
-          if (zoneStatusMsg != "") zoneStatusMsg.append(",");
+            if (zoneStatusMsg !="") 
+                sprintf(s1, PSTR(",TA:%d"), x+1);                 
+            else
+                sprintf(s1, PSTR("TA:%d"), x+1);
           zoneStatusMsg.append(s1);
         }
 
         if (zoneStatus[x].batteryLow) {
-          sprintf(s1, PSTR("BL:%d"), x + 1);
-          if (zoneStatusMsg != "") zoneStatusMsg.append(",");
+            if (zoneStatusMsg !="") 
+                sprintf(s1, PSTR(",LB:%d"), x+1);                 
+            else
+                sprintf(s1, PSTR("LB:%d"), x+1);
           zoneStatusMsg.append(s1);
         }
       }

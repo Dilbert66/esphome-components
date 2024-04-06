@@ -202,12 +202,10 @@ void Vista::onDisplay(char cbuf[], int * idx) {
   int y = 0;
   statusFlags.backlight = ((cbuf[12] & 0x80) > 0);
   cbuf[12] = (cbuf[12] & 0x7F);
-  for (int x = 12; x < * idx - 1; x++) {
-    if ((uint8_t) cbuf[x] > 31 ) {
-      statusFlags.prompt[y++] = cbuf[x];
-    }
-  }
-  statusFlags.prompt[y] = '\0'; //add string terminator
+  memcpy(statusFlags.prompt1,&cbuf[12],16);
+  statusFlags.prompt1[16]=0;
+  memcpy(statusFlags.prompt2,&cbuf[28],16);
+  statusFlags.prompt2[16]=0;  
 
 }
 
@@ -986,7 +984,7 @@ bool Vista::handle() {
       #endif
       pushCmdQueueItem();      
       return 1;
-    }
+    } 
 
     if (x == 0xF7) {
       vistaSerial -> setBaud(4800);
@@ -1108,7 +1106,7 @@ bool Vista::handle() {
       return 1;
     }
 
-   //capture any unknown cmd byte if exits
+   //capture any unknown cmd byte if exists
       if (!x) return 0; //clear any stray zeros
       gidx=0; 
       cbuf[gidx++]=x;

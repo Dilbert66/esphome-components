@@ -215,8 +215,6 @@ class vistaECPHome {
     char expanderAddr[9]={};
     int zone;
     bool sent;
-    char p1[18];
-    char p2[18];
 
     uint8_t * partitions;
     std::string topic_prefix,topic;
@@ -293,8 +291,8 @@ private:
     struct partitionStateType {
       sysState previousSystemState;
       lightStates previousLightState;
-      std::string lastp1=" ";
-      std::string lastp2=" ";
+      //std::string lastp1=" ";
+      //std::string lastp2=" ";
       int lastbeeps;
       bool refreshStatus;
       bool refreshLights;

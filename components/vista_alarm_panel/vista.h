@@ -78,7 +78,8 @@ struct statusFlagType {
     bool panicAlarm;
     char keypad[4];
     int zone;
-    char prompt[36];
+    char prompt1[18];
+    char prompt2[18];    
     char promptPos;
     uint8_t attempts = 10;
     struct {
@@ -146,7 +147,7 @@ class Vista {
     bool lrrSupervisor;
     char expansionAddr;
     void setExpFault(int, bool);
-    bool newExtCmd, newCmd, newRelCmd;
+    bool newExtCmd, newCmd;
     bool filterOwnTx;
     expanderType zoneExpanders[MAX_MODULES];
     char b; //used in isr
