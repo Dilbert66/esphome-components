@@ -79,7 +79,7 @@ void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean deco
   char * name;
   char * value;
   if (decodeUrl) percentDecode(queryString);
-  MG_INFO(("query=%s",queryString));
+  //MG_INFO(("query=%s",queryString));
   while (queryString && *queryString && ct < resultsMaxCt) {
     name = strsep(&queryString, "&");
     value = strchrnul(name, '=');
@@ -88,7 +88,7 @@ void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean deco
     std::string n=std::string(name);
     std::string v=std::string(value);
     doc[n]=v;
-    MG_INFO(("parameter %s = %s",n.c_str(),v.c_str()));
+ //   MG_INFO(("parameter %s = %s",n.c_str(),v.c_str()));
     ct++;
   }
 }
@@ -158,7 +158,7 @@ void WebServer::parseUrl(mg_http_message *hm,JsonObject doc) {
         query=std::string(hm->body.ptr,hm->body.len);
      
   
-  MG_INFO(("url=%s,query=%s",url.c_str(),query.c_str()));
+  //MG_INFO(("url=%s,query=%s",url.c_str(),query.c_str()));
   parseUrlParams((char *) query.c_str(),15, true,doc);
   doc["method"]=std::string(hm->method.ptr,hm->method.len);
   size_t domain_end = url.find('/', 1);
@@ -176,7 +176,7 @@ void WebServer::parseUrl(mg_http_message *hm,JsonObject doc) {
   size_t method_begin = id_end + 1;
   doc["action"] = url.substr(method_begin, url.length() - method_begin);
   std::string a=doc["domain"];
-  MG_INFO(("in parseurl domain=%s",a.c_str()));
+  //MG_INFO(("in parseurl domain=%s",a.c_str()));
 }
 
 void WebServer::ws_reply(mg_connection *c,const char * data,bool ok) {
@@ -534,7 +534,7 @@ void WebServer::handle_pna_cors_request(struct mg_connection *c) {
  std::string mac = get_mac_address_pretty();  
   mg_printf(c,"HTTP/1.1 200 OK\r\n%s:%s\r\n%s:%s\r\n%s:%s\r\n\r\n",HEADER_CORS_ALLOW_PNA,"true",HEADER_PNA_NAME,App.get_name().c_str(),HEADER_PNA_ID,mac.c_str());
   c->is_resp=0;
-MG_INFO((" in cors header %s",HEADER_CORS_ALLOW_PNA));
+//MG_INFO((" in cors header %s",HEADER_CORS_ALLOW_PNA));
 }
 #endif
 
@@ -1675,14 +1675,14 @@ char *mg_md5(char buf[33], ...) {
   mg_md5_ctx ctx;
   mg_md5_init(&ctx);
   va_start(ap, buf);
-  MG_INFO(("start"));
+  //MG_INFO(("start"));
   while ((p = va_arg(ap, const unsigned char *)) != NULL) {
 
     size_t len = va_arg(ap, size_t);     
-        MG_INFO(("md5 update %.*s",len,p));
+      //  MG_INFO(("md5 update %.*s",len,p));
     mg_md5_update(&ctx, p, len);
   }
-  MG_INFO(("end"));
+  //MG_INFO(("end"));
   va_end(ap);
   mg_md5_final(&ctx, hash);
   mg_hex(hash,sizeof(hash),buf);
@@ -1750,13 +1750,13 @@ static int mg_http_check_digest_auth(struct mg_http_message *hm,
     std::string u=std::string(username.ptr,username.len);
     std::string r=std::string(response.ptr,response.len);
    // if (strcmp(creds->username.c_str(),u.c_str())) {
-       MG_INFO(("password=%s",creds->password.c_str()));
+      // MG_INFO(("password=%s",creds->password.c_str()));
       mg_mkmd5resp(
           hm->method.ptr, hm->method.len, hm->uri.ptr,
           hm->uri.len,
           &username,creds->password.c_str(), &realm, &nonce,  &nc,  &cnonce,
            &qop, expected_response);
-       MG_INFO(("response =%s, expected=%s, cusername=%s,u=%s",r.c_str(),expected_response,creds->username.c_str(),u.c_str()));   
+     //  MG_INFO(("response =%s, expected=%s, cusername=%s,u=%s",r.c_str(),expected_response,creds->username.c_str(),u.c_str()));   
       return mg_casecmp(r.c_str(), expected_response) == 0;
    // }
   
@@ -1933,7 +1933,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                if (x==0 && matchIndex>0 && firstLoop) {
                    srv->handleUpload(data[0],"upload.bin",data[1],(uint8_t*)matchBuf,matchIndex,final);
                    data[1]+=matchIndex;
-                   MG_INFO(("***** save partial matched data bindex=%lu, index=%lu -  [%.*s]",matchIndex,data[1],matchIndex,matchBuf));
+                   //MG_INFO(("***** save partial matched data bindex=%lu, index=%lu -  [%.*s]",matchIndex,data[1],matchIndex,matchBuf));
                 }
                matchIndex=0;               
                break;
@@ -1946,7 +1946,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       if (matchIndex==ml && ml > 0) {
              matchIndex=0;
              final=true;
-        MG_INFO(("**********Final  bytes %lu, final=%d, data0=%lu, total=%lu, data1=%lu",x,final,data[0],x+data[1],data[1]));              
+       // MG_INFO(("**********Final  bytes %lu, final=%d, data0=%lu, total=%lu, data1=%lu",x,final,data[0],x+data[1],data[1]));              
         } 
       
       data[2]=0;  
@@ -1979,7 +1979,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
           struct mg_str boundary = mg_str("");           
           if (ct != NULL) {
             boundary = mg_http_get_header_var(*ct, mg_str("boundary"));  
-            MG_INFO(("before boundary check"));
+         //   MG_INFO(("before boundary check"));
             if (boundary.ptr != NULL && boundary.len > 0) {
              matchBuf[0]=13;
              matchBuf[1]=10;
@@ -1989,7 +1989,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
              //matchBuf[boundary.len+4]='-';
             // matchBuf[boundary.len+5]='-';
              matchBuf[boundary.len+4]=0;
-             MG_INFO(("datasize=%lu,len=%lu,boundary=[%.*s],sizeofdata=%lu,st=%lu",MG_DATA_SIZE,strlen(matchBuf),strlen(matchBuf),matchBuf,sizeof(c->data),sizeof(c->data[0])));
+             //MG_INFO(("datasize=%lu,len=%lu,boundary=[%.*s],sizeofdata=%lu,st=%lu",MG_DATA_SIZE,strlen(matchBuf),strlen(matchBuf),matchBuf,sizeof(c->data),sizeof(c->data[0])));
              matchIndex=0;
             } else
                 return;
@@ -1999,14 +1999,14 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
           size_t ofs = 0; 
           ofs=mg_getMultipart(hm.body, ofs, &part);
           if (ofs > 0  && part.filename.len) { 
-         MG_INFO(("Chunk name: [%.*s] filename: [%.*s] length: %lu bytes,ofs=%lu",
-                 (int) part.name.len, part.name.ptr, (int) part.filename.len,
-                 part.filename.ptr, (unsigned long) hm.body.len,ofs));          
+        // MG_INFO(("Chunk name: [%.*s] filename: [%.*s] length: %lu bytes,ofs=%lu",
+              //   (int) part.name.len, part.name.ptr, (int) part.filename.len,
+              //   part.filename.ptr, (unsigned long) hm.body.len,ofs));          
 
           data[0] = hm.body.len  - ofs -  (strlen(matchBuf)+4);//total len + 2 boundary headers including terminating --\r\n
           data[1] = 0;//byte counter
           data[2] = n + ofs; //initial offset
-          MG_INFO(("Got chunk len %lu,data0=%lu,data1=%lu,data2=%lu", 0,data[0],data[1],data[2]));          
+        //  MG_INFO(("Got chunk len %lu,data0=%lu,data1=%lu,data2=%lu", 0,data[0],data[1],data[2]));          
           }
   
         } 
@@ -2015,7 +2015,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
   }  else if (ev == MG_EV_HTTP_MSG) { 
         struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-        if (srv->get_credentials()->password != "" && srv->get_credentials()->token =="11") {
+        if (srv->get_credentials()->password != "" ) {
            if (!mg_http_check_digest_auth(hm,"webkeypad",srv->get_credentials())) {
             mg_send_digest_auth_request(c,"webkeypad");
            }
@@ -2134,7 +2134,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
   
  void WebServer::handleRequest (mg_connection *c,JsonObject doc) {
      std::string d=doc["domain"];
-    MG_INFO(("handlerequest domain=%s",d.c_str()));
+  //  MG_INFO(("handlerequest domain=%s",d.c_str()));
 #ifdef USE_SENSOR
 
   if (doc["domain"] == "sensor") {
@@ -2229,7 +2229,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
 
 #if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
   if (doc["domain"] == "alarm_panel") {
-      MG_INFO(("handling alarm panel"));
+     // MG_INFO(("handling alarm panel"));
     this->handle_alarm_panel_request(c,doc);
     return;
   }
