@@ -34,8 +34,6 @@ void disconnectVista() {
 namespace esphome {
 namespace alarm_panel {
     
-HighFrequencyLoopRequester hflr; 
-
 std::unordered_map<std::string,binary_sensor::BinarySensor*> bMap;
 std::unordered_map<std::string,text_sensor::TextSensor*> tMap;
 
@@ -300,7 +298,6 @@ void vistaECPHome::setup()  {
       //use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       // the system to not miss a response window on commands.  
 #if !defined(ARDUINO_MQTT)     
-      hflr.start();
       set_update_interval(8); //set looptime to 8ms 
 #if !defined(ARDUINO_MQTT)      
       loadSensors();
@@ -764,6 +761,7 @@ void vistaECPHome::cmdQueueTask(void * args) {
         if (vista.keybusConnected)
             vh=vista.handle();
           if (!vh) delay(8);
+           yield();
            vh=false;
            if (millis() - checkTime > 30000) {
             UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
