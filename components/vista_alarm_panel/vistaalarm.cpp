@@ -755,14 +755,12 @@ void vistaECPHome::cmdQueueTask(void * args) {
 
   vistaECPHome * _this = (vistaECPHome * ) args;
   static unsigned long checkTime = millis();  
-  bool vh;
   for (;;) { 
         
         if (vista.keybusConnected)
-            vh=vista.handle();
-          if (!vh) delay(8);
+          if (!vista.handle()) 
+              delay(8);
            yield();
-           vh=false;
            if (millis() - checkTime > 30000) {
             UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
             #if not defined(ARDUINO_MQTT)             
