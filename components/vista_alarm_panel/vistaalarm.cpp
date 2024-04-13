@@ -104,7 +104,6 @@ vista.stop();
       }
       
       if (zoneStatusChangeBinaryCallback != NULL ) {
-          ESP_LOGD("test","in binary callback update");
         if (zone <= maxZones) 
               zoneStatusChangeBinaryCallback(zt->zone, zt->open ||  zt->check );
          else
