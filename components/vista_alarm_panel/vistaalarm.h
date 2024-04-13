@@ -223,6 +223,7 @@ class vistaECPHome {
     
 
     struct zoneType {
+      uint8_t zone;
       unsigned long time;
       uint8_t partition;
       uint8_t open:1;

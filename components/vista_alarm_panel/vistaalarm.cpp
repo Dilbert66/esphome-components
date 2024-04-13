@@ -100,14 +100,15 @@ vista.stop();
           std::string msg,zs1;   
           zs1=zt->check?"T":zt->open?"O":"C";
           msg = zt->bypass ? "B" : zt->alarm ? "A" : "";
-          zoneStatusChangeCallback(zone,msg.append(zs1).c_str());
+          zoneStatusChangeCallback(zt->zone,msg.append(zs1).c_str());
       }
       
       if (zoneStatusChangeBinaryCallback != NULL ) {
+          ESP_LOGD("test","in binary callback update");
         if (zone <= maxZones) 
-              zoneStatusChangeBinaryCallback(zone, zt->open ||  zt->check );
+              zoneStatusChangeBinaryCallback(zt->zone, zt->open ||  zt->check );
          else
-            zoneStatusChangeBinaryCallback(zone,zt->check || zt->open || zt->alarm || zt->trouble);
+            zoneStatusChangeBinaryCallback(zt->zone,zt->check || zt->open || zt->alarm || zt->trouble);
       }
     }
     
@@ -168,6 +169,7 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
   
      
      zoneType n; 
+     n.zone=z;
      n.time=0;
      n.alarm=false;
      n.open=false;
@@ -852,6 +854,11 @@ void vistaECPHome::update()  {
               testtime=millis();
           }
          */
+        if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0) {
+             printPacket("CHK", vistaCmd.cbuf, 13);
+             return;
+        }
+         
         static unsigned long refreshLrrTime,refreshRfTime;
         //process ext messages for zones
         if (vistaCmd.newExtCmd) {
@@ -1112,7 +1119,7 @@ void vistaECPHome::update()  {
               //ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );              
              }
              zt->time=millis();
-      } else 
+      } else
          
         //zone fault status 
        // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
