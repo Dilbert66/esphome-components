@@ -953,7 +953,7 @@ void vistaECPHome::update()  {
               8 -	Loop 1 
           
           */
-          return;
+
         }
         
         
@@ -1365,7 +1365,9 @@ void vistaECPHome::update()  {
                       
         if ((zoneStatusMsg != previousZoneStatusMsg  || forceRefreshZones) && zoneExtendedStatusCallback != NULL)
           zoneExtendedStatusCallback(zoneStatusMsg);
+      
         previousZoneStatusMsg = zoneStatusMsg;
+        
         chkTime=millis();
         if (chkTime - refreshLrrTime > 30000) {
           lrrMsgChangeCallback("");
