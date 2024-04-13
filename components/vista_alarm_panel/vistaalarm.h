@@ -189,6 +189,7 @@ class vistaECPHome {
 
     sysState currentSystemState,
     previousSystemState;
+    void stop();
 
   private:
 
@@ -316,7 +317,8 @@ private:
        int mask;
     };
     struct cmdQueueItem vistaCmd;    
-
+    
+TaskHandle_t xHandle;
 static void cmdQueueTask(void * args);
 
 std::map<uint32_t,zoneType> extZones;
