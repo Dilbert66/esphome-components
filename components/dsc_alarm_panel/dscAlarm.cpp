@@ -3642,15 +3642,18 @@ void DSCkeybushome::loadSensors() {
     std::string id=obj->get_type_id();
     if (id!="") 
         bMap[id]=obj;
-#else  
-    std::string name=obj->get_name();
-    const std::regex e(" \\((.+)\\)");
-    std::smatch m;
-    if (std::regex_search(name,m,e)) {
-        std::string match=m[1];
-       bMap[match]=obj; 
-    }
+    else 
 #endif
+    {
+      std::string name=obj->get_name();
+      const std::regex e(" \\((.+)\\)");
+      std::smatch m;
+      if (std::regex_search(name,m,e)) {
+        std::string match=m[1];
+        bMap[match]=obj; 
+      }
+    }
+
   }
  std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
  for (auto *obj : ts ) {
@@ -3658,15 +3661,18 @@ void DSCkeybushome::loadSensors() {
    std::string id=obj->get_type_id();
     if (id!="")
         tMap[id]=obj;
-#else 
-    std::string name=obj->get_name();
-    const std::regex e(" \\((.+)\\)");
-    std::smatch m;
-    if (std::regex_search(name,m,e)) {
+    else 
+#endif 
+    {
+      std::string name=obj->get_name();
+      const std::regex e(" \\((.+)\\)");
+      std::smatch m;
+      if (std::regex_search(name,m,e)) {
         std::string match=m[1];
-       tMap[match]=obj; 
+        tMap[match]=obj; 
     }
-#endif     
+}
+  
  }
 }
 #endif
