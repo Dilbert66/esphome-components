@@ -67,10 +67,9 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
-    std::string name="";
     if (bMap.find(str)!=bMap.end()) 
-        name=bMap[str]->get_name();
-    return name;
+        return bMap[str]->get_name();
+    return "";
 }
   
 void DSCkeybushome::set_panel_time() {
@@ -588,7 +587,6 @@ void DSCkeybushome::begin() {
     do {
       partitionStatus[partition - 1].editIdx = partitionStatus[partition - 1].editIdx > 0 ? partitionStatus[partition - 1].editIdx - 1 : partitionStatus[partition - 1].digits - 1;
       count++;
-     //  byte b = (partitionStatus[partition - 1].editIdx / 2) + (partitionStatus[partition - 1].editIdx % 2);  
     } while (tpl[partitionStatus[partition - 1].editIdx] != 'X' && count <= partitionStatus[partition - 1].digits);
 
   }
@@ -598,7 +596,6 @@ void DSCkeybushome::begin() {
     do {
       partitionStatus[partition - 1].editIdx = partitionStatus[partition - 1].editIdx + 1 < partitionStatus[partition - 1].digits ? partitionStatus[partition - 1].editIdx + 1 : 0;
       count++;
-       //byte b = (partitionStatus[partition - 1].editIdx / 2) + (partitionStatus[partition - 1].editIdx % 2);  
     } while (tpl[partitionStatus[partition - 1].editIdx] != 'X' && count <= partitionStatus[partition - 1].digits);
 
   }

@@ -190,7 +190,7 @@ binary_sensor:
     publish_initial_state: true         
 
   - platform: template
-    id_code: z1  
+    id_code: z6
     name: "Family room window LF (z6)"
     device_class: window
     publish_initial_state: true         
@@ -451,6 +451,7 @@ switch:
   - platform: template
     name: "Connection"
     id: connection_status_switch
+    restore_mode: DISABLED
     lambda: |-
       return dsc.keybusConnected;
     icon: "mdi:shield-link-variant"
