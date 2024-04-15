@@ -1,5 +1,6 @@
 #include "vistaalarm.h"
 #include "esphome/core/helpers.h"
+#include "esp_task_wdt.h"
 
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
@@ -770,7 +771,7 @@ void vistaECPHome::cmdQueueTask(void * args) {
         if (!vista.keybusConnected || !vista.handle() )
               delay(8);
         delayMicroseconds(50);
-        yield();
+        vTaskYield();
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
          #if not defined(ARDUINO_MQTT)             
