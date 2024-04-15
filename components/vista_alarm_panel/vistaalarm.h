@@ -10,7 +10,6 @@
 #endif
 #include "esphome/core/defines.h"
 #include "paneltext.h"
-#include <unordered_map>
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT

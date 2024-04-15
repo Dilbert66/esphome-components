@@ -42,7 +42,6 @@
 #define maxZonesDefault 32 //set to 64 if your system supports it
 #define maxRelays 8
 #include "dscKeybusInterface.h"
-#include <unordered_map>
 #include <regex>
 
 extern dscKeybusInterface dsc;

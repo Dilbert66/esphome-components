@@ -27,8 +27,8 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
 #if !defined(ARDUINO_MQTT)
-std::unordered_map<std::string,binary_sensor::BinarySensor*> bMap;
-std::unordered_map<std::string,text_sensor::TextSensor*> tMap;
+std::map<std::string,binary_sensor::BinarySensor*> bMap;
+std::map<std::string,text_sensor::TextSensor*> tMap;
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;

@@ -35,8 +35,8 @@ void disconnectVista() {
 namespace esphome {
 namespace alarm_panel {
     
-std::unordered_map<std::string,binary_sensor::BinarySensor*> bMap;
-std::unordered_map<std::string,text_sensor::TextSensor*> tMap;
+std::map<std::string,binary_sensor::BinarySensor*> bMap;
+std::map<std::string,text_sensor::TextSensor*> tMap;
 
 static const char *const TAG = "vista_alarm"; 
  
@@ -161,12 +161,9 @@ void vistaECPHome::loadSensors() {
 #endif
 
 vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
-    
- 
-   std::map<uint32_t,zoneType>::iterator it=extZones.find(z);
-   if (it != extZones.end())  
-       return &it->second;
-  
+
+     if (extZones.find(z)!=extZones.end()) 
+        return &extZones[z];
      
      zoneType n; 
      n.zone=z;
@@ -182,9 +179,8 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
      n.partition=0;
      n.active=zoneActive(z);
      extZones[z]= n;
-     it=extZones.find(z);
-     if (it != extZones.end()) 
-      return &it->second; 
+     if (extZones.find(z)!=extZones.end()) 
+        return &extZones[z];
 
      return &nz; //empty zone
 }
@@ -771,7 +767,7 @@ void vistaECPHome::cmdQueueTask(void * args) {
         if (!vista.keybusConnected || !vista.handle() )
               delay(8);
         delayMicroseconds(50);
-        vTaskYield();
+        taskYIELD();
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
          #if not defined(ARDUINO_MQTT)             
