@@ -179,10 +179,7 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
      n.partition=0;
      n.active=zoneActive(z);
      extZones[z]= n;
-     if (extZones.find(z)!=extZones.end()) 
-        return &extZones[z];
-
-     return &nz; //empty zone
+     return &extZones[z];
 }
 
 vistaECPHome::serialType vistaECPHome::getRfSerialLookup(char * serialCode) { 
