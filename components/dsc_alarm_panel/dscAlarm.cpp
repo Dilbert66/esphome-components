@@ -3646,7 +3646,7 @@ void DSCkeybushome::loadSensors() {
 #endif
     {
       std::string name=obj->get_name();
-      const std::regex e(" \\((.+)\\)");
+      const std::regex e(" \\(\\s*(.+)\\s*\\)");
       std::smatch m;
       if (std::regex_search(name,m,e)) {
         std::string match=m[1];
@@ -3665,7 +3665,7 @@ void DSCkeybushome::loadSensors() {
 #endif 
     {
       std::string name=obj->get_name();
-      const std::regex e(" \\((.+)\\)");
+      const std::regex e(" \\(\\s*(.+)\\s*\\)");
       std::smatch m;
       if (std::regex_search(name,m,e)) {
         std::string match=m[1];
