@@ -133,7 +133,7 @@ void vistaECPHome::loadSensors() {
         bMap[id]=obj;
 #else  
     std::string name=obj->get_name();
-    const std::regex e(" \\(\\s*(.+)\\s*\\)");
+    const std::regex e("\\(\\s*(.+)\\s*\\)");
     std::smatch m;
     if (std::regex_search(name,m,e)) {
         std::string match=m[1];
@@ -149,7 +149,7 @@ void vistaECPHome::loadSensors() {
         tMap[id]=obj;
 #else    
     std::string name=obj->get_name();
-    const std::regex e(" \\(\\s*(.+)\\s*\\)");
+    const std::regex e("\\(\\s*(.+)\\s*\\)");
     std::smatch m;
     if (std::regex_search(name,m,e)) {
        std::string match=m[1];
