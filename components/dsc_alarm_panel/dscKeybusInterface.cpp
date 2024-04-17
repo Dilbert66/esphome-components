@@ -630,7 +630,7 @@ dscKeybusInterface::dscClockInterrupt() {
 
       if (pcmd!=NULL) {
           if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
-            #ifdef DEBOUNCE            
+#ifdef DEBOUNCE            
             if (skipFirst) 
               skipFirst = false; //second copy, we clear skipfirst, and process this copy
              else 
@@ -650,13 +650,12 @@ dscKeybusInterface::dscClockInterrupt() {
         skipFirst = false;
          
        }
- #endif   
+#endif   
       }
       // Stores new panel data in the panel buffer
       if (panelBufferLength == dscBufferSize) 
           bufferOverflow = true;
       else if (!skipData && panelBufferLength < dscBufferSize) {
-        //for (byte i = 0; i < dscReadSize; i++) panelBuffer[panelBufferLength][i] = isrPanelData[i];
         memcpy((void*)&panelBuffer[panelBufferLength],(void*)isrPanelData,dscReadSize);       
         panelBufferBitCount[panelBufferLength] = isrPanelBitTotal;
         panelBufferByteCount[panelBufferLength] = isrPanelByteCount;
@@ -671,14 +670,14 @@ dscKeybusInterface::dscClockInterrupt() {
           moduleSubCmd = isrPanelData[2];
           moduleDataDetected = false;
           moduleDataCaptured = true; // Sets a flag for handleModule()
-         // for (byte i = 0; i < dscReadSize; i++) moduleData[i] = isrModuleData[i];
+
           memcpy((void*)moduleData,(void*)isrModuleData,dscReadSize);
           moduleBitCount = isrPanelBitTotal;
           moduleByteCount = isrPanelByteCount;
         }
 
         // Resets the keypad and module capture data
-        //for (byte i = 0; i < dscReadSize; i++) isrModuleData[i] = 0;
+
         memset((void*)isrModuleData,0,dscReadSize);       
       }
 
@@ -692,12 +691,15 @@ dscKeybusInterface::dscClockInterrupt() {
     }
 
     // Virtual keypad
-    if (virtualKeypad && writeDataPending && writeBufferIdx < writeBufferLength) {
+    if (virtualKeypad && writeDataPending ) {
+
       static bool writeStart = false;
+
       if (dscWritePin == dscReadPin )
             pinMode(dscWritePin, OUTPUT);  
-      if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
-
+        
+     // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
+      if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, invertWrite);
@@ -705,13 +707,12 @@ dscKeybusInterface::dscClockInterrupt() {
         if (isrPanelBitCount == 7) {
           writeBufferIdx++;
 
-          if (writeBufferIdx == writeBufferLength) { //all bits written
+          if (writeBufferIdx == writeBufferLength ) { //all bits written
             writeStart = false;
-            writeDataPending = false;
+            writeDataPending = writeAlarm;
             if (writeAlarm) {
               writeAlarm = false;
               writeBufferIdx = 0; //reset byte counter to resend
-              writeDataPending = true;
             }
           }
         }
@@ -764,7 +765,6 @@ dscKeybusInterface::dscDataInterrupt() {
 
       // Stores the stop bit by itself in byte 1 - this aligns the Keybus bytes with panelData[] bytes
       if (isrPanelBitTotal == 8) {
-
         isrPanelBitCount = 0;
         isrPanelByteCount++;
       }
@@ -851,37 +851,37 @@ dscKeybusInterface::dscKeybusInterface::processPendingResponses(byte cmd) {
   case 0x0A:
   case 0x05:
     processPendingQueue(cmd);
-    return;
+    break;
 #if not defined(DISABLE_EXPANDER)    
   case 0x11:
-    if (!enableModuleSupervision) return;
-    updateWriteBuffer((byte * ) moduleSlots, 9,1,maxFields11 );
-    return; //setup supervisory slot response for devices
+    if (enableModuleSupervision) 
+        updateWriteBuffer((byte * ) moduleSlots, 9,1,maxFields11 );
+    break; //setup supervisory slot response for devices
   case 0x28:
     prepareModuleResponse(9, 9);
-    return; // the address will depend on the panel request command for the module
+    break;// the address will depend on the panel request command for the module
   case 0x33:
     prepareModuleResponse(10, 9);
-    return;
+    break;
   case 0x39:
     prepareModuleResponse(11, 9);
-    return;
+    break;
 #endif    
   case 0x70:
     if (pending70) {
         pending70=false;
         processCmd70();
     }
-    return; 
+    break; 
   case 0xD0:
     if (pendingD0) {
         pendingD0=false;
         updateWriteBuffer((byte *) cmdD0buffer,9,1,6);
     }
-    return;
+    break;
 
   default:
-    return;
+    break;
   }
 
 }
@@ -902,25 +902,26 @@ IRAM_ATTR
 dscKeybusInterface::processPendingResponses_0xE6(byte subcmd) {
 
   if (writeDataPending) return;
- 
+  byte addr;
   switch (subcmd) {
 
 #if not defined(DISABLE_EXPANDER)
   case 0x08:
-    prepareModuleResponse(12, 17);
-    break;
+     addr=12;
+     break;
   case 0x0A:
-    prepareModuleResponse(13, 17);;
+     addr=13;
     break;
   case 0x0C:
-    prepareModuleResponse(14, 17);;
+    addr=14;
     break;
   case 0x0E:
-    prepareModuleResponse(16, 17);;
+    addr=16;
     break;
 #endif
   default:
     return;
   }
+  prepareModuleResponse(addr,17);
 
 }

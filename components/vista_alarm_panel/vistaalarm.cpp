@@ -131,7 +131,9 @@ void vistaECPHome::loadSensors() {
     std::string id=obj->get_type_id();
     if (id!="") 
         bMap[id]=obj;
-#else  
+else 
+#endif
+   {
     std::string name=obj->get_name();
     const std::regex e("\\(\\s*(.+)\\s*\\)");
     std::smatch m;
@@ -139,7 +141,7 @@ void vistaECPHome::loadSensors() {
         std::string match=m[1];
        bMap[match]=obj; 
     }   
-#endif
+  }
  }
  std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
  for (auto *obj : ts ) {
@@ -147,7 +149,9 @@ void vistaECPHome::loadSensors() {
    std::string id=obj->get_type_id();
     if (id!="")
         tMap[id]=obj;
-#else    
+    else
+#endif        
+   {
     std::string name=obj->get_name();
     const std::regex e("\\(\\s*(.+)\\s*\\)");
     std::smatch m;
@@ -155,7 +159,8 @@ void vistaECPHome::loadSensors() {
        std::string match=m[1];
        tMap[match]=obj; 
     }
-#endif     
+  }
+
  }
 }
 #endif
