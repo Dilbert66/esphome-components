@@ -93,7 +93,7 @@ esp32:
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository
   #- source:  my_components #uncomment to use local directory  
-    components: [vista_alarm_panel,binary_sensor,text_sensor] 
+    components: [vista_alarm_panel,binary_sensor,text_sensor,web_server] 
     refresh: 10min
     
 ## web keypad component
