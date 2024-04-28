@@ -1865,7 +1865,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
  
     bool final=false;
     if (ev == MG_EV_CLOSE) {
-        ESP_LOGD(TAG,"Close session");
+        ESP_LOGD(TAG,"Connection %d closed",c->id);
       // srv->sessionTokens.erase(c); 
     } else if (ev == MG_EV_ACCEPT) {
         /*
@@ -1881,6 +1881,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         
         mg_tls_init(c, &opts);
     */
+     ESP_LOGD(TAG,"New connection %d accepted",c->id);
     } if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!
             struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;

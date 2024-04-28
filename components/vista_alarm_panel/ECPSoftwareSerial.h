@@ -54,7 +54,7 @@ enum SoftwareSerialConfig {
 // Baudrates up to 115200 can be used.
 
 class SoftwareSerial: public Stream {
-    public: SoftwareSerial(int receivePin, int transmitPin, bool invertRx=false,bool invertTx=false, int bufSize = 64, int isrBufSize = 0);
+    public: SoftwareSerial(int receivePin, int transmitPin, bool invertRx=false,bool invertTx=false, int bufSize = 64, int isrBufSize = 0, uint8_t inputRx=INPUT);
     virtual~SoftwareSerial();
 
     void begin(int32_t baud = 2400) {
@@ -125,6 +125,7 @@ class SoftwareSerial: public Stream {
     bool m_invert;
     bool m_invert_tx;
     bool m_invert_rx;
+    uint8_t m_input_type;
     bool m_overflow = false;
     int8_t m_dataBits;
     int32_t m_bitCycles;

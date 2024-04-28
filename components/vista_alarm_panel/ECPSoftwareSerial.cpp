@@ -26,13 +26,14 @@ Modified for 4800 8E2
 #include "ECPSoftwareSerial.h"
 
 SoftwareSerial::SoftwareSerial(
-    int receivePin, int transmitPin, bool invertRx,bool invertTx, int bufSize, int isrBufSize) {
+    int receivePin, int transmitPin, bool invertRx,bool invertTx, int bufSize, int isrBufSize,uint8_t inputRx) {
     m_isrBuffer = 0;
     m_isrOverflow = false;
     m_isrLastCycle = 0;
     m_oneWire = (receivePin == transmitPin);
     m_invert_tx=invertTx;
     m_invert_rx=invertRx;
+    m_input_type=inputRx;
     if (isValidGPIOpin(receivePin)) {
         m_rxPin = receivePin;
         m_bufSize = bufSize;
@@ -91,7 +92,7 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config) {
         m_inPos = m_outPos = 0;
         m_isrInPos.store(0);
         m_isrOutPos.store(0);
-        pinMode(m_rxPin, INPUT);
+        pinMode(m_rxPin, m_input_type);
     }
     if (m_txValid && !m_oneWire) {
         pinMode(m_txPin, OUTPUT);

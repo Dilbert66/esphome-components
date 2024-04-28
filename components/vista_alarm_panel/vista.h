@@ -117,7 +117,7 @@ class Vista {
   public:
         Vista();
     ~Vista();
-    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx=true,bool invertTx=true);
+    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx=true,bool invertTx=true,bool invertMon=true,uint8_t inputRx = INPUT,uint8_t inputMon = INPUT);
     void stop();
     bool handle();
     void printStatus();
@@ -195,6 +195,7 @@ class Vista {
     bool getExtBytes();
     volatile bool is2400;
     void pushCmdQueueItem();
+    bool invertRead;
 
     char IRAM_ATTR addrToBitmask1(char addr) {
         if (addr > 7) return 0xFF;

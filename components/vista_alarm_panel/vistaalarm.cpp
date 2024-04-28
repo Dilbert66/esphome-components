@@ -76,7 +76,7 @@ if (xHandle != NULL)
 vista.stop();
 }    
 
- vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin,int maxzones,int maxpartitions,bool invertrx,bool inverttx): 
+ vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin,int maxzones,int maxpartitions,bool invertrx,bool inverttx, bool invertmon,uint8_t inputrx, uint8_t inputmon): 
     keypadAddr1(kpaddr),
     rxPin(receivePin),
     txPin(transmitPin),
@@ -84,6 +84,9 @@ vista.stop();
     maxZones(maxzones),
     invertRx(invertrx),
     invertTx(inverttx),
+    invertMon(invertmon),
+    inputRx(inputrx),
+    inputMon(inputmon),
     maxPartitions(maxpartitions)
     {
          partitionKeypads = new char[maxPartitions+1];
@@ -131,7 +134,7 @@ void vistaECPHome::loadSensors() {
     std::string id=obj->get_type_id();
     if (id!="") 
         bMap[id]=obj;
-else 
+    else 
 #endif
    {
     std::string name=obj->get_name();
@@ -348,7 +351,7 @@ void vistaECPHome::setup()  {
 #endif      
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);
-      vista.begin(rxPin, txPin, keypadAddr1, monitorPin,invertRx,invertTx);
+      vista.begin(rxPin, txPin, keypadAddr1, monitorPin,invertRx,invertTx,invertMon,inputRx,inputMon);
 
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
@@ -454,7 +457,6 @@ void vistaECPHome::setup()  {
       if(keystring=="B") {set_alarm_state("B","",partition);return;}   
       if(keystring=="Y") {set_alarm_state("Y","",partition);return;}     
       
-      const char * keys = strcpy(new char[keystring.length() + 1], keystring.c_str());
       if (!partition) partition = defaultPartition;      
       if (debug > 0)
           #if defined(ARDUINO_MQTT)
@@ -466,7 +468,7 @@ void vistaECPHome::setup()  {
       if (partition > maxPartitions || partition < 1) return;
       addr=partitionKeypads[partition];
       if (addr > 0 and addr < 24)      
-        vista.write(keys,addr);
+        vista.write(keystring.c_str(),addr);
     }
     
     void vistaECPHome::setDefaultKpAddr(uint8_t p) {
@@ -767,9 +769,9 @@ void vistaECPHome::cmdQueueTask(void * args) {
   for (;;) { 
         
         if (!vista.keybusConnected || !vista.handle() )
-              delay(8);
+              vTaskDelay(8);
         delayMicroseconds(50);
-        taskYIELD();
+        vTaskDelay(0);
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
          #if not defined(ARDUINO_MQTT)             
@@ -976,9 +978,7 @@ void vistaECPHome::update()  {
            //   if (partitionStates[partition - 1].lastp2 != p2 || forceRefresh)
                 line2DisplayCallback(vistaCmd.statusFlags.prompt2, partition);
               if (partitionStates[partition - 1].lastbeeps != vistaCmd.statusFlags.beeps || forceRefresh ) {
-               char s[4];  
-               itoa(vistaCmd.statusFlags.beeps,s,10);
-                beepsCallback(s, partition);
+                beepsCallback(std::to_string( vistaCmd.statusFlags.beeps), partition);
               }
 
         //      partitionStates[partition - 1].lastp1 = str(p1);
@@ -1003,14 +1003,14 @@ void vistaECPHome::update()  {
 
         //publishes lrr status messages
         if ((vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58 && vistaCmd.newCmd) || firstRun) { //we show all lrr messages with type 58
-          int c, q, z;
 
-            c = vistaCmd.statusFlags.lrr.code;
-            q = vistaCmd.statusFlags.lrr.qual;
-            z = vistaCmd.statusFlags.lrr.zone;
+            int c = vistaCmd.statusFlags.lrr.code;
+            int q = vistaCmd.statusFlags.lrr.qual;
+            int z = vistaCmd.statusFlags.lrr.zone;
 
 
           std::string qual;
+          char msg[50];          
           if (c < 400)
             qual = (q == 3) ? " Cleared" : "";
           else if (c == 570)
@@ -1020,13 +1020,13 @@ void vistaECPHome::update()  {
           if (c) {
             String lrrString = String(statusText(c));
 
-            char uflag = lrrString[0];
             std::string uf = "user";
-            if (uflag == 'Z')
+            if (lrrString[0] == 'Z')
               uf = "zone";
+          
             sprintf(msg, "%d: %s %s %d%s", c, & lrrString[1], uf.c_str(), z, qual.c_str());
+            
             lrrMsgChangeCallback(msg);
-           // id(lrrCode) = (c << 16) | (z << 8) | q; //store in persistant global storage
             refreshLrrTime = millis();
           }
 

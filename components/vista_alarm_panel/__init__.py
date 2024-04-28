@@ -44,7 +44,10 @@ CONF_CHECK="check_text"
 CONF_TRBL="trbl_text"
 CONF_HITSTAR="hitstar_text"
 CONF_INVERT_RX="invert_rx"
-CONF_INVERT_TX="invert tx"
+CONF_INVERT_TX="invert_tx"
+CONF_INVERT_MON="invert_mon"
+CONF_INPUT_MON="input_mode_mon"
+CONF_INPUT_RX="input_mode_rx"
 
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
       alarm_panel::publishTextState("ss_",partition,&statusCode); 
@@ -136,7 +139,10 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_TRBL): cv.string  ,   
     cv.Optional(CONF_HITSTAR): cv.string  ,  
     cv.Optional(CONF_INVERT_RX, default='true'): cv.boolean, 
-    cv.Optional(CONF_INVERT_TX, default='true'): cv.boolean,     
+    cv.Optional(CONF_INVERT_TX, default='true'): cv.boolean,   
+    cv.Optional(CONF_INVERT_MON, default='true'): cv.boolean,   
+    cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
+    cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),    
     }
 )
 
@@ -156,7 +162,8 @@ async def to_code(config):
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     
-    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX])
+    
+    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
     
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));

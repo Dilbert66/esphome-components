@@ -102,7 +102,7 @@ class vistaECPHome {
 
     public: 
     
-    vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN,int maxzones=MAX_ZONES,int maxpartitions=MAX_PARTITIONS,bool invertrx=true,bool inverttx=true);
+    vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN,int maxzones=MAX_ZONES,int maxpartitions=MAX_PARTITIONS,bool invertrx=true,bool inverttx=true,bool invertmon=true,uint8_t inputrx=INPUT,uint8_t inputmon=INPUT);
     
 
     std:: function < void(int, std::string) > zoneStatusChangeCallback;
@@ -200,8 +200,12 @@ class vistaECPHome {
     int rxPin=0;
     int txPin=0;
     int monitorPin=0;  
-    bool invertRx=false;
-    bool invertTx=false;    
+    bool invertRx;
+    bool invertTx;    
+    bool invertMon;
+    uint8_t inputMon;
+    uint8_t inputRx;
+    
     
     const char * accessCode;
     const char * rfSerialLookup;    
@@ -218,8 +222,7 @@ class vistaECPHome {
 
     uint8_t * partitions;
     std::string topic_prefix,topic;
-    char msg[50];
-    
+   
 
     struct zoneType {
       uint8_t zone;

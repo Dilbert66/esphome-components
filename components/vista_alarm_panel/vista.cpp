@@ -79,6 +79,7 @@ void Vista::readChars(int ct, char buf[], int * idx) {
       buf[idxval++] = c;
       x++;
     }
+    yield();
   }
   * idx = idxval;
 }
@@ -615,6 +616,7 @@ void Vista::writeChars() {
               c = c - 0x25;
             } 
       tmpOutBuf[tmpIdx++] = c;
+      yield();
     }
     tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (ackAddr & 0x3F);  
     tmpOutBuf[1] = sz + 1;
@@ -638,7 +640,7 @@ void Vista::writeChars() {
 
 void IRAM_ATTR Vista::rxHandleISR() {
   static byte b;    
-  if (digitalRead(rxPin)) {
+  if (digitalRead(rxPin) == invertRead) {
       if (lowTime)
           lowTime=micros() - lowTime;
       highTime=micros();
@@ -906,6 +908,7 @@ bool Vista::getExtBytes() {
     if (extidx < szExt)
       extbuf[extidx++] = x;
     markPulse = 0; //reset pulse flag to wait for next inter msg gap
+    yield();
   }
 
   if (extidx > 0 && markPulse > 1) {
@@ -1121,6 +1124,7 @@ bool Vista::handle() {
        cbuf[gidx++] = x;
        i++;
      }
+     yield();
     }
     pushCmdQueueItem();
     return 1;
@@ -1155,7 +1159,7 @@ void Vista::stop() {
   keybusConnected = false;
 }
 
-void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx,bool invertTx) {
+void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx,bool invertTx, bool invertMon,uint8_t inputRx,uint8_t inputMon) {
   #ifndef ESP32
   //hw_wdt_disable(); //debugging only
   //ESP.wdtDisable(); //debugging only
@@ -1168,10 +1172,11 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   txPin = transmitPin;
   rxPin = receivePin;
   monitorPin = monitorTxPin;
+  invertRead=invertRx;
 
   //panel data rx interrupt - yellow line
   if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 10,100);
+    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 10,100,inputRx);
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
@@ -1179,7 +1184,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertRx,invertTx, 10,100);
+    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 10,100,inputMon);
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;

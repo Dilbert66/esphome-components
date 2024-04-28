@@ -491,8 +491,8 @@ void dscKeybusInterface::processPanel_0x87() {
 
 void dscKeybusInterface::processPanel_0xA5() {
   if (!validCRC()) return;
-
-  processTime(2);
+  if (panelData[6] == 0 && panelData[7] == 0) 
+    processTime(2);
 
   // Timestamp
   if (panelData[6] == 0 && panelData[7] == 0) {
@@ -571,8 +571,8 @@ void dscKeybusInterface::processPanel_0xE6_0x1A() {
 void dscKeybusInterface::processPanel_0xEB() {
   if (!validCRC()) return;
   if (dscPartitions < 3) return;
-
-  processTime(3);
+  if (panelData[6] == 0 && panelData[7] == 0) 
+    processTime(3);
 
   byte partition;
   switch (panelData[2]) {
