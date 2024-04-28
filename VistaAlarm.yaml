@@ -38,6 +38,13 @@ vista_alarm_panel:
   txpin: "21" #GPIO pin to use for data transmit (green line)
   monitorpin: "18" #GPIO pin to use for monitoring module traffic such as RF or Expanders . Set to -1 to disable
   
+  #input mode control
+  invert_mon: "true"
+  invert_rx: "true"
+  invert_tx: "true"
+  input_mode_rx: INPUT
+  input_mode_mon: INPUT
+  
   ##esp8266
   #rxpin: "5" #GPIO pin to use for data receive (yellow line) 
   #txpin: "4" #GPIO pin to use for data transmit (green line)
@@ -84,7 +91,7 @@ esp32:
 #copy the code to directory "my_components" in your main esphome directory
 # see here for more info: https://esphome.io/components/external_components    
 external_components:
-  - source: github://Dilbert66/esphome-components@main #uncomment to use github repository
+  - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository
   #- source:  my_components #uncomment to use local directory  
     components: [vista_alarm_panel,binary_sensor,text_sensor] 
     refresh: 10min
