@@ -18,6 +18,7 @@ void disconnectKeybus() {
 
 #if !defined(ARDUINO_MQTT)
 #include "esphome.h"
+
 namespace esphome {
 namespace alarm_panel {
 #endif
@@ -27,14 +28,35 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
 #if !defined(ARDUINO_MQTT)
-std::map<std::string,binary_sensor::BinarySensor*> bMap;
+
+struct binarySensorType {
+   binary_sensor::BinarySensor* ptr;   
+#if defined(ESPHOME_MQTT)   
+   mqtt::MQTTBinarySensorComponent* mqptr;  
+#endif   
+   std::string name;
+   std::string object_id;
+   std::string type_id;
+} ;
+/*
+struct textSensorType {
+   template_::TemplateTextSensor*  ptr;
+#if defined(ESPHOME_MQTT)   
+   mqtt::MQTTTextSensor* mqptr; 
+#endif   
+   std::string name;
+   std::string object_id;
+   std::string type_id;
+} ;
+*/
+std::map<std::string,binarySensorType*> bMap;
 std::map<std::string,text_sensor::TextSensor*> tMap;
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
   if (bMap.find(str)!=bMap.end()) {
-      bMap[str]->publish_state(open);
+      bMap[str]->ptr->publish_state(open);
   }  
 
 }
@@ -68,7 +90,7 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
     if (bMap.find(str)!=bMap.end()) 
-        return bMap[str]->get_name();
+        return bMap[str]->ptr->get_name();
     return "";
 }
   
@@ -617,14 +639,11 @@ void DSCkeybushome::begin() {
           if (debug > 0) Serial.printf("Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d\n", keystring.c_str(), partition,dsc.disabled[partition - 1],partitionStatus[partition-1].locked);  
 #endif
     if (dsc.disabled[partition - 1]) return;
-
-    const char * keys = strcpy(new char[keystring.length() + 1], keystring.c_str());
-    
     partitionStatus[partition - 1].keyPressTime = millis();
     if (keystring.length() == 1) {
-      processMenu(keys[0], partition);
+      processMenu(keystring.c_str()[0], partition);
     } else {
-        if (!partitionStatus[partition-1].locked) dsc.write(keys, partition);
+        if (!partitionStatus[partition-1].locked) dsc.write(keystring.c_str(), partition);
     }
   }
 
@@ -674,7 +693,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
   void DSCkeybushome::set_alarm_state(std::string state, std::string code , int partition ) {
 
     if (code.length() != 4 || !isInt(code, 10)) code = ""; // ensure we get a numeric 4 digit code
-    const char * alarmCode = strcpy(new char[code.length() + 1], code.c_str());
+    //const char * alarmCode = strcpy(new char[code.length() + 1], code.c_str());
     if (!partition) partition = defaultPartition;
 
 #if !defined(ARDUINO_MQTT)  
@@ -709,7 +728,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       dsc.write('n', partition); // Virtual keypad arm away
       if (code.length() == 4 && !isInt(accessCode, 10)) { // if the code is sent and the yaml code is not active use this.
 
-        dsc.write(alarmCode, partition);
+        dsc.write(code.c_str(), partition);
       }
     }
     // Fire command
@@ -726,7 +745,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 #if !defined(ARDUINO_MQTT)        
       if (debug > 1) ESP_LOGI(TAG,"Disarming ... ");  
 #endif      
-        dsc.write(alarmCode, partition);
+        dsc.write(code.c_str(), partition);
       }
     }
     partitionStatus[partition-1].keyPressTime = millis();    
@@ -771,12 +790,15 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
       if (dsc.panelData[panelByte] != 0) {
         zonesEnabled = true;
         for (byte zoneBit = 0; zoneBit < 8; zoneBit++) {
-
           zone = (zoneBit + startZone) + ((panelByte - inputByte) * 8) - 1;
           if (zone >= maxZones) continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
             zoneStatus[zone].partition = partition;               
             zoneStatus[zone].enabled = true;
+#if defined(AUTOPOPULATE)   
+            loadZone(zone+1); 
+            yield();
+#endif            
           } else if (zoneStatus[zone].partition==partition) {
                 zoneStatus[zone].enabled = false;
 
@@ -802,6 +824,9 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
             zoneStatus[zone].partition = partition;               
             zoneStatus[zone].enabled = true;
+#if defined(AUTOPOPULATE)         
+            loadZone(zone+1);  
+#endif
           } else if (zoneStatus[zone].partition==partition) {
                 zoneStatus[zone].enabled = false;
           }
@@ -1152,7 +1177,6 @@ void DSCkeybushome::update()  {
       eventTime = millis();
     }
     */
- 
     static unsigned long refreshTime;
     if (!firstrun && millis() - refreshTime > 60000 ) {
               refreshTime=millis();
@@ -3640,9 +3664,10 @@ void DSCkeybushome::loadSensors() {
   for (auto *obj : bs ) {
 #if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
-    if (id!="") 
-        bMap[id]=obj;
-    else 
+    if (id!="") {
+        bMap[id]=new binarySensorType();
+        bMap[id]->ptr= obj;        
+    } else 
 #endif
     {
       std::string name=obj->get_name();
@@ -3650,7 +3675,8 @@ void DSCkeybushome::loadSensors() {
       std::smatch m;
       if (std::regex_search(name,m,e)) {
         std::string match=m[1];
-        bMap[match]=obj; 
+        bMap[match]=new binarySensorType();        
+        bMap[match]->ptr= obj; 
       }
     }
 
@@ -3950,8 +3976,39 @@ if (showEvent)
     }
 
   }  
+  
+#if defined(AUTOPOPULATE)
+void DSCkeybushome::loadZone(int z) {
 
+    std::string n=std::to_string(z);      
+    std::string type_id="z" + n;
+    if (bMap.find(type_id)!=bMap.end()) 
+        return;
+    binarySensorType * bst= new binarySensorType();
+    template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
+    App.register_binary_sensor(ptr);
+    bst->name="Zone " + n;
+    ptr->set_name(bst->name.c_str());
+    bst->object_id="zone_" + n;    
+    ptr->set_object_id(bst->object_id.c_str());
+    bst->type_id=type_id;
+    ptr->set_type_id(bst->type_id.c_str());
+   // bst->ptr->set_device_class("window");    
+    ptr->set_publish_initial_state(true);    
+#if defined(ESPHOME_MQTT)   
+    bst->mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
+    bst->mqptr->set_component_source("mqtt");
+    App.register_component(bst->mqptr);
+    bst->mqptr->call();
+#endif  
+    ptr->set_component_source("template.binary_sensor");
+    App.register_component(ptr); 
+    ptr->call();
+    bst->ptr= ptr;     
+    bMap[type_id]=bst; 
+}  
 
+#endif
 
 #if !defined(ARDUINO_MQTT)
 }}//namespaces

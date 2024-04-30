@@ -193,6 +193,7 @@ class vistaECPHome {
   private:
 
     void loadSensors();
+    void loadZone(int z);
     bool zoneActive(uint32_t zone);
     int TTL = 30000;
     uint8_t debug=0;
@@ -328,7 +329,7 @@ std::map<uint32_t,zoneType> extZones;
 
 zoneType nz;
 
-zoneType * getZone(uint32_t z);
+zoneType * getZone(uint32_t z,bool createZone=false);
 
 serialType getRfSerialLookup(char * serialCode);
 
@@ -383,7 +384,8 @@ private:
     bool areEqual(char * a1, char * a2, uint8_t len);
     
   int getZoneFromPrompt(char *p1);
-   
+  std::string getNameFromPrompt(char *p1, char *p2);
+  
  // bool promptContains(char * p1, const char * msg, int & zone);
 
   void printPacket(const char * label, char cbuf[], int len) ;

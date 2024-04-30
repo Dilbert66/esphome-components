@@ -459,6 +459,8 @@ public:
 private:
 
   void loadSensors();
+  void loadZones();
+  void loadZone(int z);
   
   void processMenu(byte key, byte partition = -1) ;
 

@@ -45,6 +45,8 @@ vista_alarm_panel:
   input_mode_rx: INPUT
   input_mode_mon: INPUT
   
+  autopopulate: true # auto populate seen active zones
+  
   ##esp8266
   #rxpin: "5" #GPIO pin to use for data receive (yellow line) 
   #txpin: "4" #GPIO pin to use for data transmit (green line)
