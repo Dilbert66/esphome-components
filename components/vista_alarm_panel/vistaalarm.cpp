@@ -35,7 +35,7 @@ void disconnectVista() {
 namespace esphome {
 namespace alarm_panel {
     
- struct binarySensorType {
+ struct sensorType {
    binary_sensor::BinarySensor* ptr;   
 #if defined(ESPHOME_MQTT)   
    mqtt::MQTTBinarySensorComponent* mqptr;  
@@ -44,18 +44,8 @@ namespace alarm_panel {
    std::string object_id;
    std::string type_id;
 } ;
-/*
-struct textSensorType {
-   template_::TemplateTextSensor*  ptr;
-#if defined(ESPHOME_MQTT)   
-   mqtt::MQTTTextSensor* mqptr; 
-#endif   
-   std::string name;
-   std::string object_id;
-   std::string type_id;
-} ;   
-*/
-std::map<std::string,binarySensorType*> bMap;
+
+std::map<std::string,sensorType*> bMap;
 std::map<std::string,text_sensor::TextSensor*> tMap;
 
 static const char *const TAG = "vista_alarm"; 
@@ -63,7 +53,6 @@ static const char *const TAG = "vista_alarm";
 void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
-const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif  
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
@@ -153,7 +142,7 @@ void vistaECPHome::loadSensors() {
 #if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
     if (id!="") {
-        bMap[id]=new binarySensorType();
+        bMap[id]=new sensorType();
         bMap[id]->ptr=obj;
     } else 
 #endif
@@ -163,7 +152,7 @@ void vistaECPHome::loadSensors() {
     std::smatch m;
     if (std::regex_search(name,m,e)) {
         std::string match=m[1];
-       bMap[match]=new binarySensorType();        
+       bMap[match]=new sensorType();        
        bMap[match]->ptr=obj; 
     }   
   }
@@ -383,8 +372,9 @@ void vistaECPHome::setup()  {
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
             vTaskDelay(0);
-            zoneStatusChangeBinaryCallback(x,false);
-            zoneStatusChangeCallback(x,"C");
+            loadZone(x,false); 
+           // zoneStatusChangeBinaryCallback(x,false);
+            //zoneStatusChangeCallback(x,"C");
         }
       }
       
@@ -1037,7 +1027,15 @@ void vistaECPHome::update()  {
         if (vistaCmd.statusFlags.ready) {
           currentSystemState = sdisarmed;
           currentLightState.ready = true;
-
+          
+          for (auto  &x: extZones) {
+            if (x.second.open) {
+              x.second.open=false;
+              x.second.check=false;  
+              x.second.alarm=false;              
+              zoneStatusUpdate(&x.second);  
+            }              
+          }
         }
         //armed status lights
         if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.statusFlags.systemFlag && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay  )) {
@@ -2050,23 +2048,24 @@ void vistaECPHome::update()  {
     }
   
 #if defined(AUTOPOPULATE)
-void vistaECPHome::loadZone(int z) {
-ESP_LOGD(TAG,"Search zone %d",z);
+void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     std::string n=std::to_string(z);      
     std::string type_id="z" + n;
     if (bMap.find(type_id)!=bMap.end()) 
         return;
-    binarySensorType * bst= new binarySensorType();
+    sensorType * bst= new sensorType();
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
-    std::string name=getNameFromPrompt(vistaCmd.statusFlags.prompt1,vistaCmd.statusFlags.prompt2);
+    std::string name;    
+    if (fetchPromptName)
+        name=getNameFromPrompt(vistaCmd.statusFlags.prompt1,vistaCmd.statusFlags.prompt2);
     if (name=="") 
         bst->name="Zone " + n ;
     else
         bst->name=name+" (" + type_id + ")";
-   ESP_LOGD(TAG,"loading zone %d, name=%s",z,bst->name.c_str());
+ 
     ptr->set_name(bst->name.c_str());
-    bst->object_id="zone_" + n;    
+    bst->object_id=str_snake_case(bst->name);    
     ptr->set_object_id(bst->object_id.c_str());
     bst->type_id=type_id;
     ptr->set_type_id(bst->type_id.c_str());

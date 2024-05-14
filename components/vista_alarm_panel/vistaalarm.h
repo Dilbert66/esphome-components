@@ -56,6 +56,7 @@ namespace alarm_panel {
 extern void * alarmPanelPtr;    
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
+const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif  
   
 #endif   
@@ -193,7 +194,7 @@ class vistaECPHome {
   private:
 
     void loadSensors();
-    void loadZone(int z);
+    void loadZone(int z,bool fetchPromptName=true);
     bool zoneActive(uint32_t zone);
     int TTL = 30000;
     uint8_t debug=0;
