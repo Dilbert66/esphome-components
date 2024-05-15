@@ -930,7 +930,10 @@ void vistaECPHome::update()  {
         
         
         if (debug > 0 && vistaCmd.newCmd) {
-             printPacket("CMD", vistaCmd.cbuf, 13);
+            if (vistaCmd.cbuf[0]==0xF2)
+                printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+2);
+              else
+               printPacket("CMD", vistaCmd.cbuf, 13);
         }
         if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd) {
           getPartitionsFromMask();
@@ -1028,14 +1031,6 @@ void vistaECPHome::update()  {
           currentSystemState = sdisarmed;
           currentLightState.ready = true;
           
-          for (auto  &x: extZones) {
-            if (x.second.open) {
-              x.second.open=false;
-              x.second.check=false;  
-              x.second.alarm=false;              
-              zoneStatusUpdate(&x.second);  
-            }              
-          }
         }
         //armed status lights
         if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.statusFlags.systemFlag && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay  )) {
@@ -1286,6 +1281,16 @@ void vistaECPHome::update()  {
           vista.handle();
 #endif    
            if (!x.second.active) continue;
+           
+           if (partitionStates[ x.second.partition].previousLightState.ready) {
+            if (x.second.open) {
+              x.second.open=false;
+              x.second.check=false;  
+              x.second.alarm=false;              
+              zoneStatusUpdate(&x.second);  
+            }              
+               
+           }
            
            if ( x.second.bypass && !partitionStates[ x.second.partition].previousLightState.bypass) {
              x.second.bypass=false;  
