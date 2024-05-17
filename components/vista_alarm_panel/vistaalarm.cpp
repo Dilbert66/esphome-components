@@ -849,7 +849,10 @@ void vistaECPHome::update()  {
         //process ext messages for zones
         if (vistaCmd.newExtCmd) {
           if (debug > 0)
-            printPacket("EXT", vistaCmd.extcmd, 13);
+            if (vistaCmd.extcmd[0]==0xF6)
+                printPacket("EXT", vistaCmd.extcmd, vistaCmd.extcmd[3]+4);    
+               else            
+                printPacket("EXT", vistaCmd.extcmd, 13);
           //format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
 
           if (vistaCmd.extcmd[0] == 0xFA) {
@@ -947,7 +950,7 @@ void vistaECPHome::update()  {
         
         if (debug > 0 && vistaCmd.newCmd) {
             if (vistaCmd.cbuf[0]==0xF2)
-                printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+2);
+                printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+3);
               else
                printPacket("CMD", vistaCmd.cbuf, 13);
         }
