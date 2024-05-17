@@ -1182,9 +1182,11 @@ void DSCkeybushome::update()  {
     if (!firstrun && millis() - refreshTime > 60000 ) {
               refreshTime=millis();
               forceRefresh=true;
-      if (debug > 1)   {      
+      if (debug > 1)   {  
+#ifdef ESP32
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-        ESP_LOGD(TAG,"Free memory: %5d,freeheap: %5d,minheap: %5d,maxfree:%5d\n", (uint16_t) uxHighWaterMark,esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));  
+        ESP_LOGD(TAG,"Free memory: %5d,freeheap: %5d,minheap: %5d,maxfree:%5d\n", (uint16_t) uxHighWaterMark,esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8)); 
+#endif        
       }      
              
     }
