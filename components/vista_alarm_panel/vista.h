@@ -102,6 +102,7 @@ struct expanderType {
 struct keyType {
     char key;
     uint8_t kpaddr;
+    bool direct;
 };
 
 struct cmdQueueItem {
@@ -128,7 +129,9 @@ class Vista {
     void write(const char * );
     void write(const char);
     void write(const char *,uint8_t addr );
-    void write(const char,uint8_t addr);    
+    void write(const char,uint8_t addr);  
+    void writeDirect(const char *,uint8_t addr , int len);
+    void writeDirect(const char,uint8_t addr); 
     statusFlagType statusFlags;
     SoftwareSerial * vistaSerial, * vistaSerialMonitor;
     void setKpAddr(char keypadAddr) {
@@ -175,7 +178,7 @@ class Vista {
     int gidx;
     volatile int extidx;
     uint8_t write_Seq;
-    void onStatus(char * , int * );
+    void onAUI(char * , int * );
     void onDisplay(char * , int * );
     void writeChars();
     volatile uint8_t markPulse;

@@ -1,6 +1,7 @@
 //for project documenation visit https://github.com/Dilbert66/esphome-dsckeybus
 
 #include "dscAlarm.h"
+#include "esphome/core/helpers.h"
 
 static const char *const TAG = "dscalarm";
 
@@ -3989,7 +3990,7 @@ void DSCkeybushome::loadZone(int z) {
     App.register_binary_sensor(ptr);
     bst->name="Zone " + n;
     ptr->set_name(bst->name.c_str());
-    bst->object_id="zone_" + n;    
+    bst->object_id=str_snake_case(bst->name);    
     ptr->set_object_id(bst->object_id.c_str());
     bst->type_id=type_id;
     ptr->set_type_id(bst->type_id.c_str());

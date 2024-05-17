@@ -60,10 +60,6 @@ extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
 
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
-#endif
-
-
-#if defined(ESPHOME_MQTT)
 const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
 #endif
 

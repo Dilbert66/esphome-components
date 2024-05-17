@@ -322,8 +322,9 @@ private:
        int mask;
     };
     struct cmdQueueItem vistaCmd;    
-    
+#ifdef ESP32
 TaskHandle_t xHandle;
+#endif
 static void cmdQueueTask(void * args);
 
 std::map<uint32_t,zoneType> extZones;

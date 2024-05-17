@@ -1,7 +1,8 @@
 #include "vistaalarm.h"
 #include "esphome/core/helpers.h"
+#ifdef ESP32
 #include "esp_task_wdt.h"
-
+#endif
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
 #define KP_ADDR 17 //only used as a default if not set in the yaml
@@ -247,7 +248,9 @@ vistaECPHome::serialType vistaECPHome::getRfSerialLookup(char * serialCode) {
 }   
 
 
+
 #if defined(ESPHOME_MQTT) 
+
 void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload) {
     int p=0;
       vistaECPHome * v=static_cast<vistaECPHome*>(alarmPanelPtr);
@@ -255,6 +258,19 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
         if (payload.containsKey("partition"))
           p=payload["partition"];
       
+        if (payload.containsKey("test")) {
+            std::string s=payload["keys"];
+        int NumberChars = s.length();
+        char * bytes=new char[NumberChars/2];
+        for (int i = 0; i < NumberChars; i += 2)
+        {
+             bytes[i / 2] = v->toInt(s.substr(i, 2), 16);
+            
+        }
+            p=payload["test"];
+            vista.writeDirect(bytes,p,NumberChars/2);
+            return;
+        }
         if (payload.containsKey("state") )  {
             const char *c="";             
             if (payload.containsKey("code"))
@@ -371,7 +387,7 @@ void vistaECPHome::setup()  {
 
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
-            vTaskDelay(0);
+            yield();
             loadZone(x,false); 
            // zoneStatusChangeBinaryCallback(x,false);
             //zoneStatusChangeCallback(x,"C");
@@ -578,7 +594,7 @@ void vistaECPHome::setup()  {
     std::string vistaECPHome::getF7Lookup(char cbuf[]) {
 
         std::string s="{";
-        char s1[4];
+        char s1[10];
         for (int c = 12; c < 17; c++) {
             sprintf(s1, "%d,", cbuf[c]);
             s.append(s1);
@@ -1345,7 +1361,7 @@ void vistaECPHome::update()  {
                 sprintf(s1, "LB:%d", x.first); 
             zoneStatusMsg.append(s1);
           }
-          vTaskDelay(0);
+          yield();
       
         }
                       

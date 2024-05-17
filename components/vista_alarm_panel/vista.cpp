@@ -84,7 +84,7 @@ void Vista::readChars(int ct, char buf[], int * idx) {
   * idx = idxval;
 }
 
-void Vista::onStatus(char cbuf[], int * idx) {
+void Vista::onAUI(char cbuf[], int * idx) {
 
   //byte 2 is length of message
   //byte 3 is length of headers
@@ -474,13 +474,23 @@ void Vista::onExp(char cbuf[]) {
 
 void Vista::write(const char key, uint8_t addr) {
 
-  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || (key >= 0x41 && key <= 0x44) || key==0x46 ||  key==0x4d ||  key==0x50 || key==0x47 ) {
+  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || (key >= 0x41 && key <= 0x44) || key==0x46 ||  key==0x4d ||  key==0x50 || key==0x47 || key==0x74) {
     keyType kt;
     kt.key=key;
     kt.kpaddr=addr;
+    kt.direct=false;
     outbuf[inbufIdx] = kt;
     inbufIdx = (inbufIdx + 1) % szOutbuf;
   }
+}
+
+void Vista::writeDirect(const char key, uint8_t addr) {
+    keyType kt;
+    kt.key=key;
+    kt.kpaddr=addr;
+    kt.direct=true;
+    outbuf[inbufIdx] = kt;
+    inbufIdx = (inbufIdx + 1) % szOutbuf;
 }
 
 void Vista::write(const char key) {
@@ -495,6 +505,13 @@ void Vista::write(const char * receivedKeys) {
   }
 }
 
+void Vista::writeDirect(const char * receivedKeys, uint8_t addr,int len) {
+  int x = 0;
+  while (x<len) {
+    writeDirect(receivedKeys[x],addr);
+    x++;
+  }
+}
 
 void Vista::write(const char * receivedKeys, uint8_t addr) {
   int x = 0;
@@ -584,14 +601,15 @@ void Vista::writeChars() {
       ackAddr=kt.kpaddr;
       lastkpaddr=kt.kpaddr;
       sz++;
+      if (!kt.direct) {
       //translate digits between 0-9 to hex/decimal
-      if (c >= 0x30 && c <= 0x39) {
-        c -= 0x30;
-      } else
-        //translate * to 0x0b
-        if (c == 0x23) {
-          c = 0x0B;
+          if (c >= 0x30 && c <= 0x39) {
+          c -= 0x30;
         } else
+        //translate * to 0x0b
+          if (c == 0x23) {
+          c = 0x0B;
+         } else
           //translate # to 0x0a
           if (c == 0x2A) {
             c = 0x0A;
@@ -614,10 +632,13 @@ void Vista::writeChars() {
             //translate D to 0x1F (function key D)
             if (c >= 0x41 && c <= 0x44) {
               c = c - 0x25;
-            } 
+            }
+      } 
+            
       tmpOutBuf[tmpIdx++] = c;
       yield();
     }
+
     tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (ackAddr & 0x3F);  
     tmpOutBuf[1] = sz + 1;
   }
@@ -1049,7 +1070,7 @@ bool Vista::handle() {
       return 1;
     }
 
-    //secondary statuses
+    //AUI handling
     if (x == 0xF2) {
       vistaSerial -> setBaud(4800);
       gidx = 0;
@@ -1059,7 +1080,7 @@ bool Vista::handle() {
       if (!validChksum(cbuf, 0, gidx))
         cbuf[12] = 0x77;
       else
-        onStatus(cbuf, & gidx);
+        onAUI(cbuf, & gidx);
       newCmd = true;
       pushCmdQueueItem();      
       return 1;

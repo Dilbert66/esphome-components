@@ -107,14 +107,16 @@ CONFIG_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-    variant = get_esp32_variant()
-    _LOGGER.info("Variant is %s", variant)
-    if variant in [VARIANT_ESP32C3]:
-        cg.add_build_flag("-include \"src/risc_fix.h\"");
-        copy_file_if_changed(
-            os.path.join(pathlib.Path(__file__).parent.resolve(),"risc_fix.h"),
-            CORE.relative_build_path("src/risc_fix.h"),
-        )
+
+    if CORE.using_arduino and CORE.is_esp32:
+      variant = get_esp32_variant()
+      if variant in [VARIANT_ESP32C3]:
+          cg.add_build_flag("-include \"src/risc_fix.h\"");
+          copy_file_if_changed(
+              os.path.join(pathlib.Path(__file__).parent.resolve(),"risc_fix.h"),
+              CORE.relative_build_path("src/risc_fix.h"),
+          )
+
     cg.add_define("USE_CUSTOM_ID")      
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_AUTOPOPULATE]:
