@@ -479,6 +479,7 @@ void Vista::write(const char key, uint8_t addr) {
     kt.key=key;
     kt.kpaddr=addr;
     kt.direct=false;
+    kt.count=0;
     outbuf[inbufIdx] = kt;
     inbufIdx = (inbufIdx + 1) % szOutbuf;
   }
@@ -489,6 +490,7 @@ void Vista::writeDirect(const char key, uint8_t addr) {
     kt.key=key;
     kt.kpaddr=addr;
     kt.direct=true;
+    kt.count=0;
     outbuf[inbufIdx] = kt;
     inbufIdx = (inbufIdx + 1) % szOutbuf;
 }
@@ -678,12 +680,16 @@ void IRAM_ATTR Vista::rxHandleISR() {
         } else if (outbufIdx != inbufIdx || retries > 0) {
           keyType c = outbuf[outbufIdx]; //get pending keypad address
           ackAddr=c.kpaddr;
-          if (ackAddr && ackAddr < 24) {
+          if (ackAddr && ackAddr < 24 ) {
+            if (c.count < 3) {
+            outbuf[outbufIdx].count++;
            vistaSerial -> write(addrToBitmask1(ackAddr), false, 4800);
            b = addrToBitmask2(ackAddr); 
            if (b) vistaSerial -> write(b, false, 4800);
            b = addrToBitmask3(ackAddr); 
-           if (b) vistaSerial -> write(b, false, 4800);           
+           if (b) vistaSerial -> write(b, false, 4800); 
+            } else
+                 outbufIdx = (outbufIdx + 1) % szOutbuf; //too many tries. Skip it.
           } 
         }
         rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
@@ -934,8 +940,7 @@ bool Vista::getExtBytes() {
 
   if (extidx > 0 && markPulse > 1) {
     //ok, we are on the next pulse (gap) , lets decode the previous msg data
-    if (decodePacket())
-      ret = 1;
+    if (decodePacket()) ret = 1;
     extidx = 0;
     memset(extbuf, 0, szExt); //clear buffer mem    
 

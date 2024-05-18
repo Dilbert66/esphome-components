@@ -103,6 +103,7 @@ struct keyType {
     char key;
     uint8_t kpaddr;
     bool direct;
+    uint8_t count;
 };
 
 struct cmdQueueItem {

@@ -668,11 +668,12 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
             d->alarm_keypress_partition(s,p);
         } else if (payload.containsKey("fault") && payload.containsKey("zone")) {
             bool b=false;
-            std::string s1= (const char*) payload["fault"];
+            std::string s1= payload["fault"];
             if (s1=="ON" || s1=="on" || s1=="1")
                 b=true;
-            std::string s=payload["zone"];
-            p = atoi(s.c_str());
+           // std::string s=payload["zone"];
+            //p = atoi(s.c_str());
+            p=payload["zone"];
            // ESP_LOGI(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             d->set_zone_fault(p,b);
 

@@ -283,11 +283,12 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
             v->alarm_keypress_partition(s,p);
         } else if (payload.containsKey("fault") && payload.containsKey("zone")) {
             bool b=false;
-            std::string s1= (const char*) payload["fault"];
+            std::string s1 =  payload["fault"];
             if (s1=="ON" || s1=="on" || s1=="1")
                 b=true;
-            std::string s=payload["zone"];
-            p=v->toInt(s,10);
+            //std::string s=payload["zone"];
+            //p=v->toInt(s,10);
+             p=payload["zone"];
            // ESP_LOGE(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             v->set_zone_fault(p,b);
 
@@ -950,7 +951,7 @@ void vistaECPHome::update()  {
         
         if (debug > 0 && vistaCmd.newCmd) {
             if (vistaCmd.cbuf[0]==0xF2)
-                printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+3);
+                printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+2);
               else
                printPacket("CMD", vistaCmd.cbuf, 13);
         }
