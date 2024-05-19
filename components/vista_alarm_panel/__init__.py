@@ -162,14 +162,15 @@ async def to_code(config):
       
     cg.add_define("USE_CUSTOM_ID") 
     cg.add_define("USE_VISTA_PANEL")  
-    
+    if CORE.is_esp8266:
+        cg.add_define("INPUT_PULLDOWN INPUT")
     old_dir = CORE.relative_build_path("src")    
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")
-        
+
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
     
     if CONF_ACCESSCODE in config:

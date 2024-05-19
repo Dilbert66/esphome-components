@@ -98,6 +98,7 @@ struct expanderType {
     char expFaultBits;
     char relayState;
 };
+const expanderType expanderType_INIT = {.expansionAddr=0,.expFault=0,.expFaultBits=0,.relayState=0};
 
 struct keyType {
     char key;
@@ -105,6 +106,7 @@ struct keyType {
     bool direct;
     uint8_t count;
 };
+const keyType keyType_INIT = {.key=0,.kpaddr=0,.direct=false,.count=0};
 
 struct cmdQueueItem {
     char cbuf[50];
@@ -166,7 +168,6 @@ class Vista {
     int rxPin, txPin;
     volatile char kpAddr;
     char monitorPin;
-    volatile char ackAddr;
     volatile char rxState;
     volatile unsigned long lowTime,highTime;
     uint8_t * faultQueue;

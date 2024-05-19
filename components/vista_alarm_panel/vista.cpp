@@ -48,8 +48,8 @@ Vista::~Vista() {
   pointerToVistaClass = NULL;
 }
 expanderType Vista::getNextFault() {
-  uint8_t currentFaultIdx;
-  expanderType currentFault;
+  uint8_t currentFaultIdx ;
+  expanderType currentFault=expanderType_INIT;
   if (inFaultIdx == outFaultIdx) return currentFault;
   currentFaultIdx = faultQueue[outFaultIdx];
   outFaultIdx = (outFaultIdx + 1) % szFaultQueue;
@@ -57,7 +57,7 @@ expanderType Vista::getNextFault() {
 }
 
 expanderType IRAM_ATTR Vista::peekNextFault() {
-  expanderType currentFault;
+  expanderType currentFault=expanderType_INIT;
   if (inFaultIdx == outFaultIdx) return currentFault;
   return zoneExpanders[faultQueue[outFaultIdx]];
 }
@@ -146,7 +146,6 @@ void Vista::onDisplay(char cbuf[], int * idx) {
   // 8th various system statuses 
   // 9th byte Programming mode = 0x01
   // 10th byte prompt position in the display message of the expected input
-
   
   statusFlags.keypad[0] = cbuf[1]; //0 to 7
 
@@ -525,7 +524,7 @@ void Vista::write(const char * receivedKeys, uint8_t addr) {
 
 
 keyType Vista::getChar() {
-  keyType c;
+  keyType c=keyType_INIT;
   if (outbufIdx == inbufIdx) return c;
   c = outbuf[outbufIdx];
   outbufIdx = (outbufIdx + 1) % szOutbuf;
@@ -600,7 +599,6 @@ void Vista::writeChars() {
     if (!(lastkpaddr==0 || lastkpaddr==peekNextKpAddr())) break;
       kt = getChar();
       c=kt.key;
-      ackAddr=kt.kpaddr;
       lastkpaddr=kt.kpaddr;
       sz++;
       if (!kt.direct) {
@@ -641,7 +639,7 @@ void Vista::writeChars() {
       yield();
     }
 
-    tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (ackAddr & 0x3F);  
+    tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);  
     tmpOutBuf[1] = sz + 1;
   }
   vistaSerial -> setBaud(4800);
@@ -662,7 +660,8 @@ void Vista::writeChars() {
 }
 
 void IRAM_ATTR Vista::rxHandleISR() {
-  static byte b;    
+  static byte b;
+  static uint8_t ackAddr;  
   if (digitalRead(rxPin) == invertRead) {
       if (lowTime)
           lowTime=micros() - lowTime;
@@ -678,19 +677,16 @@ void IRAM_ATTR Vista::rxHandleISR() {
            b = addrToBitmask3(ackAddr); 
            if (b) vistaSerial -> write(b, false, 4800);
         } else if (outbufIdx != inbufIdx || retries > 0) {
-          keyType c = outbuf[outbufIdx]; //get pending keypad address
-          ackAddr=c.kpaddr;
-          if (ackAddr && ackAddr < 24 ) {
-            if (c.count < 3) {
+          ackAddr=outbuf[outbufIdx].kpaddr; //get pending keypad address
+          if (ackAddr && ackAddr < 24 && outbuf[outbufIdx].count < 3 ) {
             outbuf[outbufIdx].count++;
-           vistaSerial -> write(addrToBitmask1(ackAddr), false, 4800);
-           b = addrToBitmask2(ackAddr); 
-           if (b) vistaSerial -> write(b, false, 4800);
-           b = addrToBitmask3(ackAddr); 
-           if (b) vistaSerial -> write(b, false, 4800); 
-            } else
-                 outbufIdx = (outbufIdx + 1) % szOutbuf; //too many tries. Skip it.
-          } 
+            vistaSerial -> write(addrToBitmask1(ackAddr), false, 4800);
+            b = addrToBitmask2(ackAddr); 
+            if (b) vistaSerial -> write(b, false, 4800);
+            b = addrToBitmask3(ackAddr); 
+            if (b) vistaSerial -> write(b, false, 4800); 
+          } else
+            outbufIdx = (outbufIdx + 1) % szOutbuf; //Not valid or no answer. Skip it.
         }
         rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
       } else if ( lowTime > 4600 && rxState == sPolling) { // 2400 baud cmd preamble
@@ -1063,7 +1059,7 @@ bool Vista::handle() {
       gidx = 0;
       cbuf[gidx++] = x;
       readChars(1,cbuf, & gidx);
-      if (cbuf[1] == ackAddr) {
+      if (cbuf[1] == peekNextKpAddr()) {
         writeChars();
       }
       #ifdef MONITORTX

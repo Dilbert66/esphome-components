@@ -92,12 +92,12 @@ vista.stop();
     txPin(transmitPin),
     monitorPin(monitorTxPin),
     maxZones(maxzones),
+    maxPartitions(maxpartitions),    
     invertRx(invertrx),
     invertTx(inverttx),
     invertMon(invertmon),
     inputRx(inputrx),
-    inputMon(inputmon),
-    maxPartitions(maxpartitions)
+    inputMon(inputmon)
     {
          partitionKeypads = new char[maxPartitions+1];
          partitions = new uint8_t[maxPartitions];
@@ -849,13 +849,13 @@ void vistaECPHome::update()  {
         static unsigned long refreshLrrTime,refreshRfTime;
         //process ext messages for zones
         if (vistaCmd.newExtCmd) {
-          if (debug > 0)
+          if (debug > 0) {
             if (vistaCmd.extcmd[0]==0xF6)
                 printPacket("EXT", vistaCmd.extcmd, vistaCmd.extcmd[3]+4);    
                else            
                 printPacket("EXT", vistaCmd.extcmd, 13);
           //format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
-
+          }
           if (vistaCmd.extcmd[0] == 0xFA) {
             int z = vistaCmd.extcmd[3];
             if (vistaCmd.extcmd[2] == 0xf1 && z > 0 && z <= maxZones) { // we have a zone status (zone expander address range)

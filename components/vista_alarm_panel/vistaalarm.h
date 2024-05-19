@@ -201,12 +201,15 @@ class vistaECPHome {
     char keypadAddr1=0;
     int rxPin=0;
     int txPin=0;
-    int monitorPin=0;  
+    int monitorPin=0; 
+    int maxZones=0;
+    int maxPartitions=0;
     bool invertRx;
     bool invertTx;    
     bool invertMon;
-    uint8_t inputMon;
-    uint8_t inputRx;
+    uint8_t inputRx=0;    
+    uint8_t inputMon=0;
+
     
     
     const char * accessCode;
@@ -214,8 +217,6 @@ class vistaECPHome {
     bool quickArm;
 
     bool lrrSupervisor,    vh;
-    int maxZones;
-    int maxPartitions;
     char * partitionKeypads;
     int defaultPartition=DEFAULTPARTITION;    
     char expanderAddr[9]={};
