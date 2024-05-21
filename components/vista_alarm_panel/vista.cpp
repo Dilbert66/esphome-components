@@ -1200,7 +1200,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 
   //panel data rx interrupt - yellow line
   if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 30,300,inputRx);
+    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 2,CMDBUFSIZE * 10,inputRx);
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
@@ -1208,7 +1208,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 30,300,inputMon);
+    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 2,OUTBUFSIZE * 10,inputMon);
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;

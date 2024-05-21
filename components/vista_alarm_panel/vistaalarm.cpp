@@ -757,7 +757,7 @@ void vistaECPHome::cmdQueueTask(void * args) {
   for (;;) { 
         
         if (!vista.keybusConnected || !vista.handle() )
-              vTaskDelay(8);
+              vTaskDelay(5);
         delayMicroseconds(50);
         vTaskDelay(0);
         if (millis() - checkTime > 30000) {
