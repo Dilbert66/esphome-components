@@ -1,6 +1,8 @@
 #include "vistaalarm.h"
 #include "esphome/core/helpers.h"
-#ifdef ESP32
+
+#define USETASK
+#if defined(ESP32) && defined(USETASK)
 #include "esp_task_wdt.h"
 #endif
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
@@ -79,7 +81,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
 #endif
 
 void vistaECPHome::stop() {
-#if defined(ESP32) and not defined(__riscv)
+#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
 if (xHandle != NULL)    
     vTaskSuspend( xHandle );
 #endif
@@ -390,7 +392,7 @@ void vistaECPHome::setup()  {
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
             yield();
-            loadZone(x,false); 
+          //  loadZone(x,false); 
            // zoneStatusChangeBinaryCallback(x,false);
             //zoneStatusChangeCallback(x,"C");
         }
@@ -414,7 +416,7 @@ void vistaECPHome::setup()  {
       lrrMsgChangeCallback("ESP Restart");
       rfMsgChangeCallback(""); 
  
-#if defined(ESP32) and not defined(__riscv)
+#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
     //only for dual core esp32. Risc processors such as c3 are single core
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
@@ -748,7 +750,7 @@ void vistaECPHome::setup()  {
     
  
  
-#if defined(ESP32)
+#if defined(ESP32) && defined(USETASK)
 
 void vistaECPHome::cmdQueueTask(void * args) {
 
@@ -788,7 +790,7 @@ void vistaECPHome::update()  {
       //if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
       
- #if !defined(ESP32) or defined(__riscv)
+ #if !defined(ESP32) or defined(__riscv) or !defined(USETASK)
       vista.handle();
       static unsigned long sendWaitTime = millis();
       while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdQueue.empty()) {
@@ -1298,7 +1300,7 @@ void vistaECPHome::update()  {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
-#if !defined(ESP32) or defined(__riscv)          
+#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)         
           vista.handle();
 #endif    
            if (!x.second.active) continue;
@@ -1390,7 +1392,7 @@ void vistaECPHome::update()  {
         forceRefreshZones=false;
         forceRefreshGlobal=false;
       }
-#if !defined(ESP32) or defined(__riscv)   
+#if !defined(ESP32) or defined(__riscv)  or !defined(USETASK) 
        vista.handle();
 #endif
     }

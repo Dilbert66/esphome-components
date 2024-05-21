@@ -111,7 +111,7 @@ struct keyType {
 const keyType keyType_INIT = {.key=0,.kpaddr=0,.direct=false,.count=0};
 
 struct cmdQueueItem {
-    char cbuf[50];
+    char cbuf[CMDBUFSIZE];
     char extcmd[OUTBUFSIZE];
     bool newCmd;
     bool newExtCmd;
@@ -199,9 +199,9 @@ class Vista {
     char expFault, expBitAddr;
     char expFaultBits;
     bool decodePacket();
-    bool getExtBytes();
+    uint8_t getExtBytes();
     volatile bool is2400;
-    void pushCmdQueueItem();
+    void pushCmdQueueItem(uint8_t cmdbufsize=CMDBUFSIZE,uint8_t outbufsize=OUTBUFSIZE);
     bool invertRead;
 
     char IRAM_ATTR addrToBitmask1(char addr) {

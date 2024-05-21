@@ -218,13 +218,19 @@ int Vista::toDec(int n) {
 }
 
 
-void Vista::pushCmdQueueItem() {
+void Vista::pushCmdQueueItem(uint8_t cbufsize,uint8_t outbufsize) {
     struct cmdQueueItem q;
     q.statusFlags=statusFlags;
     q.newCmd=newCmd;
     q.newExtCmd=newExtCmd;
-    memcpy(q.cbuf, cbuf, CMDBUFSIZE); 
-    memcpy(q.extcmd,extcmd,OUTBUFSIZE);
+    for (uint8_t i=0;i<cbufsize;i++) {
+        q.cbuf[i]=cbuf[i];
+        yield();
+    }
+    for (uint8_t i=0;i<outbufsize;i++) {
+        q.extcmd[i]=extcmd[i];
+        yield();
+    }     
     cmdQueue.push(q);
 }
 
@@ -563,7 +569,7 @@ void Vista::writeChars() {
   if (!charAvail() && retries == 0) return;
 
   //if retries are getting out of control with no successfull callback
-  //just send the next bytes and stop with the current expected one
+  //just clear the queue
   if (retries > 2) {
     retries = 0;
     expectByte = 0;
@@ -920,9 +926,9 @@ bool Vista::decodePacket() {
 }
 #endif
 #ifdef MONITORTX
-bool Vista::getExtBytes() {
+uint8_t Vista::getExtBytes() {
   uint8_t x;
-  bool ret = 0;
+  uint8_t ret = 0;
 
   if (!vistaSerialMonitor) return 0;
 
@@ -937,7 +943,7 @@ bool Vista::getExtBytes() {
 
   if (extidx > 0 && markPulse > 1) {
     //ok, we are on the next pulse (gap) , lets decode the previous msg data
-    if (decodePacket()) ret = 1;
+    if (decodePacket()) ret = extidx+2;
     extidx = 0;
     memset(extbuf, 0, szExt); //clear buffer mem    
 
@@ -949,12 +955,13 @@ bool Vista::getExtBytes() {
 
 
 bool Vista::handle() {
-  uint8_t x;
   newCmd=false;
   newExtCmd=false;
+  uint8_t x;
   #ifdef MONITORTX
-  if (getExtBytes()) {
-      pushCmdQueueItem();
+  x=getExtBytes();
+  if (x) {
+      pushCmdQueueItem(0,OUTBUFSIZE);
       return 1;
   }
   #endif
@@ -978,7 +985,7 @@ bool Vista::handle() {
         expectByte = 0;
         cbuf[0] = 0x78; //for flagging an expect byte found ok
         cbuf[1] = x;
-        pushCmdQueueItem();        
+        pushCmdQueueItem(CMDBUFSIZE,0);      
         return 1;    // 1 for logging. 0 for normal
       } else {
             //we did not get the expect byte response. So assume this byte is another cmd
@@ -1009,7 +1016,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
       #endif
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);      
       return 1;
     } 
 
@@ -1026,9 +1033,8 @@ bool Vista::handle() {
       else {
         onDisplay(cbuf, & gidx);
         newCmd = true; //new valid cmd, process it
-        gidx=0;
       }
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);      
       return 1; // return 1 to log packet        
     }
 
@@ -1051,7 +1057,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);      
       return 1;
     }
     //key ack
@@ -1069,7 +1075,7 @@ bool Vista::handle() {
       memcpy(extcmd, cbuf, 7);
 
       #endif
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);     
       return 1;
     }
 
@@ -1085,7 +1091,7 @@ bool Vista::handle() {
       else
         onAUI(cbuf, & gidx);
       newCmd = true;
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);     
       return 1;
     }
 /*
@@ -1112,7 +1118,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 2);
       #endif 
-      pushCmdQueueItem();
+      pushCmdQueueItem(CMDBUFSIZE,0);
       return 1;
     }    
 
@@ -1129,7 +1135,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
-      pushCmdQueueItem();      
+      pushCmdQueueItem(CMDBUFSIZE,0);     
       return 1;
     }
 
@@ -1150,7 +1156,8 @@ bool Vista::handle() {
      }
      yield();
     }
-    pushCmdQueueItem();
+    gidx=gidx<CMDBUFSIZE?gidx:CMDBUFSIZE;
+    pushCmdQueueItem(CMDBUFSIZE,0);
     return 1;
   }
 
