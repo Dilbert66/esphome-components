@@ -17,12 +17,12 @@ void IRAM_ATTR txISRHandler() { // define global handler
 Vista::Vista() {
 
   #ifdef MONITORTX
-  szExt = 30;
+  szExt = OUTBUFSIZE;
   extbuf= new char[szExt];
   extcmd= new char[szExt];
   #endif
-  szOutbuf = 30;
-  szCbuf = 50;
+  szOutbuf = OUTBUFSIZE;
+  szCbuf = CMDBUFSIZE;
   inbufIdx = 0;
   outbufIdx = 0;
   szFaultQueue = 5;  
@@ -223,8 +223,8 @@ void Vista::pushCmdQueueItem() {
     q.statusFlags=statusFlags;
     q.newCmd=newCmd;
     q.newExtCmd=newExtCmd;
-    memcpy(q.cbuf, cbuf, 45); 
-    memcpy(q.extcmd,extcmd,16);
+    memcpy(q.cbuf, cbuf, CMDBUFSIZE); 
+    memcpy(q.extcmd,extcmd,OUTBUFSIZE);
     cmdQueue.push(q);
 }
 
@@ -509,8 +509,7 @@ void Vista::write(const char * receivedKeys) {
 void Vista::writeDirect(const char * receivedKeys, uint8_t addr,int len) {
   int x = 0;
   while (x<len) {
-    writeDirect(receivedKeys[x],addr);
-    x++;
+    writeDirect(receivedKeys[x++],addr);
   }
 }
 
@@ -595,7 +594,7 @@ void Vista::writeChars() {
     int sz = 0;
     tmpIdx=2;
     uint8_t lastkpaddr=0;
-    while (charAvail() && sz<12) {
+    while (charAvail() && sz<OUTBUFSIZE) {
     if (!(lastkpaddr==0 || lastkpaddr==peekNextKpAddr())) break;
       kt = getChar();
       c=kt.key;
@@ -634,7 +633,6 @@ void Vista::writeChars() {
               c = c - 0x25;
             }
       } 
-            
       tmpOutBuf[tmpIdx++] = c;
       yield();
     }
@@ -649,7 +647,6 @@ void Vista::writeChars() {
   for (int x = 2; x < tmpOutBuf[1] + 1; x++) {
     checksum += (char) tmpOutBuf[x];
     vistaSerial -> write(tmpOutBuf[x]);
-
   }
   uint32_t chksum = 0x100 - (tmpOutBuf[0] + tmpOutBuf[1] + checksum);
   vistaSerial -> write((char) chksum);
@@ -913,7 +910,10 @@ bool Vista::decodePacket() {
     extcmd[1] = 0; //no device
   }
   extidx = extidx < szExt - 2 ? extidx : extidx - 2;
-  for (uint8_t i = 0; i < extidx; i++) extcmd[2 + i] = extbuf[i]; //populate  buffer 0=cmd, 1=device, rest is tx data
+  for (uint8_t i = 0; i < extidx; i++) {
+      extcmd[2 + i] = extbuf[i]; //populate  buffer 0=cmd, 1=device, rest is tx data
+    //  Serial.printf("extcmd %02x\r\n",extcmd[2+i]);
+  }
   newExtCmd = true;
   return 1;
 
@@ -931,6 +931,7 @@ bool Vista::getExtBytes() {
     if (extidx < szExt)
       extbuf[extidx++] = x;
     markPulse = 0; //reset pulse flag to wait for next inter msg gap
+   // Serial.printf("%02x,extidx=%d\r\n",x,extidx);
     yield();
   }
 
@@ -945,6 +946,7 @@ bool Vista::getExtBytes() {
   return ret;
 }
 #endif
+
 
 bool Vista::handle() {
   uint8_t x;
@@ -1198,7 +1200,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 
   //panel data rx interrupt - yellow line
   if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 10,100,inputRx);
+    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 30,300,inputRx);
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
@@ -1206,7 +1208,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 10,100,inputMon);
+    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 30,300,inputMon);
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;

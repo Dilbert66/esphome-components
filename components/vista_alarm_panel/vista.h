@@ -8,6 +8,8 @@
 
 #define MONITORTX
 
+#define OUTBUFSIZE 30
+#define CMDBUFSIZE 50
 // Used to read bits on F7 message
 #define BIT_MASK_BYTE1_BEEP 0x07
 #define BIT_MASK_BYTE1_NIGHT 0x10
@@ -110,7 +112,7 @@ const keyType keyType_INIT = {.key=0,.kpaddr=0,.direct=false,.count=0};
 
 struct cmdQueueItem {
     char cbuf[50];
-    char extcmd[16];
+    char extcmd[OUTBUFSIZE];
     bool newCmd;
     bool newExtCmd;
     struct statusFlagType statusFlags;

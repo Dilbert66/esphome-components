@@ -265,6 +265,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
         for (int i = 0; i < NumberChars; i += 2)
         {
              bytes[i / 2] = v->toInt(s.substr(i, 2), 16);
+          //   ESP_LOGD(TAG,"processing byte %d,%02X, len=%d",i/2,bytes[i/2],NumberChars/2);
             
         }
             p=payload["test"];
