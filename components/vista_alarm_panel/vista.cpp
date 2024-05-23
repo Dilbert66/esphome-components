@@ -17,24 +17,20 @@ void IRAM_ATTR txISRHandler() { // define global handler
 Vista::Vista() {
 
   #ifdef MONITORTX
-  szExt = OUTBUFSIZE;
-  extbuf= new char[szExt];
-  extcmd= new char[szExt];
+  extbuf= new char[OUTBUFSIZE];
+  extcmd= new char[OUTBUFSIZE];
   #endif
-  szOutbuf = CMDBUFSIZE;
-  szCbuf = CMDBUFSIZE;
   inbufIdx = 0;
   outbufIdx = 0;
   incmdIdx=0;
   outcmdIdx=0;
-  szFaultQueue = 5;  
   rxState = sNormal;
   pointerToVistaClass = this;
-  cbuf = new char[szCbuf];
-  outbuf = new keyType[szOutbuf];
-  tmpOutBuf = new char[szOutbuf];
-  cmdQueue = new cmdQueueItem[5];
-  faultQueue = new uint8_t[szFaultQueue];
+  cbuf = new char[CMDBUFSIZE];
+  outbuf = new keyType[CMDBUFSIZE];
+  tmpOutBuf = new char[CMDBUFSIZE];
+  cmdQueue = new cmdQueueItem[CMDQUEUESIZE];
+  faultQueue = new uint8_t[FAULTQUEUESIZE];
   lrrSupervisor = false;
 
 }
@@ -55,7 +51,7 @@ expanderType Vista::getNextFault() {
   expanderType currentFault=expanderType_INIT;
   if (inFaultIdx == outFaultIdx) return currentFault;
   currentFaultIdx = faultQueue[outFaultIdx];
-  outFaultIdx = (outFaultIdx + 1) % szFaultQueue;
+  outFaultIdx = (outFaultIdx + 1) % FAULTQUEUESIZE;
   return zoneExpanders[currentFaultIdx];
 }
 
@@ -67,7 +63,7 @@ expanderType IRAM_ATTR Vista::peekNextFault() {
 
 void Vista::setNextFault(uint8_t idx) {
   faultQueue[inFaultIdx] = idx;
-  inFaultIdx = (inFaultIdx + 1) % szFaultQueue;
+  inFaultIdx = (inFaultIdx + 1) % FAULTQUEUESIZE;
 }
 
 void Vista::readChars(int ct, char buf[], int * idx) {
@@ -224,7 +220,7 @@ cmdQueueItem Vista::getNextCmd() {
   cmdQueueItem c = cmdQueueItem_INIT;
   if (outcmdIdx == incmdIdx) return c;
   c = cmdQueue[outcmdIdx];
-  outcmdIdx = (outcmdIdx + 1) % 5;
+  outcmdIdx = (outcmdIdx + 1) % CMDQUEUESIZE;
   return c;
    
 }
@@ -250,7 +246,7 @@ void Vista::pushCmdQueueItem(uint8_t cbufsize,uint8_t outbufsize) {
         yield();
     } 
     cmdQueue[incmdIdx] = q;
-    incmdIdx = (incmdIdx + 1) % 5;
+    incmdIdx = (incmdIdx + 1) % CMDQUEUESIZE;
    // cmdQueue.push(q);
      
 }
@@ -508,7 +504,7 @@ void Vista::write(const char key, uint8_t addr) {
     kt.count=0;
     kt.seq=0;
     outbuf[inbufIdx] = kt;
-    inbufIdx = (inbufIdx + 1) % szOutbuf;
+    inbufIdx = (inbufIdx + 1) % CMDBUFSIZE;
   }
 }
 
@@ -520,7 +516,7 @@ void Vista::writeDirect(const char key, uint8_t addr,uint8_t seq) {
     kt.count=0;
     kt.seq=seq;
     outbuf[inbufIdx] = kt;
-    inbufIdx = (inbufIdx + 1) % szOutbuf;
+    inbufIdx = (inbufIdx + 1) % CMDBUFSIZE;
 }
 
 void Vista::write(const char key) {
@@ -558,7 +554,7 @@ keyType Vista::getChar() {
   keyType c=keyType_INIT;
   if (outbufIdx == inbufIdx) return c;
   c = outbuf[outbufIdx];
-  outbufIdx = (outbufIdx + 1) % szOutbuf;
+  outbufIdx = (outbufIdx + 1) % CMDBUFSIZE;
   return c;
 }
 
@@ -592,7 +588,7 @@ bool Vista::charAvail() {
 
 void Vista::writeChars() {
 
-  if (!charAvail() && retries == 0) return;
+  if (!charAvail() && retries == 0 && expectByte) return;
 
   //if retries are getting out of control with no successfull callback
   //just clear the queue
@@ -712,7 +708,7 @@ void IRAM_ATTR Vista::rxHandleISR() {
            if (b) vistaSerial -> write(b, false, 4800);
         } else if (outbufIdx != inbufIdx || retries > 0) {
           ackAddr=outbuf[outbufIdx].kpaddr; //get pending keypad address
-          if (ackAddr && ackAddr < 24 && outbuf[outbufIdx].count < 3 ) {
+          if (ackAddr && ackAddr < 24 && outbuf[outbufIdx].count < 5 ) {
             outbuf[outbufIdx].count++;
             vistaSerial -> write(addrToBitmask1(ackAddr), false, 4800);
             b = addrToBitmask2(ackAddr); 
@@ -720,7 +716,7 @@ void IRAM_ATTR Vista::rxHandleISR() {
             b = addrToBitmask3(ackAddr); 
             if (b) vistaSerial -> write(b, false, 4800); 
           } else
-            outbufIdx = (outbufIdx + 1) % szOutbuf; //Not valid or no answer. Skip it.
+            outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; //Not valid or no answer. Skip it.
         }
         rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
       } else if ( lowTime > 4600 && rxState == sPolling) { // 2400 baud cmd preamble
@@ -947,7 +943,7 @@ bool Vista::decodePacket() {
   } else if (extcmd[0] != 0 && extcmd[0] != 0xf6) {
     extcmd[1] = 0; //no device
   }
-  extidx = extidx < szExt - 2 ? extidx : extidx - 2;
+  extidx = extidx < OUTBUFSIZE - 2 ? extidx : extidx - 2;
   for (uint8_t i = 0; i < extidx; i++) {
       extcmd[2 + i] = extbuf[i]; //populate  buffer 0=cmd, 1=device, rest is tx data
     //  Serial.printf("extcmd %02x\r\n",extcmd[2+i]);
@@ -967,7 +963,7 @@ uint8_t Vista::getExtBytes() {
 
   while (vistaSerialMonitor -> available()) {
     x = vistaSerialMonitor -> read();
-    if (extidx < szExt)
+    if (extidx < OUTBUFSIZE)
       extbuf[extidx++] = x;
     markPulse = 0; //reset pulse flag to wait for next inter msg gap
     yield();
@@ -977,7 +973,7 @@ uint8_t Vista::getExtBytes() {
     //ok, we are on the next pulse (gap) , lets decode the previous msg data
     if (decodePacket()) ret = extidx+2;
     extidx = 0;
-    memset(extbuf, 0, szExt); //clear buffer mem    
+    memset(extbuf, 0, OUTBUFSIZE); //clear buffer mem    
 
   }
 
@@ -1008,7 +1004,7 @@ bool Vista::handle() {
 
     x = vistaSerial -> read();
 
-    memset(cbuf, 0, szCbuf); //clear buffer mem  
+    memset(cbuf, 0, CMDBUFSIZE); //clear buffer mem  
     
     if (expectByte && x) {
 
@@ -1020,6 +1016,7 @@ bool Vista::handle() {
         pushCmdQueueItem(CMDBUFSIZE,0);        
         return 1;    // 1 for logging. 0 for normal
       } else {
+          expectByte=0;
             //we did not get the expect byte response. So assume this byte is another cmd
       }
     }
@@ -1045,7 +1042,7 @@ bool Vista::handle() {
         onExp(cbuf);
       newCmd = true;
       #ifdef MONITORTX
-      memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
+      memset(extcmd, 0, OUTBUFSIZE); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
       #endif
       pushCmdQueueItem();      
@@ -1086,7 +1083,7 @@ bool Vista::handle() {
         onLrr(cbuf, & gidx);
       newCmd = true;
       #ifdef MONITORTX
-      memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
+      memset(extcmd, 0, OUTBUFSIZE); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
       pushCmdQueueItem(CMDBUFSIZE,0);      
@@ -1103,7 +1100,7 @@ bool Vista::handle() {
         writeChars();
       }
       #ifdef MONITORTX
-      memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
+      memset(extcmd, 0, OUTBUFSIZE); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
 
       #endif
@@ -1147,7 +1144,7 @@ bool Vista::handle() {
       cbuf[gidx++] = x;
       readChars(1,cbuf, & gidx);
       #ifdef MONITORTX
-      memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
+      memset(extcmd, 0, OUTBUFSIZE); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 2);
       #endif 
       pushCmdQueueItem(CMDBUFSIZE,0);
@@ -1164,7 +1161,7 @@ bool Vista::handle() {
       if (!validChksum(cbuf, 0, gidx))
         cbuf[12] = 0x77;
       #ifdef MONITORTX
-      memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
+      memset(extcmd, 0, OUTBUFSIZE); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
       #endif
       pushCmdQueueItem(CMDBUFSIZE,0);     
@@ -1238,7 +1235,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 
   //panel data rx interrupt - yellow line
   if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 2,CMDBUFSIZE * 10,inputRx);
+    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 2,60 * 10,inputRx);
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;

@@ -10,6 +10,9 @@
 
 #define OUTBUFSIZE 30
 #define CMDBUFSIZE 50
+#define CMDQUEUESIZE 5
+#define FAULTQUEUESIZE 5
+
 // Used to read bits on F7 message
 #define BIT_MASK_BYTE1_BEEP 0x07
 #define BIT_MASK_BYTE1_NIGHT 0x10
@@ -184,7 +187,6 @@ class Vista {
     expanderType getNextFault();
     expanderType peekNextFault();
     expanderType currentFault;
-    uint8_t szOutbuf, szCbuf, szExt, szFaultQueue;
     uint8_t idx, outFaultIdx, inFaultIdx;
     int gidx;
     volatile int extidx;
