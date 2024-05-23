@@ -18,7 +18,7 @@
 
 #include "vista.h"
 #include <string>
-#include <queue>
+//#include <queue>
 #include <regex>
 
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
@@ -163,6 +163,7 @@ class vistaECPHome {
     void set_quickArm(bool qa) { quickArm=qa;}
     void set_displaySystemMsg(bool dsm) {displaySystemMsg=dsm;}
     void set_lrrSupervisor(bool ls) { lrrSupervisor=ls;}
+    void set_auiaddr(uint8_t addr) {auiAddr=addr;};
     void set_expanderAddr(uint8_t idx,uint8_t addr) { if (idx && idx < 10) expanderAddr[idx-1] = addr;}
     void set_maxZones(int mz) {maxZones=mz;}
     void set_maxPartitions(uint8_t mp) { maxPartitions=mp;}
@@ -192,7 +193,8 @@ class vistaECPHome {
     void stop();
 
   private:
-
+    void processZoneList(uint8_t partition,uint8_t step, char * list,size_t len);
+    void sendZoneRequest(uint8_t partition,uint8_t step);
     void loadSensors();
     void loadZone(int z,bool fetchPromptName=true);
     bool zoneActive(uint32_t zone);
@@ -209,9 +211,8 @@ class vistaECPHome {
     bool invertMon;
     uint8_t inputRx=0;    
     uint8_t inputMon=0;
-
-    
-    
+    uint8_t auiAddr=0;
+   
     const char * accessCode;
     const char * rfSerialLookup;    
     bool quickArm;
@@ -253,7 +254,6 @@ class vistaECPHome {
     } otherSup;
         
 
-private:    
     unsigned long lowBatteryTime;
 
     struct alarmStatusType {
@@ -328,7 +328,7 @@ TaskHandle_t xHandle;
 #endif
 static void cmdQueueTask(void * args);
 
-std::map<uint32_t,zoneType> extZones;
+std::vector<zoneType> extZones{};
 
 zoneType nz;
 

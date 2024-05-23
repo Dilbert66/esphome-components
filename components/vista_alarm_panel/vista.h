@@ -107,8 +107,10 @@ struct keyType {
     uint8_t kpaddr;
     bool direct;
     uint8_t count;
+    uint8_t seq;
 };
 const keyType keyType_INIT = {.key=0,.kpaddr=0,.direct=false,.count=0};
+
 
 struct cmdQueueItem {
     char cbuf[CMDBUFSIZE];
@@ -117,6 +119,7 @@ struct cmdQueueItem {
     bool newExtCmd;
     struct statusFlagType statusFlags;
 };
+const cmdQueueItem cmdQueueItem_INIT = {.newCmd=false,.newExtCmd=false};
 
 class Vista {
 
@@ -135,8 +138,8 @@ class Vista {
     void write(const char);
     void write(const char *,uint8_t addr );
     void write(const char,uint8_t addr);  
-    void writeDirect(const char *,uint8_t addr , int len);
-    void writeDirect(const char,uint8_t addr); 
+    void writeDirect(const char * keys,uint8_t addr , size_t len);
+    void writeDirect(const char key,uint8_t addr,uint8_t seq=0); 
     statusFlagType statusFlags;
     SoftwareSerial * vistaSerial, * vistaSerialMonitor;
     void setKpAddr(char keypadAddr) {
@@ -160,13 +163,17 @@ class Vista {
     expanderType zoneExpanders[MAX_MODULES];
     char b; //used in isr
     bool charAvail();
+    bool cmdAvail();
+    cmdQueueItem getNextCmd();    
     bool sendPending();
-    std::queue<struct cmdQueueItem> cmdQueue;
+   // std::queue<struct cmdQueueItem> cmdQueue;
     
   private:
     keyType * outbuf;
     char * tmpOutBuf;
+    cmdQueueItem * cmdQueue;
     volatile uint8_t outbufIdx, inbufIdx;
+    uint8_t outcmdIdx,incmdIdx;
     int rxPin, txPin;
     volatile char kpAddr;
     char monitorPin;

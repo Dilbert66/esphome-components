@@ -23,6 +23,7 @@ CONF_DEBUGLEVEL="vistadebuglevel"
 CONF_KEYPAD1="keypadaddr1"
 CONF_KEYPAD2="keypadaddr2"
 CONF_KEYPAD3="keypadaddr3"
+CONF_AUIADDR="auiaddr"
 CONF_RXPIN="rxpin"
 CONF_TXPIN="txpin"
 CONF_MONITORPIN="monitorpin"
@@ -112,14 +113,15 @@ CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(Component),
     cv.Optional(CONF_ACCESSCODE): cv.string  ,
-    cv.Optional(CONF_MAXZONES): cv.int_, 
-    cv.Optional(CONF_MAXPARTITIONS): cv.int_, 
+    cv.Optional(CONF_MAXZONES,default=32): cv.int_, 
+    cv.Optional(CONF_MAXPARTITIONS,default=1): cv.int_, 
     cv.Optional(CONF_RFSERIAL): cv.string, 
     cv.Optional(CONF_DEFAULTPARTITION): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL): cv.int_, 
-    cv.Optional(CONF_KEYPAD1): cv.int_, 
-    cv.Optional(CONF_KEYPAD2): cv.int_, 
-    cv.Optional(CONF_KEYPAD3): cv.int_, 
+    cv.Optional(CONF_KEYPAD1,default=17): cv.int_, 
+    cv.Optional(CONF_KEYPAD2,default=0): cv.int_, 
+    cv.Optional(CONF_KEYPAD3,default=0): cv.int_, 
+    cv.Optional(CONF_AUIADDR,default=0): cv.int_,
     cv.Optional(CONF_RXPIN): cv.int_, 
     cv.Optional(CONF_TXPIN): cv.int_, 
     cv.Optional(CONF_MONITORPIN): cv.int_, 
@@ -209,7 +211,8 @@ async def to_code(config):
         cg.add(var.set_quickArm(config[CONF_QUICKARM]));        
     if CONF_LRR in config:
         cg.add(var.set_lrrSupervisor(config[CONF_LRR]));      
-
+    if CONF_AUIADDR in config:
+        cg.add(var.set_auiaddr(config[CONF_AUIADDR]));
     if CONF_FAULT in config:
         cg.add(var.set_text(1,config[CONF_FAULT])); 
     if CONF_BYPASS in config:

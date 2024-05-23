@@ -21,16 +21,19 @@ Vista::Vista() {
   extbuf= new char[szExt];
   extcmd= new char[szExt];
   #endif
-  szOutbuf = OUTBUFSIZE;
+  szOutbuf = CMDBUFSIZE;
   szCbuf = CMDBUFSIZE;
   inbufIdx = 0;
   outbufIdx = 0;
+  incmdIdx=0;
+  outcmdIdx=0;
   szFaultQueue = 5;  
   rxState = sNormal;
   pointerToVistaClass = this;
   cbuf = new char[szCbuf];
   outbuf = new keyType[szOutbuf];
   tmpOutBuf = new char[szOutbuf];
+  cmdQueue = new cmdQueueItem[5];
   faultQueue = new uint8_t[szFaultQueue];
   lrrSupervisor = false;
 
@@ -217,6 +220,21 @@ int Vista::toDec(int n) {
   return (int) li;
 }
 
+cmdQueueItem Vista::getNextCmd() {
+  cmdQueueItem c = cmdQueueItem_INIT;
+  if (outcmdIdx == incmdIdx) return c;
+  c = cmdQueue[outcmdIdx];
+  outcmdIdx = (outcmdIdx + 1) % 5;
+  return c;
+   
+}
+
+bool Vista::cmdAvail() {
+    if (outcmdIdx == incmdIdx)
+        return false;
+    else
+        return true;
+}
 
 void Vista::pushCmdQueueItem(uint8_t cbufsize,uint8_t outbufsize) {
     struct cmdQueueItem q;
@@ -230,8 +248,11 @@ void Vista::pushCmdQueueItem(uint8_t cbufsize,uint8_t outbufsize) {
     for (uint8_t i=0;i<outbufsize;i++) {
         q.extcmd[i]=extcmd[i];
         yield();
-    }     
-    cmdQueue.push(q);
+    } 
+    cmdQueue[incmdIdx] = q;
+    incmdIdx = (incmdIdx + 1) % 5;
+   // cmdQueue.push(q);
+     
 }
 
 
@@ -485,17 +506,19 @@ void Vista::write(const char key, uint8_t addr) {
     kt.kpaddr=addr;
     kt.direct=false;
     kt.count=0;
+    kt.seq=0;
     outbuf[inbufIdx] = kt;
     inbufIdx = (inbufIdx + 1) % szOutbuf;
   }
 }
 
-void Vista::writeDirect(const char key, uint8_t addr) {
+void Vista::writeDirect(const char key, uint8_t addr,uint8_t seq) {
     keyType kt;
     kt.key=key;
     kt.kpaddr=addr;
     kt.direct=true;
     kt.count=0;
+    kt.seq=seq;
     outbuf[inbufIdx] = kt;
     inbufIdx = (inbufIdx + 1) % szOutbuf;
 }
@@ -512,10 +535,13 @@ void Vista::write(const char * receivedKeys) {
   }
 }
 
-void Vista::writeDirect(const char * receivedKeys, uint8_t addr,int len) {
+void Vista::writeDirect(const char * receivedKeys, uint8_t addr,size_t len) {
   int x = 0;
+ 
+  uint8_t seq=(((++
+  writeSeq) << 6) & 0xc0) | (addr & 0x3F);  //so that we don't mix cmd sequences
   while (x<len) {
-    writeDirect(receivedKeys[x++],addr);
+    writeDirect(receivedKeys[x++],addr,seq);
   }
 }
 
@@ -600,11 +626,14 @@ void Vista::writeChars() {
     int sz = 0;
     tmpIdx=2;
     uint8_t lastkpaddr=0;
+    uint8_t lastseq=0;
     while (charAvail() && sz<OUTBUFSIZE) {
     if (!(lastkpaddr==0 || lastkpaddr==peekNextKpAddr())) break;
+      if (!(lastseq==0 || lastseq==outbuf[outbufIdx].seq)) break;    
       kt = getChar();
       c=kt.key;
       lastkpaddr=kt.kpaddr;
+      lastseq=kt.seq;
       sz++;
       if (!kt.direct) {
       //translate digits between 0-9 to hex/decimal
@@ -642,8 +671,10 @@ void Vista::writeChars() {
       tmpOutBuf[tmpIdx++] = c;
       yield();
     }
-
-    tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);  
+    if ( kt.seq)
+        tmpOutBuf[0]=kt.seq;
+    else
+        tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);  
     tmpOutBuf[1] = sz + 1;
   }
   vistaSerial -> setBaud(4800);
@@ -731,6 +762,7 @@ bool Vista::validChksum(char cbuf[], int start, int len) {
   uint16_t chksum = 0;
   for (uint8_t x = start; x < len; x++) {
     chksum += cbuf[x];
+    yield();
   }
   if (chksum % 256 == 0)
     return true;
@@ -919,6 +951,7 @@ bool Vista::decodePacket() {
   for (uint8_t i = 0; i < extidx; i++) {
       extcmd[2 + i] = extbuf[i]; //populate  buffer 0=cmd, 1=device, rest is tx data
     //  Serial.printf("extcmd %02x\r\n",extcmd[2+i]);
+    yield();
   }
   newExtCmd = true;
   return 1;
@@ -937,11 +970,10 @@ uint8_t Vista::getExtBytes() {
     if (extidx < szExt)
       extbuf[extidx++] = x;
     markPulse = 0; //reset pulse flag to wait for next inter msg gap
-   // Serial.printf("%02x,extidx=%d\r\n",x,extidx);
     yield();
   }
 
-  if (extidx > 0 && markPulse > 1) {
+  if (extidx > 0 && markPulse) {
     //ok, we are on the next pulse (gap) , lets decode the previous msg data
     if (decodePacket()) ret = extidx+2;
     extidx = 0;
@@ -985,7 +1017,7 @@ bool Vista::handle() {
         expectByte = 0;
         cbuf[0] = 0x78; //for flagging an expect byte found ok
         cbuf[1] = x;
-        pushCmdQueueItem(CMDBUFSIZE,0);      
+        pushCmdQueueItem(CMDBUFSIZE,0);        
         return 1;    // 1 for logging. 0 for normal
       } else {
             //we did not get the expect byte response. So assume this byte is another cmd
@@ -1016,7 +1048,7 @@ bool Vista::handle() {
       memset(extcmd, 0, szExt); //store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
       #endif
-      pushCmdQueueItem(CMDBUFSIZE,0);      
+      pushCmdQueueItem();      
       return 1;
     } 
 
@@ -1156,7 +1188,6 @@ bool Vista::handle() {
      }
      yield();
     }
-    gidx=gidx<CMDBUFSIZE?gidx:CMDBUFSIZE;
     pushCmdQueueItem(CMDBUFSIZE,0);
     return 1;
   }
