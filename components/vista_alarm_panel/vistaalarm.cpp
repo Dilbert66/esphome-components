@@ -183,7 +183,6 @@ void vistaECPHome::loadSensors() {
         st->type_id=id;
         tMap.push_back(st);
     }
-       // tMap[id]=obj;
     else
 #endif        
    {
@@ -192,7 +191,6 @@ void vistaECPHome::loadSensors() {
     std::smatch m;
     if (std::regex_search(name,m,e)) {
        std::string match=m[1];
-       //tMap[match]=obj; 
         auto st=new textSensorType();
         st->ptr=obj;
         st->type_id=match;
@@ -845,8 +843,8 @@ void vistaECPHome::cmdQueueTask(void * args) {
         
         if (!vista.keybusConnected || !vista.handle() )
               vTaskDelay(5);
-        delayMicroseconds(50);
-        vTaskDelay(0);
+       // vTaskDelay(0);
+        yield();
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
          #if not defined(ARDUINO_MQTT)             

@@ -39,9 +39,9 @@ struct binarySensorType {
    std::string object_id;
    std::string type_id;
 } ;
-/*
+
 struct textSensorType {
-   template_::TemplateTextSensor*  ptr;
+   text_sensor::TextSensor* ptr;   
 #if defined(ESPHOME_MQTT)   
    mqtt::MQTTTextSensor* mqptr; 
 #endif   
@@ -49,28 +49,26 @@ struct textSensorType {
    std::string object_id;
    std::string type_id;
 } ;
-*/
-std::map<std::string,binarySensorType*> bMap;
-std::map<std::string,text_sensor::TextSensor*> tMap;
+
+std::vector<binarySensorType*> bMap{};
+std::vector<textSensorType*> tMap{};
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  if (bMap.find(str)!=bMap.end()) {
-      bMap[str]->ptr->publish_state(open);
-  }  
-
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType* f){ return f->type_id == str; } );
+     if (it != bMap.end()) (*it)->ptr->publish_state(open);
 }
     
 void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  if (tMap.find(str)!=tMap.end()) {
-      tMap[str]->publish_state(*text);
-  }
-        
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](textSensorType*  f){ return f->type_id == str; } );
+     if (it != tMap.end()) (*it)->ptr->publish_state(*text);  
+  
 }
+
 
 #endif
 
@@ -90,8 +88,9 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
-    if (bMap.find(str)!=bMap.end()) 
-        return bMap[str]->ptr->get_name();
+    
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType* f){ return f->type_id == str; } );
+     if (it != bMap.end()) return (*it)->ptr->get_name();  
     return "";
 }
   
@@ -622,7 +621,6 @@ void DSCkeybushome::begin() {
     } while (tpl[partitionStatus[partition - 1].editIdx] != 'X' && count <= partitionStatus[partition - 1].digits);
 
   }
-
 
   void DSCkeybushome::alarm_keypress(std::string keystring) {
     alarm_keypress_partition(keystring, defaultPartition);
@@ -3669,8 +3667,10 @@ void DSCkeybushome::loadSensors() {
 #if defined(USE_CUSTOM_ID)      
     std::string id=obj->get_type_id();
     if (id!="") {
-        bMap[id]=new binarySensorType();
-        bMap[id]->ptr= obj;        
+        auto st=new binarySensorType();
+              st->ptr=obj;
+              st->type_id=id;
+              bMap.push_back(st);     
     } else 
 #endif
     {
@@ -3679,8 +3679,10 @@ void DSCkeybushome::loadSensors() {
       std::smatch m;
       if (std::regex_search(name,m,e)) {
         std::string match=m[1];
-        bMap[match]=new binarySensorType();        
-        bMap[match]->ptr= obj; 
+        auto st=new binarySensorType();
+        st->ptr=obj;
+        st->type_id=match;
+        bMap.push_back(st); 
       }
     }
 
@@ -3689,9 +3691,12 @@ void DSCkeybushome::loadSensors() {
  for (auto *obj : ts ) {
 #if defined(USE_CUSTOM_ID)         
    std::string id=obj->get_type_id();
-    if (id!="")
-        tMap[id]=obj;
-    else 
+    if (id!="") {
+        auto st=new textSensorType();
+        st->ptr=obj;
+        st->type_id=id;
+        tMap.push_back(st);
+    } else 
 #endif 
     {
       std::string name=obj->get_name();
@@ -3699,7 +3704,10 @@ void DSCkeybushome::loadSensors() {
       std::smatch m;
       if (std::regex_search(name,m,e)) {
         std::string match=m[1];
-        tMap[match]=obj; 
+        auto st=new textSensorType();
+        st->ptr=obj;
+        st->type_id=match;
+        tMap.push_back(st); 
     }
 }
   
@@ -3986,8 +3994,8 @@ void DSCkeybushome::loadZone(int z) {
 
     std::string n=std::to_string(z);      
     std::string type_id="z" + n;
-    if (bMap.find(type_id)!=bMap.end()) 
-        return;
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binarySensorType * f){ return f->type_id == type_id; } );
+    if (it != bMap.end()) return;
     binarySensorType * bst= new binarySensorType();
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
@@ -4009,7 +4017,7 @@ void DSCkeybushome::loadZone(int z) {
     App.register_component(ptr); 
     ptr->call();
     bst->ptr= ptr;     
-    bMap[type_id]=bst; 
+    bMap.push_back(bst);
 }  
 
 #endif

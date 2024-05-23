@@ -10,7 +10,7 @@
 
 #define OUTBUFSIZE 30
 #define CMDBUFSIZE 50
-#define CMDQUEUESIZE 5
+#define CMDQUEUESIZE 10
 #define FAULTQUEUESIZE 5
 
 // Used to read bits on F7 message

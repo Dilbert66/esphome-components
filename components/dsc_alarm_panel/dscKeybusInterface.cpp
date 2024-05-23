@@ -19,7 +19,6 @@
 
 #include "dscKeybus.h"
 
-
 byte dscKeybusInterface::dscClockPin;
 byte dscKeybusInterface::dscReadPin;
 byte dscKeybusInterface::dscWritePin;
