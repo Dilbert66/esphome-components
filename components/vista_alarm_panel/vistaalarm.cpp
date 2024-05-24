@@ -51,10 +51,10 @@ namespace alarm_panel {
  struct textSensorType {
    text_sensor::TextSensor* ptr;   
 #if defined(ESPHOME_MQTT)   
-   mqtt::MQTTTextSensor* mqptr;  
+  // mqtt::MQTTTextSensor* mqptr;  
 #endif   
-   std::string name;
-   std::string object_id;
+   //std::string name;
+  // std::string object_id;
    std::string type_id;
 };
 

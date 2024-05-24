@@ -473,9 +473,10 @@ async def setup_binary_sensor_core_(var, config):
      
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_type_id(config[CONF_ID].id))
     if config.get(CONF_PARTITION):
         cg.add(var.set_partition(config.get(CONF_PARTITION)))          
-    #cg.add(var.set_type_id(config.get(CONF_ID))   
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))
     if publish_initial_state := config.get(CONF_PUBLISH_INITIAL_STATE):

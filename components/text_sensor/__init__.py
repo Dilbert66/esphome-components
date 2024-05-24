@@ -170,7 +170,9 @@ async def setup_text_sensor_core_(var, config):
     await setup_entity(var, config)
     
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))   
+        cg.add(var.set_type_id(config.get(CONF_TYPE_ID))) 
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_type_id(config[CONF_ID].id))
     if config.get(CONF_PARTITION):
         cg.add(var.set_partition(config.get(CONF_PARTITION)))          
     if config.get(CONF_FILTERS):  # must exist and not be empty
