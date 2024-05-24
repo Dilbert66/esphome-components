@@ -29,7 +29,7 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
 #if !defined(ARDUINO_MQTT)
-
+/*
 struct binarySensorType {
    binary_sensor::BinarySensor* ptr;   
 #if defined(ESPHOME_MQTT)   
@@ -49,23 +49,23 @@ struct textSensorType {
   // std::string object_id;
    std::string type_id;
 } ;
-
-std::vector<binarySensorType*> bMap{};
-std::vector<textSensorType*> tMap{};
+*/
+std::vector<binary_sensor::BinarySensor *> bMap;
+std::vector<text_sensor::TextSensor *> tMap;
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType* f){ return f->type_id == str; } );
-     if (it != bMap.end()) (*it)->ptr->publish_state(open);
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+     if (it != bMap.end()) (*it)->publish_state(open);
 }
     
 void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](textSensorType*  f){ return f->type_id == str; } );
-     if (it != tMap.end()) (*it)->ptr->publish_state(*text);  
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
+     if (it != tMap.end()) (*it)->publish_state(*text);  
   
 }
 
@@ -88,9 +88,8 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
-    
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType* f){ return f->type_id == str; } );
-     if (it != bMap.end()) return (*it)->ptr->get_name();  
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+     if (it != bMap.end()) return (*it)->get_name();  
     return "";
 }
   
@@ -136,7 +135,9 @@ void DSCkeybushome::begin() {
     if (debug > 2)
       Serial.begin(115200);
 #if !defined(ARDUINO_MQTT)    
-     loadSensors();
+     //loadSensors();
+  bMap =  App.get_binary_sensors(); 
+  tMap = App.get_text_sensors();      
 #endif
 
    
@@ -3659,7 +3660,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       line2DisplayCallback((lcdLine1 + " " +lcdLine2).c_str(), partition);
 
   }
-  
+  /*
 #if !defined(ARDUINO_MQTT)
 void DSCkeybushome::loadSensors() {
   std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
@@ -3714,7 +3715,7 @@ void DSCkeybushome::loadSensors() {
  }
 }
 #endif
-
+*/
   void DSCkeybushome::printPanelStatus16(byte panelByte, byte partition, bool showEvent ) {
     bool decoded = true;
      String lcdLine1;
@@ -3991,33 +3992,37 @@ if (showEvent)
   
 #if defined(AUTOPOPULATE)
 void DSCkeybushome::loadZone(int z) {
-
     std::string n=std::to_string(z);      
     std::string type_id="z" + n;
-    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binarySensorType * f){ return f->type_id == type_id; } );
-    if (it != bMap.end()) return;
-    binarySensorType * bst= new binarySensorType();
+
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_type_id() == type_id; } );
+     if (it != bMap.end()) return;  
+    //binarySensorType * bst= new binarySensorType();
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
-    bst->name="Zone " + n;
-    ptr->set_name(bst->name.c_str());
-    bst->object_id=str_snake_case(bst->name);    
-    ptr->set_object_id(bst->object_id.c_str());
-    bst->type_id=type_id;
-    ptr->set_type_id(bst->type_id.c_str());
+    std::string name;    
+    name="Zone " + n ;
+    ptr->set_name_static(name);
+   // bst->object_id=str_snake_case(bst->name);    
+    ptr->set_object_id_static(str_snake_case(name));
+    //bst->type_id=type_id;
+   // ptr->set_type_id(bst->type_id.c_str());
+    ptr->set_type_id_static(type_id);
    // bst->ptr->set_device_class("window");    
     ptr->set_publish_initial_state(true);    
 #if defined(ESPHOME_MQTT)   
-    bst->mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
-    bst->mqptr->set_component_source("mqtt");
-    App.register_component(bst->mqptr);
-    bst->mqptr->call();
+//    bst->mqptr=
+    mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
+    mqptr->set_component_source("mqtt");
+    App.register_component(mqptr);
+    mqptr->call();
 #endif  
     ptr->set_component_source("template.binary_sensor");
     App.register_component(ptr); 
     ptr->call();
-    bst->ptr= ptr;     
-    bMap.push_back(bst);
+    bMap=App.get_binary_sensors();    
+   // bst->ptr= ptr;     
+   // bMap.push_back(bst);
 }  
 
 #endif

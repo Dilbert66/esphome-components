@@ -37,7 +37,7 @@ void disconnectVista() {
 #include "esphome.h"
 namespace esphome {
 namespace alarm_panel {
-    
+/*
  struct binarySensorType {
    binary_sensor::BinarySensor* ptr;   
 #if defined(ESPHOME_MQTT)   
@@ -57,9 +57,11 @@ namespace alarm_panel {
   // std::string object_id;
    std::string type_id;
 };
-
-std::vector<binarySensorType*> bMap{};
-std::vector<textSensorType*> tMap{};
+*/
+std::vector<binary_sensor::BinarySensor *> bMap;
+std::vector<text_sensor::TextSensor *> tMap;
+//std::vector<binarySensorType*> bMap{};
+//std::vector<textSensorType*> tMap{};
 
 static const char *const TAG = "vista_alarm"; 
  
@@ -71,16 +73,16 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType* f){ return f->type_id == str; } );
-     if (it != bMap.end()) (*it)->ptr->publish_state(open);
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+     if (it != bMap.end()) (*it)->publish_state(open);
 }
     
 void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](textSensorType*  f){ return f->type_id == str; } );
-     if (it != tMap.end()) (*it)->ptr->publish_state(*text);  
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
+     if (it != tMap.end()) (*it)->publish_state(*text);  
   
 }
 
@@ -137,15 +139,16 @@ vista.stop();
 bool vistaECPHome::zoneActive(uint32_t zone) {
 
   std::string str = "z" + std::to_string(zone) ;
-  auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binarySensorType * f){ return f->type_id == str; } );
+  auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
   if (itb != bMap.end()) return true;
   
-  auto itt = std::find_if(tMap.begin(), tMap.end(),  [&str](textSensorType * f){ return f->type_id == str; } );
+  auto itt = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor* f){ return f->get_type_id() == str; } );
   if (itt != tMap.end()) return true; 
   
   return false;
 
-}    
+}   
+/* 
 #if !defined(ARDUINO_MQTT)
 void vistaECPHome::loadSensors() {
 
@@ -201,12 +204,9 @@ void vistaECPHome::loadSensors() {
  }
 }
 #endif
-
+*/
 vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z,bool createZone) {
 
-    // if (extZones.find(z)!=extZones.end() ) {
-    //    return &extZones[z];
-    // }
      auto it = std::find_if(extZones.begin(), extZones.end(),  [&z](zoneType& f){ return f.zone == z; } );
      if (it != extZones.end()) return &(*it);
      zoneType n; 
@@ -228,9 +228,7 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z,bool createZone) {
      n.active=zoneActive(z);
      ESP_LOGD(TAG,"adding zone %d,%d",z,createZone);
      extZones.push_back(n);
-     //extZones[z]= n;
      return &extZones.back();
-    // return &extZones[z];
 }
 
 vistaECPHome::serialType vistaECPHome::getRfSerialLookup(char * serialCode) { 
@@ -292,7 +290,6 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
         for (int i = 0; i < NumberChars; i += 2)
         {
              bytes[i / 2] = v->toInt(s.substr(i, 2), 16);
-            
         }
             vista.writeDirect(bytes,p,NumberChars/2);
             return;
@@ -312,8 +309,6 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
             std::string s1 =  payload["fault"];
             if (s1=="ON" || s1=="on" || s1=="1")
                 b=true;
-            //std::string s=payload["zone"];
-            //p=v->toInt(s,10);
              p=payload["zone"];
            // ESP_LOGE(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             v->set_zone_fault(p,b);
@@ -334,7 +329,6 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
     int year=rtc.year;
     char ampm=hour<12?2:1;
     if (hour > 12) hour-=12;
-
     char cmd[30];
     sprintf(cmd,"%s#63*%02d%02d%1d%02d%02d%02d*",accessCode,hour,rtc.minute,ampm,rtc.year%100,rtc.month,rtc.day_of_month);
     #if not defined(ARDUINO_MQTT)    
@@ -371,7 +365,9 @@ void vistaECPHome::setup()  {
 #if !defined(ARDUINO_MQTT)     
       set_update_interval(8); //set looptime to 8ms 
 #if !defined(ARDUINO_MQTT)      
-      loadSensors();
+   //   loadSensors();
+  bMap =  App.get_binary_sensors(); 
+  tMap = App.get_text_sensors();    
 #endif      
 #endif     
     
@@ -387,6 +383,9 @@ void vistaECPHome::setup()  {
       register_service( & vistaECPHome::alarm_keypress, "alarm_keypress", {
         "keys"
       });
+      register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {
+        "addr","hexdata"
+      });      
       register_service( & vistaECPHome::alarm_keypress_partition, "alarm_keypress_partition", {
         "keys","partition"
       });      
@@ -530,6 +529,19 @@ void vistaECPHome::setup()  {
       addr=partitionKeypads[partition];
       if (addr > 0 and addr < 24)      
         vista.write(keystring.c_str(),addr);
+    }
+    
+    void vistaECPHome::send_cmd_bytes(int addr,std::string hexbytes) {
+        int NumberChars = hexbytes.length();
+        char * bytes=new char[NumberChars/2];
+        for (int i = 0; i < NumberChars; i += 2)
+        {
+             bytes[i / 2] = toInt(hexbytes.substr(i, 2), 16);
+        }
+            vista.writeDirect(bytes,addr,NumberChars/2);
+            
+        return;
+        
     }
     
     void vistaECPHome::setDefaultKpAddr(uint8_t p) {
@@ -2186,37 +2198,40 @@ void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     std::string n=std::to_string(z);      
     std::string type_id="z" + n;
 
-    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binarySensorType * f){ return f->type_id == type_id; } );
-    if (it != bMap.end()) return;
-    binarySensorType * bst= new binarySensorType();
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_type_id() == type_id; } );
+     if (it != bMap.end()) return;  
+    //binarySensorType * bst= new binarySensorType();
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
     std::string name;    
     if (fetchPromptName)
         name=getNameFromPrompt(vistaCmd.statusFlags.prompt1,vistaCmd.statusFlags.prompt2);
     if (name=="") 
-        bst->name="Zone " + n ;
+     name="Zone " + n ;
     else
-        bst->name=name+" (" + type_id + ")";
- 
-    ptr->set_name(bst->name.c_str());
-    bst->object_id=str_snake_case(bst->name);    
-    ptr->set_object_id(bst->object_id.c_str());
-    bst->type_id=type_id;
-    ptr->set_type_id(bst->type_id.c_str());
+       name=name+" (" + type_id + ")";
+
+    ptr->set_name_static(name);
+   // bst->object_id=str_snake_case(bst->name);    
+    ptr->set_object_id_static(str_snake_case(name));
+    //bst->type_id=type_id;
+   // ptr->set_type_id(bst->type_id.c_str());
+    ptr->set_type_id_static(type_id);
    // bst->ptr->set_device_class("window");    
     ptr->set_publish_initial_state(true);    
 #if defined(ESPHOME_MQTT)   
-    bst->mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
-    bst->mqptr->set_component_source("mqtt");
-    App.register_component(bst->mqptr);
-    bst->mqptr->call();
+//    bst->mqptr=
+    mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
+    mqptr->set_component_source("mqtt");
+    App.register_component(mqptr);
+    mqptr->call();
 #endif  
     ptr->set_component_source("template.binary_sensor");
     App.register_component(ptr); 
     ptr->call();
-    bst->ptr= ptr;     
-    bMap.push_back(bst);
+    bMap=App.get_binary_sensors();    
+   // bst->ptr= ptr;     
+   // bMap.push_back(bst);
 }  
 
 #endif

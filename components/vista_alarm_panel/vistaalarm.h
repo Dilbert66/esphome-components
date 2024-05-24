@@ -375,8 +375,9 @@ void setup() override;
     void alarm_keypress(std::string keystring);
 
     void alarm_keypress_partition(std::string keystring, int partition);
-    
+    void send_cmd_bytes(uint8_t addr,std::string hexbytes);
     void setDefaultKpAddr(uint8_t p);
+    
 private:
     bool isInt(std::string s, int base);
 
