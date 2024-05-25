@@ -122,7 +122,30 @@ void DSCkeybushome::set_panel_time() {
   void DSCkeybushome::set_debug(uint8_t db) {debug=db;}  
   void DSCkeybushome::set_expanderAddr(uint8_t idx,uint8_t addr) { if (idx==1) expanderAddr1=addr; else if (idx==2) expanderAddr2=addr;}
 
- 
+  DSCkeybushome::zoneType * DSCkeybushome::getZone(byte z,bool createZone) {
+
+     auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(),  [&z](zoneType& f){ return f.zone == z+1; } );
+     if (it != zoneStatus.end()) return &(*it);
+     if (!createZone)  return &zonetype_INIT;
+     
+     zoneType n; 
+     n.zone=z+1;
+     n.alarm=false;
+     n.open=false;
+     n.tamper=false;
+     n.bypassed=false;
+     n.enabled=createZone;
+     n.batteryLow=false;
+     n.partition=0;
+     ESP_LOGD(TAG,"added zone %d,%d",z+1,createZone);     
+#if defined(AUTOPOPULATE)
+     if (createZone)
+            loadZone(z+1);
+#endif      
+
+     zoneStatus.push_back(n);
+     return &zoneStatus.back();
+}
   
 #if defined(ARDUINO_MQTT)
 public:
@@ -131,11 +154,9 @@ void DSCkeybushome::begin() {
   void DSCkeybushome::setup()  {
 #endif      
     eventStatusMsg.reserve(64);
-    zoneStatus = new zoneType[maxZones];
     if (debug > 2)
       Serial.begin(115200);
 #if !defined(ARDUINO_MQTT)    
-     //loadSensors();
   bMap =  App.get_binary_sensors(); 
   tMap = App.get_text_sensors();      
 #endif
@@ -206,15 +227,6 @@ void DSCkeybushome::begin() {
     else
       dsc.begin(Serial);
 
-    for (int x = 0; x < maxZones; x++) {
-      zoneStatus[x].tamper = false;
-      zoneStatus[x].batteryLow = false;
-      zoneStatus[x].open = false;
-      zoneStatus[x].alarm = false;
-      zoneStatus[x].enabled = false;
-      zoneStatus[x].partition = 0;
-      zoneStatus[x].bypassed = false;
-    } 
     for (int p = 0; p<dscPartitions;p++) {
         partitionStatus[p].editIdx=0;
         partitionStatus[p].digits=0;
@@ -794,14 +806,10 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
           zone = (zoneBit + startZone) + ((panelByte - inputByte) * 8) - 1;
           if (zone >= maxZones) continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-            zoneStatus[zone].partition = partition;               
-            zoneStatus[zone].enabled = true;
-#if defined(AUTOPOPULATE)   
-            loadZone(zone+1); 
-            yield();
-#endif            
-          } else if (zoneStatus[zone].partition==partition) {
-                zoneStatus[zone].enabled = false;
+            getZone(zone,1)->partition = partition;               
+            getZone(zone)->enabled = true;
+          } else if (getZone(zone)->partition==partition) {
+                getZone(zone)->enabled = false;
 
           }
 
@@ -823,13 +831,10 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
           zone = (zoneBit + startZone) + ((panelByte - inputByte) * 8) - 1;
           if (zone >= maxZones) continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-            zoneStatus[zone].partition = partition;               
-            zoneStatus[zone].enabled = true;
-#if defined(AUTOPOPULATE)         
-            loadZone(zone+1);  
-#endif
-          } else if (zoneStatus[zone].partition==partition) {
-                zoneStatus[zone].enabled = false;
+            getZone(zone,1)->partition = partition;               
+            getZone(zone)->enabled = true;
+          } else if (getZone(zone)->partition==partition) {
+                getZone(zone)->enabled = false;
           }
 
         }
@@ -958,22 +963,22 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
 
   void DSCkeybushome::clearZoneAlarms(byte partition) {
     for (int zone = 0; zone < maxZones; zone++) {
-      if (zoneStatus[zone].partition == partition)
-        zoneStatus[zone].alarm = false;
+      if (getZone(zone)->partition == partition)
+        getZone(zone)->alarm = false;
     }
   }
 
   void DSCkeybushome::clearZoneBypass(byte partition) {
     for (int zone = 0; zone < maxZones; zone++) {
-      if (zoneStatus[zone].partition == partition)
-        zoneStatus[zone].bypassed = false;
+      if (getZone(zone)->partition == partition)
+        getZone(zone)->bypassed = false;
     }
   }
 
   byte DSCkeybushome::getNextOpenZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
     for (int zone = start; zone < maxZones; zone++) {
-      if (zoneStatus[zone].enabled && zoneStatus[zone].partition == partition && zoneStatus[zone].open) {
+      if (getZone(zone)->enabled && getZone(zone)->partition == partition && getZone(zone)->open) {
       return (byte)zone + 1;
     }
     }
@@ -984,7 +989,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     if (start == 1) return 0;
     if (start == 0 || start > maxZones) start = maxZones;
     for (int zone = start - 2; zone >= 0; zone--) {
-      if (zoneStatus[zone].enabled && zoneStatus[zone].partition == partition && zoneStatus[zone].open) {
+      if (getZone(zone)->enabled && getZone(zone)->partition == partition && getZone(zone)->open) {
           return (byte) zone + 1;
       }
     }
@@ -1031,7 +1036,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
   byte DSCkeybushome::getNextEnabledZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
     for (int zone = start; zone < maxZones; zone++) {
-      if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+      if (getZone(zone)->partition == partition && getZone(zone)->enabled) {
          return (byte) zone + 1;
       }
     }
@@ -1043,13 +1048,13 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     if (start < 2 || start > maxZones) start = maxZones;
     int zone;
     for (zone=start-2;zone>=0;zone--) {
-       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+       if (getZone(zone)->partition == partition && getZone(zone)->enabled) {
           return (byte) zone+1;
        }
     }
     if (zone<0) start=maxZones;
     for (zone = start - 2; zone >= 0 ; zone--) {
-      if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+      if (getZone(zone)->partition == partition && getZone(zone)->enabled) {
          return (byte) zone+1;
       }
     }
@@ -1060,7 +1065,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
   byte DSCkeybushome::getNextAlarmedZone(byte start, byte partition) {
     if (start >= maxZones) start = 0;
     for (int zone = start; zone < maxZones; zone++) {
-      if (zoneStatus[zone].partition == partition && zoneStatus[zone].alarm) {
+      if (getZone(zone)->partition == partition && getZone(zone)->alarm) {
          return (byte) zone + 1;
       }
     }
@@ -1071,13 +1076,13 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     if (start < 2 || start > maxZones) start = maxZones;
     int zone;
     for (zone=start-2;zone>=0;zone--) {
-       if (zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) {
+       if (getZone(zone)->partition == partition && getZone(zone)->alarm) {
           return (byte) zone+1;
        }
     }
     if (zone<0) start=maxZones;
     for (zone = start - 2; zone >= 0 && zone < maxZones; zone--) {
-      if (zoneStatus[zone].partition == partition && zoneStatus[zone].alarm) {
+      if (getZone(zone)->partition == partition && getZone(zone)->alarm) {
         return (byte) zone + 1;
       }
       
@@ -1089,11 +1094,11 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
     for (byte zoneGroup = 0; zoneGroup < dscZones; zoneGroup++) {
       for (byte zoneBit = 0; zoneBit < 8; zoneBit++) {
         zone = zoneBit + (zoneGroup * 8);
-        if (!(zoneStatus[zone].partition == partition && zoneStatus[zone].enabled) || zone >= maxZones) continue;
+        if (!(getZone(zone)->partition == partition && getZone(zone)->enabled) || zone >= maxZones) continue;
         if (bitRead(programZones[zoneGroup], zoneBit)) {
-          zoneStatus[zone].bypassed = true;
+          getZone(zone)->bypassed = true;
         } else {
-          zoneStatus[zone].bypassed = false;
+          getZone(zone)->bypassed = false;
         }
       }
     }
@@ -1462,9 +1467,9 @@ void DSCkeybushome::update()  {
               if (zone >= maxZones) continue;
               if (bitRead(dsc.openZones[zoneGroup], zoneBit)) {
                 zoneStatusChangeCallback(zone+1,true);                  
-                zoneStatus[zone].open = true;
+                getZone(zone,1)->open = true;
               } else {
-                zoneStatus[zone].open = false;
+                getZone(zone)->open = false;
                 zoneStatusChangeCallback(zone+1,false);                 
               }
             }
@@ -1475,47 +1480,44 @@ void DSCkeybushome::update()  {
       std::string zoneStatusMsg;
       zoneStatusMsg = "";
       char s1[7];
-      for (int x = 0; x < maxZones; x++) {
+        for (auto  &x: zoneStatus) {
 
-        //if (!zoneStatus[x].enabled) continue;   
-        
-          
-        if (zoneStatus[x].open) {
+        if (x.open) {
             if (zoneStatusMsg !="") 
-                sprintf(s1,PSTR(",OP:%d"), x+1);                 
+                sprintf(s1,PSTR(",OP:%d"), x.zone+1);                 
             else
-                sprintf(s1, PSTR("OP:%d"), x+1);             
+                sprintf(s1, PSTR("OP:%d"), x.zone+1);             
           zoneStatusMsg.append(s1);
         }
 
-        if (zoneStatus[x].alarm) {
+        if (x.alarm) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",AL:%d"), x+1);                 
+                sprintf(s1, PSTR(",AL:%d"), x.zone+1);                 
             else
-                sprintf(s1, PSTR("AL:%d"), x+1);
+                sprintf(s1, PSTR("AL:%d"), x.zone+1);
           zoneStatusMsg.append(s1);
         }
-        if (zoneStatus[x].bypassed) {
+        if (x.bypassed) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",BY:%d"), x+1);                 
+                sprintf(s1, PSTR(",BY:%d"), x.zone+1);                 
             else
-                sprintf(s1, PSTR("BY:%d"), x+1);
-          zoneStatusMsg.append(s1);
-        }
-
-        if (zoneStatus[x].tamper) {
-            if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",TA:%d"), x+1);                 
-            else
-                sprintf(s1, PSTR("TA:%d"), x+1);
+                sprintf(s1, PSTR("BY:%d"), x.zone+1);
           zoneStatusMsg.append(s1);
         }
 
-        if (zoneStatus[x].batteryLow) {
+        if (x.tamper) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",LB:%d"), x+1);                 
+                sprintf(s1, PSTR(",TA:%d"), x.zone+1);                 
             else
-                sprintf(s1, PSTR("LB:%d"), x+1);
+                sprintf(s1, PSTR("TA:%d"), x.zone+1);
+          zoneStatusMsg.append(s1);
+        }
+
+        if (x.batteryLow) {
+            if (zoneStatusMsg !="") 
+                sprintf(s1, PSTR(",LB:%d"), x.zone+1);                 
+            else
+                sprintf(s1, PSTR("LB:%d"), x.zone+1);
           zoneStatusMsg.append(s1);
         }
       }
@@ -1615,9 +1617,9 @@ void DSCkeybushome::update()  {
             zone = zoneBit + (zoneByte * 8);
             if (zone >= maxZones) continue;
             if (!bitRead(dsc.moduleData[zoneByte + 2], x)) { // Checks an individual zone battery status flag for low
-              zoneStatus[zone].batteryLow = true;
+              getZone(zone,1)->batteryLow = true;
             } else if (!bitRead(dsc.moduleData[zoneByte + 6], x)) { // Checks an individual zone battery status flag for restore
-              zoneStatus[zone].batteryLow = false;
+              getZone(zone)->batteryLow = false;
             }
             zoneBit++;
           }
@@ -2168,9 +2170,9 @@ void DSCkeybushome::update()  {
         if ( * currentSelection < maxZones && * currentSelection > 0) {
           char s[50];
           char bypassStatus = ' ';
-          if (zoneStatus[ * currentSelection - 1].bypassed)
+          if (getZone( * currentSelection - 1)->bypassed)
             bypassStatus = 'B';
-          else if (zoneStatus[ * currentSelection - 1].open)
+          else if (getZone( * currentSelection - 1)->open)
             bypassStatus = 'O';
           std::string name=getZoneName(* currentSelection);
           if (name !="")
@@ -2445,9 +2447,9 @@ void DSCkeybushome::update()  {
         zone = zoneBit + ((panelByte - 4) * 8);
         if (zone >= maxZones) continue;
         if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-          zoneStatus[zone].batteryLow = true;
+          getZone(zone,1)->batteryLow = true;
         } else
-          zoneStatus[zone].batteryLow = false;
+          getZone(zone)->batteryLow = false;
       }
     }
   }
@@ -2865,7 +2867,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage,PSTR("Zone alarm:"));
       byte zone = dsc.panelData[panelByte] - 8;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].alarm = true;
+       getZone(zone - 1,1)->alarm = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -2889,7 +2891,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone tamper:"));
       byte zone = dsc.panelData[panelByte] - 0x55;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].tamper = true;
+        getZone(zone-1,1)->tamper = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -2902,7 +2904,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR(" restored: "));
       byte zone = dsc.panelData[panelByte] - 0x75;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].tamper = false;
+        getZone(zone-1)->tamper = false;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine2 = lcdMessage;
@@ -3032,7 +3034,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
     if (dsc.panelData[panelByte] >= 0x2C && dsc.panelData[panelByte] <= 0x4B) {
       lcdLine1 = F("Zone bat");
       strcpy_P(lcdMessage, PSTR("rest:"));
-      zoneStatus[dsc.panelData[panelByte] - 42].batteryLow = false;
+      getZone(dsc.panelData[panelByte] - 42)->batteryLow = false;
       itoa(dsc.panelData[panelByte] - 43, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine2 = lcdMessage;
@@ -3043,7 +3045,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
     if (dsc.panelData[panelByte] >= 0x4C && dsc.panelData[panelByte] <= 0x6B) {
       lcdLine1 = F("Zone bat");
       strcpy_P(lcdMessage, PSTR("low:"));
-      zoneStatus[dsc.panelData[panelByte] - 74].batteryLow = true;
+      getZone(dsc.panelData[panelByte] - 74,1)->batteryLow = true;
       itoa(dsc.panelData[panelByte] - 75, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine2 = lcdMessage;
@@ -3476,7 +3478,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone alarm: "));
       byte zone = dsc.panelData[panelByte] + 33;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].alarm = true;
+        getZone(zone-1,1)->alarm = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -3496,7 +3498,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone tamper:"));
       byte zone = dsc.panelData[panelByte] - 31;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].tamper = true;
+        getZone(zone-1,1)->tamper = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -3507,7 +3509,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR(" rest:"));
       byte zone = dsc.panelData[panelByte] - 63;
       if (zone > 0 && zone < maxZones)
-        zoneStatus[zone - 1].tamper = false;
+        getZone(zone-1)->tamper = false;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine2 = lcdMessage;
@@ -3997,21 +3999,22 @@ void DSCkeybushome::loadZone(int z) {
 
     auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_type_id() == type_id; } );
      if (it != bMap.end()) return;  
-    //binarySensorType * bst= new binarySensorType();
+
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
-    std::string name;    
-    name="Zone " + n ;
-    ptr->set_name_static(name);
-   // bst->object_id=str_snake_case(bst->name);    
-    ptr->set_object_id_static(str_snake_case(name));
-    //bst->type_id=type_id;
-   // ptr->set_type_id(bst->type_id.c_str());
-    ptr->set_type_id_static(type_id);
+    
+    ptr->name_static="Zone " + n ;
+    ptr->object_id_static=str_snake_case(ptr->name_static);
+    ptr->type_id_static=type_id;
+    ptr->set_name(ptr->name_static.c_str());
+    ptr->set_object_id(ptr->object_id_static.c_str());
+    ptr->set_type_id(ptr->type_id_static.c_str());
+
+//ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());
+    
    // bst->ptr->set_device_class("window");    
     ptr->set_publish_initial_state(true);    
 #if defined(ESPHOME_MQTT)   
-//    bst->mqptr=
     mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
     mqptr->set_component_source("mqtt");
     App.register_component(mqptr);
@@ -4021,8 +4024,6 @@ void DSCkeybushome::loadZone(int z) {
     App.register_component(ptr); 
     ptr->call();
     bMap=App.get_binary_sensors();    
-   // bst->ptr= ptr;     
-   // bMap.push_back(bst);
 }  
 
 #endif

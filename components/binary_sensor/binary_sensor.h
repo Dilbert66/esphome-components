@@ -59,17 +59,16 @@ class BinarySensor : public EntityBase, public EntityBase_DeviceClass {
 
   /// The current reported state of the binary sensor.
   bool state;
-  
-  void set_type_id_static(std::string id) {this->set_type_id(id.c_str());}
-  void set_name_static(std::string name) {this->set_name(name.c_str());}
-  void set_object_id_static(std::string oid) { this->set_object_id(oid.c_str());}
+  std::string type_id_static;
+  std::string name_static;
+  std::string object_id_static;
+
+
   void set_type_id( const char *id) {this->type_id_str_=id;}
-  
   std::string get_type_id(){  if (this->type_id_str_ == nullptr) {
     return ""; }  return this->type_id_str_;}
     
   void set_partition( int p) {this->partition_int_=p;}
-  
   int get_partition(){  return this->partition_int_;}    
     
   void add_filter(Filter *filter);

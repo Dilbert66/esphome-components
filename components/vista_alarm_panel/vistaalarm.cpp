@@ -2203,24 +2203,23 @@ void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     //binarySensorType * bst= new binarySensorType();
     template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
-    std::string name;    
-    if (fetchPromptName)
-        name=getNameFromPrompt(vistaCmd.statusFlags.prompt1,vistaCmd.statusFlags.prompt2);
-    if (name=="") 
-     name="Zone " + n ;
-    else
-       name=name+" (" + type_id + ")";
 
-    ptr->set_name_static(name);
-   // bst->object_id=str_snake_case(bst->name);    
-    ptr->set_object_id_static(str_snake_case(name));
-    //bst->type_id=type_id;
-   // ptr->set_type_id(bst->type_id.c_str());
-    ptr->set_type_id_static(type_id);
-   // bst->ptr->set_device_class("window");    
+    if (fetchPromptName)
+        ptr->name_static=getNameFromPrompt(vistaCmd.statusFlags.prompt1,vistaCmd.statusFlags.prompt2);
+    
+    if (ptr->name_static=="") 
+     ptr->name_static="Zone " + n ;
+    else
+       ptr->name_static=ptr->name_static+" (" + type_id + ")";
+
+    ptr->object_id_static=str_snake_case(ptr->name_static);
+    ptr->type_id_static=type_id;
+    ptr->set_name(ptr->name_static.c_str());
+    ptr->set_object_id(ptr->object_id_static.c_str());
+    ptr->set_type_id(ptr->type_id_static.c_str());
+    
     ptr->set_publish_initial_state(true);    
 #if defined(ESPHOME_MQTT)   
-//    bst->mqptr=
     mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
     mqptr->set_component_source("mqtt");
     App.register_component(mqptr);
@@ -2230,8 +2229,6 @@ void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     App.register_component(ptr); 
     ptr->call();
     bMap=App.get_binary_sensors();    
-   // bst->ptr= ptr;     
-   // bMap.push_back(bst);
 }  
 
 #endif

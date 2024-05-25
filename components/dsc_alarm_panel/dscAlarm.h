@@ -315,7 +315,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
     beepsCallback = callback;
   }
   
-
+  
   void set_panel_time();
 
 
@@ -388,22 +388,32 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
 
   struct zoneType {
     byte partition;
+    byte zone;    
     byte tamper:1;
     byte batteryLow:1;
     byte open:1;
     byte alarm:1;
     byte enabled:1;
     byte bypassed:1;
-    byte active:1;
-   
-
   };
+  
+  zoneType zonetype_INIT={ 
+     .partition=0,     
+     .zone=0,
+     .tamper=false, 
+     .batteryLow=false, 
+      .open=false,
+     .alarm=false,
+     .enabled=false,
+     .bypassed=false
+       };
   #if defined(ESPHOME_MQTT)
  // mqtt::MQTTClientComponent *mqttId;
   #endif
 
   public:
-  zoneType * zoneStatus;
+  std::vector<zoneType> zoneStatus{};  
+  zoneType * getZone(byte z,bool createZone=false);  
   partitionType partitionStatus[dscPartitions];
   bool forceRefresh;
   std::string previousZoneStatusMsg,eventStatusMsg; 
