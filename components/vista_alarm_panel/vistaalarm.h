@@ -242,6 +242,20 @@ class vistaECPHome {
       uint8_t lowbat:1;
       uint8_t active:1;
     };
+  zoneType zonetype_INIT={ 
+     .zone=0,
+     .time = 0,
+     .partition=0,        
+     .open=0,
+     .bypass=0,
+     .alarm=0,
+     .check=0,
+     .fire=0,
+     .panic=0,
+     .trouble=0,
+     .lowbat=0,
+     .active=0
+       };    
     struct {
         uint8_t bell:1;
         uint8_t wrx1:1;

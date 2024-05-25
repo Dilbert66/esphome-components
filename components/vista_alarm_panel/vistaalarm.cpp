@@ -60,8 +60,6 @@ namespace alarm_panel {
 */
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
-//std::vector<binarySensorType*> bMap{};
-//std::vector<textSensorType*> tMap{};
 
 static const char *const TAG = "vista_alarm"; 
  
@@ -209,6 +207,7 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z,bool createZone) {
 
      auto it = std::find_if(extZones.begin(), extZones.end(),  [&z](zoneType& f){ return f.zone == z; } );
      if (it != extZones.end()) return &(*it);
+     if (!createZone || !zoneActive(z))  return &zonetype_INIT;
      zoneType n; 
      n.zone=z;
      n.time=0;
@@ -222,8 +221,8 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z,bool createZone) {
      n.lowbat=false;
      n.partition=0;
 #if defined(AUTOPOPULATE)
-     if (createZone)
-            loadZone(z);
+    // if (createZone)
+         //   loadZone(z);
 #endif      
      n.active=zoneActive(z);
      ESP_LOGD(TAG,"adding zone %d,%d",z,createZone);
@@ -2194,6 +2193,7 @@ void vistaECPHome::update()  {
     }
   
 #if defined(AUTOPOPULATE)
+/*
 void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     std::string n=std::to_string(z);      
     std::string type_id="z" + n;
@@ -2217,20 +2217,21 @@ void vistaECPHome::loadZone(int z,bool fetchPromptName) {
     ptr->set_name(ptr->name_static.c_str());
     ptr->set_object_id(ptr->object_id_static.c_str());
     ptr->set_type_id(ptr->type_id_static.c_str());
-    
-    ptr->set_publish_initial_state(true);    
+ ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());   
+    ptr->set_publish_initial_state(true);  
+    ptr->set_disabled_by_default(false); 
 #if defined(ESPHOME_MQTT)   
     mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
     mqptr->set_component_source("mqtt");
     App.register_component(mqptr);
     mqptr->call();
 #endif  
-    ptr->set_component_source("template.binary_sensor");
     App.register_component(ptr); 
+    ptr->set_component_source("template.binary_sensor");    
     ptr->call();
     bMap=App.get_binary_sensors();    
 }  
-
+*/
 #endif
 
 #if !defined(ARDUINO_MQTT)

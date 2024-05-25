@@ -434,6 +434,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   #if defined(ESPHOME_MQTT)
   std::string topic,topic_prefix;
   #endif
+  bool zoneActive(byte zone);
   
 #if defined(ARDUINO_MQTT)
 public:
