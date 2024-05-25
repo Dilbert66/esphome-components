@@ -682,8 +682,6 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
             std::string s1= payload["fault"];
             if (s1=="ON" || s1=="on" || s1=="1")
                 b=true;
-           // std::string s=payload["zone"];
-            //p = atoi(s.c_str());
             p=payload["zone"];
            // ESP_LOGI(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
             d->set_zone_fault(p,b);
@@ -1484,40 +1482,40 @@ void DSCkeybushome::update()  {
 
         if (x.open) {
             if (zoneStatusMsg !="") 
-                sprintf(s1,PSTR(",OP:%d"), x.zone+1);                 
+                sprintf(s1,PSTR(",OP:%d"), x.zone);                 
             else
-                sprintf(s1, PSTR("OP:%d"), x.zone+1);             
+                sprintf(s1, PSTR("OP:%d"), x.zone);             
           zoneStatusMsg.append(s1);
         }
 
         if (x.alarm) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",AL:%d"), x.zone+1);                 
+                sprintf(s1, PSTR(",AL:%d"), x.zone);                 
             else
-                sprintf(s1, PSTR("AL:%d"), x.zone+1);
+                sprintf(s1, PSTR("AL:%d"), x.zone);
           zoneStatusMsg.append(s1);
         }
         if (x.bypassed) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",BY:%d"), x.zone+1);                 
+                sprintf(s1, PSTR(",BY:%d"), x.zone);                 
             else
-                sprintf(s1, PSTR("BY:%d"), x.zone+1);
+                sprintf(s1, PSTR("BY:%d"), x.zone);
           zoneStatusMsg.append(s1);
         }
 
         if (x.tamper) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",TA:%d"), x.zone+1);                 
+                sprintf(s1, PSTR(",TA:%d"), x.zone);                 
             else
-                sprintf(s1, PSTR("TA:%d"), x.zone+1);
+                sprintf(s1, PSTR("TA:%d"), x.zone);
           zoneStatusMsg.append(s1);
         }
 
         if (x.batteryLow) {
             if (zoneStatusMsg !="") 
-                sprintf(s1, PSTR(",LB:%d"), x.zone+1);                 
+                sprintf(s1, PSTR(",LB:%d"), x.zone);                 
             else
-                sprintf(s1, PSTR("LB:%d"), x.zone+1);
+                sprintf(s1, PSTR("LB:%d"), x.zone);
           zoneStatusMsg.append(s1);
         }
       }
@@ -4010,7 +4008,7 @@ void DSCkeybushome::loadZone(int z) {
     ptr->set_object_id(ptr->object_id_static.c_str());
     ptr->set_type_id(ptr->type_id_static.c_str());
 
-//ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());
+ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());
     
    // bst->ptr->set_device_class("window");    
     ptr->set_publish_initial_state(true);    
