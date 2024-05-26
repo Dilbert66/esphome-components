@@ -723,7 +723,7 @@ void vistaECPHome::setup()  {
     void vistaECPHome::assignPartitionToZone(zoneType * zt) {
         for (int p=1;p<4;p++) {
             if (partitions[p-1]) {
-                zt->partition=p-1;
+                zt->partition=p;
                 break;
             }
             
@@ -766,7 +766,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
     std::smatch sm{}; 
     int z;
     zoneType * zt;  
-    uint8_t p=partition - 0x31; // set 0x31 - 0x34 to 0 - 3 range
+    uint8_t p=partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
     unsigned long time=millis();
     const std::regex re{ R"(((\d+)-(\d+))|(\d+))" };
     
@@ -1387,9 +1387,9 @@ void vistaECPHome::update()  {
 #if !defined(ESP32) or defined(__riscv) or !defined(USETASK)         
           vista.handle();
 #endif    
-           if (!x.active) continue;
-           
-           if (partitionStates[ x.partition].previousLightState.ready) {
+           if (!x.active || !x.partition) continue;
+        
+           if (partitionStates[ x.partition-1].previousLightState.ready) {
             if (x.open) {
               x.open=false;
               x.check=false;  
@@ -1399,11 +1399,11 @@ void vistaECPHome::update()  {
                
            }
            
-           if ( x.bypass && !partitionStates[ x.partition].previousLightState.bypass) {
+           if ( x.bypass && !partitionStates[ x.partition-1].previousLightState.bypass) {
              x.bypass=false;  
            } 
            
-           if ( x.alarm && !partitionStates[ x.partition].previousLightState.alarm) {
+           if ( x.alarm && !partitionStates[ x.partition-1].previousLightState.alarm) {
              x.alarm=false;  
            }             
             
