@@ -407,13 +407,11 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
      .enabled=false,
      .bypassed=false
        };
-  #if defined(ESPHOME_MQTT)
- // mqtt::MQTTClientComponent *mqttId;
-  #endif
 
   public:
   std::vector<zoneType> zoneStatus{};  
-  zoneType * getZone(byte z,bool createZone=false);  
+  zoneType * createZone(byte z);  
+  zoneType * getZone(byte z);  
   partitionType partitionStatus[dscPartitions];
   bool forceRefresh;
   std::string previousZoneStatusMsg,eventStatusMsg; 
@@ -435,6 +433,7 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   std::string topic,topic_prefix;
   #endif
   bool zoneActive(byte zone);
+  long int toInt(std::string s, int base); 
   
 #if defined(ARDUINO_MQTT)
 public:
@@ -465,9 +464,8 @@ public:
 
 private:
 
-  void loadSensors();
   void loadZones();
-  void loadZone(int z);
+  //void loadZone(int z);
   
   void processMenu(byte key, byte partition = -1) ;
 

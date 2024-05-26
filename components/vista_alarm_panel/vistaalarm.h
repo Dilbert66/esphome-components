@@ -195,8 +195,8 @@ class vistaECPHome {
   private:
     void processZoneList(uint8_t partition,uint8_t step, char * list,size_t len);
     void sendZoneRequest(uint8_t partition,uint8_t step);
-    void loadSensors();
-    void loadZone(int z,bool fetchPromptName=true);
+    void loadZones();
+  //  void loadZone(int z,bool fetchPromptName=true);
     bool zoneActive(uint32_t zone);
     int TTL = 30000;
     uint8_t debug=0;
@@ -346,7 +346,8 @@ std::vector<zoneType> extZones{};
 
 zoneType nz;
 
-zoneType * getZone(uint32_t z,bool createZone=false);
+zoneType * getZone(uint32_t z);
+zoneType * createZone(uint32_t z);
 
 serialType getRfSerialLookup(char * serialCode);
 

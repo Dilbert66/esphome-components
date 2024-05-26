@@ -146,88 +146,56 @@ bool vistaECPHome::zoneActive(uint32_t zone) {
   return false;
 
 }   
-/* 
+
 #if !defined(ARDUINO_MQTT)
-void vistaECPHome::loadSensors() {
-
-  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
-  for (auto *obj : bs ) {
-#if defined(USE_CUSTOM_ID)      
+void vistaECPHome::loadZones() {
+    
+    //std::sort(bMap.begin(), bMap.end(), [](binary_sensor::BinarySensor * a, binary_sensor::BinarySensor * b){ return a->get_type_id() < b->get_type_id(); });
+    
+    for (auto *obj : bMap ) {
+    
     std::string id=obj->get_type_id();
-    if (id!="") {
-        auto st=new binarySensorType();
-              st->ptr=obj;
-              st->type_id=id;
-              bMap.push_back(st);
-    } else 
-#endif
-   {
-    std::string name=obj->get_name();
-    const std::regex e("\\(\\s*(.+)\\s*\\)");
+    const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
-    if (std::regex_search(name,m,e)) {
-        std::string match=m[1];
-        auto st=new binarySensorType();
-        st->ptr=obj;
-        st->type_id=match;
-        bMap.push_back(st);
-    }   
-  }
- }
- std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
- for (auto *obj : ts ) {
-#if defined(USE_CUSTOM_ID)         
-   std::string id=obj->get_type_id();
-    if (id!="") {
-        auto st=new textSensorType();
-        st->ptr=obj;
-        st->type_id=id;
-        tMap.push_back(st);
+    if (std::regex_search(id,m,e)) {
+        int z = toInt(m[1],10);        
+        createZone(z);
     }
-    else
-#endif        
-   {
-    std::string name=obj->get_name();
-    const std::regex e("\\(\\s*(.+)\\s*\\)");
+ }
+  //std::sort(tMap.begin(), tMap.end(), [](text_sensor::TextSensor * a, text_sensor::TextSensor * b){ return a->get_type_id() < b->get_type_id(); }) ;
+  
+ for (auto *obj : tMap ) {
+       
+    std::string id=obj->get_type_id();
+    const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
-    if (std::regex_search(name,m,e)) {
-       std::string match=m[1];
-        auto st=new textSensorType();
-        st->ptr=obj;
-        st->type_id=match;
-        tMap.push_back(st);       
+    if (std::regex_search(id,m,e)) {
+        int z = toInt(m[1],10);        
+        createZone(z);
     }
-  }
-
  }
+ 
+ 
 }
 #endif
-*/
-vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z,bool createZone) {
+vistaECPHome::zoneType * vistaECPHome::createZone(uint32_t z) {
+
+     zoneType n = zonetype_INIT; 
+     
+     n.zone=z;
+     n.active=true;
+     
+     ESP_LOGD(TAG,"adding zone %d",z);
+     extZones.push_back(n);
+     return &extZones.back();     
+}
+
+vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
 
      auto it = std::find_if(extZones.begin(), extZones.end(),  [&z](zoneType& f){ return f.zone == z; } );
      if (it != extZones.end()) return &(*it);
-     if (!createZone || !zoneActive(z))  return &zonetype_INIT;
-     zoneType n; 
-     n.zone=z;
-     n.time=0;
-     n.alarm=false;
-     n.open=false;
-     n.check=false;
-     n.fire=false;
-     n.trouble=false;
-     n.panic=false;
-     n.bypass=false;
-     n.lowbat=false;
-     n.partition=0;
-#if defined(AUTOPOPULATE)
-    // if (createZone)
-         //   loadZone(z);
-#endif      
-     n.active=zoneActive(z);
-     ESP_LOGD(TAG,"adding zone %d,%d",z,createZone);
-     extZones.push_back(n);
-     return &extZones.back();
+     return &zonetype_INIT;
+
 }
 
 vistaECPHome::serialType vistaECPHome::getRfSerialLookup(char * serialCode) { 
@@ -364,9 +332,9 @@ void vistaECPHome::setup()  {
 #if !defined(ARDUINO_MQTT)     
       set_update_interval(8); //set looptime to 8ms 
 #if !defined(ARDUINO_MQTT)      
-   //   loadSensors();
   bMap =  App.get_binary_sensors(); 
-  tMap = App.get_text_sensors();    
+  tMap = App.get_text_sensors();   
+  loadZones();
 #endif      
 #endif     
     
@@ -413,7 +381,6 @@ void vistaECPHome::setup()  {
       if (zoneStatusChangeBinaryCallback != NULL) {
         for (int x = 1; x <= maxZones; x++) {
             yield();
-            //loadZone(x,false); 
             zoneStatusChangeBinaryCallback(x,false);
             zoneStatusChangeCallback(x,"C");
         }
@@ -597,7 +564,7 @@ void vistaECPHome::setup()  {
    const std::regex e("[a-zA-Z]+\\s+([0-9]+)\\s+(.*?)\\s*$");
    std::smatch m;
    if (std::regex_search(p,m,e)) {
-     int z =vistaECPHome::toInt(m[1],10);
+     int z = toInt(m[1],10);
      vistaCmd.statusFlags.zone=z;
      ESP_LOGD(TAG,"zone match=%d",z);
      return z;
@@ -828,7 +795,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
             z=std::stoi(sm[0]);
             
                if (z) {
-                zt=getZone(z,true);
+                zt=getZone(z);
                 if (step==1) 
                   zt->open=true;
                  else
@@ -1198,7 +1165,7 @@ void vistaECPHome::update()  {
           fireStatus.zone = vistaCmd.statusFlags.zone;
           fireStatus.time = millis();
           fireStatus.state = true;
-          getZone(vistaCmd.statusFlags.zone,true)->fire=true;  
+          getZone(vistaCmd.statusFlags.zone)->fire=true;  
          //ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);          
 
         } else
@@ -1206,7 +1173,7 @@ void vistaECPHome::update()  {
         if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.alarm) {
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
         //if (promptContains(p1,ALARM,tz) && !vistaCmd.statusFlags.systemFlag) {
-            zoneType * zt=getZone(vistaCmd.statusFlags.zone,true);             
+            zoneType * zt=getZone(vistaCmd.statusFlags.zone);             
             if (!zt->alarm && zt->active) {
              zt->alarm=true;
              zoneStatusUpdate(zt);
@@ -1221,7 +1188,7 @@ void vistaECPHome::update()  {
         //device check status 
          if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay ) && vistaCmd.statusFlags.check) {
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
-             zoneType * zt=getZone(vistaCmd.statusFlags.zone,true);
+             zoneType * zt=getZone(vistaCmd.statusFlags.zone);
              if (!zt->check && zt->active) {
                 zt->check=true;
                 zt->open=false;
@@ -1240,7 +1207,7 @@ void vistaECPHome::update()  {
         // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
 
-             zoneType * zt=getZone(vistaCmd.statusFlags.zone,true);            
+             zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
             if (!zt->open && zt->active) {
                 zt->open=true;  
                 zoneStatusUpdate(zt);
@@ -1256,7 +1223,7 @@ void vistaECPHome::update()  {
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
        // if (promptContains(p1,BYPAS,tz) && !vistaCmd.statusFlags.systemFlag) {
         
-           zoneType * zt=getZone(vistaCmd.statusFlags.zone,true);            
+           zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
           if (!zt->bypass && zt->active) {
             zt->bypass=true;              
             zoneStatusUpdate(zt);

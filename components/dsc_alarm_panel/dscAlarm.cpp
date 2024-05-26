@@ -135,31 +135,25 @@ bool DSCkeybushome::zoneActive(byte zone) {
 
 }
 
-  DSCkeybushome::zoneType * DSCkeybushome::getZone(byte z,bool createZone) {
+DSCkeybushome::zoneType * DSCkeybushome::createZone(byte z) {
+
+     zoneType n = zonetype_INIT; 
+     
+     n.zone=z;
+     n.enabled=true;
+     
+     ESP_LOGD(TAG,"adding zone %d",z);
+     zoneStatus.push_back(n);
+     return &zoneStatus.back();     
+}
+
+DSCkeybushome::zoneType * DSCkeybushome::getZone(byte z) {
 
      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(),  [&z](zoneType& f){ return f.zone == z+1; } );
      if (it != zoneStatus.end()) return &(*it);
-     if (!createZone || !zoneActive(z+1))  return &zonetype_INIT;
-     
-     zoneType n; 
-     n.zone=z+1;
-     n.alarm=false;
-     n.open=false;
-     n.tamper=false;
-     n.bypassed=false;
-     n.batteryLow=false;
-     n.enabled=zoneActive(z+1);     
-     n.partition=0;
-     ESP_LOGD(TAG,"added zone %d,%d",z+1,createZone);     
-#if defined(AUTOPOPULATE)
-     //if (createZone)
-         //   loadZone(z+1);
-#endif      
-
-     zoneStatus.push_back(n);
-     return &zoneStatus.back();
+     return &zonetype_INIT;
 }
-  
+
 #if defined(ARDUINO_MQTT)
 public:
 void DSCkeybushome::begin() {
@@ -171,7 +165,8 @@ void DSCkeybushome::begin() {
       Serial.begin(115200);
 #if !defined(ARDUINO_MQTT)    
   bMap =  App.get_binary_sensors(); 
-  tMap = App.get_text_sensors();      
+  tMap = App.get_text_sensors();    
+  loadZones();
 #endif
 
    
@@ -817,7 +812,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
           zone = (zoneBit + startZone) + ((panelByte - inputByte) * 8) - 1;
           if (zone >= maxZones) continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-            getZone(zone,true)->partition = partition;               
+            getZone(zone)->partition = partition;               
             getZone(zone)->enabled = true;
           } else if (getZone(zone)->partition==partition) {
                 getZone(zone)->enabled = false;
@@ -842,7 +837,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
           zone = (zoneBit + startZone) + ((panelByte - inputByte) * 8) - 1;
           if (zone >= maxZones) continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-            getZone(zone,true)->partition = partition;               
+            getZone(zone)->partition = partition;               
             getZone(zone)->enabled = true;
           } else if (getZone(zone)->partition==partition) {
                 getZone(zone)->enabled = false;
@@ -1477,7 +1472,7 @@ void DSCkeybushome::update()  {
               zone = zoneBit + (zoneGroup * 8);
               if (zone >= maxZones) continue;
               if (bitRead(dsc.openZones[zoneGroup], zoneBit)) {
-                getZone(zone,true)->open = true;
+                getZone(zone)->open = true;
                 zoneStatusChangeCallback(zone+1,true);                
               } else {
                 getZone(zone)->open = false;
@@ -1628,7 +1623,7 @@ void DSCkeybushome::update()  {
             zone = zoneBit + (zoneByte * 8);
             if (zone >= maxZones) continue;
             if (!bitRead(dsc.moduleData[zoneByte + 2], x)) { // Checks an individual zone battery status flag for low
-              getZone(zone,true)->batteryLow = true;
+              getZone(zone)->batteryLow = true;
             } else if (!bitRead(dsc.moduleData[zoneByte + 6], x)) { // Checks an individual zone battery status flag for restore
               getZone(zone)->batteryLow = false;
             }
@@ -2458,7 +2453,7 @@ void DSCkeybushome::update()  {
         zone = zoneBit + ((panelByte - 4) * 8);
         if (zone >= maxZones) continue;
         if (bitRead(dsc.panelData[panelByte], zoneBit)) {
-          getZone(zone,true)->batteryLow = true;
+          getZone(zone)->batteryLow = true;
         } else
           getZone(zone)->batteryLow = false;
       }
@@ -2878,7 +2873,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage,PSTR("Zone alarm:"));
       byte zone = dsc.panelData[panelByte] - 8;
       if (zone > 0 && zone < maxZones)
-       getZone(zone - 1,true)->alarm = true;
+       getZone(zone - 1)->alarm = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -2902,7 +2897,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone tamper:"));
       byte zone = dsc.panelData[panelByte] - 0x55;
       if (zone > 0 && zone < maxZones)
-        getZone(zone-1,true)->tamper = true;
+        getZone(zone-1)->tamper = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -3056,7 +3051,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
     if (dsc.panelData[panelByte] >= 0x4C && dsc.panelData[panelByte] <= 0x6B) {
       lcdLine1 = F("Zone bat");
       strcpy_P(lcdMessage, PSTR("low:"));
-      getZone(dsc.panelData[panelByte] - 74,true)->batteryLow = true;
+      getZone(dsc.panelData[panelByte] - 74)->batteryLow = true;
       itoa(dsc.panelData[panelByte] - 75, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine2 = lcdMessage;
@@ -3489,7 +3484,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone alarm: "));
       byte zone = dsc.panelData[panelByte] + 33;
       if (zone > 0 && zone < maxZones)
-        getZone(zone-1,true)->alarm = true;
+        getZone(zone-1)->alarm = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -3509,7 +3504,7 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       strcpy_P(lcdMessage, PSTR("Zone tamper:"));
       byte zone = dsc.panelData[panelByte] - 31;
       if (zone > 0 && zone < maxZones)
-        getZone(zone-1,true)->tamper = true;
+        getZone(zone-1)->tamper = true;
       itoa(zone, charBuffer, 10);
       strcat(lcdMessage, charBuffer);
       lcdLine1 = lcdMessage;
@@ -3673,62 +3668,43 @@ void DSCkeybushome::processProgramZones(byte startByte,byte zoneStart ) {
       line2DisplayCallback((lcdLine1 + " " +lcdLine2).c_str(), partition);
 
   }
-  /*
-#if !defined(ARDUINO_MQTT)
-void DSCkeybushome::loadSensors() {
-  std::vector<binary_sensor::BinarySensor *> bs = App.get_binary_sensors();
-  for (auto *obj : bs ) {
-#if defined(USE_CUSTOM_ID)      
-    std::string id=obj->get_type_id();
-    if (id!="") {
-        auto st=new binarySensorType();
-              st->ptr=obj;
-              st->type_id=id;
-              bMap.push_back(st);     
-    } else 
-#endif
-    {
-      std::string name=obj->get_name();
-      const std::regex e("\\(\\s*(.+)\\s*\\)");
-      std::smatch m;
-      if (std::regex_search(name,m,e)) {
-        std::string match=m[1];
-        auto st=new binarySensorType();
-        st->ptr=obj;
-        st->type_id=match;
-        bMap.push_back(st); 
-      }
-    }
-
-  }
- std::vector<text_sensor::TextSensor *> ts = App.get_text_sensors();
- for (auto *obj : ts ) {
-#if defined(USE_CUSTOM_ID)         
-   std::string id=obj->get_type_id();
-    if (id!="") {
-        auto st=new textSensorType();
-        st->ptr=obj;
-        st->type_id=id;
-        tMap.push_back(st);
-    } else 
-#endif 
-    {
-      std::string name=obj->get_name();
-      const std::regex e("\\(\\s*(.+)\\s*\\)");
-      std::smatch m;
-      if (std::regex_search(name,m,e)) {
-        std::string match=m[1];
-        auto st=new textSensorType();
-        st->ptr=obj;
-        st->type_id=match;
-        tMap.push_back(st); 
-    }
-}
+long int DSCkeybushome::toInt(std::string s, int base) {
+      if (s.empty() || std::isspace(s[0])) return 0;
+      char * p;
+      long int li = strtol(s.c_str(), & p, base);
+      return li;
+} 
   
+#if !defined(ARDUINO_MQTT)
+void DSCkeybushome::loadZones() {
+    //std::sort(bMap.begin(), bMap.end(), [](binary_sensor::BinarySensor * a, binary_sensor::BinarySensor * b){ return a->get_type_id() < b->get_type_id(); });
+    
+    for (auto *obj : bMap ) {
+    
+    std::string id=obj->get_type_id();
+    const std::regex e("^[zZ]([0-9]+)$");
+    std::smatch m;
+    if (std::regex_search(id,m,e)) {
+        int z = toInt(m[1],10);        
+        createZone(z);
+    }
+ }
+ 
+ //std::sort(tMap.begin(), tMap.end(), [](text_sensor::TextSensor * a, text_sensor::TextSensor * b){ return a->get_type_id() < b->get_type_id(); } );
+ 
+ for (auto *obj : tMap ) {
+       
+    std::string id=obj->get_type_id();
+    const std::regex e("^[zZ]([0-9]+)$");
+    std::smatch m;
+    if (std::regex_search(id,m,e)) {
+        int z = toInt(m[1],10);        
+        createZone(z);
+    }
  }
 }
 #endif
-*/
+
   void DSCkeybushome::printPanelStatus16(byte panelByte, byte partition, bool showEvent ) {
     bool decoded = true;
      String lcdLine1;
