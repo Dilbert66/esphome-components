@@ -1180,7 +1180,7 @@ void vistaECPHome::update()  {
          
         //zone fault status 
        // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm  || vistaCmd.statusFlags.beeps) ) { 
+         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm  || vistaCmd.statusFlags.beeps==1) ) { 
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
         // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
@@ -1198,7 +1198,7 @@ void vistaECPHome::update()  {
         } else
         
         //zone bypass status
-         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm ) && vistaCmd.statusFlags.bypass) {  
+         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm ) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps==1) {  
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
        // if (promptContains(p1,BYPAS,tz) && !vistaCmd.statusFlags.systemFlag) {
         
