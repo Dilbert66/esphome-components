@@ -1387,7 +1387,7 @@ void vistaECPHome::update()  {
              x.alarm=false;  
            }             
             
-          if ( ( x.open || x.check) && (millis() -  x.time) > TTL ) {
+          if (!x.bypass && ( x.open || x.check) && (millis() -  x.time) > TTL ) {
              x.open=false;
              x.check=false; 
              zoneStatusUpdate(&x);
