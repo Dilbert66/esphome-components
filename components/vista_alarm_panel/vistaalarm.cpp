@@ -1206,7 +1206,6 @@ void vistaECPHome::update()  {
            
           if (!zt->bypass && zt->active) {
             zt->bypass=true;
-            zt->open=false;
             zoneStatusUpdate(zt);
             assignPartitionToZone(zt);             
           }
@@ -1388,7 +1387,7 @@ void vistaECPHome::update()  {
              x.alarm=false;  
            }             
             
-          if (! x.bypass && ( x.open || x.check) && (millis() -  x.time) > TTL ) {
+          if ( ( x.open || x.check) && (millis() -  x.time) > TTL ) {
              x.open=false;
              x.check=false; 
              zoneStatusUpdate(&x);
