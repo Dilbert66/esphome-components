@@ -197,7 +197,7 @@ class vistaECPHome {
     void sendZoneRequest(uint8_t partition,uint8_t step);
     void loadZones();
   //  void loadZone(int z,bool fetchPromptName=true);
-    bool zoneActive(uint32_t zone);
+    bool zoneActive(uint16_t zone);
     int TTL = 30000;
     uint8_t debug=0;
     char keypadAddr1=0;
@@ -221,17 +221,17 @@ class vistaECPHome {
     char * partitionKeypads;
     int defaultPartition=DEFAULTPARTITION;    
     char expanderAddr[9]={};
-    int zone;
-    bool sent;
+    //uint16_t zone;
+   // bool sent;
 
     uint8_t * partitions;
     std::string topic_prefix,topic;
    
 
     struct zoneType {
-      uint8_t zone;
+      uint16_t zone;
       unsigned long time;
-      uint8_t partition;
+      uint8_t partition:7;
       uint8_t open:1;
       uint8_t bypass:1;
       uint8_t alarm:1;
@@ -273,14 +273,14 @@ class vistaECPHome {
     struct alarmStatusType {
       unsigned long time;
       bool state;
-      int zone;
+      uint16_t zone;
       char prompt[17];
     };
 
     struct lrrType {
       int code;
       uint8_t qual;
-      int zone;
+      uint16_t zone;
       uint8_t user;
     };
 
@@ -333,7 +333,7 @@ private:
     bool firstRun;
     
     struct serialType {
-       int zone;
+       uint16_t zone;
        int mask;
     };
     struct cmdQueueItem vistaCmd;    
@@ -346,8 +346,8 @@ std::vector<zoneType> extZones{};
 
 zoneType nz;
 
-zoneType * getZone(uint32_t z);
-zoneType * createZone(uint32_t z);
+zoneType * getZone(uint16_t z);
+zoneType * createZone(uint16_t z);
 
 serialType getRfSerialLookup(char * serialCode);
 

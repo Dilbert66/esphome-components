@@ -37,27 +37,7 @@ void disconnectVista() {
 #include "esphome.h"
 namespace esphome {
 namespace alarm_panel {
-/*
- struct binarySensorType {
-   binary_sensor::BinarySensor* ptr;   
-#if defined(ESPHOME_MQTT)   
-   mqtt::MQTTBinarySensorComponent* mqptr;  
-#endif   
-   std::string name;
-   std::string object_id;
-   std::string type_id;
-} ;
 
- struct textSensorType {
-   text_sensor::TextSensor* ptr;   
-#if defined(ESPHOME_MQTT)   
-  // mqtt::MQTTTextSensor* mqptr;  
-#endif   
-   //std::string name;
-  // std::string object_id;
-   std::string type_id;
-};
-*/
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
 
@@ -127,14 +107,14 @@ vista.stop();
       }
       
       if (zoneStatusChangeBinaryCallback != NULL ) {
-        if (zone <= maxZones) 
+        if (zt->zone <= maxZones) 
               zoneStatusChangeBinaryCallback(zt->zone, zt->open ||  zt->check );
          else
             zoneStatusChangeBinaryCallback(zt->zone,zt->check || zt->open || zt->alarm || zt->trouble);
       }
     }
     
-bool vistaECPHome::zoneActive(uint32_t zone) {
+bool vistaECPHome::zoneActive(uint16_t zone) {
 
   std::string str = "z" + std::to_string(zone) ;
   auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
@@ -162,8 +142,7 @@ void vistaECPHome::loadZones() {
         createZone(z);
     }
  }
-  //std::sort(tMap.begin(), tMap.end(), [](text_sensor::TextSensor * a, text_sensor::TextSensor * b){ return a->get_type_id() < b->get_type_id(); }) ;
-  
+
  for (auto *obj : tMap ) {
        
     std::string id=obj->get_type_id();
@@ -178,7 +157,7 @@ void vistaECPHome::loadZones() {
  
 }
 #endif
-vistaECPHome::zoneType * vistaECPHome::createZone(uint32_t z) {
+vistaECPHome::zoneType * vistaECPHome::createZone(uint16_t z) {
 
      zoneType n = zonetype_INIT; 
      
@@ -190,7 +169,7 @@ vistaECPHome::zoneType * vistaECPHome::createZone(uint32_t z) {
      return &extZones.back();     
 }
 
-vistaECPHome::zoneType * vistaECPHome::getZone(uint32_t z) {
+vistaECPHome::zoneType * vistaECPHome::getZone(uint16_t z) {
 
      auto it = std::find_if(extZones.begin(), extZones.end(),  [&z](zoneType& f){ return f.zone == z; } );
      if (it != extZones.end()) return &(*it);
@@ -411,11 +390,10 @@ void vistaECPHome::setup()  {
     "cmdQueueTask", //Name of the task
     3000, //Stack size in words
     (void * ) this, //Task input parameter
-    10, //Priority of the task
-    &xHandle, //Task handle.
-    ASYNC_CORE //Core where the task should run
+    20, //Priority of the task
+    &xHandle //Task handle.
+    ,ASYNC_CORE //Core where the task should run
   );  
-   
    
 #endif      
       
@@ -820,9 +798,9 @@ void vistaECPHome::cmdQueueTask(void * args) {
   for (;;) { 
         
         if (!vista.keybusConnected || !vista.handle() )
-              vTaskDelay(5);
-       // vTaskDelay(0);
-        yield();
+              vTaskDelay(4);
+        vTaskDelay(1);
+         esp_task_wdt_reset();
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
          #if not defined(ARDUINO_MQTT)             
@@ -1202,7 +1180,7 @@ void vistaECPHome::update()  {
          
         //zone fault status 
        // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.bypass)  ) { 
+         if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag  || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm  || vistaCmd.statusFlags.beeps) ) { 
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
         // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
@@ -1210,6 +1188,7 @@ void vistaECPHome::update()  {
              zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
             if (!zt->open && zt->active) {
                 zt->open=true;  
+                zt->bypass=false;
                 zoneStatusUpdate(zt);
                 assignPartitionToZone(zt);                 
             }
@@ -1223,9 +1202,11 @@ void vistaECPHome::update()  {
          if (vistaCmd.cbuf[5] > 0x90) getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
        // if (promptContains(p1,BYPAS,tz) && !vistaCmd.statusFlags.systemFlag) {
         
-           zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
+           zoneType * zt=getZone(vistaCmd.statusFlags.zone);
+           
           if (!zt->bypass && zt->active) {
-            zt->bypass=true;              
+            zt->bypass=true;
+            zt->open=false;
             zoneStatusUpdate(zt);
             assignPartitionToZone(zt);             
           }
