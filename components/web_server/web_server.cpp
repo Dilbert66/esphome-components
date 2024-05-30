@@ -1,5 +1,4 @@
 #include "web_server.h"
-
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/network/util.h"
 #include "esphome/core/application.h"
@@ -11,6 +10,7 @@
 
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
+
 #endif
 #if defined(USE_VISTA_PANEL)
 #include "esphome/components/vista_alarm_panel/vistaalarm.h"
@@ -35,10 +35,22 @@
 #include <Update.h>
 #endif
 
+#if defined(USE_TEMPLATE_ALARM_SENSORS)
+#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+#include "esphome/components/template_alarm/text_sensor/template_text_sensor.h"
+#endif
+
+
 namespace esphome {
 namespace web_server {
 
-
+#if defined(USE_TEMPLATE_ALARM_SENSORS)
+typedef template_alarm_::TemplateBinarySensor bs;
+typedef template_alarm_::TemplateTextSensor ts;
+#else
+typedef binary_sensor::BinarySensor bs;
+typedef text_sensor::TextSensor ts;
+#endif
 
 static const char *const TAG = "web_server";
 void * webServerPtr;
@@ -49,6 +61,9 @@ static const char *const HEADER_PNA_ID = "Private-Network-Access-ID";
 static const char *const HEADER_CORS_REQ_PNA = "Access-Control-Request-Private-Network";
 static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
+
+
+
 
 #if USE_WEBSERVER_VERSION == 1
 /*
@@ -629,18 +644,18 @@ void WebServer::handle_text_sensor_request(mg_connection *c,JsonObject doc) {
    //mg_http_reply(c,404,"","");
    ws_reply(c,"",false);
 }
-#if defined(USE_CUSTOM_ID)
+#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
 std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std::string &value,
                                         JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_icon_state_value(root, obj, "text_sensor-" + obj->get_object_id() + "-" + obj->get_type_id(), value, value, start_config);
+    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id() + "-" + ((ts*) obj)->get_type_id(), value, value, start_config);
   });
 }
 #else
 std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std::string &value,
                                         JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_icon_state_value(root, obj, "text_sensor-" + obj->get_object_id() + "-" + obj->get_object_id(), value, value, start_config);
+    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id() + "-" + obj->get_object_id(), value, value, start_config);
   });
 }    
 
@@ -724,10 +739,10 @@ void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj, bool s
   //this->events_.send(this->binary_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
 this->push(STATE,this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());   
 }
-#if defined(USE_CUSTOM_ID)
+#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
 std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id() + "-" + obj->get_type_id(), value ? "ON" : "OFF", value, start_config);
+    set_json_state_value(root, obj, "binary_sensor-" +  obj->get_object_id() + "-" + ((bs*) obj)->get_type_id(), value ? "ON" : "OFF", value, start_config);
   
   });
 }

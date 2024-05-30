@@ -470,7 +470,7 @@ def binary_sensor_schema(
 
 async def setup_binary_sensor_core_(var, config):
     await setup_entity(var, config)
-     
+    
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
     elif config[CONF_ID] and config[CONF_ID].is_manual:
@@ -481,6 +481,8 @@ async def setup_binary_sensor_core_(var, config):
         cg.add(var.set_device_class(device_class))
     if publish_initial_state := config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(publish_initial_state))
+    if not config.get(CONF_PUBLISH_INITIAL_STATE):
+        cg.add(var.set_publish_initial_state(True))        
     if inverted := config.get(CONF_INVERTED):
         cg.add(var.set_inverted(inverted))
     if filters_config := config.get(CONF_FILTERS):

@@ -59,9 +59,9 @@ class BinarySensor : public EntityBase, public EntityBase_DeviceClass {
 
   /// The current reported state of the binary sensor.
   bool state;
- // std::string type_id_static;
-  //std::string name_static;
-  //std::string object_id_static;
+ std::string type_id_static{};
+  std::string name_static{};
+  std::string object_id_static{};
 
 
   void set_type_id( const char *id) {this->type_id_str_=id;}

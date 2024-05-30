@@ -29,34 +29,22 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
 #if !defined(ARDUINO_MQTT)
-/*
-struct binarySensorType {
-   binary_sensor::BinarySensor* ptr;   
-#if defined(ESPHOME_MQTT)   
-   mqtt::MQTTBinarySensorComponent* mqptr;  
-#endif   
-   std::string name;
-   std::string object_id;
-   std::string type_id;
-} ;
 
-struct textSensorType {
-   text_sensor::TextSensor* ptr;   
-#if defined(ESPHOME_MQTT)   
-  // mqtt::MQTTTextSensor* mqptr; 
-#endif   
-  // std::string name;
-  // std::string object_id;
-   std::string type_id;
-} ;
-*/
+#if defined(USE_TEMPLATE_ALARM_SENSORS)
+typedef template_alarm_::TemplateBinarySensor bs;
+typedef template_alarm_::TemplateTextSensor ts;
+#else
+typedef binary_sensor::BinarySensor bs;
+typedef text_sensor::TextSensor ts;
+#endif
+
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
 
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
      if (it != bMap.end()) (*it)->publish_state(open);
 }
     
@@ -64,7 +52,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return ((ts*)f)->get_type_id() == str; } );
      if (it != tMap.end()) (*it)->publish_state(*text);  
   
 }
@@ -88,7 +76,7 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
      if (it != bMap.end()) return (*it)->get_name();  
     return "";
 }
@@ -125,10 +113,10 @@ void DSCkeybushome::set_panel_time() {
 bool DSCkeybushome::zoneActive(byte zone) {
 
   std::string str = "z" + std::to_string(zone) ;
-  auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+  auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
   if (itb != bMap.end()) return true;
   
-  auto itt = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor* f){ return f->get_type_id() == str; } );
+  auto itt = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor* f){ return ((ts*)f)->get_type_id() == str; } );
   if (itt != tMap.end()) return true; 
   
   return false;
@@ -148,7 +136,7 @@ DSCkeybushome::zoneType * DSCkeybushome::createZone(byte z) {
 }
 
 DSCkeybushome::zoneType * DSCkeybushome::getZone(byte z) {
-
+      //zone=0 to maxZones-1
      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(),  [&z](zoneType& f){ return f.zone == z+1; } );
      if (it != zoneStatus.end()) return &(*it);
      return &zonetype_INIT;
@@ -3681,7 +3669,7 @@ void DSCkeybushome::loadZones() {
     
     for (auto *obj : bMap ) {
     
-    std::string id=obj->get_type_id();
+    std::string id=((bs*)obj)->get_type_id();
     const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
     if (std::regex_search(id,m,e)) {
@@ -3694,7 +3682,7 @@ void DSCkeybushome::loadZones() {
  
  for (auto *obj : tMap ) {
        
-    std::string id=obj->get_type_id();
+    std::string id=((ts*)obj)->get_type_id();
     const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
     if (std::regex_search(id,m,e)) {

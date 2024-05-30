@@ -37,9 +37,20 @@ void disconnectVista() {
 #include "esphome.h"
 namespace esphome {
 namespace alarm_panel {
+    
+#if defined(USE_TEMPLATE_ALARM_SENSORS)
+typedef template_alarm_::TemplateBinarySensor bs;
+typedef template_alarm_::TemplateTextSensor ts;
+#else
+typedef binary_sensor::BinarySensor bs;
+typedef text_sensor::TextSensor ts;
+
+#endif
+
 
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
+
 
 static const char *const TAG = "vista_alarm"; 
  
@@ -51,7 +62,7 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
      if (it != bMap.end()) (*it)->publish_state(open);
 }
     
@@ -59,7 +70,7 @@ void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return ((ts*)f)->get_type_id() == str; } );
      if (it != tMap.end()) (*it)->publish_state(*text);  
   
 }
@@ -113,7 +124,7 @@ vista.stop();
             zoneStatusChangeBinaryCallback(zt->zone,zt->check || zt->open || zt->alarm || zt->trouble);
       }
     }
-    
+ /*   
 bool vistaECPHome::zoneActive(uint16_t zone) {
 
   std::string str = "z" + std::to_string(zone) ;
@@ -126,28 +137,24 @@ bool vistaECPHome::zoneActive(uint16_t zone) {
   return false;
 
 }   
+*/
 
 #if !defined(ARDUINO_MQTT)
 void vistaECPHome::loadZones() {
     
     //std::sort(bMap.begin(), bMap.end(), [](binary_sensor::BinarySensor * a, binary_sensor::BinarySensor * b){ return a->get_type_id() < b->get_type_id(); });
-    
-    for (auto *obj : bMap ) {
-    
-    std::string id=obj->get_type_id();
     const std::regex e("^[zZ]([0-9]+)$");
-    std::smatch m;
-    if (std::regex_search(id,m,e)) {
+    std::smatch m;    
+    for (auto *obj : bMap ) {
+      std::string id=((bs*)obj)->get_type_id();
+      if (std::regex_search(id,m,e)) {
         int z = toInt(m[1],10);        
         createZone(z);
+      }
     }
- }
-
+ 
  for (auto *obj : tMap ) {
-       
-    std::string id=obj->get_type_id();
-    const std::regex e("^[zZ]([0-9]+)$");
-    std::smatch m;
+    std::string id=((ts*)obj)->get_type_id();
     if (std::regex_search(id,m,e)) {
         int z = toInt(m[1],10);        
         createZone(z);
@@ -312,7 +319,7 @@ void vistaECPHome::setup()  {
       set_update_interval(8); //set looptime to 8ms 
 #if !defined(ARDUINO_MQTT)      
   bMap =  App.get_binary_sensors(); 
-  tMap = App.get_text_sensors();   
+  tMap =  App.get_text_sensors();   
   loadZones();
 #endif      
 #endif     
@@ -574,7 +581,7 @@ void vistaECPHome::setup()  {
 
   }
 
-   
+  /* 
     std::string vistaECPHome::getF7Lookup(char cbuf[]) {
 
         std::string s="{";
@@ -587,7 +594,7 @@ void vistaECPHome::setup()  {
         return s;
 
     }  
-
+*/
     void vistaECPHome::set_alarm_state(std::string const& state, std::string code,int partition) {
 
       if (code.length() != 4 || !isInt(code, 10)) code = accessCode; // ensure we get a numeric 4 digit code
@@ -683,7 +690,7 @@ void vistaECPHome::setup()  {
       }
 
     }
-    
+ /*   
     void vistaECPHome::translatePrompt(char * cbuf) {
         
         for (int x=0;x<32;x++) {
@@ -697,7 +704,7 @@ void vistaECPHome::setup()  {
             
         }
     }
-
+*/
     void vistaECPHome::assignPartitionToZone(zoneType * zt) {
         for (int p=1;p<4;p++) {
             if (partitions[p-1]) {
@@ -751,7 +758,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
           //clear bypass/open zones for partition p
        auto it = std::find_if(extZones.begin(), extZones.end(),  [&p,&time](zoneType& f){ return (f.partition == p && f.active ); } );
        while (it != extZones.end()) {
-             if (step==1)
+             if (step==1 )
                 it->open=false;
                else
                  it->bypass=false;

@@ -196,8 +196,7 @@ class vistaECPHome {
     void processZoneList(uint8_t partition,uint8_t step, char * list,size_t len);
     void sendZoneRequest(uint8_t partition,uint8_t step);
     void loadZones();
-  //  void loadZone(int z,bool fetchPromptName=true);
-    bool zoneActive(uint16_t zone);
+   // bool zoneActive(uint16_t zone);
     int TTL = 30000;
     uint8_t debug=0;
     char keypadAddr1=0;
@@ -410,13 +409,13 @@ private:
   void printPacket(const char * label, char cbuf[], int len) ;
 
    
-    std::string getF7Lookup(char cbuf[]) ;
+  //  std::string getF7Lookup(char cbuf[]) ;
 public:
     void set_alarm_state(std::string const& state, std::string code = "",int partition=DEFAULTPARTITION) ;
 private:
     int getZoneFromChannel(uint8_t deviceAddress, uint8_t channel) ;
     
-    void translatePrompt(char * cbuf) ;
+ //   void translatePrompt(char * cbuf) ;
 
     void getPartitionsFromMask() ;
 
