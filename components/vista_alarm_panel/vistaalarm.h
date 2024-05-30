@@ -83,6 +83,18 @@ enum sysState {
   sarmed
 };
 
+enum reqStates {
+    sidle,
+  sopenzones,
+  sbypasszones,  
+  szonelist,
+  sdevicelist,
+  spartitionlist,
+  spartitionid,
+  sicode
+ 
+};
+
 
 #if !defined(ARDUINO_MQTT)
 extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
@@ -193,8 +205,9 @@ class vistaECPHome {
     void stop();
 
   private:
-    void processZoneList(uint8_t partition,uint8_t step, char * list,size_t len);
-    void sendZoneRequest(uint8_t partition,uint8_t step);
+    char * parseAUIMessage(char * cmd,reqStates request);
+    void processZoneList(uint8_t partition,reqStates request, char * list);
+    void sendZoneRequest(uint8_t partition,reqStates request);
     void loadZones();
    // bool zoneActive(uint16_t zone);
     int TTL = 30000;

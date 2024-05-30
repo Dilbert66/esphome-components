@@ -50,7 +50,7 @@ typedef text_sensor::TextSensor ts;
 
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
-
+const char zoneRequest_INIT[]={00,0x68,0x62,0x31,0x45,0x49,0xF5,0x31,0xFB,0x45,0x4A,0xF5,0x32,0xFB,0x45,0x43,0xF5,0x31,0xFB,0x43,0x6C};
 
 static const char *const TAG = "vista_alarm"; 
  
@@ -690,21 +690,7 @@ void vistaECPHome::setup()  {
       }
 
     }
- /*   
-    void vistaECPHome::translatePrompt(char * cbuf) {
-        
-        for (int x=0;x<32;x++) {
-          if (cbuf[x] > 127)
-            switch (cbuf[x]) {
-                //case 0x88: cbuf[x]='U';break;
-               // case 0x8b: cbuf[x]='S';break;
-                default: cbuf[x]='?';
-             }
-            
-            
-        }
-    }
-*/
+
     void vistaECPHome::assignPartitionToZone(zoneType * zt) {
         for (int p=1;p<4;p++) {
             if (partitions[p-1]) {
@@ -732,42 +718,56 @@ void vistaECPHome::setup()  {
     }
 
 
-void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
-     if (!auiAddr || !step) return;
+void vistaECPHome::sendZoneRequest(uint8_t partition,reqStates request) {
+     if (!auiAddr || !(request==sopenzones || request==sbypasszones)) return;
      char bytes[]={00,0x68,0x62,0x31,0x45,0x49,0xF5,0x31,0xFB,0x45,0x4A,0xF5,0x32,0xFB,0x45,0x43,0xF5,0x31,0xFB,0x43,0x6C};
      bytes[7]=partition;
-     bytes[12]=step==1?0x32:0x35;
-     ESP_LOGD(TAG,"Sending zone status request %d",step);
+     bytes[12]=request==sopenzones?0x32:0x35;
+     ESP_LOGD(TAG,"Sending zone status request %d",request);
      vista.writeDirect(bytes, auiAddr,sizeof(bytes));
 }
 
+char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
     
- void vistaECPHome::processZoneList(uint8_t partition,uint8_t step, char * list,size_t len) {
-   
-    for (uint8_t x=0;x<len;x++) 
+    cmd[cmd[1]+1]=0;// 0 to terminate cmd
+    char * c=&cmd[8]; //advance to start of fe xx byte
+    char * f=NULL;
+    if (request == sopenzones || request==sbypasszones) {
+        char s[]={0xfe,0xfe,0xfe,0xfe,0xec,0};
+        f=strstr(c,s);
+        if (f)
+         return f+strlen(s);        
+    }
+    
+
+    return NULL;
+    
+
+}
+    
+ void vistaECPHome::processZoneList(uint8_t partition,reqStates request, char * list) {
+    if (!list) return;
+    for (uint8_t x=0;x<sizeof(list)-1;x++) 
         list[x]=!list[x]?',':list[x];
-    list[len]=0;
     std::string zs=list;
     std::smatch sm{}; 
     int z;
     zoneType * zt;  
     uint8_t p=partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
     unsigned long time=millis();
-    const std::regex re{ R"(((\d+)-(\d+))|(\d+))" };
+    const std::regex re{ R"(((\d+)-(\d+))|(\d+))" }; //search for ranges
     
           //clear bypass/open zones for partition p
        auto it = std::find_if(extZones.begin(), extZones.end(),  [&p,&time](zoneType& f){ return (f.partition == p && f.active ); } );
        while (it != extZones.end()) {
-             if (step==1 )
+             if (request==sopenzones )
                 it->open=false;
                else
                  it->bypass=false;
              ESP_LOGD(TAG,"clearing zone %d, partition %d",it->zone,p);
             it = std::find_if(++it, extZones.end(),  [&p,&time](zoneType& f){ return (f.partition == p && f.active ); } );
        }
-    
-    
-    
+
     // Search all occureences of integers OR ranges
     for (std::string s{ zs }; std::regex_search(s, sm, re); s = sm.suffix()) {
         z=0;
@@ -781,7 +781,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
             
                if (z) {
                 zt=getZone(z);
-                if (step==1) 
+                if (request==sopenzones) 
                   zt->open=true;
                  else
                    zt->bypass=true;   
@@ -791,9 +791,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,uint8_t step) {
                }
         
     }
-    
-
-        forceRefreshZones=true;
+    forceRefreshZones=true;
  }
  
 #if defined(ESP32) && defined(USETASK)
@@ -1001,7 +999,7 @@ void vistaECPHome::update()  {
 
         }
        static uint8_t partitionRequest=0;// partition 1 = 0x31
-       static uint8_t step=0;//step=1 is open zones, step=2 is bypass zones   
+       static reqStates reqState=sidle;
  
         if (debug > 0 && vistaCmd.newCmd) {
             if (vistaCmd.cbuf[0]==0xF2)
@@ -1010,23 +1008,22 @@ void vistaECPHome::update()  {
                printPacket("CMD", vistaCmd.cbuf, 13);
         }
         if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)  {
-            ESP_LOGD(TAG,"step = %d",step);
-            if (((vistaCmd.cbuf[2]>>1) & auiAddr)  && (vistaCmd.cbuf[7] & 0xf0)==0x60 && vistaCmd.cbuf[8]==0x63 && vistaCmd.cbuf[9]==0x02 && step==0) { //partition update broadcast
+            ESP_LOGD(TAG,"state = %d",reqState);
+            if (((vistaCmd.cbuf[2]>>1) & auiAddr)  && (vistaCmd.cbuf[7] & 0xf0)==0x60 && vistaCmd.cbuf[8]==0x63 && vistaCmd.cbuf[9]==0x02 && reqState==sidle) { //partition update broadcast
                 partitionRequest=vistaCmd.cbuf[13];
-                step=1;
-                sendZoneRequest(partitionRequest,step);
-            } else 
-                if (((vistaCmd.cbuf[2]>>1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0)==0x50 && vistaCmd.cbuf[8]==0xfe ) { //response data from request
-                if (step) {
-                  if (vistaCmd.cbuf[1]>12 && vistaCmd.cbuf[12]==0xec ) //has data available
-                    processZoneList(partitionRequest,step,&vistaCmd.cbuf[13],vistaCmd.cbuf[1]-12);
-                  step=step>1?step=0:step+1;  
-                }
-              
-                if (step)
-                    sendZoneRequest(partitionRequest,step);
-            } else step=0;
-          
+                reqState=sopenzones;
+                sendZoneRequest(partitionRequest,reqState);
+            } else if (((vistaCmd.cbuf[2]>>1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0)==0x50 && vistaCmd.cbuf[8]==0xfe ) { //response data from request
+                  char * m=parseAUIMessage(vistaCmd.cbuf,reqState);
+                  
+                  if (reqState==sopenzones || reqState==sbypasszones) {
+                    processZoneList(partitionRequest,reqState,m);
+                    reqState=reqState==sbypasszones?reqState=sidle:reqState=sbypasszones;
+                    if (reqState==sbypasszones)
+                        sendZoneRequest(partitionRequest,reqState);
+                  }
+                }  else reqState==sidle;
+
         } else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd) {
           getPartitionsFromMask();
           for (uint8_t partition = 1; partition <= maxPartitions; partition++) {

@@ -33,6 +33,8 @@ vista_alarm_panel:
   keypadaddr2: "0" #partition 2 virtual keypad. set to 0 to disable
   keypadaddr3: "0" #partition 3 virtual keypad. set to 0 to disable
  
+  auiaddr: "2" #AUI address from program field *189 to use for zone status queries. Ensure it is not assigned to a real keypad.
+  
   ##esp32
   rxpin: "22" #GPIO pin to use for data receive (yellow line) 
   txpin: "21" #GPIO pin to use for data transmit (green line)
@@ -45,7 +47,6 @@ vista_alarm_panel:
   input_mode_rx: INPUT
   input_mode_mon: INPUT
   
-  autopopulate: true # auto populate seen active zones
   
   ##esp8266
   #rxpin: "5" #GPIO pin to use for data receive (yellow line) 
