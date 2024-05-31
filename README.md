@@ -3,7 +3,7 @@ Various custom components for the ESPHOME system
 Please see the main project documenation here for the Vista series panels:
 https://github.com/Dilbert66/esphome-vistaECP
 
-Please see the main project documenation here for the DSC series panels
+For the DSC series panels:
 https://github.com/Dilbert66/esphome-dsckeybus
 
 If you like this project and wish to supplement my coffee intake, please click the button below to donate! Thank you!
