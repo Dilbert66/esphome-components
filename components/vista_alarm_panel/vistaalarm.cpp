@@ -777,13 +777,10 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
         // We found something. Was it a range?
         if (sm[1].str().length()) 
             // Yes, range, add all values within to the vector  
-            for (int i{ std::stoi(sm[2]) }; i <= std::stoi(sm[3]); ++i) z=i;
-        else
-            // No, no range, just a plain integer value. Add it to the vector
-            z=std::stoi(sm[0]);
-               if (z) {
-                zt=getZone(z);
-             ESP_LOGD(TAG,"Setting zone %d, partition %d",zt->zone,p);                
+            for (int i{ std::stoi(sm[2]) }; i <= std::stoi(sm[3]); ++i) {
+              if (i) {
+                zt=getZone(i);
+             ESP_LOGD(TAG,"Setting zone %d:%d, partition %d",i,zt->zone,p);                
                 if (request==sopenzones) 
                   zt->open=true;
                  else
@@ -792,6 +789,23 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
                 zt->time=time;
                 zt->partition=p;
                }
+            }
+        else {
+            // No, no range, just a plain integer value. Add it to the vector
+            z=std::stoi(sm[0]);
+              
+              if (z) {
+                zt=getZone(z);
+             ESP_LOGD(TAG,"Setting zone %d:%d, partition %d",z,zt->zone,p);                
+                if (request==sopenzones) 
+                  zt->open=true;
+                 else
+                   zt->bypass=true;   
+               
+                zt->time=time;
+                zt->partition=p;
+               }
+        }
         
     }
     forceRefreshZones=true;
