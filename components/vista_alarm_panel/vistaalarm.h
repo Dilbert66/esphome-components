@@ -205,6 +205,7 @@ class vistaECPHome {
     void stop();
 
   private:
+    void updateZoneState(int z,int p,reqStates r); 
     char * parseAUIMessage(char * cmd,reqStates request);
     void processZoneList(uint8_t partition,reqStates request, char * list);
     void sendZoneRequest(uint8_t partition,reqStates request);

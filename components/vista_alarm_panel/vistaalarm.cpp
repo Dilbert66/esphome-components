@@ -731,7 +731,7 @@ void vistaECPHome::sendZoneRequest(uint8_t partition,reqStates request) {
 
 char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
     
-    cmd[cmd[1]+1]=0;// 0 to terminate cmd
+    cmd[cmd[1]+1]=0;// 0 to terminate cmd to use as string
     char * c=&cmd[8]; //advance to start of fe xx byte
     char * f=NULL;
     if (request == sopenzones || request==sbypasszones) {
@@ -746,65 +746,56 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
     
 
 }
+void vistaECPHome::updateZoneState(int z,int p,reqStates r) {
     
+       if (z) {
+          zoneType * zt=getZone(z);
+          ESP_LOGD(TAG,"Setting zone %d, partition %d",zt->zone,p);                
+          if (r==sopenzones) 
+             zt->open=true;
+          else if (r==sbypasszones)
+                zt->bypass=true;  
+            
+          zt->time=millis();
+          zt->partition=p;
+      }
+}
+   
  void vistaECPHome::processZoneList(uint8_t partition,reqStates request, char * list) {
     if (!list) return;
     for (uint8_t x=0;x<sizeof(list);x++) 
         list[x]=!list[x]?',':list[x];
     std::string zs=list;
     std::smatch sm{}; 
-    int z;
-    zoneType * zt;  
+
     ESP_LOGD(TAG,"List=%s",zs.c_str());
     uint8_t p=partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
-    unsigned long time=millis();
+
     const std::regex re{ R"(((\d+)-(\d+))|(\d+))" }; //search for ranges
     
           //clear bypass/open zones for partition p
-       auto it = std::find_if(extZones.begin(), extZones.end(),  [&p,&time](zoneType& f){ return (f.partition == p && f.active ); } );
+       auto it = std::find_if(extZones.begin(), extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
        while (it != extZones.end()) {
              if (request==sopenzones )
                 it->open=false;
-               else
+               else if (request==sbypasszones)
                  it->bypass=false;
              ESP_LOGD(TAG,"clearing zone %d, partition %d",it->zone,p);
-            it = std::find_if(++it, extZones.end(),  [&p,&time](zoneType& f){ return (f.partition == p && f.active ); } );
+            it = std::find_if(++it, extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
        }
 
     // Search all occureences of integers OR ranges
     for (std::string s{ zs }; std::regex_search(s, sm, re); s = sm.suffix()) {
-        z=0;
         // We found something. Was it a range?
         if (sm[1].str().length()) 
             // Yes, range, add all values within to the vector  
-            for (int i{ std::stoi(sm[2]) }; i <= std::stoi(sm[3]); ++i) {
-              if (i) {
-                zt=getZone(i);
-             ESP_LOGD(TAG,"Setting zone %d:%d, partition %d",i,zt->zone,p);                
-                if (request==sopenzones) 
-                  zt->open=true;
-                 else
-                   zt->bypass=true;   
-               
-                zt->time=time;
-                zt->partition=p;
-               }
+            for (int z{ std::stoi(sm[2]) }; z <= std::stoi(sm[3]); ++z) {
+                updateZoneState(z,p,request);
             }
         else {
             // No, no range, just a plain integer value. Add it to the vector
-            z=std::stoi(sm[0]);
-              
-              if (z) {
-                zt=getZone(z);
-             ESP_LOGD(TAG,"Setting zone %d:%d, partition %d",z,zt->zone,p);                
-                if (request==sopenzones) 
-                  zt->open=true;
-                 else
-                   zt->bypass=true;   
-               
-                zt->time=time;
-                zt->partition=p;
-               }
+            int z=std::stoi(sm[0]);
+            updateZoneState(z,p,request);
         }
         
     }
