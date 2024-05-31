@@ -692,8 +692,10 @@ void vistaECPHome::setup()  {
     }
 
     void vistaECPHome::assignPartitionToZone(zoneType * zt) {
+        
         for (int p=1;p<4;p++) {
             if (partitions[p-1]) {
+                ESP_LOGD(TAG,"Assigning partition %d, to zone %d",p,zt->zone);
                 zt->partition=p;
                 break;
             }
@@ -747,12 +749,13 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
     
  void vistaECPHome::processZoneList(uint8_t partition,reqStates request, char * list) {
     if (!list) return;
-    for (uint8_t x=0;x<sizeof(list)-1;x++) 
+    for (uint8_t x=0;x<sizeof(list);x++) 
         list[x]=!list[x]?',':list[x];
     std::string zs=list;
     std::smatch sm{}; 
     int z;
     zoneType * zt;  
+    ESP_LOGD(TAG,"List=%s",zs.c_str());
     uint8_t p=partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
     unsigned long time=millis();
     const std::regex re{ R"(((\d+)-(\d+))|(\d+))" }; //search for ranges
@@ -778,9 +781,9 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
         else
             // No, no range, just a plain integer value. Add it to the vector
             z=std::stoi(sm[0]);
-            
                if (z) {
                 zt=getZone(z);
+             ESP_LOGD(TAG,"Setting zone %d, partition %d",zt->zone,p);                
                 if (request==sopenzones) 
                   zt->open=true;
                  else
@@ -1159,8 +1162,9 @@ void vistaECPHome::update()  {
             if (!zt->alarm && zt->active) {
              zt->alarm=true;
              zoneStatusUpdate(zt);
-             assignPartitionToZone(zt);              
             }
+            if (!zt->partition && zt->active)
+                assignPartitionToZone(zt);            
             zt->time = millis();
             alarmStatus.zone = vistaCmd.statusFlags.zone;
             alarmStatus.time = zt->time;
@@ -1176,9 +1180,10 @@ void vistaECPHome::update()  {
                 zt->open=false;
                 zt->alarm=false;
                 zoneStatusUpdate(zt);
-                assignPartitionToZone(zt);                 
               //ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );              
              }
+            if (!zt->partition && zt->active)
+                assignPartitionToZone(zt);             
              zt->time=millis();
       } else
          
@@ -1194,8 +1199,10 @@ void vistaECPHome::update()  {
                 zt->open=true;  
                 zt->bypass=false;
                 zoneStatusUpdate(zt);
-                assignPartitionToZone(zt);                 
+               
             }
+            if (!zt->partition && zt->active)
+                assignPartitionToZone(zt);  
            
            // ESP_LOGD("test","fault found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->open);
             zt->time = millis();
@@ -1211,8 +1218,9 @@ void vistaECPHome::update()  {
           if (!zt->bypass && zt->active) {
             zt->bypass=true;
             zoneStatusUpdate(zt);
-            assignPartitionToZone(zt);             
           }
+            if (!zt->partition && zt->active)
+                assignPartitionToZone(zt);          
             zt->time = millis();
    
           //ESP_LOGD("test","bypass found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->bypass); 
