@@ -109,7 +109,6 @@ vista.stop();
     }
     
     void vistaECPHome::zoneStatusUpdate(zoneType* zt) {
-    //  if (!zt->active) return;
       if (zoneStatusChangeCallback != NULL ) {
           std::string msg,zs1;   
           zs1=zt->check?"T":zt->open?"O":"C";
@@ -180,7 +179,11 @@ vistaECPHome::zoneType * vistaECPHome::getZone(uint16_t z) {
 
      auto it = std::find_if(extZones.begin(), extZones.end(),  [&z](zoneType& f){ return f.zone == z; } );
      if (it != extZones.end()) return &(*it);
+     #if defined(ARDUINO_MQTT)
+     return createZone(z);
+     #else     
      return &zonetype_INIT;
+     #endif
 
 }
 
@@ -1030,6 +1033,8 @@ void vistaECPHome::update()  {
                     if (reqState==sbypasszones)
                         sendZoneRequest(partitionRequest,reqState);
                   }
+                  
+                  
                 }  else reqState==sidle;
 
         } else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd) {

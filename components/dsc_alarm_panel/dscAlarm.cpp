@@ -110,19 +110,6 @@ void DSCkeybushome::set_panel_time() {
   void DSCkeybushome::set_debug(uint8_t db) {debug=db;}  
   void DSCkeybushome::set_expanderAddr(uint8_t idx,uint8_t addr) { if (idx==1) expanderAddr1=addr; else if (idx==2) expanderAddr2=addr;}
 
-bool DSCkeybushome::zoneActive(byte zone) {
-
-  std::string str = "z" + std::to_string(zone) ;
-  auto itb = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
-  if (itb != bMap.end()) return true;
-  
-  auto itt = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor* f){ return ((ts*)f)->get_type_id() == str; } );
-  if (itt != tMap.end()) return true; 
-  
-  return false;
-
-}
-
 DSCkeybushome::zoneType * DSCkeybushome::createZone(byte z) {
 
      zoneType n = zonetype_INIT; 
@@ -139,7 +126,11 @@ DSCkeybushome::zoneType * DSCkeybushome::getZone(byte z) {
       //zone=0 to maxZones-1
      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(),  [&z](zoneType& f){ return f.zone == z+1; } );
      if (it != zoneStatus.end()) return &(*it);
+     #if defined(ARDUINO_MQTT)
+     return createZone(z);
+     #else     
      return &zonetype_INIT;
+     #endif
 }
 
 #if defined(ARDUINO_MQTT)
@@ -652,6 +643,7 @@ void DSCkeybushome::begin() {
       processMenu(keystring.c_str()[0], partition);
     } else {
         if (!partitionStatus[partition-1].locked) dsc.write(keystring.c_str(), partition);
+        setStatus(partition - 1, true);
     }
   }
 

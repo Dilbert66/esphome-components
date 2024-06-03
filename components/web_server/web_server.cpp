@@ -94,7 +94,7 @@ void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean deco
   char * name;
   char * value;
   if (decodeUrl) percentDecode(queryString);
-  //MG_INFO(("query=%s",queryString));
+ // MG_INFO(("query=%s",queryString));
   while (queryString && *queryString && ct < resultsMaxCt) {
     name = strsep(&queryString, "&");
     value = strchrnul(name, '=');
@@ -103,7 +103,7 @@ void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean deco
     std::string n=std::string(name);
     std::string v=std::string(value);
     doc[n]=v;
- //   MG_INFO(("parameter %s = %s",n.c_str(),v.c_str()));
+   // MG_INFO(("parameter %s = %s",n.c_str(),v.c_str()));
     ct++;
   }
 }
@@ -649,6 +649,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
                                         JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id() + "-" + ((ts*) obj)->get_type_id(), value, value, start_config);
+    root["id_code"]=((ts*)obj)->get_type_id();
   });
 }
 #else
@@ -743,6 +744,7 @@ this->push(STATE,this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());
 std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_state_value(root, obj, "binary_sensor-" +  obj->get_object_id() + "-" + ((bs*) obj)->get_type_id(), value ? "ON" : "OFF", value, start_config);
+    root["id_code"]=((bs*)obj)->get_type_id();    
   
   });
 }
@@ -1251,8 +1253,8 @@ void WebServer::handle_alarm_panel_request(mg_connection *c,JsonObject doc) {
          ws_reply(c,data.c_str(),true); 
       return;
     }
-     ws_reply(c,"",true); 
-     return;
+    // ws_reply(c,"",true); 
+    // return;
     }
    if (doc["action"] != "set") {
     ws_reply(c,"",false); 
@@ -2068,7 +2070,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
             mg_str *hdr =mg_http_get_header(hm, "Accept"); 
            // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
               c->data[0]='E';
-              mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\ndata: %s\r\n\r\n", "Subscribed to Events");
+              mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n");
                c->send.c=c;              
               std::string enc;  
               srv->encrypt(srv->get_config_json().c_str(),"",enc);
