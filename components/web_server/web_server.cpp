@@ -641,26 +641,23 @@ void WebServer::handle_text_sensor_request(mg_connection *c,JsonObject doc) {
     ws_reply(c,data.c_str(),true); 
     return;
   }
-   //mg_http_reply(c,404,"","");
    ws_reply(c,"",false);
 }
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
+
 std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std::string &value,
                                         JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id() + "-" + ((ts*) obj)->get_type_id(), value, value, start_config);
-    root["id_code"]=((ts*)obj)->get_type_id();
+    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
+#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
+  root["id_code"]=((ts*)obj)->get_type_id();
+#else  
+  root["id_code"]=obj->get_object_id();
+#endif    
   });
-}
-#else
-std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std::string &value,
-                                        JsonDetail start_config) {
-  return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id() + "-" + obj->get_object_id(), value, value, start_config);
-  });
+
 }    
 
-#endif
+
 #endif
 
 #ifdef USE_SWITCH
@@ -740,22 +737,20 @@ void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj, bool s
   //this->events_.send(this->binary_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
 this->push(STATE,this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());   
 }
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
+
 std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_state_value(root, obj, "binary_sensor-" +  obj->get_object_id() + "-" + ((bs*) obj)->get_type_id(), value ? "ON" : "OFF", value, start_config);
-    root["id_code"]=((bs*)obj)->get_type_id();    
+    set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
+  root["id_code"]=((bs*)obj)->get_type_id();
+#else  
+  root["id_code"]=obj->get_object_id();
+#endif     
   
   });
+ 
 }
-#else
-std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
-  return json::build_json([obj, value, start_config](JsonObject root) {
-    set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id() + "-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
-  
-  });
-}
-#endif
+
 
 void WebServer::handle_binary_sensor_request(mg_connection *c,JsonObject doc) {
   for (binary_sensor::BinarySensor *obj : App.get_binary_sensors()) {

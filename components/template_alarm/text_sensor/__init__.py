@@ -33,10 +33,10 @@ async def to_code(config):
     await cg.register_component(var, config)
 
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
+        cg.add(var.set_type_id(config.get(CONF_TYPE_ID))) 
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id))   
-       
+        cg.add(var.set_type_id(config[CONF_ID].id)) 
+        
     if CONF_LAMBDA in config:
         template_ = await cg.process_lambda(
             config[CONF_LAMBDA], [], return_type=cg.optional.template(cg.std_string)

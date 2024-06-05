@@ -102,7 +102,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
     cv.Optional(CONF_DEBOUNCE,default='false'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
-    cv.Optional(CONF_AUTOPOPULATE,default='true'): cv.boolean,  
+    cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean, 
     }
 )
 

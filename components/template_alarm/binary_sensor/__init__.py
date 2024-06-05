@@ -32,6 +32,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     if not config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(True))
+        
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
     elif config[CONF_ID] and config[CONF_ID].is_manual:
