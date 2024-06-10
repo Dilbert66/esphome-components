@@ -4,7 +4,7 @@
 #include "esphome/core/component_iterator.h"
 
 namespace esphome {
-namespace web_server {
+namespace web_keypad {
 
 class WebServer;
 

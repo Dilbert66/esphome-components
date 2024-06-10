@@ -38,41 +38,35 @@ CONF_KEYPAD="show_keypad"
 CONF_CERTIFICATE="certificate"
 CONF_CERTIFICATE_KEY="certificate_key"
 CONF_ENCRYPTION="encryption"
+CONF_JSLOCAL="js_local"
 
-web_server_ns = cg.esphome_ns.namespace("web_server")
-WebServer = web_server_ns.class_("WebServer", cg.Component, cg.Controller)
+web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
 
 
 def default_url(config):
     config = config.copy()
-    if config[CONF_VERSION] == 1:
-        if not (CONF_CSS_URL in config):
-            config[CONF_CSS_URL] = "https://esphome.io/_static/webserver-v1.min.css"
-        if not (CONF_JS_URL in config):
-            config[CONF_JS_URL] = "https://esphome.io/_static/webserver-v1.min.js"
     if config[CONF_VERSION] == 2:
+        if not (CONF_JSLOCAL in config):
+            config[CONF_JSLOCAL]=""
         if not (CONF_CSS_URL in config):
             config[CONF_CSS_URL] = ""
         if not (CONF_JS_URL in config):
-            config[CONF_JS_URL] = "https://oi.esphome.io/v2/www.js"
+            config[CONF_JS_URL] = "https://dilbert66.github.io/js_files/www.js"
     return config
 
-
-def validate_ota(config):
-    if CORE.using_esp_idf and config[CONF_OTA]:
-        raise cv.Invalid("Enabling 'ota' is not supported for IDF framework yet")
-    return config
 
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
-            cv.GenerateID(): cv.declare_id(WebServer),
+            cv.GenerateID(): cv.declare_id(WebKeypad),
             cv.Optional(CONF_PORT, default=80): cv.port,
-            cv.Optional(CONF_VERSION, default=2): cv.one_of(1,2, int=True),
+            cv.Optional(CONF_VERSION, default=2): cv.one_of(2, int=True),
             cv.Optional(CONF_CSS_URL): cv.string,
             cv.Optional(CONF_CSS_INCLUDE): cv.file_,
             cv.Optional(CONF_JS_URL): cv.string,
+            cv.Optional(CONF_JSLOCAL): cv.string,            
             cv.Optional(CONF_PARTITIONS): cv.int_,            
             cv.Optional(CONF_JS_INCLUDE): cv.file_,
             cv.Optional(CONF_CONFIG):cv.file_,
@@ -100,19 +94,18 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_INCLUDE_INTERNAL, default=False): cv.boolean,
             cv.SplitDefault(
                 CONF_OTA,
-                esp8266=True,
-                esp32_arduino=True,
+                esp8266=False,
+                esp32_arduino=False,
                 esp32_idf=False,
-                bk72xx=True,
-                rtl87xx=True,
+                bk72xx=False,
+                rtl87xx=False,
             ): cv.boolean,
-            cv.Optional(CONF_LOG, default=True): cv.boolean,
+            cv.Optional(CONF_LOG, default=False): cv.boolean,
             cv.Optional(CONF_LOCAL, default=True): cv.boolean,
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.only_on([PLATFORM_ESP32]),
     default_url,
-    validate_ota,
 
 )
 
@@ -122,7 +115,12 @@ def build_index_html(config) -> str:
     css_include = config.get(CONF_CSS_INCLUDE)
     js_include = config.get(CONF_JS_INCLUDE)
     js_url = config.get(CONF_JS_URL)  
-    js_local=config.get(CONF_LOCAL);    
+    js_local=config.get(CONF_LOCAL);  
+    if config[CONF_JSLOCAL]:
+        js_include=config.get(CONF_JSLOCAL)
+        js_url=""
+        js_local=True
+
     if css_include:
         html += "<link rel=stylesheet href=/0.css>"
     if config[CONF_CSS_URL]:
@@ -158,8 +156,8 @@ def add_resource_as_progmem(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    #cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git",">=7.12.6") 
-    cg.add_library("Crypto", None) 
+    #cg.add_library("CryptoAES_CBC", None) 
+    cg.add_library("intrbiz/Crypto",None)
     cg.add_define("USE_WEBSERVER")
     version = config[CONF_VERSION]
 
@@ -179,7 +177,7 @@ async def to_code(config):
     else:
         cg.add(var.set_css_url(config[CONF_CSS_URL]))
         cg.add(var.set_js_url(config[CONF_JS_URL]))
-    cg.add(var.set_allow_ota(config[CONF_OTA]))
+   # cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
     cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
 
@@ -202,12 +200,18 @@ async def to_code(config):
         with open(file=path, encoding="utf-8") as css_file:
             add_resource_as_progmem("CSS_INCLUDE", css_file.read())
             
-    if CONF_JS_URL in config and config[CONF_JS_URL] and config[CONF_LOCAL]:
+    if  config[CONF_JSLOCAL]:
+        cg.add_define("USE_WEBSERVER_JS_INCLUDE")
+        path = CORE.relative_config_path(config[CONF_JSLOCAL])
+        with open(file=path, encoding="utf-8") as js_file:
+            add_resource_as_progmem("JS_INCLUDE", js_file.read())  
+            
+    if (CONF_JS_URL in config and config[CONF_JS_URL] and config[CONF_LOCAL]) and not config[CONF_JSLOCAL]:
         cg.add_define("USE_WEBSERVER_JS_INCLUDE")
         response = requests.get(config[CONF_JS_URL])
         add_resource_as_progmem("JS_INCLUDE", response.text)   
         
-    if CONF_JS_INCLUDE in config:
+    if CONF_JS_INCLUDE in config and not config[CONF_JSLOCAL]:
         cg.add_define("USE_WEBSERVER_JS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_JS_INCLUDE])
         with open(file=path, encoding="utf-8") as js_file:
@@ -229,5 +233,5 @@ async def to_code(config):
     if CORE.using_arduino:
         if CORE.is_esp32:        
             cg.add_library("Update", None)        
-    cg.add_library("rweather/Crypto", "0.4.0")
+    #cg.add_library("rweather/CryptoLegacy", ">0.1.0")
 

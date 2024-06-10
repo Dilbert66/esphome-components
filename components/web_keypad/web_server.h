@@ -3,8 +3,9 @@
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
 #include "mongoose.h"
-//#include <sodium.h>
 #include <vector>
+#include <Crypto.h>
+
 #ifdef USE_ESP32
 #include <deque>
 #include <freertos/FreeRTOS.h>
@@ -30,9 +31,9 @@ extern const size_t ESPHOME_WEBSERVER_JS_INCLUDE_SIZE;
 
 
 namespace esphome {
-namespace web_server {
+namespace web_keypad {
 
-
+#define KEYSIZE 32
 
 extern void * webServerPtr;
 /// Internal helper struct that is used to parse incoming URLs
@@ -55,11 +56,12 @@ enum msgType {
 struct Credentials {
   std::string username;
   std::string password;
-  std::string token;
+  uint8_t token[KEYSIZE];
+  uint8_t * hmackey;
+  bool crypt;
 };
 
-
-
+#define SALT "77992288"
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 
 /** This class allows users to create a web server with their ESP nodes.
@@ -131,7 +133,7 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(const char * json_keypad_config);
+  void set_keypad_config(std::string  json_keypad_config);
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -150,25 +152,29 @@ class WebServer : public Controller, public Component {
   void set_auth(std::string auth_username,std::string auth_password,bool use_encryption) { 
   credentials_.username = std::move(auth_username);   
   credentials_.password = std::move(auth_password);
-  this->crypt_ = use_encryption;  
-  if (!use_encryption) return;
-   std::string p;
-   p.append(auth_username);
-   p.append(":");
-   p.append(auth_password);
-   /*
-   unsigned char key[crypto_secretbox_KEYBYTES];
-   crypto_generichash(key,crypto_secretbox_KEYBYTES,(const unsigned char*) p.c_str(),strlen(p.c_str()),NULL,0); 
-   char token[crypto_secretbox_KEYBYTES * 2+1];
-   sodium_bin2hex(token,sizeof token,key,sizeof key);
-   credentials_.token=std::string(token);
-   */
+    uint8_t i=0;
+    const char * keystr=(credentials_.username + SALT + credentials_.password).c_str();
+    ESP_LOGD("test","keystring = %s",keystr);
+    uint8_t kl=strlen(keystr) <=KEYSIZE?strlen(keystr):KEYSIZE;
+    for (i=0;i<kl;i++)
+         credentials_.token[i]=keystr[i];
+    for (i;i<KEYSIZE;i++)
+        credentials_.token[i]=0x30;  
+    credentials_.token[i]=0;
+    
+    SHA256 hasher;
+    hasher.doUpdate((const char*)credentials_.token);
+    hasher.doFinal(credentials_.token);
+    credentials_.hmackey=credentials_.token;
+   this->crypt_ = use_encryption;  
+  credentials_.crypt=use_encryption;
+
    }  
    
   Credentials * get_credentials() { return &credentials_;}
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
-int encrypt(const char * message,const char * type ,std::string &enc);
-int decrypt(const char *ciphertexthex,const char *noncehex,std::string &result);
+  std::string encrypt(const char * message);
+  std::string decrypt(DynamicJsonDocument  doc);
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -185,7 +191,7 @@ int decrypt(const char *ciphertexthex,const char *noncehex,std::string &result);
   void handle_index_request(struct mg_connection *c);
 
   /// Return the webserver configuration as JSON.
-  std::string get_config_json();
+  std::string get_config_json(unsigned long c=0);
   std::string escape_json(const char *s);
   
   long int toInt(std::string s, int base); 
@@ -293,7 +299,7 @@ int decrypt(const char *ciphertexthex,const char *noncehex,std::string &result);
 
 
 #if defined(USE_DSC_PANEL) || defined (USE_VISTA_PANEL)
-
+void handle_auth_request(mg_connection *c,JsonObject doc);
 void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 #endif
 
@@ -362,6 +368,7 @@ void parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl,JsonO
 void ws_reply(mg_connection *c,const char * data,bool ok);
 
  protected:
+ 
   const char * certificate_;
   const char * certificate_key_;
   uint32_t last_ota_progress_{0};
@@ -371,7 +378,7 @@ void ws_reply(mg_connection *c,const char * data,bool ok);
 static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
-     const char * _json_keypad_config;
+  std::string  _json_keypad_config;
 #if USE_WEBSERVER_VERSION == 1
   const char *css_url_{nullptr};
   const char *js_url_{nullptr};

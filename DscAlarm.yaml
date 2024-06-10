@@ -61,7 +61,7 @@ esp32:
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository (dev branch selected)
   #- source:  my_components #uncomment to use local directory 
-    components: [dsc_alarm_panel,template_alarm,web_server,mg_lib] 
+    components: [dsc_alarm_panel,template_alarm,web_keypad,mg_lib] 
     refresh: 10min
     
     
@@ -74,15 +74,20 @@ external_components:
 
 mg-lib:
 
-web_server:
-  port: 80  
-  partitions: 1 # a keypad will be shown for each partition
+web_keypad:
+  port: 80 
+  partitions: 1  # a keypad will be shown for each partition
   log: false
+  auth:          #this section is optional. Enable if you need authentication/encryption
+    username: test
+    password: test
+    encryption: true  #set true to use AES256HMAC encryption/auth for sent keys and returned LCD messages
+                      #set to false to use Digest authentication - no encryption
   config_url: https://dilbert66.github.io/config_files/config_dsc.yml  
   js_url: https://dilbert66.github.io/js_files/www.js
   ## If you prefer to use locally hosted compile time files comment the two lines above and uncomment below
   #config_local: ./config_dsc.yml    
-  #js_include: ./www.js    
+  #js_local: ./www.js    
   
   ## custom function call to send keypresses if other than dsc/vista components are used. Parmeters are a string keys and int partition
   #service_lambda: |- 
