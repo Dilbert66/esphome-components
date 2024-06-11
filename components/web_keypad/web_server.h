@@ -54,11 +54,11 @@ enum msgType {
 };
 
 struct Credentials {
-  std::string username;
-  std::string password;
+  std::string username="";
+  std::string password="";
   uint8_t token[KEYSIZE];
   uint8_t * hmackey;
-  bool crypt;
+  bool crypt=false;
 };
 
 #define SALT "77992288"
