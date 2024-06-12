@@ -38,18 +38,10 @@ void disconnectVista() {
 namespace esphome {
 namespace alarm_panel {
     
-#if defined(USE_TEMPLATE_ALARM_SENSORS)
-typedef template_alarm_::TemplateBinarySensor bs;
-typedef template_alarm_::TemplateTextSensor ts;
-#else
-typedef binary_sensor::BinarySensor bs;
-typedef text_sensor::TextSensor ts;
-
-#endif
-
 
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
+
 const char zoneRequest_INIT[]={00,0x68,0x62,0x31,0x45,0x49,0xF5,0x31,0xFB,0x45,0x4A,0xF5,0x32,0xFB,0x45,0x43,0xF5,0x31,0xFB,0x43,0x6C};
 
 static const char *const TAG = "vista_alarm"; 
@@ -62,15 +54,15 @@ std::function<void(const std::string &, JsonObject)> mqtt_callback;
 void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return ((bs*)f)->get_type_id() == str; } );
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
      if (it != bMap.end()) (*it)->publish_state(open);
 }
     
 void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
-    
+   if (cstr==NULL) return;
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return ((ts*)f)->get_type_id() == str; } );
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
      if (it != tMap.end()) (*it)->publish_state(*text);  
   
 }
@@ -145,21 +137,21 @@ void vistaECPHome::loadZones() {
     const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;    
     for (auto *obj : bMap ) {
-      std::string id=((bs*)obj)->get_type_id();
+      std::string id=obj->get_type_id();
       if (std::regex_search(id,m,e)) {
         int z = toInt(m[1],10);        
         createZone(z);
       }
     }
- 
+
  for (auto *obj : tMap ) {
-    std::string id=((ts*)obj)->get_type_id();
+    std::string id=obj->get_type_id();
     if (std::regex_search(id,m,e)) {
         int z = toInt(m[1],10);        
         createZone(z);
     }
  }
- 
+
  
 }
 #endif
@@ -319,29 +311,26 @@ void vistaECPHome::setup()  {
       //use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       // the system to not miss a response window on commands.  
 #if !defined(ARDUINO_MQTT)     
-      set_update_interval(8); //set looptime to 8ms 
-#if !defined(ARDUINO_MQTT)      
+  set_update_interval(8); //set looptime to 8ms 
   bMap =  App.get_binary_sensors(); 
   tMap =  App.get_text_sensors();   
   loadZones();
-#endif      
 #endif     
-    
 #if defined(ESPHOME_MQTT)
    topic_prefix =mqtt::global_mqtt_client->get_topic_prefix();
    mqtt::MQTTDiscoveryInfo mqttDiscInfo=mqtt::global_mqtt_client->get_discovery_info();
    std::string discovery_prefix=mqttDiscInfo.prefix;
    topic=discovery_prefix+"/alarm_control_panel/"+ topic_prefix + "/config"; 
    mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(),mqtt_callback);     
-   
-#elif !defined(ARDUINO_MQTT) && defined(USE_API)
+#endif  
+#if  defined(USE_API)
       register_service( & vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service( & vistaECPHome::alarm_keypress, "alarm_keypress", {
         "keys"
       });
-      register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {
-        "addr","hexdata"
-      });      
+      //register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {
+     //   "addr","hexdata"
+    // });      
       register_service( & vistaECPHome::alarm_keypress_partition, "alarm_keypress_partition", {
         "keys","partition"
       });      
@@ -362,7 +351,7 @@ void vistaECPHome::setup()  {
         "fault"
       });
       
-#endif      
+#endif     
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin,invertRx,invertTx,invertMon,inputRx,inputMon);
@@ -374,7 +363,7 @@ void vistaECPHome::setup()  {
             zoneStatusChangeCallback(x,"C");
         }
       }
-      
+   
       firstRun = true;
 
       vista.lrrSupervisor = lrrSupervisor; //if we don't have a monitoring lrr supervisor we emulate one if set to true
@@ -392,7 +381,7 @@ void vistaECPHome::setup()  {
       }    
       lrrMsgChangeCallback("ESP Restart");
       rfMsgChangeCallback(""); 
- 
+
 #if defined(ESP32) and not defined(__riscv) && defined(USETASK)
     //only for dual core esp32. Risc processors such as c3 are single core
     xTaskCreatePinnedToCore(
@@ -406,7 +395,6 @@ void vistaECPHome::setup()  {
   );  
    
 #endif      
-      
       
       
     }

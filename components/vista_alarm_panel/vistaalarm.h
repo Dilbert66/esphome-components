@@ -1,19 +1,24 @@
 #pragma once
 #if !defined(ARDUINO_MQTT)
+
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
 #if defined(USE_MQTT)
 #include "esphome/components/mqtt/mqtt_client.h"
-#elif defined(USE_API)
+#endif
+
+#if defined(USE_API)
 #include "esphome/components/api/custom_api_device.h"
 #endif
+
 #include "esphome/core/defines.h"
 #include "paneltext.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
 #endif
+
 #endif
 
 #include "vista.h"
@@ -101,13 +106,13 @@ extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
 extern void publishTextState(const char * cstr,uint8_t partition,std::string * text);
 #endif
 
-#if defined(ESPHOME_MQTT) 
+#if defined(ESPHOME_MQTT) && !defined(USE_API)
 class vistaECPHome:  public time::RealTimeClock {
 #elif defined(ARDUINO_MQTT)
 class vistaECPHome { 
 #elif defined(USE_API)
  class vistaECPHome: public api::CustomAPIDevice, public time::RealTimeClock {  
-#else 
+#else
  class vistaECPHome: public time::RealTimeClock {   
 #endif
 

@@ -5,20 +5,11 @@
 
 #include "web_server.h"
 
-#if defined(USE_TEMPLATE_ALARM_SENSORS)
-#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
-#include "esphome/components/template_alarm/text_sensor/template_text_sensor.h"
-#endif
+
 namespace esphome {
 namespace web_keypad {
 
-#if defined(USE_TEMPLATE_ALARM_SENSORS)
-typedef template_alarm_::TemplateBinarySensor bs;
-typedef template_alarm_::TemplateTextSensor ts;
-#else
-typedef binary_sensor::BinarySensor bs;
-typedef text_sensor::TextSensor ts;
-#endif
+
 static const char *const TAG = "web_server iterator";
 ListEntitiesIterator::ListEntitiesIterator(WebServer *web_server) : web_server_(web_server) {}
 
@@ -79,7 +70,7 @@ bool ListEntitiesIterator::on_text_sensor(text_sensor::TextSensor *text_sensor) 
   //    this->web_server_->text_sensor_json(text_sensor, text_sensor->state, DETAIL_ALL).c_str(), "state");
   std::string data=this->web_server_->text_sensor_json(text_sensor, text_sensor->state, DETAIL_ALL).c_str();
   #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =((ts*)text_sensor)->get_type_id();
+ std::string id =text_sensor->get_type_id();
  if (id.substr(0,2)=="ln" && this->web_server_->get_credentials()->crypt) //encrypt display lines
      data= this->web_server_->encrypt(data.c_str());
 #endif 

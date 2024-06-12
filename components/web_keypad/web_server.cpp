@@ -35,12 +35,6 @@
 #include <Update.h>
 #endif
 
-#if defined(USE_TEMPLATE_ALARM_SENSORS)
-#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
-#include "esphome/components/template_alarm/text_sensor/template_text_sensor.h"
-#endif
-
-
 
 namespace esphome {
 namespace web_keypad {
@@ -51,14 +45,6 @@ namespace web_keypad {
 //#define KEYSIZE 16
 //CBC<AES128> cbc;
 
-
-#if defined(USE_TEMPLATE_ALARM_SENSORS)
-typedef template_alarm_::TemplateBinarySensor bs;
-typedef template_alarm_::TemplateTextSensor ts;
-#else
-typedef binary_sensor::BinarySensor bs;
-typedef text_sensor::TextSensor ts;
-#endif
 
 static const char *const TAG = "web_server";
 void * webServerPtr;
@@ -645,7 +631,7 @@ void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj, const std::s
 std::string data=this->text_sensor_json(obj, state, DETAIL_STATE);  
 
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =((ts*)obj)->get_type_id();
+ std::string id =obj->get_type_id();
  if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
      data=encrypt(data.c_str());
 #endif 
@@ -661,7 +647,7 @@ void WebServer::handle_text_sensor_request(mg_connection *c,JsonObject doc) {
     //request->send(200, "application/json", data.c_str());
     //mg_http_reply(c, 200, "Content-Type: application/jsonAccess-Control-Allow-Origin: *\r\n\r\n", "%s", data.c_str());   
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =((ts*)obj)->get_type_id();
+ std::string id =obj->get_type_id();
  if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
      data=encrypt(data.c_str());
 #endif     
@@ -676,7 +662,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=((ts*)obj)->get_type_id();
+  root["id_code"]=obj->get_type_id();
 #else  
   root["id_code"]=obj->get_object_id();
 #endif    
@@ -769,7 +755,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=((bs*)obj)->get_type_id();
+  root["id_code"]=obj->get_type_id();
 #else  
   root["id_code"]=obj->get_object_id();
 #endif     
