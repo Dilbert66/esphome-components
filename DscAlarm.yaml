@@ -413,6 +413,17 @@ text_sensor:
     name: "Trouble Msg" 
     icon: "mdi:alert-box"
 
+
+ #optional. Example button config to send a keypad cmd. This one sends a PGM1 relay on cmd on partition 1
+button:
+    - platform: template
+      name: Gate Button
+      id: gate1
+      icon: "mdi:emoticon-outline"    
+      on_press:
+        - lambda: |-
+            $panelId->alarm_keypress_partition("*71",1);   
+
 # this sensor below is optional - example use of pin d8 as a zone trigger pin for the emulated zone expander  
 # this emulates the hardware connection for a pc5108 board. Use a pull down/pull up resistor.  Adjust logic accordingly for the correct logic output. ie invert
  # - platform: gpio  
@@ -420,10 +431,10 @@ text_sensor:
  #   device_class: window
  #   on_press:       #pin high=on(open), pin low=off(closed)
  #     - lambda: |-
- #         dsc.setZoneFault(17,1);  #set zone 17 as open
+ #         $panelId->setZoneFault(17,1);  #set zone 17 as open
  #   on_release:
  #     - lambda: |-
- #         dsc.setZoneFault(17,0);  #set zone 17 as closed
+ #         $panelId->setZoneFault(17,0);  #set zone 17 as closed
  
 
 

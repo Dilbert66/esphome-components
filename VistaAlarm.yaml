@@ -3,10 +3,11 @@ substitutions:
   name: "vistaalarm" #unique network name, system name
   friendlyName: "Vista Alarm"  #used as the friendly name of your application in HomeAssistant
   panelId: "VistaAlarm"         #used as the service variable name.
+  accesscode: !secret access_code 
   
 vista_alarm_panel:
   id: $panelId
-  accesscode: !secret access_code #Only comes into effect if needed for arming and quickarm is not set
+  accesscode: $accesscode #Only comes into effect if needed for arming and quickarm is not set
   maxzones: "48" #maximum amount of zones that your panel supports
   maxpartitions: "1" #maximum amount of partitions that your panel supports
 
@@ -488,6 +489,16 @@ text_sensor:
   - platform: template
     name: "Beeps partition 2"
     id: bp_2    
+    
+#optional cmd button example.  Send any keypad keys 
+button:
+    - platform: template
+      name: Gate Button
+      id: gate1
+      icon: "mdi:emoticon-outline"    
+      on_press:
+        - lambda: |-
+            $panelId->alarm_keypress_partition("${accesscode}#701",1);    
 
    
  #- platform: gpio  #example use of pin d8 as a zone trigger port for the emulated zone expander
@@ -496,10 +507,10 @@ text_sensor:
   #  device_class: window
    # on_press:       #zone,on/off
    #   - lambda: |-
-   #       vista.setExpFault(17,1); 
+   #       $panelId->setZoneFault(17,1);
   #  on_release:
   #    - lambda: |-
-   #       vista.setExpFault(17,0);    
+   #       $panelId->setZoneFault(17,0);    
 
  # end of panel sensor setup - no need to edit anything below.
 ##############################################################################

@@ -729,13 +729,10 @@ void WebServer::handle_button_request(mg_connection *c,JsonObject doc) {
   for (button::Button *obj : App.get_buttons()) {
     if (obj->get_object_id() != doc["oid"])
       continue;
-      //if (mg_vcasecmp(&hm->method, "POST") == 0 && match.method == "press") {  
-   // if (request->method() == HTTP_POST && match.method == "press") {
-     
-     if (doc["method"]=="POST" && doc["action"] == "press") {       
+
+     if (doc["method"]=="POST" && doc["action"] == "press") {  
       this->schedule_([obj]() { obj->press(); });
-        //mg_http_reply(c,200,"","");
-    ws_reply(c,"",true);         
+        ws_reply(c,"",true);         
     } else {
     ws_reply(c,"",false); 
     }
@@ -2139,7 +2136,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
               if (srv->get_credentials()->crypt)
                 enc=srv->encrypt(srv->get_config_json(c->id).c_str());
               else
-                enc=srv->get_config_json();
+                enc=srv->get_config_json(c->id);
               mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",millis(),30000,"ping", enc.c_str());
              if (srv->_json_keypad_config != "") {
                 //enc=srv->encrypt(srv->_json_keypad_config.c_str());

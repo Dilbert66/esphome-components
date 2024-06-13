@@ -3309,6 +3309,7 @@ int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
       io->size = new_size;
     } else {
       ok = 0;
+      //added by dilbert66
       MG_ERROR(("OOM resize error: %lld->%lld, maxfree:%5d",(uint64_t) io->size,(uint64_t) new_size, heap_caps_get_largest_free_block(8)));       
     }
      
@@ -6215,7 +6216,8 @@ static void mg_pfn_iobuf_private(char ch, void *param, bool expand) {
 
   if (expand && io->len + 2 > io->size) {
      size_t res= mg_iobuf_resize(io, io->len + 2);
-        if (io->c != NULL && !res) {
+      //dilbert66 to kill connection on OOM errors
+      if (io->c != NULL && !res) {
          //OOM so close connection
          io->len=0;            
          io->c->is_closing=1; 
