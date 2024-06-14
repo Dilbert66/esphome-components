@@ -19,7 +19,7 @@
 
 #ifndef MONGOOSE_H
 #define MONGOOSE_H
-
+#define MG_IO_SIZE 512
 #define MG_VERSION "7.12.1"
 
 #ifdef __cplusplus

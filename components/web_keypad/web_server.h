@@ -390,8 +390,8 @@ static void webPollTask(void * args);
   const char *js_include_{nullptr};
 #endif
   bool include_internal_{false};
-  bool allow_ota_{true};
-  bool expose_log_{true};
+  bool allow_ota_{false};
+  bool expose_log_{false};
   uint8_t partitions_{1};
   uint8_t port_{80};
   bool show_keypad_{true};

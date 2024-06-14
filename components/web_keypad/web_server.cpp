@@ -349,190 +349,7 @@ void WebServer::dump_config() {
 }
 float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
-#if USE_WEBSERVER_VERSION == 1
-/*
-void WebServer::handle_index_request(struct mg_connection *c) {
-  AsyncResponseStream *stream = request->beginResponseStream("text/html");
-  const std::string &title = App.get_name();
-  stream->print(F("<!DOCTYPE html><html lang=\"en\"><head><meta charset=UTF-8><meta "
-                  "name=viewport content=\"width=device-width, initial-scale=1,user-scalable=no\"><title>"));
-  stream->print(title.c_str());
-  stream->print(F("</title>"));
-#ifdef USE_WEBSERVER_CSS_INCLUDE
-  stream->print(F("<link rel=\"stylesheet\" href=\"/0.css\">"));
-#endif
-  if (strlen(this->css_url_) > 0) {
-    stream->print(F(R"(<link rel="stylesheet" href=")"));
-    stream->print(this->css_url_);
-    stream->print(F("\">"));
-  }
-  stream->print(F("</head><body>"));
-  stream->print(F("<article class=\"markdown-body\"><h1>"));
-  stream->print(title.c_str());
-  stream->print(F("</h1>"));
-  stream->print(F("<h2>States</h2><table id=\"states\"><thead><tr><th>Name<th>State<th>Actions<tbody>"));
-
-#ifdef USE_SENSOR
-  for (auto *obj : App.get_sensors()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "sensor", "");
-  }
-#endif
-
-#ifdef USE_SWITCH
-  for (auto *obj : App.get_switches()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "switch", "<button>Toggle</button>");
-  }
-#endif
-
-#ifdef USE_BUTTON
-  for (auto *obj : App.get_buttons())
-    write_row(stream, obj, "button", "<button>Press</button>");
-#endif
-
-#ifdef USE_BINARY_SENSOR
-  for (auto *obj : App.get_binary_sensors()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "binary_sensor", "");
-  }
-#endif
-
-#ifdef USE_FAN
-  for (auto *obj : App.get_fans()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "fan", "<button>Toggle</button>");
-  }
-#endif
-
-#ifdef USE_LIGHT
-  for (auto *obj : App.get_lights()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "light", "<button>Toggle</button>");
-  }
-#endif
-
-#ifdef USE_TEXT_SENSOR
-  for (auto *obj : App.get_text_sensors()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "text_sensor", "");
-  }
-#endif
-
-#ifdef USE_COVER
-  for (auto *obj : App.get_covers()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "cover", "<button>Open</button><button>Close</button>");
-  }
-#endif
-
-#ifdef USE_NUMBER
-  for (auto *obj : App.get_numbers()) {
-    if (this->include_internal_ || !obj->is_internal()) {
-      write_row(stream, obj, "number", "", [](AsyncResponseStream &stream, EntityBase *obj) {
-        number::Number *number = (number::Number *) obj;
-        stream.print(R"(<input type="number" min=")");
-        stream.print(number->traits.get_min_value());
-        stream.print(R"(" max=")");
-        stream.print(number->traits.get_max_value());
-        stream.print(R"(" step=")");
-        stream.print(number->traits.get_step());
-        stream.print(R"(" value=")");
-        stream.print(number->state);
-        stream.print(R"("/>)");
-      });
-    }
-  }
-#endif
-
-#ifdef USE_TEXT
-  for (auto *obj : App.get_texts()) {
-    if (this->include_internal_ || !obj->is_internal()) {
-      write_row(stream, obj, "text", "", [](AsyncResponseStream &stream, EntityBase *obj) {
-        text::Text *text = (text::Text *) obj;
-        auto mode = (int) text->traits.get_mode();
-        stream.print(R"(<input type=")");
-        if (mode == 2) {
-          stream.print(R"(password)");
-        } else {  // default
-          stream.print(R"(text)");
-        }
-        stream.print(R"(" minlength=")");
-        stream.print(text->traits.get_min_length());
-        stream.print(R"(" maxlength=")");
-        stream.print(text->traits.get_max_length());
-        stream.print(R"(" pattern=")");
-        stream.print(text->traits.get_pattern().c_str());
-        stream.print(R"(" value=")");
-        stream.print(text->state.c_str());
-        stream.print(R"("/>)");
-      });
-    }
-  }
-#endif
-
-#ifdef USE_SELECT
-  for (auto *obj : App.get_selects()) {
-    if (this->include_internal_ || !obj->is_internal()) {
-      write_row(stream, obj, "select", "", [](AsyncResponseStream &stream, EntityBase *obj) {
-        select::Select *select = (select::Select *) obj;
-        stream.print("<select>");
-        stream.print("<option></option>");
-        for (auto const &option : select->traits.get_options()) {
-          stream.print("<option>");
-          stream.print(option.c_str());
-          stream.print("</option>");
-        }
-        stream.print("</select>");
-      });
-    }
-  }
-#endif
-
-#ifdef USE_LOCK
-  for (auto *obj : App.get_locks()) {
-    if (this->include_internal_ || !obj->is_internal()) {
-      write_row(stream, obj, "lock", "", [](AsyncResponseStream &stream, EntityBase *obj) {
-        lock::Lock *lock = (lock::Lock *) obj;
-        stream.print("<button>Lock</button><button>Unlock</button>");
-        if (lock->traits.get_supports_open()) {
-          stream.print("<button>Open</button>");
-        }
-      });
-    }
-  }
-#endif
-
-#ifdef USE_CLIMATE
-  for (auto *obj : App.get_climates()) {
-    if (this->include_internal_ || !obj->is_internal())
-      write_row(stream, obj, "climate", "");
-  }
-#endif
-
-  stream->print(F("</tbody></table><p>See <a href=\"https://esphome.io/web-api/index.html\">ESPHome Web API</a> for "
-                  "REST API documentation.</p>"));
-  if (this->allow_ota_) {
-    stream->print(
-        F("<h2>OTA Update</h2><form method=\"POST\" action=\"/update\" enctype=\"multipart/form-data\"><input "
-          "type=\"file\" name=\"update\"><input type=\"submit\" value=\"Update\"></form>"));
-  }
-  stream->print(F("<h2>Debug Log</h2><pre id=\"log\"></pre>"));
-#ifdef USE_WEBSERVER_JS_INCLUDE
-  if (this->js_include_ != nullptr) {
-    stream->print(F("<script type=\"module\" src=\"/0.js\"></script>"));
-  }
-#endif
-  if (strlen(this->js_url_) > 0) {
-    stream->print(F("<script src=\""));
-    stream->print(this->js_url_);
-    stream->print(F("\"></script>"));
-  }
-  stream->print(F("</article></body></html>"));
-  request->send(stream);
-  */
-}
-#elif USE_WEBSERVER_VERSION == 2
+#if USE_WEBSERVER_VERSION == 2
 void WebServer::handle_index_request(struct mg_connection *c) {
   
           const char * buf= (const char *) ESPHOME_WEBSERVER_INDEX_HTML;  
@@ -571,8 +388,8 @@ void WebServer::handle_js_request(struct mg_connection *c) {
           const char * buf= (const char *) ESPHOME_WEBSERVER_JS_INCLUDE;
           mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n", ESPHOME_WEBSERVER_JS_INCLUDE_SIZE );
           mg_send(c,buf,ESPHOME_WEBSERVER_JS_INCLUDE_SIZE);
-          c->is_resp = 0;  
-            
+          c->is_resp = 0; 
+           
 }
 #endif
 
@@ -1242,12 +1059,11 @@ void WebServer::handle_auth_request(mg_connection *c,JsonObject doc) {
     if (doc.containsKey("cid")) {
      // cid = toInt(doc["partition"],10);
      unsigned long ul=(unsigned long) doc["cid"];
-ESP_LOGD(TAG,"Got auth id=%d",ul);
     for (struct mg_connection *cl = mgr.conns; cl != NULL; cl = cl->next) {
             if (cl->id == ul) {
                 cl->data[1]=1;
                 entities_iterator_.begin(include_internal_);
-                ESP_LOGD(TAG,"Set cl %d as 1",cl->id);
+                ESP_LOGD(TAG,"Set auth conn %d as 1",cl->id);
                 break;
                 
             }
@@ -1877,50 +1693,6 @@ return std::string(data);
 
 }
 
-/*
-std::string WebServer::encrypt(const char * message) {
-
-    uint8_t * key=get_credentials()->token;
-    std::vector<uint8_t> m;
-    uint8_t iv[16];
-    random_bytes(iv,16);
-    uint8_t d=strlen(message) % 16; //block size is always 16
-    d=d?16-d:0;
-    m.reserve(strlen(message) + d + 1);
-    for (uint8_t x=0;x<strlen(message);x++)
-        m.push_back(message[x]);
-    for (uint8_t x=0;x<d;x++) //zero pad
-         m.push_back(0);
-    std::string eiv=base64_encode(iv,16);
-
-    cbc.setKey(key,KEYSIZE);
-    cbc.setIV(iv,16);
-
-    cbc.encrypt(m.data(),m.data(),m.size());
-    std::string enc= "{\"iv\":\"" + eiv + "\",\"data\":\"";
-    enc.append(base64_encode(m));
-    enc.append("\"}");
-    return enc;
-
-}
-
-std::string WebServer::decrypt(const char *data,const char *iv) {
-    uint8_t * key=get_credentials()->token;
-    uint8_t data_decoded[strlen(data)];
-    uint8_t iv_decoded[strlen(iv)];
-    int encrypted_length = base64_decode(std::string(data), data_decoded, strlen(data));
-    base64_decode(std::string(iv), iv_decoded,strlen(iv));
-    cbc.setKey(key,KEYSIZE);
-    cbc.setIV(iv_decoded,16);
-   
-    cbc.decrypt(data_decoded, data_decoded,encrypted_length);
-    data_decoded[encrypted_length] = '\0';
-
-    return std::string((char*)data_decoded); 
-
-
-}
-*/
 char WebServer::matchBuf[MATCH_BUF_SIZE];
 uint8_t WebServer::matchIndex=0;
 
@@ -1946,6 +1718,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         mg_tls_init(c, &opts);
     */
      ESP_LOGD(TAG,"New connection %d accepted",c->id);
+      
     } if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!
             struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;
@@ -2111,22 +1884,9 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                 mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", enc.c_str()); 
              }                
 
-             /*
-             //create and send session token
-             unsigned char token[crypto_secretbox_KEYBYTES];
-             char tokenhex[crypto_secretbox_KEYBYTES * 2+1];             
-             randombytes_buf(token, sizeof token);             
-             sodium_bin2hex(tokenhex,sizeof tokenhex,token,sizeof token);
-             srv->sessionTokens[c]=std::string(tokenhex);
-             snprintf(buf,bufsize, "{\"%s\":\"%s\",\"%s\":\"%s\"}", "type","token","data", tokenhex);  
-             config=srv->encrypt(buf,srv->get_credentials()->token.c_str(),"token");
-              mg_ws_printf(c, WEBSOCKET_OP_TEXT, "%s",config.c_str()); 
-              */
-
             srv->entities_iterator_.begin(srv->include_internal_);
             
         } else if (mg_http_match_uri(hm, "/events") && !c->is_websocket) {
-            
             mg_str *hdr =mg_http_get_header(hm, "Accept"); 
            // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
               c->data[0]='E';
@@ -2143,13 +1903,14 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
               // enc=srv->_json_keypad_config;
                 mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", srv->_json_keypad_config.c_str());   
              } 
-               srv->entities_iterator_.begin(srv->include_internal_);
+             srv->entities_iterator_.begin(srv->include_internal_);
            // } else
             //   mg_http_reply(c, 404,"", ""); 
         
         } else {
             c->send.c=c;            
             srv->handleWebRequest(c,hm);
+
         }
   } 
        (void) ev_data;
@@ -2157,14 +1918,17 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
 
 void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
+    
   if (mg_http_match_uri(hm, "/")) { 
     this->handle_index_request(c);
+    c->is_draining=1;    
     return;
   }
 
 #ifdef USE_WEBSERVER_CSS_INCLUDE
   if (mg_http_match_uri(hm, "/0.css")) { 
     this->handle_css_request(c);
+    c->is_draining=1;        
     return;
   }
 #endif
@@ -2172,6 +1936,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
 #ifdef USE_WEBSERVER_JS_INCLUDE
   if (mg_http_match_uri(hm, "/0.js")) { 
     this->handle_js_request(c);
+    c->is_draining=1;  //uses about 22k or more of ram and doesnt free it so close it when done sending
     return;
   }
 #endif
@@ -2185,7 +1950,9 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
    mg_str *hdr =mg_http_get_header(hm, HEADER_CORS_REQ_PNA); 
    if (mg_vcasecmp(&hm->method, "OPTIONS") == 0 && hdr != NULL) {  
     this->handle_pna_cors_request(c);
+    c->is_draining=1;        
     return;
+    
    }   
 
 #endif
@@ -2210,7 +1977,8 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
   }
 
   handleRequest(c,obj);
-
+  if (c->send.size > 1500 || c->recv.size > 1500)
+    c->is_draining=1; //if send or recv queue getting too large close the connection to free up ram
   
   }
   
