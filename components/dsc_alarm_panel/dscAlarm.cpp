@@ -1162,10 +1162,11 @@ void DSCkeybushome::update()  {
       eventTime = millis();
     }
     */
+    /*
     static unsigned long refreshTime;
     if (!firstrun && millis() - refreshTime > 60000 ) {
               refreshTime=millis();
-              forceRefresh=true;
+            //  forceRefresh=true;
       if (debug > 1)   {  
 #ifdef ESP32
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
@@ -1174,7 +1175,7 @@ void DSCkeybushome::update()  {
       }      
              
     }
-
+*/
 
     if ( (dsc.loop() || forceRefresh) && dsc.panelData[0] ) { //Processes data only when a valid Keybus command has been read
  

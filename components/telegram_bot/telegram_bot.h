@@ -42,7 +42,8 @@ class WebNotify : public Controller, public Component {
 
   void dump_config() override;
   void publish(std::string to,std::string message);
-
+  void publish(std::string message) {publish("",message); }
+  
   void set_bot_id(std::string bot_id) {botId_=bot_id;
   ESP_LOGD("test","telegram: bot id set to %s,%d,%d",botId_.c_str(),botId_.length(),sending);
   }
@@ -111,16 +112,16 @@ template<typename... Ts> class TelegramPublishAction : public Action<Ts...> {
   WebNotify *parent_;
 };
 
-class TelegramMessageTrigger : public Trigger<std::string,std::string,std::string> {
+class TelegramMessageTrigger : public Trigger<std::string,std::string,std::string,std::string> {
  public:
   explicit TelegramMessageTrigger(const std::string &cmd) {
       
          global_notify->set_on_message([cmd,this](rx_message_t *m) {
-        ESP_LOGD("test","got trigger sending back payload %s",m->text.c_str());
-       if (cmd.compare("")==0) 
-           this->trigger(m->cmd,m->args,m->text);
+       // ESP_LOGD("test","got trigger sending back payload %s",m->text.c_str());
+       if (cmd.compare("")==0 || cmd.compare("*")==0 ) 
+           this->trigger(m->cmd,m->args,m->text,m->chat_id);
        else if (cmd.compare(m->cmd)==0)       
-           this->trigger(m->cmd,m->args,m->text);
+           this->trigger(m->cmd,m->args,m->text,m->chat_id);
        
     }); 
       
@@ -130,5 +131,5 @@ class TelegramMessageTrigger : public Trigger<std::string,std::string,std::strin
 
 };
 
-}  // namespace web_server
+}  // namespace web_notify
 }  // namespace esphome

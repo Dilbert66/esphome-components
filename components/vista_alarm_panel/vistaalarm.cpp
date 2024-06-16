@@ -743,9 +743,15 @@ void vistaECPHome::updateZoneState(int z,int p,reqStates r) {
           zoneType * zt=getZone(z);
           ESP_LOGD(TAG,"Setting zone %d, partition %d",zt->zone,p);                
           if (r==sopenzones) 
-             zt->open=true;
+              if (!zt->open) {
+                  zt->open=true;                  
+                  zoneStatusUpdate(zt);
+              }
           else if (r==sbypasszones)
-                zt->bypass=true;  
+              if (!zt->bypass) {
+                zt->bypass=true; 
+                zoneStatusUpdate(zt);
+              }                
             
           zt->time=millis();
           zt->partition=p;
@@ -768,9 +774,15 @@ void vistaECPHome::updateZoneState(int z,int p,reqStates r) {
        auto it = std::find_if(extZones.begin(), extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
        while (it != extZones.end()) {
              if (request==sopenzones )
-                it->open=false;
+                if (it->open) {
+                    it->open=false;
+                    zoneStatusUpdate((zoneType *)(&it));                    
+                }
                else if (request==sbypasszones)
-                 it->bypass=false;
+                 if (it->bypass) {
+                    it->bypass=false;
+                    zoneStatusUpdate((zoneType*)(&it));                 
+                 }
              ESP_LOGD(TAG,"clearing zone %d, partition %d",it->zone,p);
             it = std::find_if(++it, extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
        }
@@ -848,6 +860,7 @@ void vistaECPHome::update()  {
        //  vista.cmdQueue.pop();
        if (vista.cmdAvail()) {
          vistaCmd=vista.getNextCmd();
+         /*
        static unsigned long refreshFlagsTime;
        if (((!firstRun && vista.keybusConnected && millis() - refreshFlagsTime > 60000 ) || forceRefreshGlobal )&&  !vistaCmd.statusFlags.programMode) {
               forceRefreshZones=true;
@@ -861,7 +874,8 @@ void vistaECPHome::update()  {
              ESP_LOGD(TAG,"Force refresh....");
             #endif
            
-      }       
+      }   
+*/      
           /*
           //rf testing code
           static unsigned long testtime=millis();
@@ -1024,7 +1038,7 @@ void vistaECPHome::update()  {
                   
                   
                 }  else reqState==sidle;
-
+            return;
         } else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd) {
           getPartitionsFromMask();
           for (uint8_t partition = 1; partition <= maxPartitions; partition++) {
@@ -1098,7 +1112,7 @@ void vistaECPHome::update()  {
 
 
         // done other cmd processing.  Process f7 now
-        if (!(vistaCmd.cbuf[0] == 0xf7 || vistaCmd.cbuf[0]==0xf2) ||  vistaCmd.cbuf[12]==0x77 ) return;
+        if (!(vistaCmd.cbuf[0] == 0xf7  ||  vistaCmd.cbuf[12]==0x77 ) return;
 
         currentSystemState = sunavailable;
         currentLightState.stay = false;

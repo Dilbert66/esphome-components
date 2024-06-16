@@ -25,6 +25,7 @@ WebNotify::WebNotify()
 
 void WebNotify::publish(std::string to,std::string message) {
   std::string outmsg;
+  //ESP_LOGD(TAG,"Sending telegram message %s to %s",message.c_str(),to.c_str());  
   if (message.length() > 200) {
           ESP_LOGE(TAG,"Message %s to %s too long",message.c_str(),to.c_str());
       
@@ -42,10 +43,13 @@ void WebNotify::publish(std::string to,std::string message) {
 }
 
 bool WebNotify::isAllowed(std::string chat_id) {
+       if (std::find (allowed_chat_ids.begin(), allowed_chat_ids.end(),"*") != allowed_chat_ids.end())
+           return true;
+       
        if ( std::find(allowed_chat_ids.begin(), allowed_chat_ids.end(), chat_id) != allowed_chat_ids.end() ) 
            return true;
-       else
-           return false;
+
+       return false;
 }
 
 void WebNotify::parseArgs(rx_message_t *m) {
@@ -58,7 +62,7 @@ void WebNotify::parseArgs(rx_message_t *m) {
 }
 
 bool WebNotify::processMessage(const char *payload) {
-   bool success=false;
+   bool success=true;
   
    json::parse_json(payload,  [&success](JsonObject root) {
      
@@ -110,7 +114,7 @@ bool WebNotify::processMessage(const char *payload) {
               if (global_notify->lastMsgReceived == 0) global_notify->lastMsgReceived = update_id;
               
               if (global_notify->lastMsgReceived != update_id) {
-               std::string sender = root["result"][0]["message"]["from"]["username"];
+                std::string sender = root["result"][0]["message"]["from"]["username"];
                 std::string text = root["result"][0]["message"]["text"];
                 std::string chat_id = root["result"][0]["message"]["chat"]["id"];
                 std::string date = root["result"][0]["message"]["date"];
@@ -120,16 +124,17 @@ bool WebNotify::processMessage(const char *payload) {
                 m.chat_id = chat_id;
                 m.date = date;
                 global_notify->lastMsgReceived = update_id;
+                
                 if (!global_notify->isAllowed(m.chat_id)) {
                     MG_INFO(("Chat id %s not allowed to send to bot",m.chat_id.c_str()));
-                    success=true; //message was still parsed ok so we set success
+                        //std::string msg="{\"chat_id\":"+ m.chat_id) +",\"text\":\"ID: "+m.chat_id + " not allowed"\"}"; 
+                        //global_notify->messages.push(msg); 
                     return ;
                     
                 }      
                 //test - echo message back
-                std::string msg="{\"chat_id\":"+ std::string(global_notify->telegramUserId_.c_str()) +",\"text\":\"" + text + "\"}"; 
-                global_notify->messages.push(msg); 
-                
+                //std::string msg="{\"chat_id\":"+ std::string(global_notify->telegramUserId_.c_str()) +",\"text\":\"" + text + "\"}"; 
+                //global_notify->messages.push(msg); 
                 global_notify->parseArgs(&m);
                 global_notify->on_message_.call(&m);  
               }
@@ -147,8 +152,13 @@ bool WebNotify::processMessage(const char *payload) {
             } else if (global_notify->sending) {
                     //message response. Pop the message anyhow so we don't loop.
                       global_notify->messages.pop();
-            }
-            success=true;
+            } else if ( root["result"][0]["update_id"]) {
+                int update_id = root["result"][0]["update_id"];
+                global_notify->lastMsgReceived = update_id + 1;
+            } //else 
+              // success=false;
+
+            
    });
    return success;
 }
@@ -208,7 +218,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Content-Type: application/json\r\n");
         mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",msg.length(),msg.c_str());
-       // ESP_LOGD("test","sent telegram msg %s",msg.c_str());
+        //ESP_LOGD("test","sent telegram msg %s",msg.c_str());
       } else if ( global_notify->enableBot_) {
         global_notify->sending=false;       
         mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
@@ -216,7 +226,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Accept: application/json\r\n");
         mg_printf(c,"Cache-Control: no-cache\r\n\r\n");    
-         //MG_INFO(("sent post data"));
+        //ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
       }
    
   } else if (ev == MG_EV_HTTP_MSG) {
@@ -256,7 +266,7 @@ void WebNotify::setup() {
    if (telegramUserId_ !="")
        allowed_chat_ids.push_back(telegramUserId_);
    mg_mgr_init(&mgr); 
-  std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"test message from esphome\"}";
+  std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
   messages.push(msg);   
 }
 
@@ -284,5 +294,5 @@ void WebNotify::dump_config() {
 WebNotify * global_notify=nullptr;
 
 
-}  // namespace web_server
+}  // namespace web_notify
 }  // namespace esphome

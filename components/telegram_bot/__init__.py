@@ -66,7 +66,7 @@ CONF_MESSAGE="message"
 TELEGRAM_PUBLISH_ACTION_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.use_id(WebNotify),
-        cv.Required(CONF_TO): cv.templatable(cv.string),
+        cv.Optional(CONF_TO,default=""): cv.templatable(cv.string),
         cv.Required(CONF_MESSAGE): cv.templatable(cv.string),
     }
 )
@@ -106,7 +106,6 @@ def add_resource_as_progmem(
 async def to_code(config):
     cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
     cg.add_build_flag("-DMG_IO_SIZE=512")    
-    #cg.add_library("https://github.com/Dilbert66/esphome-mongoose.git", ">=7.12.6")    
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:
@@ -127,6 +126,6 @@ async def to_code(config):
 
     for conf in config.get(CONF_ON_MESSAGE, []):
         trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],conf[CONF_CMD])
-        await automation.build_automation(trig, [(cg.std_string, "cmd"),(cg.std_string,"args"),(cg.std_string,"text")], conf)
+        await automation.build_automation(trig, [(cg.std_string, "cmd"),(cg.std_string,"args"),(cg.std_string,"text"),(cg.std_string,'chat_id')], conf)
 
 
