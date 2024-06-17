@@ -1112,7 +1112,7 @@ void vistaECPHome::update()  {
 
 
         // done other cmd processing.  Process f7 now
-        if (!(vistaCmd.cbuf[0] == 0xf7  ||  vistaCmd.cbuf[12]==0x77 ) return;
+        if (!vistaCmd.cbuf[0] == 0xf7  ||  vistaCmd.cbuf[12]==0x77 ) return;
 
         currentSystemState = sunavailable;
         currentLightState.stay = false;
