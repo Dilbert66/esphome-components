@@ -62,7 +62,7 @@ telegram_bot:
   allowed_chat_ids:  #chat id's that are allowed to send cmds. Can also be group id's. Use "*" to allow all.
     - "12345522"
     - "-2255221"
-  on_message:  #provides variables cmd, args , chat_id and text. <cmd> <args> , text is both. 
+  on_message:  #provides variables cmd, args , chat_id and text. <cmd> <args> , text is both. Chat_id is the requesting client's id. Has to be part of the allowed_chat_ids to be able to send cmds.
     - command: "*" #wildard captures all cmds
       then:
        - lambda: |-
@@ -132,7 +132,7 @@ Sample telegram publish action.  message=string or !lambda.
     on_state: 
       then:
         - lambda: |-
-             webnotify->publish("123466778","The ready light is: " + id(rdy_1).state); send to a specific id
+             webnotify->publish("123466778","The ready light is: " + id(rdy_1).state); #send to a specific id
              webnotify->publish("The ready light is: " + id(rdy_1).state); #send to default chat id
        
 ```   
