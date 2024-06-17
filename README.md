@@ -36,10 +36,10 @@ Optional. If you also want to use allow a group to control your alarm system,
 create a new group.  Add your own chat_id, the bot id and any other authorized users to the group.
 
 ### Get the group chat id:
-   a. Add @getidsbot to the group.
+`   a. Add @getidsbot to the group.
    b. Get the ID from the id: field under 'This Chat'.
    c. Copy the group chat ID to the chat_id: field or to the allowed_chat_ids: field.
-   
+  ` 
 Make sure to add all other allowed user or group chat ids to the allowed_chat_ids: field. 
 
 ## YAML config 
@@ -206,4 +206,5 @@ web_keypad:
 ![vistaalarm](https://github.com/Dilbert66/esphome-components/assets/7193213/047c1fdb-1d90-4c14-8585-87309310d2bc)
 
 If you like this project and wish to supplement my coffee intake, please click the button below to donate! Thank you!
+
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Dilbert66)
