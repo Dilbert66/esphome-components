@@ -194,8 +194,13 @@ void WebServer::ws_reply(mg_connection *c,const char * data,bool ok) {
           if (strlen(data) == 0)
             mg_http_reply(c,204,"Access-Control-Allow-Origin: *\r\n","");
           else {
-            if (get_credentials()->crypt)
-                data=encrypt(data).c_str();
+            if ( get_credentials()->crypt) {
+               if ( !c->data[1])  {              
+                    mg_http_reply(c,404,"","");
+                    return;
+               } else                 
+                   data=encrypt(data).c_str();
+            }
             mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data);
           }
        } else
