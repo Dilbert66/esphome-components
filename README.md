@@ -43,9 +43,8 @@ create a new group.  Add your own chat_id, the bot id and any other authorized u
 Make sure to add all other allowed user or group chat ids to the allowed_chat_ids: field. 
 
 ## YAML config 
-Add the following sections to your chose yaml configuration.
-Custom components. You can use the github release version  or 
-Copy the source directly to directory "my_components" under your esphome directory
+Add the following sections to your chosen yaml configuration. You can use the github release version  or 
+copy the source directly from this repository to directory "my_components" under your esphome directory
 The example below shows a sample bot config showing how to create a menu of cmd options.
 ```
 external_components:
