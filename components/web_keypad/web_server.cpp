@@ -1446,7 +1446,7 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
       case OTA:    type="ota";break;
       default: return;
   }
-    if ( get_credentials()->crypt)
+    if ( get_credentials()->crypt && strlen(data) > 0)
         data=encrypt(data).c_str();
   for (c = mgr.conns; c != NULL; c = c->next) {
     if ( get_credentials()->crypt && !c->data[1]) continue;//not authenticated with encryped response
@@ -1632,6 +1632,7 @@ static int mg_http_check_digest_auth(struct mg_http_message *hm,
 
 std::string WebServer::encrypt(const char * message) {
    int i = strlen(message);
+   if (!i) return "";
    int buf = round(i / 16) * 16;
    int length = (buf <= i) ? buf + 16 : buf;
    uint8_t encrypted[length];
