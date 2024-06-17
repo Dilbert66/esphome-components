@@ -204,5 +204,6 @@ web_keypad:
 
 ```
 
+![vistaalarm](https://github.com/Dilbert66/esphome-components/assets/7193213/047c1fdb-1d90-4c14-8585-87309310d2bc)
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Dilbert66)
