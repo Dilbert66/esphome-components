@@ -167,6 +167,7 @@ Switches to control bot and notify functions:
       - lambda: |-
           webnotify->set_send_enable(0);      
  ```   
+![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
 # ESP32 web keypad component. 
 
