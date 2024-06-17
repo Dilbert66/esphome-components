@@ -21,8 +21,7 @@ I will document each option later but for now, I'm providing a fairly complete e
 You will first need a fully working yaml config.  The options below will need to be added to that config.  The implementation uses the esphome "custom components" feature which allows the yaml config to download the external source code as needed.  You can also copy the source directly to a folder on your system if you prefer.  The example below as shown, will download the "telegram_bot" and "mg_lib" components from my github page and compile them on your system when you do your local install/compile.  I've also provided two switch configurations that you can use to switch the bot and notify functions off or on from Home assistant or from the web_server application.
 
 ## Bot creation
-### Create your Telegram bot id: 
-   Get your bot id:
+### Get your bot id:
     a. Start a  conversation with @BotFather or go to url: https://telegram.me/botfather
     b. Create a new bot using BotFather: /newbot
     c. Copy the bot token to the "bot_id:" field
