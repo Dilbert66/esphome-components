@@ -147,10 +147,10 @@ Switches to control bot and notify functions:
       return webnotify->get_bot_status();
     turn_on_action:
       - lambda: |-
-          return webnotify->set_bot_enable(1);
+          webnotify->set_bot_enable(true);
     turn_off_action:
       - lambda: |-
-          webnotify->set_bot_enable(0); 
+          webnotify->set_bot_enable(false); 
 
   - platform: template
     name: enable Notify
@@ -159,10 +159,10 @@ Switches to control bot and notify functions:
       return webnotify->get_send_status();
     turn_on_action:
       - lambda: |-
-          return webnotify->set_send_enable(1);
+          webnotify->set_send_enable(true);
     turn_off_action:
       - lambda: |-
-          webnotify->set_send_enable(0);      
+          webnotify->set_send_enable(false);      
  ```   
 ![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
