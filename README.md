@@ -1,16 +1,16 @@
-#Various custom components for the ESPHOME system
+# Various custom components for the ESPHOME system
 
-##Vista alarm system interface
+## Vista alarm system interface
 Please see the main project documenation here for the Vista series panels:
 https://github.com/Dilbert66/esphome-vistaECP
 
-##DSC alarm system interface
+## DSC alarm system interface
 For the DSC series panels:
 https://github.com/Dilbert66/esphome-dsckeybus
 
 If you like this project and wish to supplement my coffee intake, please click the button below to donate! Thank you!
 
-#ESP32 Standalone Telegram Bot
+# ESP32 Standalone Telegram Bot
 
 This component provides a standalone telegram bot application for the ESP32 platform that gives the ability
 to fully control an Esphome application from your telegram account.  You can send your Esphome application any commands you want as well as have it send any statuses back to you via a secure https connection to the telegram api, all remotely.  It does not require any outside application or home control software, completely residing on the chip. Due to the need to use TLS for communications to the Telegram API site, it will use about 46K of heap memory which should not be a problem with the ESP32.  For performance and stability reasons, I've used the mongoose.ws web library as the base for all http handling.  This library provides an event driven, non-blocking API for creating various TCP apps.  I initially chose it to replace the ESPasyncwebserver library that was used on the web_server component since I was encountering too many heap crashes during heavy traffic.  I have been very pleased with it's minimal memory footprint and reliability. 
@@ -23,20 +23,20 @@ I will document each option later but for now, I'm providing a fairly complete e
 You will first need a fully working yaml config.  The options below will need to be added to that config.  The implementation uses the esphome "custom components" feature which allows the yaml config to download the external source code as needed.  You can also copy the source directly to a folder on your system if you prefer.  The example below as shown, will download the "telegram_bot" and "mg_lib" components from my github page and compile them on your system when you do your local install/compile.  I've also provided two switch configurations that you can use to switch the bot and notify functions off or on from Home assistant or from the web_server application.
 
 ## Bot creation
-###Create your Telegram bot id: 
+### Create your Telegram bot id: 
    Get your bot id:
     a. Start a  conversation with @BotFather or go to url: https://telegram.me/botfather
     b. Create a new bot using BotFather: /newbot
     c. Copy the bot token to the "bot_id:" field
     d. Start a conversation with the newly created bot to open the chat.
-###Get your chat id: 
+### Get your chat id: 
     a. Start a conversation with @myidbot, or go to url: https://telegram.me/myidbot to get your chat id.
     b. Get your user chat ID with cmd: /getid
     c. Copy the user shown chat ID to the "chat_id:" field or the allowed_chat_ids: field.
     
 Optional. If you also want to use allow a group to control your alarm system,
 create a new group.  Add your own chat_id, the bot id and any other authorized users to the group.
-###Get the group chat id:
+### Get the group chat id:
    a: Add @getidsbot to the group
    b: Get the ID from the id: field under "This Chat"
    c: copy the group chat ID to the chat_id: field or to the allowed_chat_ids: field.
@@ -168,7 +168,7 @@ Switches to control bot and notify functions:
           webnotify->set_send_enable(0);      
  ```   
 
-#ESP32 web keypad component. 
+# ESP32 web keypad component. 
 
 This component provides a virtual keypad for each partition of your alarm system via a web page as well providing all sensor statuses. You can configure all buttons and keys using a config file. I’ve provided an example yaml file in my components directory. Just configure the yaml as usual for your system. There is an added section called web_keypad: for this new feature. 
 
