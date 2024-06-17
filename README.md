@@ -27,6 +27,7 @@ You will first need a fully working yaml config.  The options below will need to
     b. Create a new bot using BotFather: /newbot
     c. Copy the bot token to the "bot_id:" field
     d. Start a conversation with the newly created bot to open the chat.
+    
 ### Get your chat id: 
     a. Start a conversation with @myidbot, or go to url: https://telegram.me/myidbot to get your chat id.
     b. Get your user chat ID with cmd: /getid
@@ -35,9 +36,9 @@ You will first need a fully working yaml config.  The options below will need to
 Optional. If you also want to use allow a group to control your alarm system,
 create a new group.  Add your own chat_id, the bot id and any other authorized users to the group.
 ### Get the group chat id:
-   a: Add @getidsbot to the group
-   b: Get the ID from the id: field under "This Chat"
-   c: copy the group chat ID to the chat_id: field or to the allowed_chat_ids: field.
+   a. Add @getidsbot to the group
+   b. Get the ID from the id: field under "This Chat"
+   c. copy the group chat ID to the chat_id: field or to the allowed_chat_ids: field.
    
 Make sure to add all other allowed user or group chat ids to the allowed_chat_ids: field. 
 
