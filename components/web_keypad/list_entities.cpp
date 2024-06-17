@@ -71,8 +71,8 @@ bool ListEntitiesIterator::on_text_sensor(text_sensor::TextSensor *text_sensor) 
   std::string data=this->web_server_->text_sensor_json(text_sensor, text_sensor->state, DETAIL_ALL).c_str();
   #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
  std::string id =text_sensor->get_type_id();
- if (id.substr(0,2)=="ln" && this->web_server_->get_credentials()->crypt) //encrypt display lines
-     data= this->web_server_->encrypt(data.c_str());
+ //if (id.substr(0,2)=="ln" && this->web_server_->get_credentials()->crypt) //encrypt display lines
+   //  data= this->web_server_->encrypt(data.c_str());
 #endif 
   
  this->web_server_->push(STATE,data.c_str());     

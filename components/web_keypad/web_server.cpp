@@ -193,8 +193,11 @@ void WebServer::ws_reply(mg_connection *c,const char * data,bool ok) {
        if (ok) {
           if (strlen(data) == 0)
             mg_http_reply(c,204,"Access-Control-Allow-Origin: *\r\n","");
-          else
+          else {
+            if (get_credentials()->crypt)
+                data=encrypt(data).c_str();
             mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data);
+          }
        } else
            mg_http_reply(c,404,"","");
         
@@ -448,9 +451,9 @@ void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj, const std::s
 std::string data=this->text_sensor_json(obj, state, DETAIL_STATE);  
 
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =obj->get_type_id();
- if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
-     data=encrypt(data.c_str());
+ //std::string id =obj->get_type_id();
+ //if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
+    // data=encrypt(data.c_str());
 #endif 
 
 this->push(STATE,data.c_str());   
@@ -464,9 +467,9 @@ void WebServer::handle_text_sensor_request(mg_connection *c,JsonObject doc) {
     //request->send(200, "application/json", data.c_str());
     //mg_http_reply(c, 200, "Content-Type: application/jsonAccess-Control-Allow-Origin: *\r\n\r\n", "%s", data.c_str());   
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =obj->get_type_id();
- if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
-     data=encrypt(data.c_str());
+ //std::string id =obj->get_type_id();
+// if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
+    // data=encrypt(data.c_str());
 #endif     
     ws_reply(c,data.c_str(),true); 
     return;
@@ -1443,9 +1446,11 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
       case OTA:    type="ota";break;
       default: return;
   }
-  
+    if ( get_credentials()->crypt)
+        data=encrypt(data).c_str();
   for (c = mgr.conns; c != NULL; c = c->next) {
-    if (get_credentials()->crypt && !c->data[1]) continue;//not authenticated with encryped response
+    if ( get_credentials()->crypt && !c->data[1]) continue;//not authenticated with encryped response
+
     if (c->data[0] =='E') {
 
          if (id && reconnect)
@@ -1461,7 +1466,7 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
 
     if (mt==PING) 
          mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%d\"}", "type",type.c_str(),"data",id); 
-    else if ((mt ==LOG || mt==OTA) && !crypt) 
+    else if ((mt ==LOG || mt==OTA) && ! get_credentials()->crypt) 
          mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);  
      else
          mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);   
@@ -1880,7 +1885,10 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                  enc=srv->get_config_json(c->id);
              mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}", "type","app_config","data", enc.c_str());
              if (srv->_json_keypad_config != "") {
-                enc=srv->encrypt(srv->_json_keypad_config.c_str());             
+              if (srv->get_credentials()->crypt)                 
+                 enc=srv->encrypt(srv->_json_keypad_config.c_str());
+              else
+                 enc=srv->_json_keypad_config;            
                 mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", enc.c_str()); 
              }                
 
@@ -1899,9 +1907,11 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                 enc=srv->get_config_json(c->id);
               mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",millis(),30000,"ping", enc.c_str());
              if (srv->_json_keypad_config != "") {
-                //enc=srv->encrypt(srv->_json_keypad_config.c_str());
-              // enc=srv->_json_keypad_config;
-                mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", srv->_json_keypad_config.c_str());   
+              if (srv->get_credentials()->crypt)                 
+                 enc=srv->encrypt(srv->_json_keypad_config.c_str());
+              else
+                 enc=srv->_json_keypad_config;
+                mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", enc.c_str());   
              } 
              srv->entities_iterator_.begin(srv->include_internal_);
            // } else
