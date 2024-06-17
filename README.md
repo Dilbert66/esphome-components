@@ -36,8 +36,8 @@ Optional. If you also want to use allow a group to control your alarm system,
 create a new group.  Add your own chat_id, the bot id and any other authorized users to the group.
 
 ### Get the group chat id:
-   a. Add @getidsbot to the group
-   b. Get the ID from the id: field under "This Chat"
+   a. Add @getidsbot to the group.
+   b. Get the ID from the id: field under "This Chat".
    c. copy the group chat ID to the chat_id: field or to the allowed_chat_ids: field.
    
 Make sure to add all other allowed user or group chat ids to the allowed_chat_ids: field. 
