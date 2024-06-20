@@ -64,7 +64,7 @@ void WebNotify::parseArgs(rx_message_t *m) {
 bool WebNotify::processMessage(const char *payload) {
    bool success=true;
   
-   json::parse_json(payload,  [&success](JsonObject root) {
+   return json::parse_json(payload,  [&success](JsonObject root) -> bool{
      
             rx_message_t m;  
             if (root["result"][0]["callback_query"]["id"]) {
@@ -129,7 +129,7 @@ bool WebNotify::processMessage(const char *payload) {
                     MG_INFO(("Chat id %s not allowed to send to bot",m.chat_id.c_str()));
                         //std::string msg="{\"chat_id\":"+ m.chat_id) +",\"text\":\"ID: "+m.chat_id + " not allowed"\"}"; 
                         //global_notify->messages.push(msg); 
-                    return ;
+                    return true;
                     
                 }      
                 //test - echo message back
@@ -158,9 +158,9 @@ bool WebNotify::processMessage(const char *payload) {
             } //else 
               // success=false;
 
-            
+           return true 
    });
-   return success;
+  
 }
 
 void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
