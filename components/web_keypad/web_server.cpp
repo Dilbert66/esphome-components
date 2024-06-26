@@ -192,16 +192,16 @@ void WebServer::ws_reply(mg_connection *c,const char * data,bool ok) {
     if (c->data[0] != 'W') {
        if (ok) {
           if (strlen(data) == 0)
-            mg_http_reply(c,204,"Access-Control-Allow-Origin: *\r\n","");
+            mg_http_reply(c,204,PSTR("Access-Control-Allow-Origin: *\r\n"),"");
           else {
-            if ( get_credentials()->crypt) {
+            if ( credentials_.crypt) {
                if ( !c->data[1])  {              
                     mg_http_reply(c,404,"","");
                     return;
                } else                 
                    data=encrypt(data).c_str();
             }
-            mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data);
+            mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", data);
           }
        } else
            mg_http_reply(c,404,"","");
@@ -232,8 +232,8 @@ void WebServer::set_css_include(const char *css_include) { this->css_include_ = 
 void WebServer::set_js_include(const char *js_include) { this->js_include_ = js_include; }
 #endif
 
-void WebServer::set_keypad_config(std::string json_keypad_config) {
-    _json_keypad_config=json_keypad_config;
+void WebServer::set_keypad_config(std::string&& json_keypad_config) {
+    _json_keypad_config=std::move(json_keypad_config);
 }
 
 std::string WebServer::get_config_json(unsigned long cid) {
@@ -298,7 +298,7 @@ std::string WebServer::escape_json(const char * input) {
 
 
 void WebServer::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up web server...");
+  ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
   this->setup_controller(this->include_internal_);
 
    mg_mgr_init(&mgr); 
@@ -340,7 +340,7 @@ void WebServer::loop() {
     mg_mgr_init(&mgr);        // Initialise event manager
     char addr[50];
     sprintf(addr,"http://0.0.0.0:%d",port_);
-    printf("Starting web server on %s:%d\n", network::get_use_address().c_str(),port_);
+    printf("\nStarting web server on %s:%d\n", network::get_use_address().c_str(),port_);
    if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL) {
      printf("Cannot listen on address..");
       return;
@@ -361,7 +361,7 @@ float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f
 void WebServer::handle_index_request(struct mg_connection *c) {
   
           const char * buf= (const char *) ESPHOME_WEBSERVER_INDEX_HTML;  
-          mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n", ESPHOME_WEBSERVER_INDEX_HTML_SIZE );
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_INDEX_HTML_SIZE );
           mg_send(c,buf,ESPHOME_WEBSERVER_INDEX_HTML_SIZE);
           c->is_resp = 0;  
 
@@ -372,7 +372,7 @@ void WebServer::handle_index_request(struct mg_connection *c) {
 void WebServer::handle_pna_cors_request(struct mg_connection *c) {
 
  std::string mac = get_mac_address_pretty();  
-  mg_printf(c,"HTTP/1.1 200 OK\r\n%s:%s\r\n%s:%s\r\n%s:%s\r\n\r\n",HEADER_CORS_ALLOW_PNA,"true",HEADER_PNA_NAME,App.get_name().c_str(),HEADER_PNA_ID,mac.c_str());
+  mg_printf(c,PSTR("HTTP/1.1 200 OK\r\n%s:%s\r\n%s:%s\r\n%s:%s\r\n\r\n"),HEADER_CORS_ALLOW_PNA,"true",HEADER_PNA_NAME,App.get_name().c_str(),HEADER_PNA_ID,mac.c_str());
   c->is_resp=0;
 //MG_INFO((" in cors header %s",HEADER_CORS_ALLOW_PNA));
 }
@@ -382,7 +382,7 @@ void WebServer::handle_pna_cors_request(struct mg_connection *c) {
 void WebServer::handle_css_request(struct mg_connection *c) {
    
           const char * buf= (const char *) ESPHOME_WEBSERVER_CSS_INCLUDE;
-          mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n", ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE );
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE );
           mg_send(c,buf,ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE);
           c->is_resp = 0;    
      
@@ -394,7 +394,7 @@ void WebServer::handle_js_request(struct mg_connection *c) {
 
          
           const char * buf= (const char *) ESPHOME_WEBSERVER_JS_INCLUDE;
-          mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n", ESPHOME_WEBSERVER_JS_INCLUDE_SIZE );
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_JS_INCLUDE_SIZE );
           mg_send(c,buf,ESPHOME_WEBSERVER_JS_INCLUDE_SIZE);
           c->is_resp = 0; 
            
@@ -1451,17 +1451,22 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
       case OTA:    type="ota";break;
       default: return;
   }
-    if ( get_credentials()->crypt && strlen(data) > 0)
-        data=encrypt(data).c_str();
+
+     std::string newdata; 
+    if ( credentials_.crypt && strlen(data) > 0)
+       newdata=encrypt(data);
+    else 
+        newdata=std::string(data);
+   
   for (c = mgr.conns; c != NULL; c = c->next) {
-    if ( get_credentials()->crypt && !c->data[1]) continue;//not authenticated with encryped response
+    if ( credentials_.crypt && !c->data[1]) continue;//not authenticated with encryped response
 
     if (c->data[0] =='E') {
-
+//ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
          if (id && reconnect)
-           mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",id,reconnect,type.c_str(), data);
+           mg_printf(c,PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"),id,reconnect,type.c_str(), newdata.c_str());
         else
-           mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n",type.c_str(),data);
+           mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),type.c_str(),newdata.c_str());
        
         if (c->send.len > 15000 ) c->is_closing=1; //dead connection. kill it. 
 
@@ -1470,11 +1475,11 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
     if (c->data[0] != 'W') continue;
 
     if (mt==PING) 
-         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%d\"}", "type",type.c_str(),"data",id); 
-    else if ((mt ==LOG || mt==OTA) && ! get_credentials()->crypt) 
-         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":\"%s\"}", "type",type.c_str(),"data", data);  
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,PSTR("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type",type.c_str(),"data",id); 
+    else if ((mt ==LOG || mt==OTA) && ! credentials_.crypt) 
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,PSTR("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type",type.c_str(),"data", newdata.c_str());  
      else
-         mg_ws_printf(c, WEBSOCKET_OP_TEXT,"{\"%s\":\"%s\",\"%s\":%s}", "type",type.c_str(),"data", data);   
+         mg_ws_printf(c, WEBSOCKET_OP_TEXT,PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type",type.c_str(),"data", newdata.c_str());   
      
     if (c->send.len > 15000 ) c->is_closing=1; //dead connection. kill it.
  }
@@ -1565,10 +1570,10 @@ static void mg_send_digest_auth_request(struct mg_connection *c,
   mg_random(nonce, sizeof(nonce));                                           
                                             
   mg_printf(c,
-            "HTTP/1.1 401 Unauthorized\r\n"
+            PSTR("HTTP/1.1 401 Unauthorized\r\n"
             "WWW-Authenticate: Digest qop=\"auth\", "
             "realm=\"%s\", nonce=\"%lu\"\r\n"
-            "Content-Length: 0\r\n\r\n",
+            "Content-Length: 0\r\n\r\n"),
             realm, nonce);
 }
 
@@ -1637,46 +1642,46 @@ static int mg_http_check_digest_auth(struct mg_http_message *hm,
 
 std::string WebServer::encrypt(const char * message) {
    int i = strlen(message);
-   if (!i) return "";
+   // ESP_LOGD(TAG,"len=%d",i);
+   if (!i ) return "";
    int buf = round(i / 16) * 16;
    int length = (buf <= i) ? buf + 16 : buf;
    uint8_t encrypted[length];
-   uint8_t * key=get_credentials()->token;
-    uint8_t * hmackey=get_credentials()->hmackey;     
+    //uint8_t * key=credentials_.token;
+   // uint8_t * hmackey=credentials_.hmackey;     
     uint8_t iv[16];
     random_bytes(iv,16);
+
     std::string eiv=base64_encode(iv,16);
 
-    AES aes(key, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
-    aes.process((uint8_t*)message, encrypted, i);
-    int encrypted_size = sizeof(encrypted);
-    
-    std::string em=base64_encode(encrypted,encrypted_size);
+    AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
+    aes.process((uint8_t*)message,  &encrypted[0], i);
 
-    SHA256HMAC hmac(hmackey,32);
+    std::string em=base64_encode(&encrypted[0],length);
+
+    SHA256HMAC hmac(credentials_.hmackey,32);
     hmac.doUpdate(eiv.c_str(),eiv.length());
     hmac.doUpdate(em.c_str(),em.length());
     uint8_t authCode[SHA256HMAC_SIZE];
     hmac.doFinal(authCode);
     
-    std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
+   // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
     
     std::string enc= "{\"iv\":\"" + eiv + "\",\"data\":\"";
     enc.append(em);
-    enc.append("\",\"hash\":\""+ehm+"\"}");
-
+    enc.append("\",\"hash\":\""+base64_encode(authCode,SHA256HMAC_SIZE)+"\"}");
    // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
    // ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
     return enc;
 
 }
 
-std::string WebServer::decrypt(DynamicJsonDocument  doc) {
+std::string WebServer::decrypt(DynamicJsonDocument&  doc) {
     const char *iv=doc["iv"];
     const char *data=doc["data"];
     std::string hash=doc["hash"];
-    uint8_t * key=get_credentials()->token;
-    uint8_t * hmackey=get_credentials()->hmackey;     
+    uint8_t * key=credentials_.token;
+    uint8_t * hmackey=credentials_.hmackey;     
     uint8_t data_decoded[strlen(data)];
     uint8_t iv_decoded[strlen(iv)];
     
@@ -1688,7 +1693,7 @@ std::string WebServer::decrypt(DynamicJsonDocument  doc) {
     
     std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
     if (ehm != hash) {
-ESP_LOGD(TAG,"ehm [%s] does not match hash [%s]",ehm.c_str(),hash.c_str());
+ESP_LOGD(TAG,PSTR("ehm [%s] does not match hash [%s]"),ehm.c_str(),hash.c_str());
         return "";
     }        
     int encrypted_length = base64_decode(std::string(data), data_decoded, strlen(data));
@@ -1711,7 +1716,23 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     WebServer * srv=static_cast<WebServer*>(webServerPtr);
  
     bool final=false;
-    if (ev == MG_EV_CLOSE) {
+    if (ev == MG_EV_WRITE) {
+
+        if (c->send.len ==0 && c->send.size > 512) {
+                void *p = calloc(1,512);
+                if (p!= NULL) {
+                    size_t * len= (size_t *) ev_data;                    
+                    //keep outbound queue size under 5k to minimize ram use.
+                  //  ESP_LOGD(TAG,"Send size=%d, len=%d, write size=%d, type=%02x",c->send.size,c->send.len,*len,c->data[0]);
+                    memset(c->send.buf,0,c->send.size);
+                    free(c->send.buf);
+                    c->send.buf = (unsigned char *) p;
+                    c->send.size = 512;
+                }
+        }
+            
+
+    } else if (ev == MG_EV_CLOSE) {
         ESP_LOGD(TAG,"Connection %d closed",c->id);
       // srv->sessionTokens.erase(c); 
     } else if (ev == MG_EV_ACCEPT) {
@@ -1728,7 +1749,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         
         mg_tls_init(c, &opts);
     */
-     ESP_LOGD(TAG,"New connection %d accepted",c->id);
+     ESP_LOGD(TAG,PSTR("New connection %d accepted"),c->id);
       
     } if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!
@@ -1889,13 +1910,13 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                  enc=srv->encrypt(srv->get_config_json(c->id).c_str()); 
              else
                  enc=srv->get_config_json(c->id);
-             mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}", "type","app_config","data", enc.c_str());
+             mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type","app_config","data", enc.c_str());
              if (srv->_json_keypad_config != "") {
               if (srv->get_credentials()->crypt)                 
                  enc=srv->encrypt(srv->_json_keypad_config.c_str());
               else
                  enc=srv->_json_keypad_config;            
-                mg_ws_printf(c, WEBSOCKET_OP_TEXT, "{\"%s\":\"%s\",\"%s\":%s}", "type","key_config","data", enc.c_str()); 
+                mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type","key_config","data", enc.c_str()); 
              }                
 
             srv->entities_iterator_.begin(srv->include_internal_);
@@ -1904,20 +1925,20 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
             mg_str *hdr =mg_http_get_header(hm, "Accept"); 
            // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
               c->data[0]='E';
-              mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n");
+              mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                c->send.c=c;  
               std::string enc;
               if (srv->get_credentials()->crypt)
                 enc=srv->encrypt(srv->get_config_json(c->id).c_str());
               else
                 enc=srv->get_config_json(c->id);
-              mg_printf(c,"id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n",millis(),30000,"ping", enc.c_str());
+              mg_printf(c,PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"),millis(),30000,"ping", enc.c_str());
              if (srv->_json_keypad_config != "") {
               if (srv->get_credentials()->crypt)                 
                  enc=srv->encrypt(srv->_json_keypad_config.c_str());
               else
                  enc=srv->_json_keypad_config;
-                mg_printf(c,"event: %s\r\ndata: %s\r\n\r\n","key_config", enc.c_str());   
+                mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),"key_config", enc.c_str());   
              } 
              srv->entities_iterator_.begin(srv->include_internal_);
            // } else
@@ -1980,7 +2001,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
             DeserializationError err =deserializeJson(doc,buf.c_str());
             int e=1;
 
-            if ( !err && obj.containsKey("iv") && get_credentials()->password != "" ) {
+            if ( !err && obj.containsKey("iv") && credentials_.password != "" ) {
                 buf=decrypt(doc);
                 if (buf!="")
                    deserializeJson(doc,buf.c_str());

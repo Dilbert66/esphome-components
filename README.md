@@ -10,7 +10,7 @@ https://github.com/Dilbert66/esphome-dsckeybus
 
 # ESP32 Standalone Telegram Bot
 
-This component provides a standalone telegram bot application running on an ESP32 platform that gives the ability to fully control an Esphome application from your telegram account.  You can send any commands you want as well as have it send back any statuses via a secure https connection using the telegram api, all remotely.  It does not require any other application or home control software.  Due to the need to use TLS for communications to the Telegram API site, this component will use about 46K of heap memory which should not be a problem on the ESP32.  For performance and stability reasons, I've used the mongoose.ws web library as the base for all http handling.  This library provides an event driven, non-blocking API for creating various TCP apps.  I initially chose it to replace the ESPasyncwebserver library that was used on the web_server component since I was encountering too many heap crashes during heavy traffic.  I have been very pleased with it's minimal memory footprint and reliability. 
+This component provides a standalone telegram bot application running on an ESP32 platform that gives the ability to fully control an Esphome application from your telegram account.  You can send any commands you want as well as have it send back any statuses via a secure https connection using the telegram api, all remotely.  It does not require any other application or home control software.  Due to the need to use TLS for communications (using MbedTLS ) to the Telegram API site, this component will use about 46K of heap memory which should not be a problem on the ESP32.  For performance and stability reasons, I've used the mongoose.ws web library as the base for all http handling.  This library provides an event driven, non-blocking API for creating various TCP apps.  I initially chose it to replace the ESPasyncwebserver library that was used on the web_server component since I was encountering too many heap crashes during heavy traffic.  I have been very pleased with it's minimal memory footprint and reliability. 
 
 This component is part of a complete system that I use to create a standalone alarm control applications using ESP32 hardware.  Why have a telegram bot on the ESP ? Not everyone wants to have a separate home control system or only needs one ESP device to manage something.  For instance, for someone who only wants to control their legacy alarm system remotely , they can do it all usinng one chip.   This bot uses a technique called long polling to wait for messages on the telegram api.  It will create a connection to the api server and wait for up to 2 minutes for new messages.  This is done using a non-blocking event driven loop which will not impact any other running components on the system. When a status update needs to go out from the ESP, the software will terminate the long poll loop, send the message and re-implement the poll.
 
@@ -46,6 +46,29 @@ Make sure to add all other allowed user or group chat ids to the allowed_chat_id
 Add the following sections to your chosen yaml configuration. You can use the github release version  or 
 copy the source directly from this repository to directory "my_components" under your esphome directory
 The example below shows a sample bot config showing how to create a menu of cmd options.
+
+Supported telegram actions:
+- SendMessage
+- EditMessage
+- EditReplyMarkup
+- AnswerCallbackQuery
+- DeleteMessage
+
+
+The on_message actions will send a RemoteData structure x to lambda's that holds the following values:
+```
+  x.text -> Sent text from telegram user or group.
+  x.chat_id -> chat_id of sending user or group.
+  x.sender -> name of sender
+  x.date -> time and date of message
+  x.cmd -> if text contains a command in the format /xxxx yyyy.  The cmd /xxxx will be stored in x.cmd
+  x.args -> the args yyyy from the above cmd will be stored in x.args
+  x.is_callback -> if this message comes from an inline_keyboard action, this will be true.
+  x.message_id -> current message id.  Used in replies, edits, etc.
+  x.callback_id -> callback id of callback messaged. Used to answer back to inline_keyboard actions.
+```
+
+Example bot config:
 ```
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
@@ -55,6 +78,7 @@ external_components:
 
 mg_lib:   
 
+
 telegram_bot:
   id: webnotify
   bot_id: "123467890:SAMPLETELEGRAMBOTKEYSAMPLETELEGRAM"
@@ -63,55 +87,99 @@ telegram_bot:
   allowed_chat_ids:  #chat id's that are allowed to send cmds. Can also be group id's. Use "*" to allow all.
     - "12345522"
     - "-2255221"
-  on_message:  #provides variables cmd, args , chat_id and text. <cmd> <args> , text is both. Chat_id is the requesting client's id. Has to be part of the allowed_chat_ids to be able to send cmds.
-    - command: "*" #wildard captures all cmds
+ on_message:  #provides returned values in RemoteData structure x.
+    - callback: "*" #accept all cmds. Can also select any specific text value.
       then:
-       - lambda: |-
-           #sample code to look for cmds and act on them. Anything you want. Creates a cmd menu 
-              #create some strings to hold the menu and system status. To be used by the cmds.
-              std::string m="Help Menu\r\n";
-              m.append("/disarm - disarm system\r\n");
-              m.append("/help - this menu\r\n");
-              m.append("/keys <args> - send cmds\r\n");
-              m.append("/status - system status\r\n");
-              m.append("/reboot - reboot esp\r\n");
-              m.append("/notify <on|off> - enable send\r\n");
-              m.append("/armstay - arm stay\r\n");
-              m.append("/bypass - bypass all\r\n");
-              
-              std::string ss="System state: "+ id(ss_1).state;
-              ss.append("\r\nZone state: "+id(zs).state);    
-              
-          if (cmd=="/disarm" || cmd=="/d") {
-            $panelId->alarm_keypress_partition("${accesscode}1",1);
-          } else if (cmd=="/help" || cmd=="/h") {
-              webnotify->publish(chat_id,m);  
-              webnotify->publish(chat_id,ss); 
-          } else if (cmd=="/status" || cmd=="/s") {
-               webnotify->publish(chat_id,ss);   
-          } else if (cmd=="/keys" || cmd=="/k") {
-              $panelId->alarm_keypress_partition(args,1);
-          } else if (cmd=="/armstay" || cmd=="/a") {
-              $panelId->alarm_keypress_partition("#${accesscode}2",1);
-          } else if (cmd=="/notify")  {
-            if (args=="on" ){
-              webnotify->set_send_enable(true); 
-              webnotify->publish("Notify is now on");
-            } else
-              webnotify->set_send_enable(false);
-          } else if (cmd=="/reboot") {
-              restart_switch->turn_on();
-          } else if (cmd=="/bypass" || cmd=="/b") {
+        - telegram.answer_callback:
+           message: "You sent inline cmd: " + x.text;
+           callback_query_id: !lambda return x.callback_id;
+           show_alert: true
+             
+    - text: "*"  #accept all text messages
+      then:
+        - telegram.publish:
+           message: !lambda return "You sent text: " + x.text;
+           to: !lambda return x.chat_id;                  
+
+    - command: "/disarm,/d"  #cmds/text/callback values and be comma separated to also accept aliases for the cmd.
+      then: 
+        - lambda: |-
+            $panelId->alarm_keypress_partition("${accesscode}1",1); #uses global value "accesscode"
+
+    - command: "/help,/h"
+      then: 
+        - telegram.publish:
+            message: !lambda return "System state:"+id(ss_1).state; 
+            to: !lambda return x.chat_id;  #reply to sending chat_id.
+        - telegram.publish:
+            message: "Help Menu\r\n/disarm - disarm system\r\n/help - this menu\r\n/keys <args> - send keys\r\n/status - system status\r\n/reboot - reboot esp\r\n/notify <on|off> - enable send\r\n/armstay - arm stay\r\n/bypass - bypass all\r\n"
+            to: !lambda return x.chat_id;
+
+    - command: "/status,/s"
+      then: 
+        - lambda: |-
+            webnotify->publish(x.chat_id,"System state:"+id(ss_1).state);   
+
+    - command: "/keys,/k"
+      then: 
+        - lambda: |-         
+            $panelId->alarm_keypress_partition(x.args,1);
+
+    - command: "/armstay,/a"
+      then: 
+        - lambda: |-   
+            $panelId->alarm_keypress_partition("${accesscode}2",1);
+
+    - command: "/notify,/n"
+      then: 
+        - lambda: |-
+           if (x.args=="on") {
+            webnotify->set_send_enable(true);
+            webnotify->publish(x.chat_id,"Notify is on");
+           } else {
+            webnotify->set_send_enable(false);
+            webnotify->publish(x.chat_id,"Notify is off");
+           }
+
+    - command: "/reboot,/r"
+      then: 
+        -  switch.turn_on:  restart_switch
+            
+    - command: "/bypass,/b"
+      then: 
+        - lambda: |-    
             $panelId->alarm_keypress_partition("${accesscode}6#",1);
-          }
-          
-    #alternate way of handling specified cmds
-    - command: "/test"
+
+    #below shows how to send custom and inline_keyboards back to client.
+    - command: "/keyboardtest,/kt"
       then:
-          id(ss2)->publish_state(args);    
+       - telegram.publish:
+            message: !lambda return "This is a custom keyboard test reply message to "+ x.sender;
+            keyboard: "[[{'text':'/help'},{'text':'/armstay'},{'text':'/disarm'}],[{'text':'/bypass'},{'text':'/status'},{'text':'/notify on'}]]"
+            to: !lambda return x.chat_id;
+
+    - command: "/inlinetest,/it"
+      then:
+       - telegram.publish:
+            message: !lambda return "This is an inline keyboard test reply message to "+ x.sender;
+            inline_keyboard: "[[{'text':'Help','callback_data':'/help'},{'text':'Arm Stay','callback_data':'/armstay'},{'text':'Disarm','callback_data':'/d'}],[{'text':'Bypass All','callback_data':'/b'},{'text':'Status','callback_data':'/s'},{'text':'Notify On','callback_data':'/notify on'}]]"
+            to: !lambda return x.chat_id; 
+            
+    - command: "/removekb,/rkb"
+      then:
+        - telegram.publish:
+              message: "keyboard removed"
+              keyboard: "none" #send none instead of markup to delete a keyboard            
+       
+    - command: "/deletemessage,/dm"
+      then:
+        - telegram.delete_message:
+            message_id: !lambda return x.message_id;
+            chat_id: !lambda return x.chat_id;        
+
 ```
 
-Sample telegram publish action.  message=string or !lambda.
+Sample telegram publish actions.  message=string or !lambda.
 ```
   - platform: template
     id: rdy_1
@@ -122,11 +190,7 @@ Sample telegram publish action.  message=string or !lambda.
             message: "this is a test message to chat id 123466778" #message.  Can also be a lambda function.
             to: 123466778 #chat id to send to if not default. Optional. 
         - telegram.publish:
-            message: "a message to the default chat id"
- ```
- 
- Alternative example using a lambda function:
- ```
+
   - platform: template
     id: rdy_1
     name: "Ready"

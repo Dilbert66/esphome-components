@@ -1,5 +1,5 @@
  //EN
- 
+ #include "paneltext.h"
     //lookups for determining zone status as strings.  Must include complete word before zone#. No spaces. obsolete now. No longer needed. Using flags to identify type
     
     const char * FAULT = "FAULT";    

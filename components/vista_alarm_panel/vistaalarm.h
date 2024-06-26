@@ -13,7 +13,6 @@
 #endif
 
 #include "esphome/core/defines.h"
-#include "paneltext.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -23,8 +22,8 @@
 
 #include "vista.h"
 #include <string>
-//#include <queue>
 #include <regex>
+#include "paneltext.h"
 
  //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
@@ -303,21 +302,21 @@ class vistaECPHome {
     };
 
     struct lightStates {
-      bool away;
-      bool stay;
-      bool night;
-      bool instant;
-      bool bypass;
-      bool ready;
-      bool ac;
-      bool chime;
-      bool bat;
-      bool alarm;
-      bool check;
-      bool fire;
-      bool canceled;
-      bool trouble;
-      bool armed;
+      uint8_t away:1;
+      uint8_t stay:1;
+      uint8_t night:1;
+      uint8_t instant:1;
+      uint8_t bypass:1;
+      uint8_t ready:1;
+      uint8_t ac:1;
+      uint8_t chime:1;
+      uint8_t bat:1;
+      uint8_t alarm:1;
+      uint8_t check:1;
+      uint8_t fire:1;
+      uint8_t canceled:1;
+      uint8_t trouble:1;
+      uint8_t armed:1;
     };
 
     lightStates currentLightState,

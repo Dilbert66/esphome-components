@@ -1,6 +1,5 @@
 #pragma once
  //EN
- 
     //lookups for determining zone status as strings.  Must include complete word before zone#. No spaces. obsolete now. No longer needed. Using flags to identify type
     
     extern const char * FAULT;    

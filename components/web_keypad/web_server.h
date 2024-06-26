@@ -133,7 +133,7 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(std::string  json_keypad_config);
+  void set_keypad_config(std::string&&  json_keypad_config);
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -149,7 +149,7 @@ class WebServer : public Controller, public Component {
    this->key_service_func_ = lambda;
   }
 
-  void set_auth(std::string auth_username,std::string auth_password,bool use_encryption) { 
+  void set_auth(std::string&& auth_username,std::string&& auth_password,bool use_encryption) { 
   credentials_.username = std::move(auth_username);   
   credentials_.password = std::move(auth_password);
     uint8_t i=0;
@@ -174,7 +174,7 @@ class WebServer : public Controller, public Component {
   Credentials * get_credentials() { return &credentials_;}
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
   std::string encrypt(const char * message);
-  std::string decrypt(DynamicJsonDocument  doc);
+  std::string decrypt(DynamicJsonDocument&  doc);
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)

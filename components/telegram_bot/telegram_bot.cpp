@@ -23,24 +23,52 @@ WebNotify::WebNotify()
  global_notify=this;
 }
 
-void WebNotify::publish(std::string to,std::string message) {
-  std::string outmsg;
-  //ESP_LOGD(TAG,"Sending telegram message %s to %s",message.c_str(),to.c_str());  
-  if (message.length() > 200) {
-          ESP_LOGE(TAG,"Message %s to %s too long",message.c_str(),to.c_str());
-      
-  }
+void WebNotify::publish(SendData& out) {
+
   if (!enableSend_) {
       ESP_LOGE(TAG,"Message sending is not enabled");
       return;
   }
-  StaticJsonDocument < 300 > doc;
-  doc["chat_id"] = to != "" ?  to : telegramUserId_;
-  doc["text"] =message;
-  serializeJson(doc, outmsg); 
-  messages.push(outmsg);  
-  ESP_LOGD(TAG,"Sent telegram message %s to %s",message.c_str(),to.c_str());
+  
+    std::string outmsg = json::build_json([out,this](JsonObject root) {
+     if (out.reply_markup.length() > 0 ) {
+            json::parse_json(out.reply_markup,  [&root](JsonObject x) -> bool {   
+            root["reply_markup"]=x;
+            return true;
+            });
+        }  
+    if (out.callback_id.length()>0) {
+       root["callback_query_id"]=out.callback_id.c_str();
+       root["cache_time"]=1;
+    }
+    if (out.message_id.length() > 0)
+       root["message_id"]=out.message_id.c_str();
+    if (out.chat_id.lenght() > 0)
+        root["chat_id"] = out.chat_id.c_str();   
+    if (out.parse_mode.length()>0)
+      root["parse_mode"] = out.parse_mode.c_str();
+    if(out.disable_notification)
+        root["disable_notification"]=out.disable_notification;
+    if(out.disable_web_page_preview)
+        root["disable_web_page_preview"]=out.disable_web_page_preview;
+    if(out.resize_keyboard)
+        root["resize_keyboard"]=out.resize_keyboard;
+    if(out.one_time_keyboard)
+        root["one_time_keyboard"]=out.one_time_keyboard;    
+    if (out.text.length()>0)
+      root["text"] = out.text.c_str();
+    if(out.selective)
+        root["selective"]=out.selective;
+    
+   });
+
+  outMessage omsg;
+  omsg.msg=outmsg;
+  omsg.type=out.type;
+  messages.push(omsg);  
+ 
 }
+
 
 bool WebNotify::isAllowed(std::string chat_id) {
        if (std::find (allowed_chat_ids.begin(), allowed_chat_ids.end(),"*") != allowed_chat_ids.end())
@@ -52,21 +80,18 @@ bool WebNotify::isAllowed(std::string chat_id) {
        return false;
 }
 
-void WebNotify::parseArgs(rx_message_t *m) {
-    if (m->text[0]!='/') return;
-    std::string s = m->text;
-    m->cmd = s.substr(0, s.find(" "));
-    m->args= s.erase(0,s.find(" ") + 1); 
-    if (m->cmd == m->args) m->args=""; //if no args set to empty
-   // ESP_LOGD("parse","telegram cmd=%s, args=%s",m->cmd.c_str(),m->args.c_str());    
+void WebNotify::parseArgs(RemoteData& x) {
+    if (x.text[0] != '/') return;
+    x.cmd = x.text.substr(0, x.text.find(" "));
+    x.args= x.text.erase(0,x.text.find(" ") + 1); 
+    if (x.cmd == x.args) x.args=""; //if no args set to empty
 }
 
 bool WebNotify::processMessage(const char *payload) {
-   bool success=true;
+
   
-   return json::parse_json(payload,  [&success](JsonObject root) -> bool{
-     
-            rx_message_t m;  
+   return json::parse_json(payload,  [payload](JsonObject root) -> bool {
+
             if (root["result"][0]["callback_query"]["id"]) {
 
               int update_id = root["result"][0]["update_id"];
@@ -76,16 +101,27 @@ bool WebNotify::processMessage(const char *payload) {
               if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
               
               if (global_notify->lastMsgReceived != update_id) {
-                std::string sender = root["result"][0]["callback_query"]["message"]["from"]["username"];
-                std::string text = root["result"][0]["callback_query"]["data"];
-                std::string chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"];
-                std::string date = root["result"][0]["callback_query"]["message"]["date"];
-                m.sender = sender;
-                m.text = text;
-                m.chat_id = chat_id;
-                m.date = date;
-                global_notify->lastMsgReceived = update_id;
+                global_notify->lastMsgReceived = update_id;   
+                  RemoteData x;
+                  x.sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
+                  x.text = root["result"][0]["callback_query"]["data"].as<std::string>();
+                  x.chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
+                  x.date = root["result"][0]["callback_query"]["message"]["date"].as<std::string>();
+                  x.message_id = root["result"][0]["callback_query"]["message"]["message_id"].as<std::string>();
+                  x.callback_id =root["result"][0]["callback_query"]["id"].as<std::string>();
+                  x.is_callback=true;
+                  x.cmd="";
+                  x.args="";
+                  if (!global_notify->isAllowed(x.chat_id)) {
+                    MG_INFO(("Chat id %s not allowed to send to bot",x.chat_id.c_str()));
+                    return true;
+                  }                      
+                  global_notify->parseArgs(x);
+                  global_notify->on_message_.call(x);                 
+
+                 
               }
+/*              
             } else if (root["result"][0]["channel_post"]["id"]) { 
               int update_id = root["result"][0]["update_id"];
               update_id = update_id + 1;
@@ -98,52 +134,47 @@ bool WebNotify::processMessage(const char *payload) {
                 std::string chat_id = root["result"][0]["channel_post"]["message"]["chat"]["id"];
                 std::string date = root["result"][0]["channel_post"]["message"]["date"];
 
-                m.sender = sender;
-                m.text = text;
-                m.chat_id = chat_id;
-                m.date = date;
+               // m.sender = sender;
+               // m.text = text;
+               // m.chat_id = chat_id;
+                //m.date = date;
+               // m.is_callback=false;
                 global_notify->lastMsgReceived = update_id;
-            
-                
               }
+*/              
             } else if (root["result"][0]["message"]["text"]) {
               int update_id = root["result"][0]["update_id"];
               update_id = update_id + 1;
-               // ESP_LOGD("test","update=%d",update_id);                
               //we ignore the first message on initial start to avoid a reboot loop
-              if (global_notify->lastMsgReceived == 0) global_notify->lastMsgReceived = update_id;
+              if (global_notify->lastMsgReceived == 0) 
+                  global_notify->lastMsgReceived = update_id;
               
               if (global_notify->lastMsgReceived != update_id) {
-                std::string sender = root["result"][0]["message"]["from"]["username"];
-                std::string text = root["result"][0]["message"]["text"];
-                std::string chat_id = root["result"][0]["message"]["chat"]["id"];
-                std::string date = root["result"][0]["message"]["date"];
 
-                m.sender = sender;
-                m.text = text;
-                m.chat_id = chat_id;
-                m.date = date;
                 global_notify->lastMsgReceived = update_id;
-                
-                if (!global_notify->isAllowed(m.chat_id)) {
-                    MG_INFO(("Chat id %s not allowed to send to bot",m.chat_id.c_str()));
-                        //std::string msg="{\"chat_id\":"+ m.chat_id) +",\"text\":\"ID: "+m.chat_id + " not allowed"\"}"; 
-                        //global_notify->messages.push(msg); 
+         
+                  RemoteData x;
+                  x.sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
+                 
+                  x.text = root["result"][0]["message"]["text"].as<std::string>();
+                  x.chat_id= root["result"][0]["message"]["chat"]["id"].as<std::string>();
+                  x.date =root["result"][0]["message"]["date"].as<std::string>();
+                  x.message_id = root["result"][0]["message"]["message_id"].as<std::string>();
+                  x.is_callback=false;
+                  x.cmd="";
+                  x.args="";                      
+                  if (!global_notify->isAllowed(x.chat_id)) {
+                    MG_INFO(("Chat id %s not allowed to send to bot",x.chat_id.c_str()));
                     return true;
-                    
-                }      
-                //test - echo message back
-                //std::string msg="{\"chat_id\":"+ std::string(global_notify->telegramUserId_.c_str()) +",\"text\":\"" + text + "\"}"; 
-                //global_notify->messages.push(msg); 
-                global_notify->parseArgs(&m);
-                global_notify->on_message_.call(&m);  
+                  }    
+                  global_notify->parseArgs(x);
+                  global_notify->on_message_.call(x);
               }
             } else if (root["result"]["message_id"] ) {
                 
                 bool ok=root["ok"];
                 std::string id=root["result"]["message_id"];
-               // ESP_LOGD("test","got message response2 %s,%d",id.c_str(),ok);
-                if (ok) {
+                 if (ok) {
                     //pop last sent message from queue as it was successful
                       global_notify->messages.pop();              
                 } else
@@ -154,27 +185,29 @@ bool WebNotify::processMessage(const char *payload) {
                       global_notify->messages.pop();
             } else if ( root["result"][0]["update_id"]) {
                 int update_id = root["result"][0]["update_id"];
-                global_notify->lastMsgReceived = update_id + 1;
-            } //else 
-              // success=false;
-
-           return true 
+                global_notify->lastMsgReceived = update_id+1;
+            } else {
+                bool ok=root["ok"];
+                if (!ok)
+                    ESP_LOGD(TAG,"Error response from server: %s",payload);
+            }
+            return true;
+           
    });
-  
+   
 }
 
 void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
-  if (global_notify == NULL) {
+    if (global_notify == NULL) {
       ESP_LOGE(TAG,"Global telegram pointer is null");
       return;
-  }
-  
-  if (ev == MG_EV_OPEN) {
+    }
+    if (ev == MG_EV_OPEN) {
       global_notify->connected=true;
-    // Connection created. Store connect expiration time in c->data
-    *(uint64_t *) &c->data[2] = mg_millis() + global_notify->timeout_ms;
-  } else if (ev == MG_EV_POLL) {
+      // Connection created. Store connect expiration time in c->data
+      *(uint64_t *) &c->data[2] = mg_millis() + global_notify->timeout_ms;
+    } else if (ev == MG_EV_POLL) {
     if (mg_millis() > *(uint64_t *) &c->data[2] &&
         (c->is_connecting || c->is_resolving)) {
       mg_error(c, "Connect timeout");
@@ -210,15 +243,24 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
       ESP_LOGD(TAG,"TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       if (global_notify->messages.size()) {
         global_notify->sending=true;       //we are connecting so flag connection as open           
-        //String msg = global_notify->getNextMsg();
-        //String msg = global_notify->peekNextMsg();//only peek it, we will pop from queue if successful later
-        std::string msg = global_notify->messages.front();
+
+        outMessage outmsg=global_notify->messages.front();
+        
         mg_printf(c,"POST /bot%s",global_notify->botId_.c_str());
-        mg_printf(c,"/sendMessage HTTP/1.1\r\n");
+        if (outmsg.type==mtEditMessageText)
+            mg_printf(c,"/editMessageText HTTP/1.1\r\n");
+        else if(outmsg.type==mtAnswerCallbackQuery)
+            mg_printf(c,"/answerCallbackQuery HTTP/1.1\r\n");
+        else if (outmsg.type==mtEditMessageReplyMarkup)
+            mg_printf(c,"/editMessageReplyMarkup HTTP/1.1\r\n");
+        else if (outmsg.type==mtDeleteMessage)
+            mg_printf(c,"/deleteMessage HTTP/1.1\r\n");        
+        else
+            mg_printf(c,"/sendMessage HTTP/1.1\r\n");
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Content-Type: application/json\r\n");
-        mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",msg.length(),msg.c_str());
-        //ESP_LOGD("test","sent telegram msg %s",msg.c_str());
+        mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
+   printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
       } else if ( global_notify->enableBot_) {
         global_notify->sending=false;       
         mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
@@ -226,17 +268,17 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Accept: application/json\r\n");
         mg_printf(c,"Cache-Control: no-cache\r\n\r\n");    
-        //ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
+       // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
       }
    
   } else if (ev == MG_EV_HTTP_MSG) {
   
     // Response is received. Print it
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-    //printf(" response message from telegram: %.*s", (int) hm->message.len, hm->message.ptr);
+printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.ptr);
             
          String payload= String(hm->body.ptr,hm->body.len);    
-
+    //printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
           if (!global_notify->processMessage(payload.c_str())) {
             printf_P("%s",F("\nMessage parsing failed, skipped.\n"));
             int update_id_first_digit = 0;
@@ -263,11 +305,14 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
 void WebNotify::setup() {
   ESP_LOGCONFIG(TAG, "Setting up web client...");
-   if (telegramUserId_ !="")
-       allowed_chat_ids.push_back(telegramUserId_);
+   if (telegramUserId !="")
+       allowed_chat_ids.push_back(telegramUserId);
    mg_mgr_init(&mgr); 
-  std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
-  messages.push(msg);   
+ // std::string msg="{\"chat_id\":"+std::string(telegramUserId.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
+  //outMessage out;
+  //out.msg=msg;
+  //out.type=mtSendMessage;
+  //messages.push(out);   
 }
 
 
@@ -280,6 +325,12 @@ void WebNotify::loop() {
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
    }
+     static unsigned long checkTime = millis();  
+        if (millis() - checkTime > 20000) {
+         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+         ESP_LOGD(TAG,"Telegram free memory: %5d\n", (uint16_t) uxHighWaterMark);
+         checkTime=millis();
+        }
        mg_mgr_poll(&mgr, 0);
  
 }
