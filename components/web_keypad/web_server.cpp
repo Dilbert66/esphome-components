@@ -232,11 +232,11 @@ void WebServer::set_css_include(const char *css_include) { this->css_include_ = 
 void WebServer::set_js_include(const char *js_include) { this->js_include_ = js_include; }
 #endif
 
-void WebServer::set_keypad_config(std::string&& json_keypad_config) {
-    _json_keypad_config=std::move(json_keypad_config);
+void WebServer::set_keypad_config(const std::string& json_keypad_config) {
+    _json_keypad_config=json_keypad_config;
 }
 
-std::string WebServer::get_config_json(unsigned long cid) {
+const std::string WebServer::get_config_json(unsigned long cid) {
   return json::build_json([this,cid](JsonObject root) {
     root["title"] = App.get_friendly_name().empty() ? App.get_name() : App.get_friendly_name();
     root["comment"] = App.get_comment();
@@ -251,9 +251,8 @@ std::string WebServer::get_config_json(unsigned long cid) {
   });
 }
 
-std::string WebServer::escape_json(const char * input) {
+const std::string WebServer::escape_json(const char * input) {
     std::string output;
-    output.reserve(strlen(input));
 
     for (int i=0;i<strlen(input);i++)
     {
@@ -1050,7 +1049,7 @@ std::string WebServer::text_json(text::Text *obj, const std::string &value, Json
 #endif
 
 
-    long int WebServer::toInt(std::string s, int base) {
+    long int WebServer::toInt(const std::string& s, int base) {
       if (s.empty() || std::isspace(s[0])) return 0;
       char * p;
       long int li = strtol(s.c_str(), & p, base);
@@ -1640,7 +1639,7 @@ static int mg_http_check_digest_auth(struct mg_http_message *hm,
   return 0;
 }
 
-std::string WebServer::encrypt(const char * message) {
+const std::string WebServer::encrypt(const char * message) {
    int i = strlen(message);
    // ESP_LOGD(TAG,"len=%d",i);
    if (!i ) return "";
@@ -1676,7 +1675,7 @@ std::string WebServer::encrypt(const char * message) {
 
 }
 
-std::string WebServer::decrypt(DynamicJsonDocument&  doc) {
+const std::string WebServer::decrypt(DynamicJsonDocument&  doc) {
     const char *iv=doc["iv"];
     const char *data=doc["data"];
     std::string hash=doc["hash"];

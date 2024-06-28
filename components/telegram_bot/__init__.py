@@ -19,8 +19,8 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 
-DEPENDENCIES = ["network"]
-AUTO_LOAD = ["json"]
+DEPENDENCIES = ["network","mg_lib"]
+AUTO_LOAD = ["json","mg_lib"]
 CONF_API_HOST="telegram_host"
 CONF_CHAT_ID="chat_id"
 CONF_BOT_ID="bot_id"

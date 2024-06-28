@@ -63,7 +63,7 @@ class WebNotify : public Controller, public Component {
   void dump_config() override;
   void publish(SendData& out);
   
-  void publish(std::string chat_id,std::string message,std::string reply_markup="",std::string parse_mode="html",bool disable_notification=false,bool disable_web_page_preview=false,bool resize_keyboard=false,bool one_time_keyboard=false) {
+  void publish(const std::string & chat_id,const std::string& message,const std::string& reply_markup="",const std::string & parse_mode="html",bool disable_notification=false,bool disable_web_page_preview=false,bool resize_keyboard=false,bool one_time_keyboard=false) {
     SendData out;
     out.text=message;
     out.chat_id=chat_id;
@@ -78,9 +78,9 @@ class WebNotify : public Controller, public Component {
   };
   
   
-  void publish(std::string message) {publish("",message); }
+  void publish(const std::string & message) {publish("",message); }
   
-  void answerCallbackQuery(std::string message,std::string callback_id,bool show_alert=false) { 
+  void answerCallbackQuery(const std::string & message,const std::string & callback_id,bool show_alert=false) { 
     SendData out;
     out.message_id=callback_id;
     out.show_alert=show_alert;
@@ -88,7 +88,7 @@ class WebNotify : public Controller, public Component {
     publish(out);
   }
   
-  void editMessageText(std::string chat_id,std::string message,std::string message_id,std::string inline_keyboard="",std::string parse_mode="html",bool disable_web_page_preview=false){  
+  void editMessageText(const std::string & chat_id,const std::string & message,const std::string &message_id,const std::string & inline_keyboard="",const std::string & parse_mode="html",bool disable_web_page_preview=false){  
     SendData out;
     out.chat_id=chat_id;
     out.text=message;
@@ -100,7 +100,7 @@ class WebNotify : public Controller, public Component {
     publish(out);
   }
   
-  void editMessageReplyMarkup(std::string chat_id,std::string message_id,std::string inline_keyboard="",bool disable_web_page_preview=false){  
+  void editMessageReplyMarkup(const std::string & chat_id,const std::string & message_id,const std::string & inline_keyboard="",bool disable_web_page_preview=false){  
     SendData out;
     out.chat_id=chat_id;
     out.message_id=message_id;

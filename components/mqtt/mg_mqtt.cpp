@@ -95,7 +95,25 @@ void MQTTBackendESP32::loop() {
 }
 
 void MQTTBackendESP32::instance_fn(struct mg_connection *c, int ev, void *ev_data) {
-  if (ev == MG_EV_OPEN) {
+    
+    if (ev == MG_EV_WRITE) {
+
+        if (c->send.len ==0 && c->send.size > 512) {
+                void *p = calloc(1,512);
+                if (p!= NULL) {
+                    size_t * len= (size_t *) ev_data;                    
+                    //keep outbound queue size under 5k to minimize ram use.
+                    ESP_LOGD(TAG,"Send size=%d, len=%d, write size=%d, type=%02x",c->send.size,c->send.len,*len,c->data[0]);
+                    memset(c->send.buf,0,c->send.size);
+                    free(c->send.buf);
+                    c->send.buf = (unsigned char *) p;
+                    c->send.size = 512;
+                }
+        }
+            
+
+    }    
+  else if (ev == MG_EV_OPEN) {
     MG_INFO(("mqtt %lu CREATED", c->id));
 
     // c->is_hexdumping = 1;

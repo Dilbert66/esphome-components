@@ -27,8 +27,8 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 
-DEPENDENCIES = ["network"]
-AUTO_LOAD = ["json"]
+DEPENDENCIES = ["network","mg_lib"]
+AUTO_LOAD = ["json","mg_lib"]
 
 CONF_CONFIG ="config_local"
 CONF_KEYPAD_URL="config_url"

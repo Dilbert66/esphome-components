@@ -133,7 +133,7 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(std::string&&  json_keypad_config);
+  void set_keypad_config(const std::string&  json_keypad_config);
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -145,16 +145,15 @@ class WebServer : public Controller, public Component {
   } 
   const char * get_certificate() { return certificate_; } 
   const char *get_certificate_key() { return certificate_key_; } 
-  void set_service_lambda(key_service_t &&lambda) { 
+  void set_service_lambda(const key_service_t & lambda) { 
    this->key_service_func_ = lambda;
   }
 
-  void set_auth(std::string&& auth_username,std::string&& auth_password,bool use_encryption) { 
-  credentials_.username = std::move(auth_username);   
-  credentials_.password = std::move(auth_password);
+  void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
+  credentials_.username = auth_username;   
+  credentials_.password = auth_password;
     uint8_t i=0;
     const char * keystr=(credentials_.username + SALT + credentials_.password).c_str();
-    ESP_LOGD("test","keystring = %s",keystr);
     uint8_t kl=strlen(keystr) <=KEYSIZE?strlen(keystr):KEYSIZE;
     for (i=0;i<kl;i++)
          credentials_.token[i]=keystr[i];
@@ -167,14 +166,14 @@ class WebServer : public Controller, public Component {
     hasher.doFinal(credentials_.token);
     credentials_.hmackey=credentials_.token;
    this->crypt_ = use_encryption;  
-  credentials_.crypt=use_encryption;
+   credentials_.crypt=use_encryption;
 
    }  
    
   Credentials * get_credentials() { return &credentials_;}
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
-  std::string encrypt(const char * message);
-  std::string decrypt(DynamicJsonDocument&  doc);
+  const std::string encrypt(const char * message);
+  const std::string decrypt(DynamicJsonDocument&  doc);
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -191,10 +190,10 @@ class WebServer : public Controller, public Component {
   void handle_index_request(struct mg_connection *c);
 
   /// Return the webserver configuration as JSON.
-  std::string get_config_json(unsigned long c=0);
-  std::string escape_json(const char *s);
+  const std::string get_config_json(unsigned long c=0);
+  const std::string escape_json(const char *s);
   
-  long int toInt(std::string s, int base); 
+  long int toInt(const std::string &s, int base); 
 
 #ifdef USE_WEBSERVER_CSS_INCLUDE
   /// Handle included css request under '/0.css'.

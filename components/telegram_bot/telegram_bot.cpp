@@ -43,7 +43,7 @@ void WebNotify::publish(SendData& out) {
     }
     if (out.message_id.length() > 0)
        root["message_id"]=out.message_id.c_str();
-    if (out.chat_id.lenght() > 0)
+    if (out.chat_id.length() > 0)
         root["chat_id"] = out.chat_id.c_str();   
     if (out.parse_mode.length()>0)
       root["parse_mode"] = out.parse_mode.c_str();
