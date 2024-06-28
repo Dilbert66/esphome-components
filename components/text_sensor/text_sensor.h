@@ -13,6 +13,9 @@ namespace text_sensor {
 #define LOG_TEXT_SENSOR(prefix, type, obj) \
   if ((obj) != nullptr) { \
     ESP_LOGCONFIG(TAG, "%s%s '%s'", prefix, LOG_STR_LITERAL(type), (obj)->get_name().c_str()); \
+    if (!(obj)->get_device_class().empty()) { \
+      ESP_LOGCONFIG(TAG, "%s  Device Class: '%s'", prefix, (obj)->get_device_class().c_str()); \
+    } \
     if (!(obj)->get_icon().empty()) { \
       ESP_LOGCONFIG(TAG, "%s  Icon: '%s'", prefix, (obj)->get_icon().c_str()); \
     } \
@@ -28,7 +31,7 @@ namespace text_sensor {
  public: \
   void set_##name##_text_sensor(text_sensor::TextSensor *text_sensor) { this->name##_text_sensor_ = text_sensor; }
 
-class TextSensor : public EntityBase , public EntityBase_DeviceClass{
+class TextSensor : public EntityBase, public EntityBase_DeviceClass {
  public:
   /// Getter-syntax for .state.
   std::string get_state() const;
@@ -52,14 +55,14 @@ class TextSensor : public EntityBase , public EntityBase_DeviceClass{
   void add_on_state_callback(std::function<void(std::string)> callback);
   /// Add a callback that will be called every time the sensor sends a raw value.
   void add_on_raw_state_callback(std::function<void(std::string)> callback);
-  
+  ////custom add by Dilbert66
   void set_type_id( const char *id) {this->type_id_str_=id;}
   std::string get_type_id(){  if (this->type_id_str_ == nullptr) {
     return ""; }  return this->type_id_str_;}
   void set_partition( int p) {this->partition_int_=p;}
+  int get_partition(){  return this->partition_int_;}   
+  //end add by dilbert66
   
-  int get_partition(){  return this->partition_int_;}        
-    
   std::string state;
   std::string raw_state;
 
@@ -76,9 +79,10 @@ class TextSensor : public EntityBase , public EntityBase_DeviceClass{
   void internal_send_state_to_frontend(const std::string &state);
 
  protected:
- 
+ //Dilbert66
   int partition_int_{0};
   const char * type_id_str_{nullptr};
+  //end add
   CallbackManager<void(std::string)> raw_callback_;  ///< Storage for raw state callbacks.
   CallbackManager<void(std::string)> callback_;      ///< Storage for filtered state callbacks.
 
