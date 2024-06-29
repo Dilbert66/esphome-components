@@ -15,10 +15,7 @@ ListEntitiesIterator::ListEntitiesIterator(WebServer *web_server) : web_server_(
 
 #ifdef USE_BINARY_SENSOR
 bool ListEntitiesIterator::on_binary_sensor(binary_sensor::BinarySensor *binary_sensor) {
- // this->web_server_->events_.send(
-   //   this->web_server_->binary_sensor_json(binary_sensor, binary_sensor->state, DETAIL_ALL).c_str(), "state");
       this->web_server_->push(STATE, this->web_server_->binary_sensor_json(binary_sensor, binary_sensor->state, DETAIL_ALL).c_str());
-      
   return true;
 }
 #endif
@@ -66,15 +63,7 @@ bool ListEntitiesIterator::on_button(button::Button *button) {
 #endif
 #ifdef USE_TEXT_SENSOR
 bool ListEntitiesIterator::on_text_sensor(text_sensor::TextSensor *text_sensor) {
- // this->web_server_->events_.send(
-  //    this->web_server_->text_sensor_json(text_sensor, text_sensor->state, DETAIL_ALL).c_str(), "state");
   std::string data=this->web_server_->text_sensor_json(text_sensor, text_sensor->state, DETAIL_ALL).c_str();
-  #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
- std::string id =text_sensor->get_type_id();
- //if (id.substr(0,2)=="ln" && this->web_server_->get_credentials()->crypt) //encrypt display lines
-   //  data= this->web_server_->encrypt(data.c_str());
-#endif 
-  
  this->web_server_->push(STATE,data.c_str());     
   return true;
 }

@@ -48,15 +48,12 @@ extern dscKeybusInterface dsc;
 extern bool forceDisconnect;
 extern void disconnectKeybus();
 
+
 #if !defined(ARDUINO_MQTT)
 namespace esphome {
 namespace alarm_panel {
 #endif
 
-extern void * alarmPanelPtr;
-
-extern void publishTextState(const char * cstr,uint8_t partition,std::string * text);
-extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
 
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
@@ -69,6 +66,8 @@ typedef struct  {
     byte ccount=0;
     byte ecount=0;
 } cmdCountType;
+
+
 
 const char mm0[] PROGMEM = "Press # to exit";
 const char mm1[] PROGMEM = "Zone Bypass";
@@ -315,11 +314,29 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
     beepsCallback = callback;
   }
   
-  
-  void set_panel_time();
+void set_panel_time();
 
+struct binarySensor{
+    binary_sensor::BinarySensor * ptr;
+    const char * type_id;
+};
 
-  void set_panel_time_manual(int year,int month,int day,int hour,int minute); 
+struct textSensor{
+    text_sensor::TextSensor * ptr;
+    const char * type_id;
+};
+
+std::vector<binarySensor> bMap;
+std::vector<textSensor> tMap;
+
+void add_binary_sensor(binary_sensor::BinarySensor * b,const char * type_id);
+void add_text_sensor(text_sensor::TextSensor* b,const char * type_id); 
+const char * getTypeIdFromBinaryObjectId(const std::string & objid); 
+const char * getTypeIdFromTextObjectId(const std::string & objid);
+void publishBinaryState(const std::string& cstr,uint8_t partition,bool open);
+void publishTextState(const std::string & cstr,uint8_t partition,std::string * text);
+
+void set_panel_time_manual(int year,int month,int day,int hour,int minute); 
 
 #if defined(USE_MQTT)
   //void set_mqtt_id(mqtt::MQTTClientComponent *mqtt_id) { mqttId = mqtt_id; }
@@ -589,6 +606,9 @@ void update() override;
   const __FlashStringHelper *statusText(uint8_t statusCode) ;  
 
 };
+
+extern DSCkeybushome* alarmPanelPtr;
+
 
 #if !defined(ARDUINO_MQTT)
 }}//namespaces

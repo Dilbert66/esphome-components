@@ -7,7 +7,7 @@ from esphome.const import CONF_ID, CONF_LAMBDA, CONF_STATE
 from .. import template_alarm_ns
 
 CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
+ALARM_PTR="alarm_panel::alarmPanelPtr"
 
 TemplateTextSensor = template_alarm_ns.class_(
     "TemplateTextSensor", text_sensor.TextSensor, cg.PollingComponent
@@ -18,7 +18,6 @@ CONFIG_SCHEMA = (
     .extend(
         {
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
-            cv.Optional(CONF_PARTITION, default=0):cv.int_,            
             cv.GenerateID(): cv.declare_id(TemplateTextSensor),
             cv.Optional(CONF_LAMBDA): cv.returning_lambda,
         }
@@ -33,9 +32,9 @@ async def to_code(config):
     await cg.register_component(var, config)
 
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID))) 
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id)) 
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_ID].id}\");"))
         
     if CONF_LAMBDA in config:
         template_ = await cg.process_lambda(

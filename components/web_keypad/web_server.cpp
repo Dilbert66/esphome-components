@@ -232,7 +232,7 @@ void WebServer::set_css_include(const char *css_include) { this->css_include_ = 
 void WebServer::set_js_include(const char *js_include) { this->js_include_ = js_include; }
 #endif
 
-void WebServer::set_keypad_config(const std::string& json_keypad_config) {
+void WebServer::set_keypad_config(const char * json_keypad_config) {
     _json_keypad_config=json_keypad_config;
 }
 
@@ -486,7 +486,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=obj->get_type_id();
+  root["id_code"]=alarm_panel::alarmPanelPtr->getTypeIdFromTextObjectId(obj->get_object_id());
 #else  
   root["id_code"]=obj->get_object_id();
 #endif    
@@ -576,7 +576,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
 #if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=obj->get_type_id();
+  root["id_code"]=alarm_panel::alarmPanelPtr->getTypeIdFromBinaryObjectId(obj->get_object_id());
 #else  
   root["id_code"]=obj->get_object_id();
 #endif     
@@ -1082,19 +1082,19 @@ void WebServer::handle_auth_request(mg_connection *c,JsonObject doc) {
 }
     
 bool WebServer::callKeyService(const char *buf,int partition) {
-#if defined(USE_DSC_PANEL)
-     auto * alarmPanel=static_cast< alarm_panel::DSCkeybushome*>(alarm_panel::alarmPanelPtr);
-#elif defined(USE_VISTA_PANEL)
-     auto * alarmPanel=static_cast<alarm_panel::vistaECPHome*>(alarm_panel::alarmPanelPtr);
-#endif 
+
       std::string keys=buf;
       if (this->key_service_func_.has_value()) {
           (*this->key_service_func_)(keys,partition);          
           return true;
-      } else if (alarmPanel != NULL) {
-          alarmPanel->alarm_keypress_partition(keys,partition);
+      }
+#if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
+      else if (alarm_panel::alarmPanelPtr != NULL) {
+          alarm_panel::alarmPanelPtr->alarm_keypress_partition(keys,partition);
           return true;
       } 
+#endif
+      
       return false;
 }    
 
@@ -1105,9 +1105,8 @@ void WebServer::handle_alarm_panel_request(mg_connection *c,JsonObject doc) {
     
       
     if (doc["method"]=="GET") {
-     if (doc["action"]=="getconfig" && _json_keypad_config != "") {
-      std::string data = _json_keypad_config;
-         ws_reply(c,data.c_str(),true); 
+     if (doc["action"]=="getconfig" && strlen(_json_keypad_config) > 0) {
+         ws_reply(c,_json_keypad_config,true); 
       return;
     }
     // ws_reply(c,"",true); 
@@ -1910,9 +1909,9 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
              else
                  enc=srv->get_config_json(c->id);
              mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type","app_config","data", enc.c_str());
-             if (srv->_json_keypad_config != "") {
+             if (strlen(srv->_json_keypad_config) > 0) {
               if (srv->get_credentials()->crypt)                 
-                 enc=srv->encrypt(srv->_json_keypad_config.c_str());
+                 enc=srv->encrypt(srv->_json_keypad_config);
               else
                  enc=srv->_json_keypad_config;            
                 mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type","key_config","data", enc.c_str()); 
@@ -1932,9 +1931,9 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
               else
                 enc=srv->get_config_json(c->id);
               mg_printf(c,PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"),millis(),30000,"ping", enc.c_str());
-             if (srv->_json_keypad_config != "") {
+             if (strlen(srv->_json_keypad_config) > 0) {
               if (srv->get_credentials()->crypt)                 
-                 enc=srv->encrypt(srv->_json_keypad_config.c_str());
+                 enc=srv->encrypt(srv->_json_keypad_config);
               else
                  enc=srv->_json_keypad_config;
                 mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),"key_config", enc.c_str());   

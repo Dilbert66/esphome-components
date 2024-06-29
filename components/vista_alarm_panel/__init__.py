@@ -12,7 +12,7 @@ from esphome.helpers import copy_file_if_changed
 _LOGGER = logging.getLogger(__name__)
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
-Component = component_ns.class_('vistaECPHome', cg.PollingComponent)
+AlarmComponent = component_ns.class_('vistaECPHome', cg.PollingComponent)
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
@@ -53,25 +53,25 @@ CONF_AUTOPOPULATE="autopopulate"
 
 
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
-      alarm_panel::publishTextState("ss_",partition,&statusCode); 
+      alarm_panel::alarmPanelPtr->publishTextState("ss_",partition,&statusCode); 
     }'''
 line1 ='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln1_",partition,&msg);
+      alarm_panel::alarmPanelPtr->publishTextState("ln1_",partition,&msg);
     }'''
 line2='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln2_",partition,&msg);
+      alarm_panel::alarmPanelPtr->publishTextState("ln2_",partition,&msg);
     }'''
 beeps='''[&](std::string  beeps,uint8_t partition) {
-      alarm_panel::publishTextState("bp_",partition,&beeps); 
+      alarm_panel::alarmPanelPtr->publishTextState("bp_",partition,&beeps); 
     }'''
 zoneext='''[&](std::string msg) {
-      alarm_panel::publishTextState("zs",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("zs",0,&msg);  
     }'''
 lrr='''[&](std::string msg) {
-      alarm_panel::publishTextState("lrr",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("lrr",0,&msg);  
     }''' 
 rf='''[&](std::string msg) {
-      alarm_panel::publishTextState("rf",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("rf",0,&msg);  
     }'''
 statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
      std::string sensor="NIL";   
@@ -83,35 +83,35 @@ statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
                 case alarm_panel::sarmedaway: sensor="arma_";break;
                 case alarm_panel::sinstant: sensor="armi_";break; 
                 case alarm_panel::sready: sensor="rdy_";break; 
-                case alarm_panel::sac: alarm_panel::publishBinaryState("ac",0,open);return;       
+                case alarm_panel::sac: alarm_panel::alarmPanelPtr->publishBinaryState("ac",0,open);return;       
                 case alarm_panel::sbypass: sensor="byp_";break;  
                 case alarm_panel::schime: sensor="chm_";break;
-                case alarm_panel::sbat: alarm_panel::publishBinaryState("bat",0,open);return;  
+                case alarm_panel::sbat: alarm_panel::alarmPanelPtr->publishBinaryState("bat",0,open);return;  
                 case alarm_panel::sarmednight: sensor="armn_";break;  
                 case alarm_panel::sarmed: sensor="arm_";break;  
                 case alarm_panel::soffline: break;       
                 case alarm_panel::sunavailable: break; 
                 default: break;
          };
-      alarm_panel::publishBinaryState(sensor.c_str(),partition,open);
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,partition,open);
     }'''
 zonebinary='''[&](int zone, bool open) {
       std::string sensor = "z" + std::to_string(zone) ;
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);    
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);    
     }'''
 zonestatus='''[&](int zone, std::string open) {
       std::string sensor = "z" + std::to_string(zone);
-      alarm_panel::publishTextState(sensor.c_str(),0,&open); 
+      alarm_panel::alarmPanelPtr->publishTextState(sensor,0,&open); 
     }''' 
 relay='''[&](uint8_t addr,int channel,bool open) {
       std::string sensor = "r"+std::to_string(addr) + std::to_string(channel);
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);       
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
     }'''
 
 
 CONFIG_SCHEMA = cv.Schema(
     {
-    cv.GenerateID(): cv.declare_id(Component),
+    cv.GenerateID(): cv.declare_id(AlarmComponent),
     cv.Optional(CONF_ACCESSCODE): cv.string  ,
     cv.Optional(CONF_MAXZONES,default=32): cv.int_, 
     cv.Optional(CONF_MAXPARTITIONS,default=1): cv.int_, 
@@ -156,7 +156,7 @@ async def to_code(config):
     if CORE.using_arduino and CORE.is_esp32:
       variant = get_esp32_variant()
       if variant in [VARIANT_ESP32C3]:
-          #cg.add_build_flag("-include \"src/risc_fix.h\"");
+          cg.add_build_flag("-include \"src/risc_fix.h\"");
           copy_file_if_changed(
               os.path.join(pathlib.Path(__file__).parent.resolve(),"risc_fix.h"),
               CORE.relative_build_path("src/risc_fix.h"),

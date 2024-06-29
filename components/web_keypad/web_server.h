@@ -133,7 +133,7 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(const std::string&  json_keypad_config);
+  void set_keypad_config(const char *  json_keypad_config);
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -377,7 +377,7 @@ void ws_reply(mg_connection *c,const char * data,bool ok);
 static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
-  std::string  _json_keypad_config;
+  const char * _json_keypad_config;
 #if USE_WEBSERVER_VERSION == 1
   const char *css_url_{nullptr};
   const char *js_url_{nullptr};

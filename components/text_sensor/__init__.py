@@ -32,7 +32,7 @@ DEVICE_CLASSES = [
 ]
 
 CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
+ALARM_PTR="alarm_panel::alarmPanelPtr"
 
 IS_PLATFORM_COMPONENT = True
 
@@ -145,7 +145,6 @@ TEXT_SENSOR_SCHEMA = (
                 }
             ),
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,     
-            cv.Optional(CONF_PARTITION, default=0): cv.int_,  
             cv.Optional(CONF_ON_RAW_VALUE): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
@@ -199,11 +198,9 @@ async def setup_text_sensor_core_(var, config):
     await setup_entity(var, config)
     
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID))) 
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id))
-    if config.get(CONF_PARTITION):
-        cg.add(var.set_partition(config.get(CONF_PARTITION)))    
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_ID].id}\");"))
         
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))

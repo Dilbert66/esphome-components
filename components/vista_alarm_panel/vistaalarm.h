@@ -57,7 +57,7 @@ extern void disconnectVista();
 namespace esphome {
 namespace alarm_panel {
  
-extern void * alarmPanelPtr;    
+ 
 #if defined(ESPHOME_MQTT)
 extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
 const char setalarmcommandtopic[] PROGMEM = "/alarm/set"; 
@@ -100,10 +100,6 @@ enum reqStates {
 };
 
 
-#if !defined(ARDUINO_MQTT)
-extern void publishBinaryState(const char * cstr,uint8_t partition,bool open);
-extern void publishTextState(const char * cstr,uint8_t partition,std::string * text);
-#endif
 
 #if defined(ESPHOME_MQTT) && !defined(USE_API)
 class vistaECPHome:  public time::RealTimeClock {
@@ -200,6 +196,27 @@ class vistaECPHome {
         }
         
     }
+    
+struct binarySensor{
+    binary_sensor::BinarySensor * ptr;
+    const char * type_id;
+};
+
+struct textSensor{
+    text_sensor::TextSensor * ptr;
+    const char * type_id;
+};
+
+std::vector<binarySensor> bMap;
+std::vector<textSensor> tMap;
+
+void add_binary_sensor(binary_sensor::BinarySensor * b,const char * type_id);
+void add_text_sensor(text_sensor::TextSensor* b,const char * type_id); 
+const char * getTypeIdFromBinaryObjectId(const std::string & objid); 
+const char * getTypeIdFromTextObjectId(const std::string & objid);
+void publishBinaryState(const std::string& cstr,uint8_t partition,bool open);
+void publishTextState(const std::string & cstr,uint8_t partition,std::string * text);    
+    
     
     bool displaySystemMsg = false;
     bool forceRefreshGlobal,forceRefreshZones,forceRefresh;
@@ -447,6 +464,8 @@ void update() override;
 private:
     const __FlashStringHelper * statusText(int statusCode) ;
   };
+  
+extern vistaECPHome* alarmPanelPtr; 
 #if !defined(ARDUINO_MQTT)
 }} //namespaces
 #endif

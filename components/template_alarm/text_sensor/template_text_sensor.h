@@ -17,13 +17,11 @@ class TemplateTextSensor : public text_sensor::TextSensor, public PollingCompone
 
   void dump_config() override;
   
-  void set_type_id( const char *id) {this->type_id_str_=id;}
-  std::string get_type_id(){  if (this->type_id_str_ == nullptr) {
-    return ""; }  return this->type_id_str_;}
-
+ 
+ private:
  protected:
   optional<std::function<optional<std::string>()>> f_{};
-  const char * type_id_str_{nullptr};    
+   
 };
 
 }  // namespace template_alarm_

@@ -103,7 +103,7 @@ DEFAULT_DELAY = "1s"
 DEFAULT_TIME_OFF = "100ms"
 DEFAULT_TIME_ON = "900ms"
 CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
+ALARM_PTR="alarm_panel::alarmPanelPtr"
 
 
 binary_sensor_ns = cg.esphome_ns.namespace("binary_sensor")
@@ -398,7 +398,6 @@ BINARY_SENSOR_SCHEMA = (
                 mqtt.MQTTBinarySensorComponent
             ),
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
-            cv.Optional(CONF_PARTITION, default=0):cv.int_,      
             cv.Optional(CONF_PUBLISH_INITIAL_STATE): cv.boolean,
             cv.Optional(CONF_DEVICE_CLASS): validate_device_class,
             cv.Optional(CONF_FILTERS): validate_filters,
@@ -497,11 +496,9 @@ async def setup_binary_sensor_core_(var, config):
         
         
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id))
-    if config.get(CONF_PARTITION):
-        cg.add(var.set_partition(config.get(CONF_PARTITION)))          
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_ID].id}\");"))
     if publish_initial_state := config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(publish_initial_state))
     if not config.get(CONF_PUBLISH_INITIAL_STATE):

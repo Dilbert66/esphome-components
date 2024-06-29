@@ -7,7 +7,7 @@ from .. import template_alarm_ns
 
 
 CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
+ALARM_PTR="alarm_panel::alarmPanelPtr"
 
 TemplateBinarySensor = template_alarm_ns.class_(
     "TemplateBinarySensor", binary_sensor.BinarySensor, cg.Component
@@ -18,7 +18,6 @@ CONFIG_SCHEMA = (
     .extend(
         {
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
-            cv.Optional(CONF_PARTITION, default=0):cv.int_,           
             cv.Optional(CONF_LAMBDA): cv.returning_lambda,
         }
     )
@@ -30,14 +29,15 @@ async def to_code(config):
     cg.add_define("USE_TEMPLATE_ALARM_SENSORS")
     var = await binary_sensor.new_binary_sensor(config)
     await cg.register_component(var, config)
+   
     if not config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(True))
-        
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
-    elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id))   
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
 
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_ID].id}\");"))
+        
     if CONF_LAMBDA in config:
         template_ = await cg.process_lambda(
             config[CONF_LAMBDA], [], return_type=cg.optional.template(bool)

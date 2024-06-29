@@ -13,7 +13,7 @@ from esphome.helpers import copy_file_if_changed
 _LOGGER = logging.getLogger(__name__)
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
-Component = component_ns.class_('DSCkeybushome', cg.PollingComponent)
+AlarmComponent = component_ns.class_('DSCkeybushome', cg.PollingComponent)
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
@@ -34,14 +34,14 @@ CONF_AUTOPOPULATE="autopopulate"
 
 
 systemstatus= '''[&](std::string statusCode) {
-      alarm_panel::publishTextState("ss",0,&statusCode); 
+      alarm_panel::alarmPanelPtr->publishTextState("ss",0,&statusCode); 
     }'''
 partitionstatus= '''[&](std::string statusCode,uint8_t partition) {
-      alarm_panel::publishTextState("ps_",partition,&statusCode); 
-      alarm_panel::publishBinaryState("al_",partition,(statusCode.compare("triggered")==0));        
+      alarm_panel::alarmPanelPtr->publishTextState("ps_",partition,&statusCode); 
+      alarm_panel::alarmPanelPtr->publishBinaryState("al_",partition,(statusCode.compare("triggered")==0));        
     }'''    
 partitionmsg= '''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("msg_",partition,&msg); 
+      alarm_panel::alarmPanelPtr->publishTextState("msg_",partition,&msg); 
     }'''    
 panelstatus= '''[&](alarm_panel::panelStatus ps,bool open,uint8_t partition) {
       std::string sensor="NIL";
@@ -53,42 +53,42 @@ panelstatus= '''[&](alarm_panel::panelStatus ps,bool open,uint8_t partition) {
           case alarm_panel::armStatus:  sensor = "arm_"; break; 
           default: break;
         }                
-      alarm_panel::publishBinaryState(sensor.c_str(),partition,open);
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,partition,open);
     }'''      
 line1 ='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln1_",partition,&msg);
+      alarm_panel::alarmPanelPtr->publishTextState("ln1_",partition,&msg);
     }'''
 line2='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln2_",partition,&msg);
+      alarm_panel::alarmPanelPtr->publishTextState("ln2_",partition,&msg);
     }'''
 beeps='''[&](std::string  beeps,uint8_t partition) {
-      alarm_panel::publishTextState("bp_",partition,&beeps); 
+      alarm_panel::alarmPanelPtr->publishTextState("bp_",partition,&beeps); 
     }'''
 zonemsg='''[&](std::string msg) {
-      alarm_panel::publishTextState("zs",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("zs",0,&msg);  
     }'''
 troublemsg='''[&](std::string msg) {
-      alarm_panel::publishTextState("tr_msg",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("tr_msg",0,&msg);  
     }'''    
 eventinfo='''[&](std::string msg) {
-      alarm_panel::publishTextState("evt",0,&msg);  
+      alarm_panel::alarmPanelPtr->publishTextState("evt",0,&msg);  
     }''' 
     
 firestatus='''[&]( bool open,uint8_t partition) {
-      alarm_panel::publishBinaryState("fa_",partition,open);    
+      alarm_panel::alarmPanelPtr->publishBinaryState("fa_",partition,open);    
     }'''
 zonebinary='''[&](int zone, bool open) {
       std::string sensor = "z" + std::to_string(zone) ;
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);    
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);    
     }'''
 relay='''[&](uint8_t channel,bool open) {
       std::string sensor = "r"+ std::to_string(channel);
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);       
+      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
     }'''
 
 CONFIG_SCHEMA = cv.Schema(
     {
-    cv.GenerateID(): cv.declare_id(Component),
+    cv.GenerateID(): cv.declare_id(AlarmComponent),
     cv.Optional(CONF_ACCESSCODE, default=""): cv.string  ,
     cv.Optional(CONF_MAXZONES, default=""): cv.int_, 
     cv.Optional(CONF_USERCODES, default=""): cv.string, 

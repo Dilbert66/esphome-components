@@ -23,32 +23,79 @@ void disconnectKeybus() {
 namespace esphome {
 namespace alarm_panel {
 #endif
-void * alarmPanelPtr;  
+DSCkeybushome* alarmPanelPtr; 
 #if defined(ESPHOME_MQTT)
 std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
 
 #if !defined(ARDUINO_MQTT)
 
-std::vector<binary_sensor::BinarySensor *> bMap;
-std::vector<text_sensor::TextSensor *> tMap;
+void DSCkeybushome::add_binary_sensor(binary_sensor::BinarySensor * b,const char * type_id) {
 
-void publishBinaryState(const char * cstr,uint8_t partition,bool open) {
+    struct binarySensor bs;
+    bs.ptr=b;
+    bs.type_id=type_id;
+    bMap.push_back(bs);
+    ESP_LOGD(TAG,"Added binary sensor %s with type %s",bs.ptr->get_name().c_str(),bs.type_id);
+
+}
+
+void DSCkeybushome::add_text_sensor(text_sensor::TextSensor* b,const char * type_id) {
+    struct textSensor ts;
+    ts.ptr=b;
+    ts.type_id=type_id;
+    tMap.push_back(ts);
+    ESP_LOGD(TAG,"Added text sensor %s with type %s",ts.ptr->get_name().c_str(),ts.type_id);
+
+}
+
+
+const char * DSCkeybushome::getTypeIdFromBinaryObjectId(const std::string & objid) {
+    
+      auto it = std::find_if(bMap.begin(), bMap.end(),  [objid](struct binarySensor bs){
+          
+            return  bs.ptr->get_object_id()==objid; 
+   } );
+   if (it != bMap.end()) 
+       return (*it).type_id;
+   else
+       return "";
+}
+
+const char * DSCkeybushome::getTypeIdFromTextObjectId(const std::string & objid) {
+    
+      auto it = std::find_if(tMap.begin(), tMap.end(),  [objid](struct textSensor ts){
+          
+            return  ts.ptr->get_object_id()==objid; 
+   } );
+   if (it != tMap.end()) 
+       return (*it).type_id;
+   else
+       return "";
+}
+
+void DSCkeybushome::publishBinaryState(const std::string& cstr,uint8_t partition,bool open) {
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
-     if (it != bMap.end()) (*it)->publish_state(open);
+   const char * c=str.c_str();
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [c](struct binarySensor bs){
+            return strcmp(bs.type_id,c)==0; 
+   } );    
+   if (it != bMap.end()) (*it).ptr->publish_state(open);
 }
     
-void publishTextState(const char * cstr,uint8_t partition,std::string * text) {
+void DSCkeybushome::publishTextState(const std::string & cstr,uint8_t partition,std::string * text) {
     
   std::string str=cstr;
   if (partition) str=str + std::to_string(partition);  
-  auto it = std::find_if(tMap.begin(), tMap.end(),  [&str](text_sensor::TextSensor*  f){ return f->get_type_id() == str; } );
-     if (it != tMap.end()) (*it)->publish_state(*text);  
+  const char *  c=str.c_str();
+  auto it = std::find_if(tMap.begin(), tMap.end(),  [c](struct textSensor ts){ 
+    return strcmp(ts.type_id,c)==0; 
+  } 
+  );
+  if (it != tMap.end()) (*it).ptr->publish_state(*text);  
   
 }
-
 
 #endif
 
@@ -66,12 +113,17 @@ DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin
 #endif      
   }
 
+    
 std::string DSCkeybushome::getZoneName(int zone) {
     std::string str = "z" + std::to_string(zone) ;
-  auto it = std::find_if(bMap.begin(), bMap.end(),  [&str](binary_sensor::BinarySensor* f){ return f->get_type_id() == str; } );
-     if (it != bMap.end()) return (*it)->get_name();  
+  const char *  c=str.c_str();
+  auto it = std::find_if(bMap.begin(), bMap.end(),  [c](struct binarySensor bs){
+      return strcmp(bs.type_id,c)==0; 
+      } );
+     if (it != bMap.end()) return (*it).ptr->get_name();  
     return "";
 }
+
   
 void DSCkeybushome::set_panel_time() {
 #if defined(USE_TIME)      
@@ -134,9 +186,7 @@ void DSCkeybushome::begin() {
     eventStatusMsg.reserve(64);
     if (debug > 2)
       Serial.begin(115200);
-#if !defined(ARDUINO_MQTT)    
-  bMap =  App.get_binary_sensors(); 
-  tMap = App.get_text_sensors();    
+#if !defined(ARDUINO_MQTT)  
   loadZones();
 #endif
 
@@ -1187,7 +1237,11 @@ void DSCkeybushome::update()  {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
-
+    if (firstrun) {
+        
+      forceRefresh=true;  
+        
+    }
 #if not defined(DISABLE_EXPANDER)          
        // dsc.clearZoneRanges(); // start with clear expanded zones
 #endif
@@ -3651,10 +3705,9 @@ long int DSCkeybushome::toInt(std::string s, int base) {
   
 #if !defined(ARDUINO_MQTT)
 void DSCkeybushome::loadZones() {
-    //std::sort(bMap.begin(), bMap.end(), [](binary_sensor::BinarySensor * a, binary_sensor::BinarySensor * b){ return a->get_type_id() < b->get_type_id(); });
-    
-    for (auto *obj : bMap ) {
-    std::string id=(obj->get_type_id());
+
+    for (struct binarySensor obj : bMap ) {
+    std::string id=obj.type_id;
     const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
     if (std::regex_search(id,m,e)) {
@@ -3663,11 +3716,9 @@ void DSCkeybushome::loadZones() {
     }
  }
  
- //std::sort(tMap.begin(), tMap.end(), [](text_sensor::TextSensor * a, text_sensor::TextSensor * b){ return a->get_type_id() < b->get_type_id(); } );
- 
- for (auto *obj : tMap ) {
+ for (struct textSensor obj : tMap ) {
        
-    std::string id=obj->get_type_id();
+    std::string id=obj.type_id;
     const std::regex e("^[zZ]([0-9]+)$");
     std::smatch m;
     if (std::regex_search(id,m,e)) {

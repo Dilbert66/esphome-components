@@ -7,6 +7,8 @@ namespace template_alarm_ {
 static const char *const TAG = "template_alarm.binary_sensor";
 
 void TemplateBinarySensor::setup() {
+
+  
   if (!this->publish_initial_state_)
     return;
 
@@ -15,7 +17,9 @@ void TemplateBinarySensor::setup() {
   } else {
     this->publish_initial_state(false);
   }
+
 }
+
 void TemplateBinarySensor::loop() {
   if (this->f_ == nullptr)
     return;

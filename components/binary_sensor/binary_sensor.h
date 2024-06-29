@@ -74,24 +74,8 @@ class BinarySensor : public EntityBase, public EntityBase_DeviceClass {
 
   virtual bool is_status_binary_sensor() const;
 
-//Add by Dilbert66
-  std::string type_id_static{};
-  std::string name_static{};
-  std::string object_id_static{};
-
-
-  void set_type_id( const char *id) {this->type_id_str_=id;}
-  std::string get_type_id(){  if (this->type_id_str_ == nullptr) {
-    return ""; }  return this->type_id_str_;}
-    
-  void set_partition( int p) {this->partition_int_=p;}
-  int get_partition(){  return this->partition_int_;} 
-//end add
-
-
  protected:
-  int partition_int_{0};
-  const char * type_id_str_{nullptr};
+ 
   CallbackManager<void(bool)> state_callback_{};
   Filter *filter_list_{nullptr};
   bool has_state_{false};
