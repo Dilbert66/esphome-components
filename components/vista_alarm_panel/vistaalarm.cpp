@@ -275,7 +275,7 @@ vistaECPHome::serialType vistaECPHome::getRfSerialLookup(char * serialCode) {
 
 void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload) {
     int p=0;
-      vistaECPHome * v=static_cast<vistaECPHome*>(alarmPanelPtr);
+      
       if (topic.find(String(FPSTR(setalarmcommandtopic)).c_str())!=std::string::npos) { 
         if (payload.containsKey("partition"))
           p=payload["partition"];
@@ -287,7 +287,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
         char * bytes=new char[NumberChars/2];
         for (int i = 0; i < NumberChars; i += 2)
         {
-             bytes[i / 2] = v->toInt(s.substr(i, 2), 16);
+             bytes[i / 2] = alarmPanelPtr->toInt(s.substr(i, 2), 16);
         }
             vista.writeDirect(bytes,p,NumberChars/2);
             return;
@@ -298,10 +298,10 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
                 c=payload["code"];
             std::string code=c;
             std::string s=payload["state"];  
-            v->set_alarm_state(s,code,p); 
+            alarmPanelPtr->set_alarm_state(s,code,p); 
         } else if (payload.containsKey("keys")) {
             std::string s=payload["keys"]; 
-            v->alarm_keypress_partition(s,p);
+             alarmPanelPtr->alarm_keypress_partition(s,p);
         } else if (payload.containsKey("fault") && payload.containsKey("zone")) {
             bool b=false;
             std::string s1 =  payload["fault"];
@@ -309,7 +309,7 @@ void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
                 b=true;
              p=payload["zone"];
            // ESP_LOGE(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
-            v->set_zone_fault(p,b);
+             alarmPanelPtr->set_zone_fault(p,b);
 
         }
         

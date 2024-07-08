@@ -697,8 +697,7 @@ void DSCkeybushome::begin() {
 #if defined(ESPHOME_MQTT) 
 void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload) {
     int p=0;
-      DSCkeybushome * d=static_cast<DSCkeybushome*>(alarmPanelPtr);
-      if (topic.find(String(FPSTR(setalarmcommandtopic)).c_str())!=std::string::npos) { 
+           if (topic.find(String(FPSTR(setalarmcommandtopic)).c_str())!=std::string::npos) { 
         if (payload.containsKey("partition"))
           p=payload["partition"];
       
@@ -708,10 +707,10 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
                 c=payload["code"];
             std::string code=c;
             std::string s=payload["state"];  
-            d->set_alarm_state(s,code,p); 
+           alarmPanelPtr->set_alarm_state(s,code,p); 
         } else if (payload.containsKey("keys")) {
             std::string s=payload["keys"]; 
-            d->alarm_keypress_partition(s,p);
+            alarmPanelPtr->alarm_keypress_partition(s,p);
         } else if (payload.containsKey("fault") && payload.containsKey("zone")) {
             bool b=false;
             std::string s1= payload["fault"];
@@ -719,7 +718,7 @@ void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload
                 b=true;
             p=payload["zone"];
            // ESP_LOGI(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);            
-            d->set_zone_fault(p,b);
+           alarmPanelPtr->set_zone_fault(p,b);
 
         }
         
