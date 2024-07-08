@@ -96,9 +96,11 @@ const char * vistaECPHome::getTypeIdFromTextObjectId(const std::string & objid) 
 }
 
 void vistaECPHome::publishBinaryState(const std::string& cstr,uint8_t partition,bool open) {
-  std::string str=cstr;
-  if (partition) str=str + std::to_string(partition);
-   const char * c=str.c_str();
+   const char * c;
+   if (partition)
+       c=(cstr + std::to_string(partition)).c_str();
+   else
+       c=cstr.c_str();
     auto it = std::find_if(bMap.begin(), bMap.end(),  [c](struct binarySensor bs){
             return strcmp(bs.type_id,c)==0; 
    } );    
@@ -106,10 +108,11 @@ void vistaECPHome::publishBinaryState(const std::string& cstr,uint8_t partition,
 }
     
 void vistaECPHome::publishTextState(const std::string & cstr,uint8_t partition,std::string * text) {
-    
-  std::string str=cstr;
-  if (partition) str=str + std::to_string(partition);  
-  const char *  c=str.c_str();
+   const char * c;
+   if (partition)
+       c=(cstr + std::to_string(partition)).c_str();
+   else
+       c=cstr.c_str();
   auto it = std::find_if(tMap.begin(), tMap.end(),  [c](struct textSensor ts){ 
     return strcmp(ts.type_id,c)==0; 
   } 

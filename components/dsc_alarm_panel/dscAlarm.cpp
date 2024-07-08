@@ -75,9 +75,11 @@ const char * DSCkeybushome::getTypeIdFromTextObjectId(const std::string & objid)
 }
 
 void DSCkeybushome::publishBinaryState(const std::string& cstr,uint8_t partition,bool open) {
-  std::string str=cstr;
-  if (partition) str=str + std::to_string(partition);
-   const char * c=str.c_str();
+   const char * c;
+   if (partition)
+       c=(cstr + std::to_string(partition)).c_str();
+   else
+       c=cstr.c_str();
     auto it = std::find_if(bMap.begin(), bMap.end(),  [c](struct binarySensor bs){
             return strcmp(bs.type_id,c)==0; 
    } );    
@@ -86,9 +88,11 @@ void DSCkeybushome::publishBinaryState(const std::string& cstr,uint8_t partition
     
 void DSCkeybushome::publishTextState(const std::string & cstr,uint8_t partition,std::string * text) {
     
-  std::string str=cstr;
-  if (partition) str=str + std::to_string(partition);  
-  const char *  c=str.c_str();
+   const char * c;
+   if (partition)
+       c=(cstr + std::to_string(partition)).c_str();
+   else
+       c=cstr.c_str();
   auto it = std::find_if(tMap.begin(), tMap.end(),  [c](struct textSensor ts){ 
     return strcmp(ts.type_id,c)==0; 
   } 
@@ -1233,7 +1237,7 @@ void DSCkeybushome::update()  {
       static unsigned long startWait = millis();
       if (millis() - startWait > 60000 && delayedStart) {
         delayedStart = false;
-        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !partitionStatus[defaultPartition-1].armed) {
+        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !partitionStatus[defaultPartition-1].armed && !partitionStatus[defaultPartition-1].inprogram) {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
@@ -1451,9 +1455,9 @@ void DSCkeybushome::update()  {
             partitionStatus[partition].ready=true;  
           } else if (!dsc.exitDelay[partition]) {
             if (!dsc.armed[partition] ) {
-                partitionStatusChangeCallback( String(FPSTR(STATUS_NOT_READY)).c_str(), partition + 1);
-                panelStatusChangeCallback(armStatus, false, partition + 1);
-               partitionStatus[partition].exitdelay=false;   
+              partitionStatusChangeCallback( String(FPSTR(STATUS_NOT_READY)).c_str(), partition + 1);
+              panelStatusChangeCallback(armStatus, false, partition + 1);
+              partitionStatus[partition].exitdelay=false;   
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=false;
               partitionStatus[partition].armedAway=false;
@@ -1471,7 +1475,7 @@ void DSCkeybushome::update()  {
           dsc.fireChanged[partition] = false; // Resets the fire status flag
           if (dsc.fire[partition]) {
               fireStatusChangeCallback(true, partition + 1); // Fire alarm tripped
-               partitionStatus[partition].fire=true;
+              partitionStatus[partition].fire=true;
           } else {
               fireStatusChangeCallback(false,partition + 1); // Fire alarm restored
               partitionStatus[partition].fire=false;             

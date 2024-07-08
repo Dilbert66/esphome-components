@@ -1645,8 +1645,6 @@ const std::string WebServer::encrypt(const char * message) {
    int buf = round(i / 16) * 16;
    int length = (buf <= i) ? buf + 16 : buf;
    uint8_t encrypted[length];
-    //uint8_t * key=credentials_.token;
-   // uint8_t * hmackey=credentials_.hmackey;     
     uint8_t iv[16];
     random_bytes(iv,16);
 
@@ -1683,7 +1681,8 @@ const std::string WebServer::decrypt(DynamicJsonDocument&  doc) {
     uint8_t data_decoded[strlen(data)];
     uint8_t iv_decoded[strlen(iv)];
     
-    SHA256HMAC hmac(hmackey,32);
+    
+    SHA256HMAC hmac(credentials_.hmackey,32);
     hmac.doUpdate(iv,strlen(iv));
     hmac.doUpdate(data,strlen(data));
     uint8_t authCode[SHA256HMAC_SIZE];
@@ -1691,7 +1690,7 @@ const std::string WebServer::decrypt(DynamicJsonDocument&  doc) {
     
     std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
     if (ehm != hash) {
-ESP_LOGD(TAG,PSTR("ehm [%s] does not match hash [%s]"),ehm.c_str(),hash.c_str());
+        ESP_LOGD(TAG,PSTR("ehm [%s] does not match hash [%s]"),ehm.c_str(),hash.c_str());
         return "";
     }        
     int encrypted_length = base64_decode(std::string(data), data_decoded, strlen(data));
@@ -1703,8 +1702,6 @@ ESP_LOGD(TAG,PSTR("ehm [%s] does not match hash [%s]"),ehm.c_str(),hash.c_str())
     //return std::string((char*)data_decoded); 
     return out;
     
-return std::string(data);
-
 }
 
 char WebServer::matchBuf[MATCH_BUF_SIZE];
@@ -1732,6 +1729,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
     } else if (ev == MG_EV_CLOSE) {
         ESP_LOGD(TAG,"Connection %d closed",c->id);
+        ESP_LOGD(TAG,"Current Heap values: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
       // srv->sessionTokens.erase(c); 
     } else if (ev == MG_EV_ACCEPT) {
         /*
@@ -1748,7 +1746,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         mg_tls_init(c, &opts);
     */
      ESP_LOGD(TAG,PSTR("New connection %d accepted"),c->id);
-      
+        ESP_LOGD(TAG,"Current Heap values: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
     } if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!
             struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;

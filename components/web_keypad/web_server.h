@@ -57,7 +57,7 @@ struct Credentials {
   std::string username="";
   std::string password="";
   uint8_t token[KEYSIZE];
-  uint8_t * hmackey;
+  uint8_t hmackey[KEYSIZE];
   bool crypt=false;
 };
 
@@ -152,19 +152,18 @@ class WebServer : public Controller, public Component {
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
   credentials_.username = auth_username;   
   credentials_.password = auth_password;
-    uint8_t i=0;
-    const char * keystr=(credentials_.username + SALT + credentials_.password).c_str();
-    uint8_t kl=strlen(keystr) <=KEYSIZE?strlen(keystr):KEYSIZE;
-    for (i=0;i<kl;i++)
-         credentials_.token[i]=keystr[i];
-    for (i;i<KEYSIZE;i++)
-        credentials_.token[i]=0x30;  
-    credentials_.token[i]=0;
+  
+  const char * keystr=(credentials_.username + SALT + credentials_.password).c_str();
+
+    SHA256HMAC aeskey((const byte*)keystr,strlen(keystr));
+    aeskey.doUpdate("aeskey");
+    aeskey.doFinal(credentials_.token);
     
-    SHA256 hasher;
-    hasher.doUpdate((const char*)credentials_.token);
-    hasher.doFinal(credentials_.token);
-    credentials_.hmackey=credentials_.token;
+    SHA256HMAC hmac((const byte*)keystr,strlen(keystr));
+    hmac.doUpdate("hmackey");
+    hmac.doFinal(credentials_.hmackey);
+   
+    
    this->crypt_ = use_encryption;  
    credentials_.crypt=use_encryption;
 
