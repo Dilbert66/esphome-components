@@ -260,7 +260,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
         mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
         mg_printf(c,"Content-Type: application/json\r\n");
         mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
-   printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+ // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
       } else if ( global_notify->enableBot_) {
         global_notify->sending=false;       
         mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
@@ -275,7 +275,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
   
     // Response is received. Print it
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.ptr);
+//printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.ptr);
             
          String payload= String(hm->body.ptr,hm->body.len);    
     //printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
@@ -321,14 +321,14 @@ void WebNotify::loop() {
  
    if (network::is_connected() ) {
       if (((millis() - retryDelay) > delayTime) && !connected && botId_.length() > 0 &&  (enableBot_ || (messages.size() && enableSend_))) {
-          ESP_LOGD(TAG,"Telegram connecting to %s",apiHost_.c_str());
+          ESP_LOGD(TAG,"Connecting to api");
           mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection 
       }
    }
      static unsigned long checkTime = millis();  
         if (millis() - checkTime > 20000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-         ESP_LOGD(TAG,"Telegram free memory: %5d\n", (uint16_t) uxHighWaterMark);
+         ESP_LOGD(TAG,"Free memory: %5d", (uint16_t) uxHighWaterMark);
          checkTime=millis();
         }
        mg_mgr_poll(&mgr, 0);
