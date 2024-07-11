@@ -67,14 +67,13 @@ bool SoftwareSerial::isValidGPIOpin(int pin) {
     return (pin >= 0 && pin <= 5) || (pin >= 12 && pin <= 15);
     #endif
     #ifdef ESP32
-    return pin == 0 || pin == 2 || (pin >= 4 && pin <= 5) || (pin >= 12 && pin <= 19) ||
+    return pin == 0 || pin == 2 || (pin >= 3 && pin <= 5) || (pin >= 12 && pin <= 19) ||
         (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 36) || pin==39;
     #endif
 }
 
 void  SoftwareSerial::setBaud(int32_t baud) {
       m_bitCycles = ESP.getCpuFreqMHz() * 1000000 / baud;
-
       if (baud==4800) //we save 4800 bit cycles for call from ISR later
           m_4800_bitCycles=m_bitCycles;
 }

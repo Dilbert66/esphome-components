@@ -1,11 +1,11 @@
+ //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 #include "vistaalarm.h"
 #include "esphome/core/helpers.h"
 
-#define USETASK
 #if defined(ESP32) && defined(USETASK)
-#include "esp_task_wdt.h"
+#include <esp_chip_info.h>
+#include <esp_task_wdt.h>
 #endif
- //for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
 #define KP_ADDR 17 //only used as a default if not set in the yaml
 #define MAX_ZONES 48
@@ -30,8 +30,6 @@ Vista vista;
 void disconnectVista() {
   vista.stop();
 }
-
-
  
 #if !defined(ARDUINO_MQTT)
 #include "esphome.h"
@@ -121,7 +119,8 @@ void vistaECPHome::publishTextState(const std::string & cstr,uint8_t partition,s
 #endif
 
 void vistaECPHome::stop() {
-#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
+//#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
+#if !defined(ESP32) or  !defined(USETASK)   
 if (xHandle != NULL)    
     vTaskSuspend( xHandle );
 #endif
@@ -430,17 +429,32 @@ void vistaECPHome::setup()  {
       lrrMsgChangeCallback(PSTR("ESP Restart"));
       rfMsgChangeCallback(""); 
 
-#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
-    //only for dual core esp32. Risc processors such as c3 are single core
+//#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
+#if defined(ESP32) && defined(USETASK)   
+
+  esp_chip_info_t info;
+  esp_chip_info(&info);
+  ESP_LOGD(TAG,"Cores: %d,arduino core=%d",info.cores,CONFIG_ARDUINO_RUNNING_CORE);
+  if (info.cores > 1) {
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
     "cmdQueueTask", //Name of the task
     3200, //Stack size in words
     (void * ) this, //Task input parameter
-    20, //Priority of the task
+    10, //Priority of the task
     &xHandle //Task handle.
     ,ASYNC_CORE //Core where the task should run
   );  
+  } else {
+    xTaskCreatePinnedToCore(
+    this -> cmdQueueTask, //Function to implement the task
+    "cmdQueueTask", //Name of the task
+    3200, //Stack size in words
+    (void * ) this, //Task input parameter
+    10, //Priority of the task
+    &xHandle //Task handle.
+     ,0 );   
+  }
    
 #endif      
       
@@ -860,18 +874,18 @@ void vistaECPHome::cmdQueueTask(void * args) {
   vistaECPHome * _this = (vistaECPHome * ) args;
   static unsigned long checkTime = millis();  
   for (;;) { 
-        
-        if (!vista.keybusConnected || !vista.handle() )
-              vTaskDelay(4);
-        vTaskDelay(1);
-         esp_task_wdt_reset();
+        const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+        if ( !vista.handle() )
+              vTaskDelay(xDelay);
+        taskYIELD();
+        #if not defined(ARDUINO_MQTT)   
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-         #if not defined(ARDUINO_MQTT)             
-         ESP_LOGD(TAG,PSTR("Taskupdates free memory: %5d\n"), (uint16_t) uxHighWaterMark);
+         ESP_LOGD(TAG,PSTR("High water stack level: %5d"), (uint16_t) uxHighWaterMark);
          checkTime=millis();
-         #endif
         }
+        #endif
+        
   }
   vTaskDelete(NULL);
 }
@@ -893,10 +907,11 @@ void vistaECPHome::update()  {
       //if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
       
- #if !defined(ESP32) or defined(__riscv) or !defined(USETASK)
+//#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)
+#if !defined(ESP32)  or !defined(USETASK)
       vista.handle();
       static unsigned long sendWaitTime = millis();
-      while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdQueue.empty()) {
+      while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail()) {
         vista.handle();
         if (millis() - sendWaitTime > 10) break;
       }
@@ -1108,16 +1123,12 @@ void vistaECPHome::update()  {
               ESP_LOGI(TAG, PSTR("Partition: %02X"), partition);
           #endif
           
-           //   if (partitionStates[partition - 1].lastp1 != p1 || forceRefresh)
                 line1DisplayCallback(vistaCmd.statusFlags.prompt1, partition);
-           //   if (partitionStates[partition - 1].lastp2 != p2 || forceRefresh)
                 line2DisplayCallback(vistaCmd.statusFlags.prompt2, partition);
               if (partitionStates[partition - 1].lastbeeps != vistaCmd.statusFlags.beeps || forceRefresh ) {
                 beepsCallback(std::to_string( vistaCmd.statusFlags.beeps), partition);
               }
 
-        //      partitionStates[partition - 1].lastp1 = str(p1);
-        //      partitionStates[partition - 1].lastp2 = str(p2);
               partitionStates[partition - 1].lastbeeps = vistaCmd.statusFlags.beeps;
 
              if (vistaCmd.statusFlags.systemFlag && strstr(vistaCmd.statusFlags.prompt2, HITSTAR))
@@ -1263,7 +1274,7 @@ void vistaECPHome::update()  {
         // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
        // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
 
-             zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
+            zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
             if (!zt->open && zt->active) {
                 zt->open=true;  
                 zt->bypass=false;
@@ -1445,7 +1456,8 @@ void vistaECPHome::update()  {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
-#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)         
+//#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)  
+#if !defined(ESP32) or  !defined(USETASK)          
           vista.handle();
 #endif    
            if (!x.active || !x.partition) continue;
@@ -1537,7 +1549,8 @@ void vistaECPHome::update()  {
         forceRefreshZones=false;
         forceRefreshGlobal=false;
       }
-#if !defined(ESP32) or defined(__riscv)  or !defined(USETASK) 
+//#if !defined(ESP32) or defined(__riscv)  or !defined(USETASK) 
+#if !defined(ESP32) or !defined(USETASK)   
        vista.handle();
 #endif
     }

@@ -1,23 +1,17 @@
 #pragma once
-#if !defined(ARDUINO_MQTT)
 
+#if !defined(ARDUINO_MQTT)
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
 #if defined(USE_MQTT)
+#define ESPHOME_MQTT
 #include "esphome/components/mqtt/mqtt_client.h"
 #endif
-
 #if defined(USE_API)
 #include "esphome/components/api/custom_api_device.h"
 #endif
-
 #include "esphome/core/defines.h"
-
-#if defined(USE_MQTT)
-#define ESPHOME_MQTT
-#endif
-
 #endif
 
 #include "vista.h"
@@ -33,6 +27,7 @@
 #define DEFAULTPARTITION 1
 
 #define ASYNC_CORE 1
+#define USETASK
 
 //default pins to use for serial comms to the panel
 //The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.
@@ -47,8 +42,6 @@
 #define TX_PIN 4
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
-
-
 
 extern Vista vista;
 extern void disconnectVista();

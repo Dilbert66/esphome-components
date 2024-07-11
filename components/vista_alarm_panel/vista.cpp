@@ -986,19 +986,25 @@ bool Vista::handle() {
   newCmd=false;
   newExtCmd=false;
   uint8_t x;
+
+
+  if (vistaSerial == NULL) return 0;
+
   #ifdef MONITORTX
   x=getExtBytes();
+
   if (x) {
       pushCmdQueueItem(0,OUTBUFSIZE);
       return 1;
   }
   #endif
 
+
+
   if (is2400)
     vistaSerial -> setBaud(2400);
   else
     vistaSerial -> setBaud(4800);
-
 
   if (vistaSerial -> available()) {
 

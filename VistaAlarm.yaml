@@ -74,7 +74,7 @@ vista_alarm_panel:
   relayaddr3: "0"
   relayaddr4: "0"
   
-  ttl: "30000"  # time  to live  in ms for zone/fire status before expiring;
+  ttl: "30000"  # time  to live  in ms for zone/fire status before expiring; 
   quickarm: "false"
   lrrsupervisor: "false" # set to true if we don't have an LRR monitoring supervisor  we can emulate one to get the statuses
   
@@ -107,8 +107,6 @@ external_components:
 #Component source: https://github.com/Dilbert66/esphome-components/tree/keypad/components/web_keypad
 ### Note: this is an ESP32 only component. The esp8266 does not support the resources needed.
 
-mg_lib:
-
 web_keypad:
   port: 80 
   partitions: 1  # a keypad will be shown for each partition
@@ -123,7 +121,6 @@ web_keypad:
   ## If you prefer to use locally hosted compile time files comment two lines above and uncomment below  
   #config_local: ./config_vista.yml     
   #js_local: ./www.js    
-  
    ## custom function call to send keypresses if other than dsc/vista components are used. Parmeters are a string keys and int partition
   #service_lambda: |- 
       #$panelId->alarm_keypress_partition(keys,partition);    
@@ -185,8 +182,8 @@ safe_mode:
 ota:
    password: !secret ota_password
    platform: esphome
-   on_begin:
-          switch.turn_off: connection_status_switch 
+   #on_begin:
+          #switch.turn_off: connection_status_switch 
 
 time:
  - platform: sntp
