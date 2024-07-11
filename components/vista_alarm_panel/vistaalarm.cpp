@@ -119,7 +119,6 @@ void vistaECPHome::publishTextState(const std::string & cstr,uint8_t partition,s
 #endif
 
 void vistaECPHome::stop() {
-//#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
 #if !defined(ESP32) or  !defined(USETASK)   
 if (xHandle != NULL)    
     vTaskSuspend( xHandle );
@@ -428,14 +427,13 @@ void vistaECPHome::setup()  {
       }    
       lrrMsgChangeCallback(PSTR("ESP Restart"));
       rfMsgChangeCallback(""); 
-
-//#if defined(ESP32) and not defined(__riscv) && defined(USETASK)
+      ESPCores=1;
 #if defined(ESP32) && defined(USETASK)   
-
   esp_chip_info_t info;
   esp_chip_info(&info);
+  ESPCores=info.cores;
   ESP_LOGD(TAG,"Cores: %d,arduino core=%d",info.cores,CONFIG_ARDUINO_RUNNING_CORE);
-  if (info.cores > 1) {
+  if (ESPCores > 1) {
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
     "cmdQueueTask", //Name of the task
@@ -445,16 +443,7 @@ void vistaECPHome::setup()  {
     &xHandle //Task handle.
     ,ASYNC_CORE //Core where the task should run
   );  
-  } else {
-    xTaskCreatePinnedToCore(
-    this -> cmdQueueTask, //Function to implement the task
-    "cmdQueueTask", //Name of the task
-    3200, //Stack size in words
-    (void * ) this, //Task input parameter
-    10, //Priority of the task
-    &xHandle //Task handle.
-     ,0 );   
-  }
+  } 
    
 #endif      
       
@@ -907,16 +896,17 @@ void vistaECPHome::update()  {
       //if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
       
-//#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)
-#if !defined(ESP32)  or !defined(USETASK)
+
+    if (ESPCores < 2) {
       vista.handle();
       static unsigned long sendWaitTime = millis();
       while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail()) {
         vista.handle();
         if (millis() - sendWaitTime > 10) break;
       }
+    }
       
-#endif
+
        
        // if (!vista.cmdQueue.empty()) {
       //   vistaCmd=vista.cmdQueue.front();
@@ -1456,10 +1446,12 @@ void vistaECPHome::update()  {
         char s1[16];
         //clears restored zones after timeout
         for (auto  &x: extZones) {
-//#if !defined(ESP32) or defined(__riscv) or !defined(USETASK)  
-#if !defined(ESP32) or  !defined(USETASK)          
+
+
+    if (ESPCores < 2) {        
           vista.handle();
-#endif    
+    }
+  
            if (!x.active || !x.partition) continue;
         
            if (partitionStates[ x.partition-1].previousLightState.ready) {
@@ -1549,10 +1541,12 @@ void vistaECPHome::update()  {
         forceRefreshZones=false;
         forceRefreshGlobal=false;
       }
-//#if !defined(ESP32) or defined(__riscv)  or !defined(USETASK) 
-#if !defined(ESP32) or !defined(USETASK)   
+
+
+     if (ESPCores  < 2) { 
        vista.handle();
-#endif
+     }
+
     }
 
     const __FlashStringHelper * vistaECPHome::statusText(int statusCode) {
