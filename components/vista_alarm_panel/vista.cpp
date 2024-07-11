@@ -985,13 +985,14 @@ uint8_t Vista::getExtBytes() {
 bool Vista::handle() {
   newCmd=false;
   newExtCmd=false;
-  uint8_t x;
+  uint8_t x=0;
 
 
-  if (vistaSerial == NULL) return 0;
+
 
   #ifdef MONITORTX
-  x=getExtBytes();
+  if ( vistaSerialMonitor != NULL)
+    x=getExtBytes();
 
   if (x) {
       pushCmdQueueItem(0,OUTBUFSIZE);
@@ -999,7 +1000,7 @@ bool Vista::handle() {
   }
   #endif
 
-
+  if (vistaSerial == NULL) return 0;
 
   if (is2400)
     vistaSerial -> setBaud(2400);
@@ -1245,7 +1246,8 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
-  }
+    
+  } else printf("Warning vistaserial rx pin %d is invalid",rxPin);
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
@@ -1253,7 +1255,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;
-  }
+  } printf("Warning vistaserial monitor rx pin %d is invalid",monitorPin);
   #endif
   keybusConnected = true;
 
