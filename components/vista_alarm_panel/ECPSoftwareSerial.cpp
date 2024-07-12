@@ -67,13 +67,20 @@ bool SoftwareSerial::isValidGPIOpin(int pin) {
     return (pin >= 0 && pin <= 5) || (pin >= 12 && pin <= 15);
     #endif
     #ifdef ESP32
-    return pin == 0 || pin == 2 || (pin >= 2 && pin <= 8) || (pin >= 12 && pin <= 19) ||
+    return pin == 0 || (pin >= 2 && pin <= 8) || (pin >= 12 && pin <= 19) ||
         (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 36) || pin==39;
     #endif
 }
 
 void  SoftwareSerial::setBaud(int32_t baud) {
+      /*there is a bug in the ESP32C3 (riscv core) that prevents ESP.getCycleCount from working correctly so we need to ignore
+      using getcpufreq and getcycle count and use micros() instead of accurate bit lenght calculations
+      */
+      #ifdef __riscv
+      m_bitCycles=1000000/baud;
+      #else
       m_bitCycles = ESP.getCpuFreqMHz() * 1000000 / baud;
+      #endif
       if (baud==4800) //we save 4800 bit cycles for call from ISR later
           m_4800_bitCycles=m_bitCycles;
 }
@@ -169,7 +176,11 @@ int SoftwareSerial::available() {
         avail += m_bufSize;
     }
     if (!avail) {
+        #ifdef __riscv
+        optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles );
+        #else
         optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles / ESP.getCpuFreqMHz());
+        #endif
         rxBits();
         avail = m_inPos - m_outPos;
         if (avail < 0) {
@@ -178,8 +189,11 @@ int SoftwareSerial::available() {
     }
     return avail;
 }
-
+#ifdef __riscv
+#define WAIT {     while (micros() - start < wait);    wait += m_bitCycles; }
+#else
 #define WAIT {     while (ESP.getCycleCount() - start < wait);    wait += m_bitCycles; }
+#endif
 
 size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity,int32_t baud ) {
     int32_t origCycles=m_bitCycles;
@@ -188,7 +202,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity,int32_t baud ) {
     if (baud == 4800 && m_4800_bitCycles > 0)
         m_bitCycles=m_4800_bitCycles;
     else
+        #ifdef __riscv
+        m_bitCycles=1000000/baud;
+        #else
         m_bitCycles = ESP.getCpuFreqMHz() * 1000000 / baud;  //we use a precalculated value for 4800 baud rate when called from an ISR since getcpufreqmhz is not an isr friendly function. Only need 4800 for the isr call.
+       #endif
                                                                        
     m_parity = parity;
     size_t r = write(b);
@@ -211,7 +229,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b) {
     if (!m_txValid) return 0;
     if (m_invert_tx) b = ~b;
     unsigned long wait = m_bitCycles;
+#ifdef __riscv
+    unsigned long start = micros();
+#else
     unsigned long start = ESP.getCycleCount();
+#endif
     // Start bit;
     if (m_invert_tx)
         digitalWrite(m_txPin, HIGH);
@@ -304,7 +326,11 @@ void SoftwareSerial::rxBits() {
     
     if (avail == 0 && m_rxCurBit < m_dataBits+2  && m_isrInPos.load() == m_isrOutPos.load() && m_rxCurBit >= 0) {
         uint32_t expectedCycle = m_isrLastCycle.load() + (m_dataBits + 3 - m_rxCurBit) * m_bitCycles;
+#ifdef __riscv
+        if (static_cast < int32_t > (micros() - expectedCycle) > m_bitCycles) {
+#else
         if (static_cast < int32_t > (ESP.getCycleCount() - expectedCycle) > m_bitCycles) {
+#endif
             // Store inverted stop bit edge and cycle in the buffer unless we have an overflow
             // cycle's LSB is repurposed for the level bit
             int next = (m_isrInPos.load() + 1) % m_isrBufSize;
@@ -452,7 +478,11 @@ void SoftwareSerial::rxBits() {
 }
 
 void IRAM_ATTR SoftwareSerial::rxRead() {
+#ifdef __riscv
+    uint32_t curCycle = micros();
+#else
     uint32_t curCycle = ESP.getCycleCount();
+#endif
     bool level = digitalRead(m_rxPin);
 
     // Store inverted edge value & cycle in the buffer unless we have an overflow

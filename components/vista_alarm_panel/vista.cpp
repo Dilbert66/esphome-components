@@ -987,20 +987,18 @@ bool Vista::handle() {
   newExtCmd=false;
   uint8_t x=0;
 
-
-
-
   #ifdef MONITORTX
-  if ( vistaSerialMonitor != NULL)
+  if ( vistaSerialMonitor != NULL) {
     x=getExtBytes();
 
-  if (x) {
+    if (x) {
       pushCmdQueueItem(0,OUTBUFSIZE);
-      return 1;
+      return true;
+    }
   }
   #endif
 
-  if (vistaSerial == NULL) return 0;
+  if (vistaSerial == NULL) return false;
 
   if (is2400)
     vistaSerial -> setBaud(2400);
@@ -1241,21 +1239,31 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   invertRead=invertRx;
 
   //panel data rx interrupt - yellow line
-  if (vistaSerial -> isValidGPIOpin(rxPin)) {
-    vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 2,60 * 10,inputRx);
+
+   vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx,invertTx, 2,60 * 10,inputRx);
+   if (vistaSerial -> isValidGPIOpin(rxPin)) {
     vistaSerial -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
     vistaSerial -> processSingle = true;
     
-  } else printf("Warning vistaserial rx pin %d is invalid",rxPin);
+  } else {
+      free(vistaSerial);
+      vistaSerial=NULL;
+      printf("Warning rx pin %d is invalid",rxPin);
+  }
   #ifdef MONITORTX
     //interrupt for capturing keypad/module data on green transmit line  
+
+   vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 2,OUTBUFSIZE * 10,inputMon);
   if (vistaSerialMonitor -> isValidGPIOpin(monitorPin)) {
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon,false, 2,OUTBUFSIZE * 10,inputMon);
     vistaSerialMonitor -> begin(4800, SWSERIAL_8E2);
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     vistaSerialMonitor -> processSingle = true;
-  } printf("Warning vistaserial monitor rx pin %d is invalid",monitorPin);
+  } else {
+      free(vistaSerialMonitor);
+      vistaSerialMonitor=NULL;
+      printf("Warning monitor rx pin %d is invalid",monitorPin);
+  }
   #endif
   keybusConnected = true;
 

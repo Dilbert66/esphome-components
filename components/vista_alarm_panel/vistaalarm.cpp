@@ -119,7 +119,7 @@ void vistaECPHome::publishTextState(const std::string & cstr,uint8_t partition,s
 #endif
 
 void vistaECPHome::stop() {
-#if !defined(ESP32) or  !defined(USETASK)   
+#if defined(ESP32) &&  defined(USETASK)   
 if (xHandle != NULL)    
     vTaskSuspend( xHandle );
 #endif
@@ -433,7 +433,9 @@ void vistaECPHome::setup()  {
   esp_chip_info(&info);
   ESPCores=info.cores;
   ESP_LOGD(TAG,"Cores: %d,arduino core=%d",info.cores,CONFIG_ARDUINO_RUNNING_CORE);
-  if (ESPCores > 1) {
+  uint8_t core=ASYNC_CORE;
+  if (ESPCores < 2)
+      core=0;
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
     "cmdQueueTask", //Name of the task
@@ -441,13 +443,10 @@ void vistaECPHome::setup()  {
     (void * ) this, //Task input parameter
     10, //Priority of the task
     &xHandle //Task handle.
-    ,ASYNC_CORE //Core where the task should run
-  );  
-  } 
-   
-#endif      
-      
-      
+    ,core //Core where the task should run
+  ); 
+#endif  
+     
     }
 
     void vistaECPHome::alarm_disarm(std::string code,int partition) {
@@ -897,14 +896,14 @@ void vistaECPHome::update()  {
 
       
 
-    if (ESPCores < 2) {
+#if !defined(ESP32) or  !defined(USETASK)  
       vista.handle();
       static unsigned long sendWaitTime = millis();
       while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail()) {
         vista.handle();
         if (millis() - sendWaitTime > 10) break;
       }
-    }
+#endif
       
 
        
@@ -965,6 +964,9 @@ void vistaECPHome::update()  {
           }
          */
         if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0) {
+                              if (vistaCmd.cbuf[0]==0xF7)
+                       printPacket("CHK", vistaCmd.cbuf, 45);
+                   else
              printPacket("CHK", vistaCmd.cbuf, 13);
              return;
         }
@@ -1080,7 +1082,7 @@ void vistaECPHome::update()  {
             if (vistaCmd.cbuf[0]==0xF2)
                 printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1]+2);
               else
-               printPacket("CMD", vistaCmd.cbuf, 13);
+                 printPacket("CMD", vistaCmd.cbuf, 13);
         }
         if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)  {
             ESP_LOGD(TAG,PSTR("state = %d"),reqState);
@@ -1448,9 +1450,9 @@ void vistaECPHome::update()  {
         for (auto  &x: extZones) {
 
 
-    if (ESPCores < 2) {        
+#if !defined(ESP32) or  !defined(USETASK)      
           vista.handle();
-    }
+#endif
   
            if (!x.active || !x.partition) continue;
         
@@ -1543,10 +1545,9 @@ void vistaECPHome::update()  {
       }
 
 
-     if (ESPCores  < 2) { 
+#if !defined(ESP32) or  !defined(USETASK)  
        vista.handle();
-     }
-
+#endif
     }
 
     const __FlashStringHelper * vistaECPHome::statusText(int statusCode) {

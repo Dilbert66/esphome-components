@@ -129,7 +129,7 @@ class SoftwareSerial: public Stream {
     bool m_overflow = false;
     int8_t m_dataBits;
     int32_t m_bitCycles;
-    int32_t m_4800_bitCycles;
+    int16_t m_4800_bitCycles;
     int m_inPos, m_outPos;
     int m_bufSize = 0;
     uint8_t * m_buffer = 0;
