@@ -921,7 +921,7 @@ bool Vista::decodePacket() {
         extcmd[4] = extbuf[4];
         extcmd[5] = extbuf[5];
         extcmd[6] = extbuf[6];
-        extcmd[12] = 0x73; //flag to identify cheksum failed             
+        extcmd[12] = 0x77; //flag to identify cheksum failed             
         newExtCmd = true;
         return 1;
       }

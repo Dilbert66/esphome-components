@@ -859,10 +859,11 @@ void vistaECPHome::cmdQueueTask(void * args) {
   vistaECPHome * _this = (vistaECPHome * ) args;
   static unsigned long checkTime = millis();  
   for (;;) { 
-        const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+        const TickType_t xDelay = 2 / portTICK_PERIOD_MS;
         if ( !vista.handle() )
               vTaskDelay(xDelay);
-        taskYIELD();
+        else
+            taskYIELD();
         #if not defined(ARDUINO_MQTT)   
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
