@@ -233,5 +233,6 @@ class Vista {
 
     char expectByte;
     volatile uint8_t retries;
+    volatile uint8_t retryAddr;
     volatile bool sending;
 };

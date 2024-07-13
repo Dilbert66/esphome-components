@@ -592,8 +592,9 @@ void Vista::writeChars() {
 
   //if retries are getting out of control with no successfull callback
   //just clear the queue
-  if (retries > 2) {
+  if (retries > 4) {
     retries = 0;
+    retryAddr=0;
     expectByte = 0;
     outbufIdx = inbufIdx;
     return;
@@ -630,6 +631,7 @@ void Vista::writeChars() {
       c=kt.key;
       lastkpaddr=kt.kpaddr;
       lastseq=kt.seq;
+      retryAddr=kt.kpaddr;
       sz++;
       if (!kt.direct) {
       //translate digits between 0-9 to hex/decimal
@@ -706,8 +708,8 @@ void IRAM_ATTR Vista::rxHandleISR() {
            if (b) vistaSerial -> write(b, false, 4800);
            b = addrToBitmask3(ackAddr); 
            if (b) vistaSerial -> write(b, false, 4800);
-        } else if (outbufIdx != inbufIdx || retries > 0) {
-          ackAddr=outbuf[outbufIdx].kpaddr; //get pending keypad address
+        } else if (outbufIdx != inbufIdx || retries) {
+          ackAddr=retries?retryAddr:outbuf[outbufIdx].kpaddr; //get pending keypad address
           if (ackAddr && ackAddr < 24 && outbuf[outbufIdx].count < 5 ) {
             outbuf[outbufIdx].count++;
             vistaSerial -> write(addrToBitmask1(ackAddr), false, 4800);
@@ -1011,11 +1013,12 @@ bool Vista::handle() {
 
     memset(cbuf, 0, CMDBUFSIZE); //clear buffer mem  
     
-    if (expectByte && x) {
+    if (retries && x) {
 
       if (x == expectByte) {
         retries = 0;            
         expectByte = 0;
+        retryAddr=0;
         cbuf[0] = 0x78; //for flagging an expect byte found ok
         cbuf[1] = x;
         pushCmdQueueItem(CMDBUFSIZE,0);        
@@ -1101,7 +1104,8 @@ bool Vista::handle() {
       gidx = 0;
       cbuf[gidx++] = x;
       readChars(1,cbuf, & gidx);
-      if (cbuf[1] == peekNextKpAddr()) {
+      uint8_t kpaddr=retries?retryAddr:peekNextKpAddr();
+      if (cbuf[1] == kpaddr) {
         writeChars();
       }
       #ifdef MONITORTX
