@@ -1013,7 +1013,7 @@ bool Vista::handle() {
 
     memset(cbuf, 0, CMDBUFSIZE); //clear buffer mem  
     
-    if (retries && x) {
+    if (expectByte && x) {
 
       if (x == expectByte) {
         retries = 0;            
