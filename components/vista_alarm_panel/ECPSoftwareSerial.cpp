@@ -73,8 +73,8 @@ bool SoftwareSerial::isValidGPIOpin(int pin) {
 }
 
 void  SoftwareSerial::setBaud(int32_t baud) {
-      /*there is a bug in the ESP32C3 (riscv core) that prevents ESP.getCycleCount from working correctly so we need to ignore
-      using getcpufreq and getcycle count and use micros() instead of accurate bit lenght calculations
+      /*
+      There is a bug in the ESP32C3 (riscv core) that prevents ESP.getCycleCount from working correctly so we need to use micros() instead of ESP.getcpufreq and ESP.getcyclecount for accurate bit length calculations
       */
       #ifdef __riscv
       m_bitCycles=1000000/baud;

@@ -219,7 +219,6 @@ void publishTextState(const std::string & cstr,uint8_t partition,std::string * t
     void stop();
 
   private:
-    uint8_t ESPCores=1;
     void updateZoneState(int z,int p,reqStates r); 
     char * parseAUIMessage(char * cmd,reqStates request);
     void processZoneList(uint8_t partition,reqStates request, char * list);

@@ -427,15 +427,12 @@ void vistaECPHome::setup()  {
       }    
       lrrMsgChangeCallback(PSTR("ESP Restart"));
       rfMsgChangeCallback(""); 
-      ESPCores=1;
+      
 #if defined(ESP32) && defined(USETASK)   
   esp_chip_info_t info;
   esp_chip_info(&info);
-  ESPCores=info.cores;
   ESP_LOGD(TAG,"Cores: %d,arduino core=%d",info.cores,CONFIG_ARDUINO_RUNNING_CORE);
-  uint8_t core=ASYNC_CORE;
-  if (ESPCores < 2)
-      core=0;
+  uint8_t core= info.cores>1?ASYNC_CORE:0;
     xTaskCreatePinnedToCore(
     this -> cmdQueueTask, //Function to implement the task
     "cmdQueueTask", //Name of the task
