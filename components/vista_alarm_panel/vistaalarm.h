@@ -219,11 +219,7 @@ void publishTextState(const std::string & cstr,uint8_t partition,std::string * t
     void stop();
 
   private:
-    void updateZoneState(int z,int p,reqStates r); 
-    char * parseAUIMessage(char * cmd,reqStates request);
-    void processZoneList(uint8_t partition,reqStates request, char * list);
-    void sendZoneRequest(uint8_t partition,reqStates request);
-    void loadZones();
+
    // bool zoneActive(uint16_t zone);
     int TTL = 30000;
     uint8_t debug=0;
@@ -345,6 +341,12 @@ void publishTextState(const std::string & cstr,uint8_t partition,std::string * t
       bool refreshStatus;
       bool refreshLights;
     } ;
+    
+    void updateZoneState(zoneType * zt,int p,reqStates r,bool state,unsigned long t); 
+    char * parseAUIMessage(char * cmd,reqStates request);
+    void processZoneList(uint8_t partition,reqStates request, char * list);
+    void sendZoneRequest(uint8_t partition,reqStates request);
+    void loadZones();    
     
 public:
     partitionStateType * partitionStates;

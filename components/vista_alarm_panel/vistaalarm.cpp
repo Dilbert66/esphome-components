@@ -784,25 +784,18 @@ char * vistaECPHome::parseAUIMessage(char * cmd,reqStates request) {
     
 
 }
-void vistaECPHome::updateZoneState(int z,int p,reqStates r) {
+void vistaECPHome::updateZoneState(zoneType * zt,int p,reqStates r,bool state,unsigned long t) {
     
-       if (z) {
-          zoneType * zt=getZone(z);
-          ESP_LOGD(TAG,PSTR("Setting zone %d, partition %d"),zt->zone,p);                
-          if (r==sopenzones) 
-              if (!zt->open) {
-                  zt->open=true;                  
+          ESP_LOGD(TAG,PSTR("Setting zone %d=%d, partition %d"),zt->zone,state,p);                
+          if (r==sopenzones) {
+                  zt->open=state;                  
                   zoneStatusUpdate(zt);
-              }
-          else if (r==sbypasszones)
-              if (!zt->bypass) {
-                zt->bypass=true; 
+         } else if (r==sbypasszones) {
+                zt->bypass=state; 
                 zoneStatusUpdate(zt);
-              }                
-            
-          zt->time=millis();
-          zt->partition=p;
-      }
+         }                
+         zt->time=t;
+         zt->partition=p;
 }
    
  void vistaECPHome::processZoneList(uint8_t partition,reqStates request, char * list) {
@@ -817,38 +810,30 @@ void vistaECPHome::updateZoneState(int z,int p,reqStates r) {
 
     const std::regex re{ R"(((\d+)-(\d+))|(\d+))" }; //search for ranges
     
-          //clear bypass/open zones for partition p
-       auto it = std::find_if(extZones.begin(), extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
-       while (it != extZones.end()) {
-             if (request==sopenzones )
-                if (it->open) {
-                    it->open=false;
-                    zoneStatusUpdate((zoneType *)(&it));                    
-                }
-               else if (request==sbypasszones)
-                 if (it->bypass) {
-                    it->bypass=false;
-                    zoneStatusUpdate((zoneType*)(&it));                 
-                 }
-             ESP_LOGD(TAG,PSTR("clearing zone %d, partition %d"),it->zone,p);
-            it = std::find_if(++it, extZones.end(),  [&p](zoneType& f){ return (f.partition == p && f.active ); } );
-       }
-
     // Search all occureences of integers OR ranges
+    unsigned long t=millis();
     for (std::string s{ zs }; std::regex_search(s, sm, re); s = sm.suffix()) {
         // We found something. Was it a range?
+
         if (sm[1].str().length()) 
             // Yes, range, add all values within to the vector  
             for (int z{ std::stoi(sm[2]) }; z <= std::stoi(sm[3]); ++z) {
-                updateZoneState(z,p,request);
+                updateZoneState(getZone(z),p,request,true,t);
             }
         else {
             // No, no range, just a plain integer value. Add it to the vector
             int z=std::stoi(sm[0]);
-            updateZoneState(z,p,request);
+            updateZoneState(getZone(z),p,request,true,t);
         }
         
     }
+    //clear  bypass/open zones for partition p that were not set above
+     auto it = std::find_if(extZones.begin(), extZones.end(),  [&p,&t](zoneType& f){ return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); } );
+
+     while (it != extZones.end()) {
+            updateZoneState(&(*it),p,request,false,0);
+            it = std::find_if(++it, extZones.end(),  [&p,&t](zoneType& f){ return (f.partition == p && f.active  && f.time != t && (f.open || f.bypass)); } );
+       }
     forceRefreshZones=true;
  }
  
@@ -1267,6 +1252,7 @@ void vistaECPHome::update()  {
             zoneType * zt=getZone(vistaCmd.statusFlags.zone);            
             if (!zt->open && zt->active) {
                 zt->open=true;  
+                zt->check=false;
                 zt->bypass=false;
                 zoneStatusUpdate(zt);
                
@@ -1472,8 +1458,11 @@ void vistaECPHome::update()  {
              x.alarm=false;  
            }             
             
-          if (!x.bypass && ( x.open || x.check) && (millis() -  x.time) > TTL ) {
+          if (!x.bypass &&  x.open  && (millis() -  x.time) > TTL ) {
              x.open=false;
+             zoneStatusUpdate(&x);
+          }
+          if (!x.bypass && x.check && (millis() -  x.time) > TTL ) {
              x.check=false; 
              zoneStatusUpdate(&x);
           }
