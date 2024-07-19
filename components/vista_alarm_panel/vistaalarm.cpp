@@ -810,7 +810,7 @@ void vistaECPHome::updateZoneState(zoneType * zt,int p,reqStates r,bool state,un
 
     const std::regex re{ R"(((\d+)-(\d+))|(\d+))" }; //search for ranges
     
-    // Search all occureences of integers OR ranges
+    // Search all occurences of integers or ranges
     unsigned long t=millis();
     for (std::string s{ zs }; std::regex_search(s, sm, re); s = sm.suffix()) {
         // We found something. Was it a range?
@@ -844,11 +844,10 @@ void vistaECPHome::cmdQueueTask(void * args) {
   vistaECPHome * _this = (vistaECPHome * ) args;
   static unsigned long checkTime = millis();  
   for (;;) { 
-        const TickType_t xDelay = 2 / portTICK_PERIOD_MS;
         if ( !vista.handle() )
-              vTaskDelay(xDelay);
+              vTaskDelay(2 / portTICK_PERIOD_MS);
         else
-            taskYIELD();
+             vTaskDelay(1 / portTICK_PERIOD_MS);
         #if not defined(ARDUINO_MQTT)   
         if (millis() - checkTime > 30000) {
          UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
