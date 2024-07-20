@@ -1192,7 +1192,7 @@ void DSCkeybushome::update()  {
 
 #if defined(ESPHOME_MQTT)
    static bool firstrunmqtt=true;
-   if (mqtt::global_mqtt_client->is_connected() && firstrunmqtt)	{
+   if (firstrunmqtt && mqtt::global_mqtt_client->is_connected())	{
          mqtt::global_mqtt_client->publish(topic,"{\"name\":\"command\", \"cmd_t\":\"" +  topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "\"}",0,1);
          firstrunmqtt=false;
        }
@@ -1200,7 +1200,7 @@ void DSCkeybushome::update()  {
 
 
     
-    if ((millis() - beepTime > 2000 && beeps > 0)) {
+    if (beeps > 0 && millis() - beepTime > 2000) {
       beeps = 0;
       for (byte partition = 1; partition <= dscPartitions; partition++) {
         if (dsc.disabled[partition - 1]) continue;
@@ -1232,23 +1232,19 @@ void DSCkeybushome::update()  {
 
     if ( (dsc.loop() || forceRefresh) && dsc.panelData[0] ) { //Processes data only when a valid Keybus command has been read
  
-      static bool delayedStart = true;
+      static uint8_t delayedStart = 1;
       static unsigned long startWait = millis();
-      if (millis() - startWait > 60000 && delayedStart) {
-        delayedStart = false;
+      if (delayedStart==1 && millis() - startWait > 15000 ) {
+          forceRefresh=true;
+          delayedStart++;
+      } else if (delayedStart==2 && millis() - startWait > 60000) {
+        delayedStart++;
         if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !partitionStatus[defaultPartition-1].armed && !partitionStatus[defaultPartition-1].inprogram) {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
-    if (firstrun) {
-        
-      forceRefresh=true;  
-        
-    }
-#if not defined(DISABLE_EXPANDER)          
-       // dsc.clearZoneRanges(); // start with clear expanded zones
-#endif
-      }
+      } 
+      
       bool valid05=check051bCmd();
       if (debug > 1)
         printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
@@ -1490,7 +1486,7 @@ void DSCkeybushome::update()  {
             status=STATUS_EXIT;
         else if (partitionStatus[partition].ready)
             status=STATUS_READY;
-        else 
+        else  if (partitionStatus[partition].status != 0x9F)
             status=STATUS_NOT_READY;
  
         if (status != partitionStatus[partition].lastPartitionStatus || partitionStatus[partition].lastPartitionStatus == NULL)
@@ -1724,6 +1720,7 @@ void DSCkeybushome::update()  {
     case 0x01:
       lcdLine1 = F("Partition ready");
       lcdLine2 = F(" ");
+      partitionStatus[partition].ready=true;
       break;
     case 0x02:
       lcdLine1 = F("Stay         ");
@@ -1736,10 +1733,12 @@ void DSCkeybushome::update()  {
     case 0x04:
       lcdLine1 = F("Armed:       ");
       lcdLine2 = F("Stay            ");
+      partitionStatus[partition].armedStay=true;
       break;
     case 0x05:
       lcdLine1 = F("Armed:       ");
       lcdLine2 = F("Away            ");
+      partitionStatus[partition].armedAway=true;
       break;
     case 0x06:
       lcdLine1 = F("Armed: Stay  ");
@@ -1752,6 +1751,7 @@ void DSCkeybushome::update()  {
     case 0x08:
       lcdLine1 = F("Exit delay   ");
       lcdLine2 = F("in progress     ");
+      partitionStatus[partition].exitdelay=true;
       break;
     case 0x09:
       lcdLine1 = F("Arming:      ");
@@ -1764,6 +1764,7 @@ void DSCkeybushome::update()  {
     case 0x0C:
       lcdLine1 = F("Entry delay  ");
       lcdLine2 = F("in progress     ");
+      partitionStatus[partition].entrydelay=true;
       break;
     case 0x0D:
       lcdLine1 = F("Entry delay  ");
