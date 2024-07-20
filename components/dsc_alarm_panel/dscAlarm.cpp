@@ -1487,7 +1487,7 @@ void DSCkeybushome::update()  {
         else if (partitionStatus[partition].alarm)
             status=STATUS_TRIGGERED;
         else if (partitionStatus[partition].exitdelay)
-            status=STATUS_ARMING;
+            status=STATUS_EXIT;
         else if (partitionStatus[partition].ready)
             status=STATUS_READY;
         else 
