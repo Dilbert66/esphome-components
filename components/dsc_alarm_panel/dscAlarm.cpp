@@ -1380,7 +1380,6 @@ void DSCkeybushome::update()  {
           if (dsc.alarm[partition]) {
             dsc.readyChanged[partition] = false; //if we are triggered no need to trigger a ready state change
             dsc.armedChanged[partition] = false; // no need to display armed changed
-            partitionStatusChangeCallback( String(FPSTR(STATUS_TRIGGERED)).c_str(), partition + 1);
             partitionStatus[partition].alarm=true;
           } else
               partitionStatus[partition].alarm=false;
@@ -1396,20 +1395,17 @@ void DSCkeybushome::update()  {
             panelStatusChangeCallback(armStatus, true, partition + 1);
             partitionStatus[partition].armed=true;
             if ((dsc.armedAway[partition] || dsc.armedStay[partition]) && dsc.noEntryDelay[partition]) { 
-              partitionStatusChangeCallback( String(FPSTR(STATUS_NIGHT)).c_str(), partition + 1);
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=true;
               partitionStatus[partition].armedAway=false;
               partitionStatus[partition].exitdelay=false;  
             }
             else if (dsc.armedStay[partition] ) {
-              partitionStatusChangeCallback( String(FPSTR(STATUS_STAY)).c_str(), partition + 1);
               partitionStatus[partition].armedStay=true;   
               partitionStatus[partition].armedNight=false;
               partitionStatus[partition].armedAway=false;
               partitionStatus[partition].exitdelay=false;              
             } else {
-              partitionStatusChangeCallback( String(FPSTR(STATUS_ARM)).c_str(), partition + 1);
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=false;
               partitionStatus[partition].armedAway=true;
@@ -1420,10 +1416,6 @@ void DSCkeybushome::update()  {
                 clearZoneBypass(partition + 1);
             } 
               panelStatusChangeCallback(armStatus, false, partition + 1);
-              if (dsc.ready[partition] )  
-                    partitionStatusChangeCallback( String(FPSTR(STATUS_OFF)).c_str(), partition + 1);
-              else
-                    partitionStatusChangeCallback( String(FPSTR(STATUS_NOT_READY)).c_str(), partition + 1);
               partitionStatus[partition].armed=false;               
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=false;
@@ -1437,14 +1429,12 @@ void DSCkeybushome::update()  {
           dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
           if (dsc.exitDelay[partition]) {
               partitionStatus[partition].armed=false;              
-              partitionStatusChangeCallback( String(FPSTR(STATUS_ARMING)).c_str(), partition + 1);
               partitionStatus[partition].exitdelay=true;   
               partitionStatus[partition].armedStay=false;   
               partitionStatus[partition].armedNight=false;
               partitionStatus[partition].armedAway=false;  
           } else {
               partitionStatus[partition].exitdelay=false;
- 
           }
         } 
 
@@ -1453,12 +1443,10 @@ void DSCkeybushome::update()  {
     if (dsc.readyChanged[partition]  || forceRefresh) {
           dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
           if ( dsc.ready[partition] && !dsc.exitDelay[partition]) {
-            partitionStatusChangeCallback( String(FPSTR(STATUS_OFF)).c_str(), partition + 1);
             panelStatusChangeCallback(rdyStatus, true, partition + 1);
             partitionStatus[partition].ready=true;  
           } else if (!dsc.exitDelay[partition]) {
             if (!dsc.armed[partition] ) {
-              partitionStatusChangeCallback( String(FPSTR(STATUS_NOT_READY)).c_str(), partition + 1);
               panelStatusChangeCallback(armStatus, false, partition + 1);
               partitionStatus[partition].exitdelay=false;   
               partitionStatus[partition].armedStay=false;   
@@ -1489,7 +1477,32 @@ void DSCkeybushome::update()  {
           
         }
 
+        const char * status;
+        if (partitionStatus[partition].armedStay)
+            status=STATUS_STAY;
+        else if (partitionStatus[partition].armedNight)
+            status=STATUS_NIGHT;
+        else if (partitionStatus[partition].armedAway)
+            status=STATUS_ARM;
+        else if (partitionStatus[partition].alarm)
+            status=STATUS_TRIGGERED;
+        else if (partitionStatus[partition].exitdelay)
+            status=STATUS_ARMING;
+        else if (partitionStatus[partition].ready)
+            status=STATUS_READY;
+        else 
+            status=STATUS_NOT_READY;
+ 
+        if (status != partitionStatus[partition].lastPartitionStatus || partitionStatus[partition].lastPartitionStatus == NULL)
+           partitionStatusChangeCallback( String(FPSTR(status)).c_str(), partition + 1);
+        
+        
+        partitionStatus[partition].lastPartitionStatus=status;   
+        
+
       }
+      
+
 
       // Publishes zones 1-64 status in a separate topic per zone
       // Zone status is stored in the openZones[] and openZonesChanged[] arrays using 1 bit per zone, up to 64 zones:

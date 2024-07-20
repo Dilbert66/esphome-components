@@ -123,7 +123,6 @@ const char am5[] PROGMEM = "Open Zones:Scroll to view <>";
 const char ml0[] PROGMEM = "System is Ready:Ready to Arm <>";
 const char ml1[] PROGMEM = "Secure System:Before Arming <>";
 
-const char STATUS_PENDING[] PROGMEM = "pending";
 const char STATUS_ARMING[] PROGMEM = "arming";
 const char STATUS_ARM[] PROGMEM = "armed_away";
 const char STATUS_STAY[] PROGMEM = "armed_home";
@@ -358,6 +357,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   private: 
   
   byte debug;
+  const char * laststatus;
   const char * accessCode;
   const char * userCodes;
   byte maxZones = maxZonesDefault; 
@@ -378,6 +378,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   struct partitionType {
     unsigned long keyPressTime;
     byte lastStatus;
+    const char * lastPartitionStatus;
     byte status;
     byte digits;
     byte editIdx;
