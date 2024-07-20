@@ -1489,7 +1489,7 @@ void DSCkeybushome::update()  {
         else  if (partitionStatus[partition].status != 0x9F)
             status=STATUS_NOT_READY;
  
-        if (status != partitionStatus[partition].lastPartitionStatus || partitionStatus[partition].lastPartitionStatus == NULL)
+        if (status != partitionStatus[partition].lastPartitionStatus || partitionStatus[partition].lastPartitionStatus == NULL || forceRefresh)
            partitionStatusChangeCallback( String(FPSTR(status)).c_str(), partition + 1);
         
         
