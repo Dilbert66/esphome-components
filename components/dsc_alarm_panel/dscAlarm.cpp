@@ -1232,13 +1232,13 @@ void DSCkeybushome::update()  {
 
     if ( (dsc.loop() || forceRefresh) && dsc.panelData[0] ) { //Processes data only when a valid Keybus command has been read
  
-        static uint8_t delayedStart = 1;
+      static uint8_t delayedStart = 1;
       static unsigned long startWait = millis();
-    /*  if (delayedStart==1 && millis() - startWait > 15000 ) {
+      if (delayedStart==1 && millis() - startWait > 10000 ) {
           forceRefresh=true;
           delayedStart++;
-      } else */
-       if (delayedStart==1 && millis() - startWait > 60000) {
+      } else 
+       if (delayedStart==2 && millis() - startWait > 60000) {
         delayedStart++;
         if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !dsc.armed[defaultPartition-1] && !partitionStatus[defaultPartition-1].inprogram) {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
