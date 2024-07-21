@@ -1232,7 +1232,6 @@ void DSCkeybushome::update()  {
 
     if ( (dsc.loop() || forceRefresh) && dsc.panelData[0] ) { //Processes data only when a valid Keybus command has been read
  
-      static uint8_t delayedStart = 1;
         static uint8_t delayedStart = 1;
       static unsigned long startWait = millis();
     /*  if (delayedStart==1 && millis() - startWait > 15000 ) {
