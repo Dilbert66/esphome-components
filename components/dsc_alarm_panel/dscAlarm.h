@@ -394,16 +394,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
     byte newData:1;
     byte hexMode:1;
     byte chime:1;
-    byte armedAway:1;
-    byte armedStay:1;
-    byte armedNight:1;
-    byte armed:1;
-    byte disabled:1;
-    byte ready:1;
-    byte exitdelay:1;
-    byte entrydelay:1;
-    byte fire:1;
-    byte alarm:1;
+
   };
 
   struct zoneType {

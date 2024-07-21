@@ -1239,7 +1239,7 @@ void DSCkeybushome::update()  {
           delayedStart++;
       } else if (delayedStart==2 && millis() - startWait > 60000) {
         delayedStart++;
-        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !partitionStatus[defaultPartition-1].armed && !partitionStatus[defaultPartition-1].inprogram) {
+        if (!dsc.disabled[defaultPartition-1] && !partitionStatus[defaultPartition-1].locked && !dsc.armed[defaultPartition-1] && !partitionStatus[defaultPartition-1].inprogram) {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
           dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
         }
@@ -1354,10 +1354,6 @@ void DSCkeybushome::update()  {
 
       // Publishes status per partition
       for (byte partition = 0; partition < dscPartitions; partition++) {
-        if (dsc.disabled[partition])
-            partitionStatus[partition].disabled=true;
-         else
-             partitionStatus[partition].disabled=false;
          
         if (dsc.disabled[partition] || partitionStatus[partition].locked) continue;
 
@@ -1376,9 +1372,7 @@ void DSCkeybushome::update()  {
           if (dsc.alarm[partition]) {
             dsc.readyChanged[partition] = false; //if we are triggered no need to trigger a ready state change
             dsc.armedChanged[partition] = false; // no need to display armed changed
-            partitionStatus[partition].alarm=true;
-          } else
-              partitionStatus[partition].alarm=false;
+          } 
         }
 
         // Publishes armed/disarmed status
@@ -1389,49 +1383,17 @@ void DSCkeybushome::update()  {
           if (dsc.armed[partition] && !dsc.alarm[partition]) {
             clearZoneAlarms(partition + 1);
             panelStatusChangeCallback(armStatus, true, partition + 1);
-            partitionStatus[partition].armed=true;
-            if ((dsc.armedAway[partition] || dsc.armedStay[partition]) && dsc.noEntryDelay[partition]) { 
-              partitionStatus[partition].armedStay=false;   
-              partitionStatus[partition].armedNight=true;
-              partitionStatus[partition].armedAway=false;
-              partitionStatus[partition].exitdelay=false;  
-            }
-            else if (dsc.armedStay[partition] ) {
-              partitionStatus[partition].armedStay=true;   
-              partitionStatus[partition].armedNight=false;
-              partitionStatus[partition].armedAway=false;
-              partitionStatus[partition].exitdelay=false;              
-            } else {
-              partitionStatus[partition].armedStay=false;   
-              partitionStatus[partition].armedNight=false;
-              partitionStatus[partition].armedAway=true;
-              partitionStatus[partition].exitdelay=false;
-            }
+
           } else if (!dsc.exitDelay[partition] && !dsc.alarm[partition]) {
             if (!forceRefresh) {
                 clearZoneBypass(partition + 1);
             } 
               panelStatusChangeCallback(armStatus, false, partition + 1);
-              partitionStatus[partition].armed=false;               
-              partitionStatus[partition].armedStay=false;   
-              partitionStatus[partition].armedNight=false;
-              partitionStatus[partition].armedAway=false;  
-              partitionStatus[partition].exitdelay=false;   
-              partitionStatus[partition].alarm=false;      
           }
         }
         // Publishes exit delay status
         if (dsc.exitDelayChanged[partition] || forceRefresh) {
           dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
-          if (dsc.exitDelay[partition]) {
-              partitionStatus[partition].armed=false;              
-              partitionStatus[partition].exitdelay=true;   
-              partitionStatus[partition].armedStay=false;   
-              partitionStatus[partition].armedNight=false;
-              partitionStatus[partition].armedAway=false;  
-          } else {
-              partitionStatus[partition].exitdelay=false;
-          }
         } 
 
         // Publishes ready status
@@ -1440,19 +1402,11 @@ void DSCkeybushome::update()  {
           dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
           if ( dsc.ready[partition] && !dsc.exitDelay[partition]) {
             panelStatusChangeCallback(rdyStatus, true, partition + 1);
-            partitionStatus[partition].ready=true;  
           } else if (!dsc.exitDelay[partition]) {
             if (!dsc.armed[partition] ) {
               panelStatusChangeCallback(armStatus, false, partition + 1);
-              partitionStatus[partition].exitdelay=false;   
-              partitionStatus[partition].armedStay=false;   
-              partitionStatus[partition].armedNight=false;
-              partitionStatus[partition].armedAway=false;
-              partitionStatus[partition].armed=false;    
-              partitionStatus[partition].alarm=false;  
             } 
             panelStatusChangeCallback(rdyStatus, false, partition + 1);
-            partitionStatus[partition].ready=false;                
           }
 
         }
@@ -1462,10 +1416,9 @@ void DSCkeybushome::update()  {
           dsc.fireChanged[partition] = false; // Resets the fire status flag
           if (dsc.fire[partition]) {
               fireStatusChangeCallback(true, partition + 1); // Fire alarm tripped
-              partitionStatus[partition].fire=true;
           } else {
               fireStatusChangeCallback(false,partition + 1); // Fire alarm restored
-              partitionStatus[partition].fire=false;             
+          
           }
         }
         if (forceRefresh) {
@@ -1473,25 +1426,26 @@ void DSCkeybushome::update()  {
           
         }
 
-        const char * status;
-        if (partitionStatus[partition].armedStay)
-            status=STATUS_STAY;
-        else if (partitionStatus[partition].armedNight)
+        const char * status=NULL;
+
+         if (dsc.noEntryDelay[partition])
             status=STATUS_NIGHT;
-        else if (partitionStatus[partition].armedAway)
+         else if (dsc.armedStay[partition])
+            status=STATUS_STAY;
+        else if (dsc.armedAway[partition])
             status=STATUS_ARM;
-        else if (partitionStatus[partition].alarm)
+        else if (dsc.alarm[partition])
             status=STATUS_TRIGGERED;
-        else if (partitionStatus[partition].exitdelay)
+        else if (dsc.exitDelay[partition])
             status=STATUS_EXIT;
-        else if (partitionStatus[partition].ready)
+        else if (dsc.ready[partition])
             status=STATUS_READY;
-        else  if (partitionStatus[partition].status != 0x9F)
+        else if ( dsc.status[partition] != 0x9f && !( dsc.status[partition] > 0x03 &&  dsc.status[partition] <  0x0B))
             status=STATUS_NOT_READY;
- 
-        if (status != partitionStatus[partition].lastPartitionStatus || partitionStatus[partition].lastPartitionStatus == NULL || forceRefresh)
+
+        if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus  || forceRefresh)) {
            partitionStatusChangeCallback( String(FPSTR(status)).c_str(), partition + 1);
-        
+        }
         
         partitionStatus[partition].lastPartitionStatus=status;   
         
@@ -1720,7 +1674,6 @@ void DSCkeybushome::update()  {
     case 0x01:
       lcdLine1 = F("Partition ready");
       lcdLine2 = F(" ");
-      partitionStatus[partition].ready=true;
       break;
     case 0x02:
       lcdLine1 = F("Stay         ");
@@ -1733,12 +1686,10 @@ void DSCkeybushome::update()  {
     case 0x04:
       lcdLine1 = F("Armed:       ");
       lcdLine2 = F("Stay            ");
-      partitionStatus[partition].armedStay=true;
       break;
     case 0x05:
       lcdLine1 = F("Armed:       ");
       lcdLine2 = F("Away            ");
-      partitionStatus[partition].armedAway=true;
       break;
     case 0x06:
       lcdLine1 = F("Armed: Stay  ");
@@ -1751,7 +1702,6 @@ void DSCkeybushome::update()  {
     case 0x08:
       lcdLine1 = F("Exit delay   ");
       lcdLine2 = F("in progress     ");
-      partitionStatus[partition].exitdelay=true;
       break;
     case 0x09:
       lcdLine1 = F("Arming:      ");
@@ -1764,7 +1714,6 @@ void DSCkeybushome::update()  {
     case 0x0C:
       lcdLine1 = F("Entry delay  ");
       lcdLine2 = F("in progress     ");
-      partitionStatus[partition].entrydelay=true;
       break;
     case 0x0D:
       lcdLine1 = F("Entry delay  ");
