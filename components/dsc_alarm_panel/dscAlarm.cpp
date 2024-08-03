@@ -1441,7 +1441,7 @@ void DSCkeybushome::update()  {
             status=STATUS_EXIT;
         else if (dsc.ready[partition])
             status=STATUS_READY;
-        else if ( dsc.status[partition] != 0x9f && !( dsc.status[partition] > 0x03 &&  dsc.status[partition] <  0x07))
+        else if ( dsc.status[partition] != 0x9f && !( dsc.status[partition] > 0x03 &&  dsc.status[partition] <  0x0e))
             status=STATUS_NOT_READY;
 
         if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus  || forceRefresh)) {
