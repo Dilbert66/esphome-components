@@ -1428,8 +1428,11 @@ void DSCkeybushome::update()  {
         }
 
         const char * status=NULL;
-
-         if (dsc.noEntryDelay[partition])
+        if (dsc.exitDelay[partition])
+            status=STATUS_EXIT;
+        else if (dsc.entryDelay[partition])
+            status=STATUS_ENTRY;
+        else if (dsc.noEntryDelay[partition])
             status=STATUS_NIGHT;
          else if (dsc.armedStay[partition])
             status=STATUS_STAY;
@@ -1437,10 +1440,6 @@ void DSCkeybushome::update()  {
             status=STATUS_ARM;
         else if (dsc.alarm[partition])
             status=STATUS_TRIGGERED;
-        else if (dsc.exitDelay[partition])
-            status=STATUS_EXIT;
-        else if (dsc.entryDelay[partition])
-            status=STATUS_ENTRY;
         else if (dsc.ready[partition])
             status=STATUS_READY;
         else if ( dsc.status[partition] != 0x9f && !( dsc.status[partition] > 0x03 &&  dsc.status[partition] <  0x0e))
