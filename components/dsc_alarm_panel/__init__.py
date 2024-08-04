@@ -104,7 +104,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_DEBOUNCE,default='false'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
-    cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='true'):cv.boolean,
+    cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
     }
 )
 
