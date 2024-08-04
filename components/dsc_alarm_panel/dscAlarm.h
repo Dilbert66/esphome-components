@@ -123,8 +123,8 @@ const char am5[] PROGMEM = "Open Zones:Scroll to view <>";
 const char ml0[] PROGMEM = "System is Ready:Ready to Arm <>";
 const char ml1[] PROGMEM = "Secure System:Before Arming <>";
 
-const char STATUS_EXIT[] PROGMEM = "exit_delay";
-const char STATUS_ENTRY[] PROGMEM = "entry_delay";
+const char STATUS_EXIT[] PROGMEM = "arming";
+const char STATUS_ENTRY[] PROGMEM = "pending";
 const char STATUS_ARM[] PROGMEM = "armed_away";
 const char STATUS_STAY[] PROGMEM = "armed_home";
 const char STATUS_NIGHT[] PROGMEM = "armed_night";

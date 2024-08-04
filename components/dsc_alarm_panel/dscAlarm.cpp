@@ -1433,12 +1433,10 @@ void DSCkeybushome::update()  {
             status=STATUS_DISARMED;
         else if (dsc.alarm[partition])
             status=STATUS_TRIGGERED;
-        #ifdef DETAILED_PARTITION_STATE
         else if (dsc.exitDelay[partition])
             status=STATUS_EXIT;
         else if (dsc.entryDelay[partition])
             status=STATUS_ENTRY;
-        #endif
         else if (dsc.noEntryDelay[partition])
             status=STATUS_NIGHT;
         else if (dsc.armedStay[partition])
