@@ -1428,7 +1428,9 @@ void DSCkeybushome::update()  {
         }
 
         const char * status=NULL;
-        if (dsc.alarm[partition])
+        if (dsc.status[partition]==0x3e)
+            status=STATUS_DISARMED;
+        else if (dsc.alarm[partition])
             status=STATUS_TRIGGERED;
         else if (dsc.exitDelay[partition])
             status=STATUS_EXIT;
@@ -1436,7 +1438,7 @@ void DSCkeybushome::update()  {
             status=STATUS_ENTRY;
         else if (dsc.noEntryDelay[partition])
             status=STATUS_NIGHT;
-         else if (dsc.armedStay[partition])
+        else if (dsc.armedStay[partition])
             status=STATUS_STAY;
         else if (dsc.armedAway[partition])
             status=STATUS_ARM;

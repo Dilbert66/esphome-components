@@ -123,17 +123,16 @@ const char am5[] PROGMEM = "Open Zones:Scroll to view <>";
 const char ml0[] PROGMEM = "System is Ready:Ready to Arm <>";
 const char ml1[] PROGMEM = "Secure System:Before Arming <>";
 
-//const char STATUS_ARMING[] PROGMEM = "arming";
 const char STATUS_EXIT[] PROGMEM = "exit_delay";
 const char STATUS_ENTRY[] PROGMEM = "entry_delay";
 const char STATUS_ARM[] PROGMEM = "armed_away";
 const char STATUS_STAY[] PROGMEM = "armed_home";
 const char STATUS_NIGHT[] PROGMEM = "armed_night";
-const char STATUS_OFF[] PROGMEM = "disarmed";
 const char STATUS_ONLINE[] PROGMEM = "online";
 const char STATUS_OFFLINE[] PROGMEM = "offline";
 const char STATUS_TRIGGERED[] PROGMEM = "triggered";
 const char STATUS_READY[] PROGMEM = "ready";
+const char STATUS_DISARMED[] PROGMEM = "disarmed";
 const char STATUS_NOT_READY[] PROGMEM = "not_ready"; //ha alarm panel likes to see "unavailable" instead of not_ready when the system can't be armed
 
 const char *
