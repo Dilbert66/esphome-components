@@ -41,6 +41,10 @@ dsc_alarm_panel:
   #dscclockpin: "5"
   #dscreadpin: "4"
   #dscwritepin: "15" 
+  
+  #if true ps_x will add entry_delay,exit_delay,ready,not_ready to the armed_away,armed_night,armed_stay,disarmed statuses shown. 
+  #default value is true
+  detailed_partition_state: false
  
   clean_build: "false" #default is false.  set to true if getting duplication errors in linking step.  
 
