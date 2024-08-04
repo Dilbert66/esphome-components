@@ -29,6 +29,7 @@ CONF_EXPANDER2="expanderaddr2"
 CONF_DEBOUNCE="debounce"
 CONF_CLEAN="clean_build"
 CONF_AUTOPOPULATE="autopopulate"
+CONF_DETAILEDPARTITIONSTATE="detailed_partition_state"
 
 #CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
@@ -102,7 +103,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
     cv.Optional(CONF_DEBOUNCE,default='false'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
-    cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean, 
+    cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
+    cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='true'):cv.boolean,
     }
 )
 
@@ -121,6 +123,8 @@ async def to_code(config):
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")
+    if config[CONF_DETAILEDPARTITIONSTATE]:
+        cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()

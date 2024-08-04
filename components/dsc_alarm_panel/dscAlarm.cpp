@@ -1428,24 +1428,32 @@ void DSCkeybushome::update()  {
         }
 
         const char * status=NULL;
+        
         if (dsc.status[partition]==0x3e)
             status=STATUS_DISARMED;
         else if (dsc.alarm[partition])
             status=STATUS_TRIGGERED;
+        #ifdef DETAILED_PARTITION_STATE
         else if (dsc.exitDelay[partition])
             status=STATUS_EXIT;
         else if (dsc.entryDelay[partition])
             status=STATUS_ENTRY;
+        #endif
         else if (dsc.noEntryDelay[partition])
             status=STATUS_NIGHT;
         else if (dsc.armedStay[partition])
             status=STATUS_STAY;
         else if (dsc.armedAway[partition])
             status=STATUS_ARM;
+        #ifdef DETAILED_PARTITION_STATE
         else if (dsc.ready[partition])
             status=STATUS_READY;
         else if ( dsc.status[partition] != 0x9f && !( dsc.status[partition] > 0x03 &&  dsc.status[partition] <  0x0e))
             status=STATUS_NOT_READY;
+        #else
+        else
+           status=STATUS_DISARMED;   
+        #endif
 
         if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus  || forceRefresh)) {
            partitionStatusChangeCallback( String(FPSTR(status)).c_str(), partition + 1);
