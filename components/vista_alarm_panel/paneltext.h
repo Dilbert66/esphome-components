@@ -23,6 +23,8 @@
     extern const char * STATUS_OFFLINE;
     extern const char * STATUS_TRIGGERED;
     extern const char * STATUS_READY;
+    extern const char * STATUS_ARMING;
+    extern const char * STATUS_PENDING;
       
     //the default ha alarm panel card likes to see "unavailable" instead of not_ready when the system can't be armed
     extern const char * STATUS_NOT_READY;
