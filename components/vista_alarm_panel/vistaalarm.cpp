@@ -220,7 +220,7 @@ namespace esphome
       n.zone = z;
       n.active = true;
 
-      ESP_LOGD(TAG, PSTR("adding zone %d"), z);
+      ESP_LOGD(TAG,"adding zone %d", z);
       extZones.push_back(n);
       return &extZones.back();
     }
@@ -363,7 +363,7 @@ namespace esphome
       char cmd[30];
       sprintf(cmd, PSTR("%s#63*%02d%02d%1d%02d%02d%02d*"), accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
 #if not defined(ARDUINO_MQTT)
-      ESP_LOGD(TAG, PSTR("Send time string: %s"), cmd);
+      ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
       int addr = partitionKeypads[defaultPartition];
       vista.write(cmd, addr);
@@ -382,7 +382,7 @@ namespace esphome
 #if defined(ARDUINO_MQTT)
       Serial.printf("Setting panel time...\n");
 #else
-  ESP_LOGD(TAG, PSTR("Send time string: %s"), cmd);
+  ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
 
       int addr = partitionKeypads[defaultPartition];
@@ -570,7 +570,7 @@ void vistaECPHome::setup()
 #if defined(ARDUINO_MQTT)
         Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(), partition);
 #else
-    ESP_LOGD(TAG, PSTR("Writing keys: %s to partition %d"), keystring.c_str(), partition);
+    ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(), partition);
 #endif
       uint8_t addr = 0;
       if (partition > maxPartitions || partition < 1)
@@ -644,7 +644,7 @@ void vistaECPHome::setup()
         std::string m1 = m[1];
         std::string m2 = m[2];
         m2 = std::regex_replace(m2, r, " ");
-        ESP_LOGD(TAG, PSTR("name match=%s,zone=%s"), m2.c_str(), m1.c_str());
+        ESP_LOGD(TAG, "name match=%s,zone=%s", m2.c_str(), m1.c_str());
         return m2;
       }
 
@@ -689,7 +689,7 @@ void vistaECPHome::setup()
 #if defined(ARDUINO_MQTT)
       Serial.printf("%s: %s\n", label, s.c_str());
 #else
-  ESP_LOGI(label, PSTR("%s %s"), s2, s.c_str());
+  ESP_LOGI(label, "%s %s", s2, s.c_str());
 #endif
     }
 
@@ -831,7 +831,7 @@ void vistaECPHome::setup()
       {
         if (partitions[p - 1])
         {
-          ESP_LOGD(TAG, PSTR("Assigning partition %d, to zone %d"), p, zt->zone);
+          ESP_LOGD(TAG, "Assigning partition %d, to zone %d", p, zt->zone);
           zt->partition = p;
           break;
         }
@@ -864,7 +864,7 @@ void vistaECPHome::setup()
       char bytes[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
       bytes[7] = partition;
       bytes[12] = request == sopenzones ? 0x32 : 0x35;
-      ESP_LOGD(TAG, PSTR("Sending zone status request %d"), request);
+      ESP_LOGD(TAG, "Sending zone status request %d", request);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
@@ -894,7 +894,7 @@ void vistaECPHome::setup()
     void vistaECPHome::updateZoneState(zoneType *zt, int p, reqStates r, bool state, unsigned long t)
     {
 
-      ESP_LOGD(TAG, PSTR("Setting zone %d=%d, partition %d"), zt->zone, state, p);
+      ESP_LOGD(TAG, "Setting zone %d=%d, partition %d", zt->zone, state, p);
       if (r == sopenzones)
       {
         zt->open = state;
@@ -918,7 +918,7 @@ void vistaECPHome::setup()
       std::string zs = list;
       std::smatch sm{};
 
-      ESP_LOGD(TAG, PSTR("List=%s"), zs.c_str());
+      ESP_LOGD(TAG, "List=%s", zs.c_str());
       uint8_t p = partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
 
       const std::regex re{R"(((\d+)-(\d+))|(\d+))"}; // search for ranges
@@ -1096,7 +1096,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
                   Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
 #else
-              ESP_LOGD(TAG, PSTR("Got relay address %d channel %d = %d"), vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+              ESP_LOGD(TAG, "Got relay address %d channel %d = %d", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
 #endif
               }
             }
@@ -1109,7 +1109,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
                   Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
 #else
-              ESP_LOGD(TAG, PSTR("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off"), vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+              ESP_LOGD(TAG, "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
 #endif
               }
             }
@@ -1149,7 +1149,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
               Serial.printf("RFX: %s,%02x\n", rf_serial_char, vistaCmd.extcmd[5]);
 #else
-          ESP_LOGI(TAG, PSTR("RFX: %s,%02x"), rf_serial_char, vistaCmd.extcmd[5]);
+          ESP_LOGI(TAG, "RFX: %s,%02x", rf_serial_char, vistaCmd.extcmd[5]);
 #endif
             }
             if (z && !(vistaCmd.extcmd[5] & 4) && !(vistaCmd.extcmd[5] & 1))
@@ -1193,7 +1193,7 @@ void vistaECPHome::update()
         }
         if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
         {
-          ESP_LOGD(TAG, PSTR("state = %d"), reqState);
+          ESP_LOGD(TAG, "state = %d", reqState);
           if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02 && reqState == sidle)
           { // partition update broadcast
             char *m = parseAUIMessage(vistaCmd.cbuf, reqState);
@@ -1222,13 +1222,16 @@ void vistaECPHome::update()
             if (reqState == sopenzones || reqState == sbypasszones)
             {
               processZoneList(partitionRequest, reqState, m);
-              reqState = reqState == sbypasszones ? reqState = sidle : reqState = sbypasszones;
-              if (reqState == sbypasszones)
+
+              if (reqState==sopenzones) {
+                reqState=sbypasszones;
                 sendZoneRequest(partitionRequest, reqState);
+              } else
+                reqState = sidle;
             }
           }
           else
-            reqState == sidle;
+            reqState = sidle;
           return;
         }
         else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
@@ -1243,7 +1246,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
               Serial.printf("Partition: %02X\n", partition);
 #else
-          ESP_LOGI(TAG, PSTR("Partition: %02X"), partition);
+          ESP_LOGI(TAG, "Partition: %02X", partition);
 #endif
 
               line1DisplayCallback(vistaCmd.statusFlags.prompt1, partition);
@@ -1264,9 +1267,9 @@ void vistaECPHome::update()
           Serial.printf("Prompt: %s\n", vistaCmd.statusFlags.prompt2);
           Serial.printf("Beeps: %d\n", vistaCmd.statusFlags.beeps);
 #else
-      ESP_LOGI(TAG, PSTR("Prompt: %s"), vistaCmd.statusFlags.prompt1);
-      ESP_LOGI(TAG, PSTR("Prompt: %s"), vistaCmd.statusFlags.prompt2);
-      ESP_LOGI(TAG, PSTR("Beeps: %d"), vistaCmd.statusFlags.beeps);
+      ESP_LOGI(TAG, "Prompt: %s", vistaCmd.statusFlags.prompt1);
+      ESP_LOGI(TAG, "Prompt: %s", vistaCmd.statusFlags.prompt2);
+      ESP_LOGI(TAG, "Beeps: %d", vistaCmd.statusFlags.beeps);
 #endif
         }
 
