@@ -1399,6 +1399,7 @@ void vistaECPHome::update()
                   zt->check = true;
                   zt->open = false;
                   zt->alarm = false;
+                  currentLightState.trouble = true;
                   zoneStatusUpdate(zt);
                   // ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );
                 }
