@@ -98,11 +98,16 @@ bool WebNotify::processMessage(const char *payload) {
         
               update_id = update_id + 1;
               //we ignore the first message on initial start to avoid a reboot loop
-              if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
+              //if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
               
               if (global_notify->lastMsgReceived != update_id) {
-                global_notify->lastMsgReceived = update_id;   
+
                   RemoteData x;
+                  if (global_notify->lastMsgReceived == 0) 
+                    x.is_first_cmd=true;
+                  else
+                    x.is_first_cmd=false;
+                  global_notify->lastMsgReceived = update_id;
                   x.sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
                   x.text = root["result"][0]["callback_query"]["data"].as<std::string>();
                   x.chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
@@ -146,14 +151,16 @@ bool WebNotify::processMessage(const char *payload) {
               int update_id = root["result"][0]["update_id"];
               update_id = update_id + 1;
               //we ignore the first message on initial start to avoid a reboot loop
-              if (global_notify->lastMsgReceived == 0) 
-                  global_notify->lastMsgReceived = update_id;
+             // if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
               
               if (global_notify->lastMsgReceived != update_id) {
 
-                global_notify->lastMsgReceived = update_id;
-         
                   RemoteData x;
+                  if (global_notify->lastMsgReceived == 0) 
+                    x.is_first_cmd=true;
+                  else
+                    x.is_first_cmd=false;
+                  global_notify->lastMsgReceived = update_id;
                   x.sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
                  
                   x.text = root["result"][0]["message"]["text"].as<std::string>();

@@ -143,7 +143,11 @@ telegram_bot:
 
     - command: "/reboot,/r"
       then: 
-        -  switch.turn_on:  restart_switch
+       if:
+        condition:
+            lambda: 'return !x.is_first_cmd;' #ensure it's not the first cmd after reboot
+        then:
+            switch.turn_on:  restart_switch
             
     - command: "/bypass,/b"
       then: 
@@ -266,6 +270,7 @@ web_keypad:
   #config_local: ./config_vista.yml  
 
 ```
+This project is licensed under the `Lesser General Public License` version `2.1`, or (at your option) any later version as per it's use of other libraries and code. Please see `COPYING.LESSER` for more information.
 
 ![vistaalarm](https://github.com/Dilbert66/esphome-components/assets/7193213/047c1fdb-1d90-4c14-8585-87309310d2bc)
 

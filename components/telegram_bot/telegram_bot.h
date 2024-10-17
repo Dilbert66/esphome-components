@@ -28,6 +28,7 @@ struct RemoteData {
   bool is_callback;
   std::string message_id;
   std::string callback_id;
+  bool is_first_cmd;
 
 };
 
