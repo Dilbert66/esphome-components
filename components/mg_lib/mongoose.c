@@ -297,7 +297,7 @@ bool mg_flash_load(void *sector, uint32_t key, void *buf, size_t len) {
 static void mg_flash_sector_cleanup(char *sector) {
   // Buffer all saved objects into an IO buffer (backed by RAM)
   // erase sector, and re-save them.
-  struct mg_iobuf io = {0, 0, 0, 2048};
+  struct mg_iobuf io = {0, 0, 0, 2048, NULL};
   size_t ss = mg_flash_sector_size();
   size_t n, size, size2, ofs = 0, hs = sizeof(uint32_t) * 2;
   uint32_t key;
@@ -6165,7 +6165,7 @@ void mg_pfn_iobuf(char ch, void *param) {
 }
 
 size_t mg_vsnprintf(char *buf, size_t len, const char *fmt, va_list *ap) {
-  struct mg_iobuf io = {(uint8_t *) buf, len, 0, 0};
+  struct mg_iobuf io = {(uint8_t *) buf, len, 0, 0, NULL};
   size_t n = mg_vxprintf(mg_putchar_iobuf_static, &io, fmt, ap);
   if (n < len) buf[n] = '\0';
   return n;
@@ -6181,7 +6181,7 @@ size_t mg_snprintf(char *buf, size_t len, const char *fmt, ...) {
 }
 
 char *mg_vmprintf(const char *fmt, va_list *ap) {
-  struct mg_iobuf io = {0, 0, 0, 256};
+  struct mg_iobuf io = {0, 0, 0, 256, NULL};
   mg_vxprintf(mg_pfn_iobuf, &io, fmt, ap);
   return (char *) io.buf;
 }
