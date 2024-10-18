@@ -10,6 +10,45 @@
 
 #ifdef USE_ARDUINO
 #include <StreamString.h>
+#else
+#define F(x) x
+#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
+
+class String: public std::string
+{
+public:
+  String(): std::string() {}
+  String(const char*&p, size_t&s): std::string(p, s) {}
+
+  int indexOf( char ch, unsigned int fromIndex ) const
+  {
+    if (fromIndex >= this->length()) return -1;
+    const char* temp = strchr(this->c_str() + fromIndex, ch);
+    if (temp == NULL) return -1;
+    return temp - this->c_str();
+  }
+
+  String substring(unsigned int left, unsigned int right) const
+  {
+    if (left > right) {
+      unsigned int temp = right;
+      right = left;
+      left = temp;
+    }
+    unsigned int len = this->length();
+    String out;
+    if (left >= len) return out;
+    if (right > len) right = len;
+    out.copy(((char*)this->c_str()) + left, right - left);
+    return out;
+  }
+
+  long toInt(void) const
+  {
+    if (this->c_str()) return atol(this->c_str());
+    return 0;
+  }
+};
 #endif
 
 namespace esphome {
