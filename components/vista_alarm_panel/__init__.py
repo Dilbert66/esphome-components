@@ -162,7 +162,7 @@ async def to_code(config):
               CORE.relative_build_path("src/risc_fix.h"),
           )
       
-    cg.add_define("USE_CUSTOM_ID") 
+   # cg.add_define("USE_CUSTOM_ID") 
     cg.add_define("USE_VISTA_PANEL")  
     if CORE.is_esp8266:
         cg.add_define("INPUT_PULLDOWN INPUT")

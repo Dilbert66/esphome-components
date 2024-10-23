@@ -1,10 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.cpp_generator import MockObjClass
-from esphome.cpp_helpers import setup_entity
 from esphome import automation, core
 from esphome.automation import Condition, maybe_simple_id
 from esphome.components import mqtt, web_server
+from esphome.helpers import sanitize, snake_case
 from esphome.const import (
     CONF_DELAY,
     CONF_DEVICE_CLASS,
@@ -25,6 +25,7 @@ from esphome.const import (
     CONF_PUBLISH_INITIAL_STATE,
     CONF_STATE,
     CONF_TIMING,
+    CONF_NAME,
     CONF_TRIGGER_ID,
     CONF_MQTT_ID,
     CONF_WEB_SERVER_ID,
@@ -487,6 +488,15 @@ def binary_sensor_schema(
 
     return BINARY_SENSOR_SCHEMA.extend(schema)
 
+async def setup_entity(var, config):
+    """Set up generic properties of an Entity"""
+    cg.add(var.set_name(config[CONF_NAME]))
+    if config.get(CONF_TYPE_ID):
+        cg.add(var.set_object_id(config[CONF_TYPE_ID]))
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_object_id(config[CONF_ID].id))
+    else:
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
 
 async def setup_binary_sensor_core_(var, config):
     await setup_entity(var, config)
@@ -495,10 +505,6 @@ async def setup_binary_sensor_core_(var, config):
         cg.add(var.set_device_class(device_class))
         
         
-    if config.get(CONF_TYPE_ID):
-        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
-    elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_binary_sensor({var},\"{config[CONF_ID].id}\");"))
     if publish_initial_state := config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(publish_initial_state))
     if not config.get(CONF_PUBLISH_INITIAL_STATE):

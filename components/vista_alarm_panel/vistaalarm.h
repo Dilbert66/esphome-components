@@ -231,25 +231,16 @@ class vistaECPHome : public time::RealTimeClock
         }
       }
 
-      struct binarySensor
-      {
-        binary_sensor::BinarySensor *ptr;
-        const char *type_id;
-      };
-
-      struct textSensor
-      {
-        text_sensor::TextSensor *ptr;
-        const char *type_id;
-      };
-
-      std::vector<binarySensor> bMap;
-      std::vector<textSensor> tMap;
-
+      std::vector<binary_sensor::BinarySensor *> bMap;
+      std::vector<text_sensor::TextSensor *> tMap;
+      
+      char *stack;
+/*
       void add_binary_sensor(binary_sensor::BinarySensor *b, const char *type_id);
       void add_text_sensor(text_sensor::TextSensor *b, const char *type_id);
       const char *getTypeIdFromBinaryObjectId(const std::string &objid);
       const char *getTypeIdFromTextObjectId(const std::string &objid);
+*/
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
@@ -261,7 +252,6 @@ class vistaECPHome : public time::RealTimeClock
       void stop();
 
     private:
-      // bool zoneActive(uint16_t zone);
       int TTL = 30000;
       uint8_t debug = 0;
       char keypadAddr1 = 0;
@@ -277,6 +267,17 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
 
+      /*
+      We need to init regex classes as globals because of a weird bug 
+      with the esp8266 compilation which causes stack corruption when 
+      regexes are initialized within functions. <shrug>
+      */
+      const std::regex zone_re = std::regex("[zZ]([0-9]+)");
+      const std::regex name_re = std::regex("[a-zA-Z]+\\s+([0-9]+)\\s+(.*?)\\s*$");
+      const std::regex blank_re = std::regex("\\s+");
+      const std::regex range_re = std::regex{R"(((\d+)-(\d+))|(\d+))"}; 
+
+
       const char *accessCode;
       const char *rfSerialLookup;
       bool quickArm;
@@ -285,8 +286,6 @@ class vistaECPHome : public time::RealTimeClock
       char *partitionKeypads;
       int defaultPartition = DEFAULTPARTITION;
       char expanderAddr[9] = {};
-      // uint16_t zone;
-      // bool sent;
 
       uint8_t *partitions;
       std::string topic_prefix, topic;
@@ -318,7 +317,9 @@ class vistaECPHome : public time::RealTimeClock
           .panic = 0,
           .trouble = 0,
           .lowbat = 0,
-          .active = 0};
+          .active = 0
+          };
+
       struct
       {
         uint8_t bell : 1;
@@ -380,8 +381,6 @@ class vistaECPHome : public time::RealTimeClock
       {
         sysState previousSystemState;
         lightStates previousLightState;
-        // std::string lastp1=" ";
-        // std::string lastp2=" ";
         int lastbeeps;
         bool refreshStatus;
         bool refreshLights;
@@ -414,8 +413,9 @@ class vistaECPHome : public time::RealTimeClock
       struct cmdQueueItem vistaCmd;
 #ifdef ESP32
       TaskHandle_t xHandle;
-#endif
       static void cmdQueueTask(void *args);
+#endif
+
 
       std::vector<zoneType> extZones{};
 

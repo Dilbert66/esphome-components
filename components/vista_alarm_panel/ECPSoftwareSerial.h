@@ -75,7 +75,6 @@ public:
     int peek();
     int read(bool processRxbits);
     int read();
-    size_t write(uint8_t byte, bool parity);
     size_t write(uint8_t b, bool parity, int32_t baud);
     size_t write(uint8_t byte);
 

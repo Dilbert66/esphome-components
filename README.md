@@ -63,9 +63,10 @@ The on_message actions will send a RemoteData structure x to lambda's that holds
   x.date -> time and date of message
   x.cmd -> if text contains a command in the format /xxxx yyyy.  The cmd /xxxx will be stored in x.cmd
   x.args -> the args yyyy from the above cmd will be stored in x.args
-  x.is_callback -> if this message comes from an inline_keyboard action, this will be true.
+  x.is_callback -> boolean - if this message comes from an inline_keyboard action, this will be true.
   x.message_id -> current message id.  Used in replies, edits, etc.
   x.callback_id -> callback id of callback messaged. Used to answer back to inline_keyboard actions.
+  x.is_first_cmd -> boolean - Will be true after reboot and false after the first command is received
 ```
 
 Example bot config:
@@ -145,7 +146,7 @@ telegram_bot:
       then: 
        if:
         condition:
-            lambda: 'return !x.is_first_cmd;' #ensure it's not the first cmd after reboot
+            lambda: return !x.is_first_cmd; #ensure it's not the first cmd after reboot
         then:
             switch.turn_on:  restart_switch
             

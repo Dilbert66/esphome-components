@@ -119,7 +119,7 @@ async def to_code(config):
               CORE.relative_build_path("src/risc_fix.h"),
           )
 
-    cg.add_define("USE_CUSTOM_ID")      
+    #cg.add_define("USE_CUSTOM_ID")      
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")

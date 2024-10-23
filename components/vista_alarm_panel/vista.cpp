@@ -61,7 +61,7 @@ expanderType Vista::getNextFault()
   return zoneExpanders[currentFaultIdx];
 }
 
-expanderType IRAM_ATTR Vista::peekNextFault()
+expanderType Vista::peekNextFault()
 {
   expanderType currentFault = expanderType_INIT;
   if (inFaultIdx == outFaultIdx)
@@ -800,7 +800,8 @@ void IRAM_ATTR Vista::rxHandleISR()
     if (lowTime > 9000)
     {
       markPulse = 2;
-      expanderType currentFault = peekNextFault();
+      expanderType currentFault = inFaultIdx==outFaultIdx?expanderType_INIT:zoneExpanders[faultQueue[outFaultIdx]];
+
       if (currentFault.expansionAddr && currentFault.expansionAddr < 24)
       {
         ackAddr = currentFault.expansionAddr; // use the expander address 07/08/09/10/11 as the requestor
@@ -1419,8 +1420,11 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   invertRead = invertRx;
 
   // panel data rx interrupt - yellow line
-
+  #ifdef ESP32
   vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 60 * 10, inputRx);
+  #else
+  vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 20 * 10, inputRx);
+  #endif
   if (vistaSerial->isValidGPIOpin(rxPin))
   {
     vistaSerial->begin(4800, SWSERIAL_8E2);
@@ -1436,7 +1440,11 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 #ifdef MONITORTX
   // interrupt for capturing keypad/module data on green transmit line
 
+  #ifdef ESP32
   vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
+  #else
+  vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, 10 * 10, inputMon);
+  #endif
   if (vistaSerialMonitor->isValidGPIOpin(monitorPin))
   {
     vistaSerialMonitor->begin(4800, SWSERIAL_8E2);

@@ -2,12 +2,14 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import mqtt, web_server
+from esphome.helpers import sanitize, snake_case
 from esphome.const import (
     CONF_DEVICE_CLASS,
     CONF_ENTITY_CATEGORY,
     CONF_FILTERS,
     CONF_ICON,
     CONF_ID,
+    CONF_NAME,
     CONF_ON_VALUE,
     CONF_ON_RAW_VALUE,
     CONF_TRIGGER_ID,
@@ -22,7 +24,6 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 from esphome.cpp_generator import MockObjClass
-from esphome.cpp_helpers import setup_entity
 from esphome.util import Registry
 
 DEVICE_CLASSES = [
@@ -194,14 +195,19 @@ async def build_filters(config):
     return await cg.build_registry_list(FILTER_REGISTRY, config)
 
 
+async def setup_entity(var, config):
+    """Set up generic properties of an Entity"""
+    cg.add(var.set_name(config[CONF_NAME]))
+    if config.get(CONF_TYPE_ID):
+        cg.add(var.set_object_id(config[CONF_TYPE_ID]))
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_object_id(config[CONF_ID].id))
+    else:
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+
 async def setup_text_sensor_core_(var, config):
     await setup_entity(var, config)
     
-    if config.get(CONF_TYPE_ID):
-        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_TYPE_ID]}\");"))
-    elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(cg.RawExpression(f"{ALARM_PTR}->add_text_sensor({var},\"{config[CONF_ID].id}\");"))
-        
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))
 

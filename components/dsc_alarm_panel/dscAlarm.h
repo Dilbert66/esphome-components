@@ -326,8 +326,8 @@ struct textSensor{
     const char * type_id;
 };
 
-std::vector<binarySensor> bMap;
-std::vector<textSensor> tMap;
+std::vector<binary_sensor::BinarySensor *> bMap;
+std::vector<text_sensor::TextSensor *> tMap;
 
 void add_binary_sensor(binary_sensor::BinarySensor * b,const char * type_id);
 void add_text_sensor(text_sensor::TextSensor* b,const char * type_id); 
