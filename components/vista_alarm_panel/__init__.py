@@ -74,26 +74,7 @@ rf='''[&](std::string msg) {
       alarm_panel::alarmPanelPtr->publishTextState("rf",0,&msg);  
     }'''
 statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
-     std::string sensor="NIL";   
-      switch(led) {
-                case alarm_panel::sfire: sensor="fire_";break;
-                case alarm_panel::salarm: sensor="alm_";break;
-                case alarm_panel::strouble: sensor="trbl_";break;
-                case alarm_panel::sarmedstay:sensor="arms_";break;
-                case alarm_panel::sarmedaway: sensor="arma_";break;
-                case alarm_panel::sinstant: sensor="armi_";break; 
-                case alarm_panel::sready: sensor="rdy_";break; 
-                case alarm_panel::sac: alarm_panel::alarmPanelPtr->publishBinaryState("ac",0,open);return;       
-                case alarm_panel::sbypass: sensor="byp_";break;  
-                case alarm_panel::schime: sensor="chm_";break;
-                case alarm_panel::sbat: alarm_panel::alarmPanelPtr->publishBinaryState("bat",0,open);return;  
-                case alarm_panel::sarmednight: sensor="armn_";break;  
-                case alarm_panel::sarmed: sensor="arm_";break;  
-                case alarm_panel::soffline: break;       
-                case alarm_panel::sunavailable: break; 
-                default: break;
-         };
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,partition,open);
+     alarm_panel::alarmPanelPtr->publishStatusChange(led,open,partition);
     }'''
 zonebinary='''[&](int zone, bool open) {
       std::string sensor = "z" + std::to_string(zone) ;

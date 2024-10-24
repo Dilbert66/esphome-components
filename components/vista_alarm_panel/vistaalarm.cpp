@@ -1,6 +1,6 @@
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 #include "vistaalarm.h"
-#include "esphome/core/helpers.h"
+
 
 #if defined(ESP32) && defined(USETASK)
 #include <esp_chip_info.h>
@@ -26,11 +26,6 @@
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
-Vista vista;
-void disconnectVista()
-{
-  vista.stop();
-}
 
 #if !defined(ARDUINO_MQTT)
 #include "esphome.h"
@@ -39,6 +34,7 @@ namespace esphome
   namespace alarm_panel
   {
 
+    Vista * vista;
     const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
 
     static const char *const TAG = "vista_alarm";
@@ -75,6 +71,30 @@ namespace esphome
 
     }
 */
+
+void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition) 
+{
+      std::string sensor="NIL";   
+      switch(led) {
+                case sfire: sensor="fire_";break;
+                case salarm: sensor="alm_";break;
+                case strouble: sensor="trbl_";break;
+                case sarmedstay:sensor="arms_";break;
+                case sarmedaway: sensor="arma_";break;
+                case sinstant: sensor="armi_";break; 
+                case sready: sensor="rdy_";break; 
+                case sac: publishBinaryState("ac",0,open);return;       
+                case sbypass: sensor="byp_";break;  
+                case schime: sensor="chm_";break;
+                case sbat: publishBinaryState("bat",0,open);return;  
+                case sarmednight: sensor="armn_";break;  
+                case sarmed: sensor="arm_";break;  
+                case soffline: break;       
+                case sunavailable: break; 
+                default: break;
+         };
+      publishBinaryState(sensor,partition,open);
+}
     void vistaECPHome::publishBinaryState(const std::string &cstr, uint8_t partition, bool open)
     {
      std::string c=cstr;
@@ -107,7 +127,7 @@ namespace esphome
       if (xHandle != NULL)
         vTaskSuspend(xHandle);
 #endif
-      vista.stop();
+      vista->stop();
     }
 
     vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin, int maxzones, int maxpartitions, bool invertrx, bool inverttx, bool invertmon, uint8_t inputrx, uint8_t inputmon) : keypadAddr1(kpaddr),
@@ -127,7 +147,7 @@ namespace esphome
       partitionStates = new partitionStateType[maxPartitions];
       alarmPanelPtr = this;
 #if defined(ESPHOME_MQTT)
-      mqtt_callback = on_json_message;
+      mqtt_callback = on_json_message_callback;
 #endif
     }
 
@@ -169,39 +189,36 @@ namespace esphome
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
-      char t1=0x33;
-      ESP_LOGD("test","stack t1=%04X",&t1);
-      char x[25];
-      //std::regex e("[zZ]([0-9]+)");
-      char t=0x33;
-      ESP_LOGD("test","stack t=%04X",&t);
-      std::smatch m;
+
       int z;
-      
+      MatchState ms;
+      char buf[20];
+      char res;
       for (auto obj : bMap)
       {
-        std::string id = obj->get_object_id();
-        if (std::regex_search(id, m, zone_re))
-        {
-          z = toInt(m[1], 10);
-          createZone(z);
-        }
-      }
-
-      for (auto obj : tMap)
-      {
-
-        std::string id = obj->get_object_id();
-        if (std::regex_search(id, m, zone_re))
-        {
-          z = toInt(m[1], 10);
-          createZone(z);
+        ms.Target((char*)obj->get_object_id().c_str());
+        res=ms.Match("^[zZ](%d+)$");
+        if (res==REGEXP_MATCHED) {
+                ms.GetCapture(buf,0);
+                z = toInt(buf, 10);
+                createZone(z);
         }
       }
       
+      for (auto obj : tMap)
+      {
+        ms.Target((char*)obj->get_object_id().c_str());
+        res=ms.Match("^[zZ](%d+)$");
+        if (res==REGEXP_MATCHED) {
+                ms.GetCapture(buf,0);
+                z = toInt(buf, 10);
+                createZone(z);
+        }
+      }
 
     }
 #endif
+
     vistaECPHome::zoneType *vistaECPHome::createZone(uint16_t z)
     {
 
@@ -285,6 +302,10 @@ namespace esphome
     }
 
 #if defined(ESPHOME_MQTT)
+    void vistaECPHome::on_json_message_callback(const std::string &topic, JsonObject payload)
+    {
+     alarmPanelPtr->on_json_message(topic,payload);
+    }
 
     void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
     {
@@ -303,9 +324,9 @@ namespace esphome
           char *bytes = new char[NumberChars / 2];
           for (int i = 0; i < NumberChars; i += 2)
           {
-            bytes[i / 2] = alarmPanelPtr->toInt(s.substr(i, 2), 16);
+            bytes[i / 2] = toInt(s.substr(i, 2), 16);
           }
-          vista.writeDirect(bytes, p, NumberChars / 2);
+          vista->writeDirect(bytes, p, NumberChars / 2);
           return;
         }
         if (payload.containsKey("state"))
@@ -315,12 +336,12 @@ namespace esphome
             c = payload["code"];
           std::string code = c;
           std::string s = payload["state"];
-          alarmPanelPtr->set_alarm_state(s, code, p);
+          set_alarm_state(s, code, p);
         }
         else if (payload.containsKey("keys"))
         {
           std::string s = payload["keys"];
-          alarmPanelPtr->alarm_keypress_partition(s, p);
+          alarm_keypress_partition(s, p);
         }
         else if (payload.containsKey("fault") && payload.containsKey("zone"))
         {
@@ -330,7 +351,7 @@ namespace esphome
             b = true;
           p = payload["zone"];
           // ESP_LOGE(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);
-          alarmPanelPtr->set_zone_fault(p, b);
+          set_zone_fault(p, b);
         }
       }
     }
@@ -355,7 +376,7 @@ namespace esphome
       ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
       int addr = partitionKeypads[defaultPartition];
-      vista.write(cmd, addr);
+      vista->write(cmd, addr);
 #endif
     }
 
@@ -375,7 +396,7 @@ namespace esphome
 #endif
 
       int addr = partitionKeypads[defaultPartition];
-      vista.write(cmd, addr);
+      vista->write(cmd, addr);
     }
 
 #if defined(ARDUINO_MQTT)
@@ -385,27 +406,16 @@ namespace esphome
 void vistaECPHome::setup()
 {
 #endif
-      char stack_start=0x55;
-      stack = &stack_start;
+
+      vista = new Vista();
       // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       //  the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
-          ESP_LOGD("test","before bmap: %04X",ESP.getFreeHeap());
       bMap = App.get_binary_sensors();
-                ESP_LOGD("test","before tmap: %04X",ESP.getFreeHeap());
       tMap = App.get_text_sensors();  
       set_update_interval(8); // set looptime to 8ms
-            ESP_LOGD("test","before load zone: %04X",ESP.getFreeHeap());
-            char s1=0x66;
-      ESP_LOGD("test","start stack=%04X,s1=%04X",stack,&s1);
-
       loadZones();
 
-     char s=0xaa;    
-            
-      ESP_LOGD("test","stack s=%04X",&s);
-        ESP_LOGD("test","after load zone: %04X",ESP.getFreeHeap());
-yield();
 #endif
 #if defined(ESPHOME_MQTT)
       topic_prefix = mqtt::global_mqtt_client->get_topic_prefix();
@@ -433,14 +443,13 @@ yield();
 #endif
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);
-      vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
-      ESP_LOGD("test","after vista begin: %04X",ESP.getFreeHeap());
+      vista->begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
 
       if (zoneStatusChangeBinaryCallback != NULL)
       {
              char s2;    
             
-      ESP_LOGD("test","stack s2=%04X",&s2);
+
         for (int x = 1; x <= maxZones; x++)
         {
           yield();
@@ -450,11 +459,11 @@ yield();
       }
       firstRun = true;
 
-      vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
+      vista->lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
       // set addresses of expander emulators
       for (int x = 0; x < 9; x++)
       {
-        vista.zoneExpanders[x].expansionAddr = expanderAddr[x];
+        vista->zoneExpanders[x].expansionAddr = expanderAddr[x];
       }
 
       setDefaultKpAddr(defaultPartition);
@@ -525,7 +534,7 @@ ESP_LOGD("test","Completed setup");
     void vistaECPHome::set_zone_fault(int zone, bool fault)
     {
 
-      vista.setExpFault(zone, fault);
+      vista->setExpFault(zone, fault);
     }
 
     void vistaECPHome::alarm_keypress(std::string keystring)
@@ -586,7 +595,7 @@ ESP_LOGD("test","Completed setup");
         return;
       addr = partitionKeypads[partition];
       if (addr > 0 and addr < 24)
-        vista.write(keystring.c_str(), addr);
+        vista->write(keystring.c_str(), addr);
     }
 
     void vistaECPHome::send_cmd_bytes(int addr, std::string hexbytes)
@@ -597,7 +606,7 @@ ESP_LOGD("test","Completed setup");
       {
         bytes[i / 2] = toInt(hexbytes.substr(i, 2), 16);
       }
-      vista.writeDirect(bytes, addr, NumberChars / 2);
+      vista->writeDirect(bytes, addr, NumberChars / 2);
 
       return;
     }
@@ -609,7 +618,7 @@ ESP_LOGD("test","Completed setup");
         return;
       a = partitionKeypads[p];
       if (a > 15 && a < 24)
-        vista.setKpAddr(a);
+        vista->setKpAddr(a);
     }
 
     bool vistaECPHome::isInt(std::string s, int base)
@@ -642,39 +651,42 @@ ESP_LOGD("test","Completed setup");
 
     std::string vistaECPHome::getNameFromPrompt(char *p1, char *p2)
     {
-      if (vistaCmd.cbuf[0] != 0xf7)
+      if (vistaCmd.cbuf[0] != 0xf7) {
         return "";
-      std::string p = std::string(p1) + std::string(p2);
-      //const std::regex e("[a-zA-Z]+\\s+([0-9]+)\\s+(.*?)\\s*$");
-      //const std::regex r("\\s+");
-      std::smatch m;
-      if (std::regex_search(p, m, name_re))
-      {
-        std::string m1 = m[1];
-        std::string m2 = m[2];
-        m2 = std::regex_replace(m2, blank_re, " ");
-        ESP_LOGD(TAG, "name match=%s,zone=%s", m2.c_str(), m1.c_str());
-        return m2;
       }
+      std::string p = std::string(p1) + std::string(p2);
 
+        MatchState ms;
+        char buf[5];
+        char buf1[20];
+        ms.Target((char *)p.c_str());
+        char res=ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+        if (res==REGEXP_MATCHED) {
+          ms.GetCapture(buf,0);
+          ms.GetCapture(buf1,1);
+          ESP_LOGD(TAG, "name match=%s,zone=%s", buf1, buf);
+          return std::string(buf1);
+        }
       return "";
     }
 
+
     int vistaECPHome::getZoneFromPrompt(char *p1)
     {
-      if (vistaCmd.cbuf[0] != 0xf7)
+      if (vistaCmd.cbuf[0] != 0xf7) {
         return 0;
-      std::string p = std::string(p1);
-      //const std::regex e("[a-zA-Z]+\\s+([0-9]+)\\s+(.*?)\\s*$");
-      std::smatch m;
-      if (std::regex_search(p, m, name_re))
-      {
-        int z = toInt(m[1], 10);
-        vistaCmd.statusFlags.zone = z;
-        ESP_LOGD(TAG, "zone match=%d", z);
-        return z;
       }
-
+        MatchState ms;
+        char buf[5];
+        ms.Target(p1);
+        char res=ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+        if (res==REGEXP_MATCHED) {
+          ms.GetCapture(buf,0);
+          int z = toInt(buf, 10);
+          vistaCmd.statusFlags.zone = z;
+          ESP_LOGD(TAG, "zone match=%d", z);
+          return z;
+        }
       return 0;
     }
 
@@ -702,20 +714,7 @@ ESP_LOGD("test","Completed setup");
 #endif
     }
 
-    /*
-      std::string vistaECPHome::getF7Lookup(char cbuf[]) {
 
-          std::string s="{";
-          char s1[10];
-          for (int c = 12; c < 17; c++) {
-              sprintf(s1, "%d,", cbuf[c]);
-              s.append(s1);
-          }
-          s.append("0}");
-          return s;
-
-      }
-  */
     void vistaECPHome::set_alarm_state(std::string const &state, std::string code, int partition)
     {
 
@@ -733,11 +732,11 @@ ESP_LOGD("test","Completed setup");
       if (state.compare("S") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
         if (quickArm)
-          vista.write("#3", addr);
+          vista->write("#3", addr);
         else if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("3", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("3", addr);
         }
       }
       // Arm away
@@ -745,32 +744,32 @@ ESP_LOGD("test","Completed setup");
       {
 
         if (quickArm)
-          vista.write("#2", addr);
+          vista->write("#2", addr);
         else if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("2", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("2", addr);
         }
       }
       else if (state.compare("I") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
         if (quickArm)
-          vista.write("#7", addr);
+          vista->write("#7", addr);
         else if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("7", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("7", addr);
         }
       }
       else if (state.compare("N") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
 
         if (quickArm)
-          vista.write("#33", addr);
+          vista->write("#33", addr);
         else if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("33", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("33", addr);
         }
       }
       // Fire command
@@ -789,26 +788,26 @@ ESP_LOGD("test","Completed setup");
       {
         if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("6#", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("6#", addr);
         }
       }
       else if (state.compare("Y") == 0)
       {
         if (code.length() == 4)
         {
-          vista.write(code.c_str(), addr);
-          vista.write("600", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("600", addr);
         }
       }
       else if (state.compare("D") == 0)
       {
         if (code.length() == 4)
         { // ensure we get 4 digit code
-          vista.write(code.c_str(), addr);
-          vista.write("1", addr);
-          vista.write(code.c_str(), addr);
-          vista.write("1", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("1", addr);
+          vista->write(code.c_str(), addr);
+          vista->write("1", addr);
         }
       }
     }
@@ -874,7 +873,7 @@ ESP_LOGD("test","Completed setup");
       bytes[7] = partition;
       bytes[12] = request == sopenzones ? 0x32 : 0x35;
       ESP_LOGD(TAG, "Sending zone status request %d", request);
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes));
+      vista->writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
     char *vistaECPHome::parseAUIMessage(char *cmd, reqStates request)
@@ -920,37 +919,49 @@ ESP_LOGD("test","Completed setup");
 
     void vistaECPHome::processZoneList(uint8_t partition, reqStates request, char *list)
     {
-      if (!list)
+      if (!list) {
         return;
-      for (uint8_t x = 0; x < sizeof(list); x++)
+      }
+      for (uint8_t x = 0; x < sizeof(list); x++) {
         list[x] = !list[x] ? ',' : list[x];
-      std::string zs = list;
-      std::smatch sm{};
+      }
+      std::string s = list;
+      s.append(",");
 
-      ESP_LOGD(TAG, "List=%s", zs.c_str());
+      ESP_LOGD(TAG, "List=%s", s.c_str());
       uint8_t p = partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
-
-      //const std::regex re{R"(((\d+)-(\d+))|(\d+))"}; // search for ranges
 
       // Search all occurences of integers or ranges
       unsigned long t = millis();
-      for (std::string s{zs}; std::regex_search(s, sm, range_re); s = sm.suffix())
-      {
-        // We found something. Was it a range?
-
-        if (sm[1].str().length())
-          // Yes, range, add all values within to the vector
-          for (int z{std::stoi(sm[2])}; z <= std::stoi(sm[3]); ++z)
+        size_t pos;
+        char buf[5],buf1[5];
+        MatchState ms;
+        while ((pos = s.find(',')) != std::string::npos)
+        {
+         std::string s1 = s.substr(0, pos);
+         ms.Target((char*)s1.c_str());
+         char res=ms.Match("(%d+)-(%d+)");
+        if (res==REGEXP_MATCHED) {
+            ms.GetCapture(buf,0);
+            ms.GetCapture(buf1,1);
+           // Yes, range, add all values within to the vector
+           for (int z{std::stoi(buf)}; z <= std::stoi(buf1); ++z)
           {
             updateZoneState(getZone(z), p, request, true, t);
           }
-        else
-        {
-          // No, no range, just a plain integer value. Add it to the vector
-          int z = std::stoi(sm[0]);
-          updateZoneState(getZone(z), p, request, true, t);
+
+        } else {
+          res=ms.Match("(%d+)");
+          if (res==REGEXP_MATCHED) {
+            ms.GetCapture(buf,0);
+            // No, no range, just a plain integer value. Add it to the vector
+            int z = std::stoi(buf);
+            updateZoneState(getZone(z), p, request, true, t);
+          }
         }
-      }
+          s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
+        }
+      
       // clear  bypass/open zones for partition p that were not set above
       auto it = std::find_if(extZones.begin(), extZones.end(), [&p, &t](zoneType &f)
                              { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
@@ -973,7 +984,7 @@ ESP_LOGD("test","Completed setup");
       static unsigned long checkTime = millis();
       for (;;)
       {
-        if (!vista.handle())
+        if (!vista->handle())
           vTaskDelay(4 / portTICK_PERIOD_MS);
         else
           vTaskDelay(2 / portTICK_PERIOD_MS);
@@ -1008,20 +1019,20 @@ void vistaECPHome::update()
       // if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
 #if !defined(ESP32) or !defined(USETASK)
-      vista.handle();
+      vista->handle();
       static unsigned long sendWaitTime = millis();
-      while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail())
+      while (!firstRun && vista->connected && vista->sendPending() && vista->cmdAvail())
       {
-        vista.handle();
+        vista->handle();
         if (millis() - sendWaitTime > 10)
           break;
       }
 #endif
 
-      if (vista.cmdAvail())
+      if (vista->cmdAvail())
       {
 
-        vistaCmd = vista.getNextCmd();
+        vistaCmd = vista->getNextCmd();
 
 #if defined(ARDUINO_MQTT)
         if (firstRun)
@@ -1638,7 +1649,7 @@ void vistaECPHome::update()
         {
 
 #if !defined(ESP32) or !defined(USETASK)
-          vista.handle();
+          vista->handle();
 #endif
 
           if (!x.active || !x.partition)
@@ -1745,7 +1756,7 @@ void vistaECPHome::update()
       }
 
 #if !defined(ESP32) or !defined(USETASK)
-      vista.handle();
+      vista->handle();
 #endif
     }
 

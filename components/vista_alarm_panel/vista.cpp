@@ -1400,7 +1400,7 @@ void Vista::stop()
     detachInterrupt(monitorPin);
   }
 #endif
-  keybusConnected = false;
+  connected = false;
 }
 
 void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx, bool invertTx, bool invertMon, uint8_t inputRx, uint8_t inputMon)
@@ -1443,7 +1443,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   #ifdef ESP32
   vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
   #else
-  vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, 10 * 10, inputMon);
+  vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
   #endif
   if (vistaSerialMonitor->isValidGPIOpin(monitorPin))
   {
@@ -1458,5 +1458,5 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     printf("Warning monitor rx pin %d is invalid", monitorPin);
   }
 #endif
-  keybusConnected = true;
+  connected = true;
 }

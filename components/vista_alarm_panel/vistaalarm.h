@@ -16,8 +16,9 @@
 
 #include "vista.h"
 #include <string>
-#include <regex>
+//#include <regex>
 #include "paneltext.h"
+#include "Regexp.h"
 
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
@@ -43,8 +44,7 @@
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
-extern Vista vista;
-extern void disconnectVista();
+
 
 #if !defined(ARDUINO_MQTT)
 namespace esphome
@@ -52,6 +52,7 @@ namespace esphome
   namespace alarm_panel
   {
 
+extern Vista * vista;
 #if defined(ESPHOME_MQTT)
     extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
     const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
@@ -126,6 +127,7 @@ class vistaECPHome : public time::RealTimeClock
       std::function<void(std::string, uint8_t)> beepsCallback;
       std::function<void(std::string)> zoneExtendedStatusCallback;
       std::function<void(uint8_t, int, bool)> relayStatusChangeCallback;
+
 
       void onZoneStatusChange(std::function<void(int zone,
                                                  std::string msg)>
@@ -234,13 +236,7 @@ class vistaECPHome : public time::RealTimeClock
       std::vector<binary_sensor::BinarySensor *> bMap;
       std::vector<text_sensor::TextSensor *> tMap;
       
-      char *stack;
-/*
-      void add_binary_sensor(binary_sensor::BinarySensor *b, const char *type_id);
-      void add_text_sensor(text_sensor::TextSensor *b, const char *type_id);
-      const char *getTypeIdFromBinaryObjectId(const std::string &objid);
-      const char *getTypeIdFromTextObjectId(const std::string &objid);
-*/
+      void publishStatusChange(sysState led,bool open,uint8_t partition);
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
@@ -252,6 +248,7 @@ class vistaECPHome : public time::RealTimeClock
       void stop();
 
     private:
+
       int TTL = 30000;
       uint8_t debug = 0;
       char keypadAddr1 = 0;
@@ -266,16 +263,6 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputRx = 0;
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
-
-      /*
-      We need to init regex classes as globals because of a weird bug 
-      with the esp8266 compilation which causes stack corruption when 
-      regexes are initialized within functions. <shrug>
-      */
-      const std::regex zone_re = std::regex("[zZ]([0-9]+)");
-      const std::regex name_re = std::regex("[a-zA-Z]+\\s+([0-9]+)\\s+(.*?)\\s*$");
-      const std::regex blank_re = std::regex("\\s+");
-      const std::regex range_re = std::regex{R"(((\d+)-(\d+))|(\d+))"}; 
 
 
       const char *accessCode;
@@ -392,8 +379,23 @@ class vistaECPHome : public time::RealTimeClock
       void sendZoneRequest(uint8_t partition, reqStates request);
       void loadZones();
 
+
     public:
       partitionStateType *partitionStates;
+
+      void disconnectVista()
+      {
+        vista->stop();
+      }
+      bool connected() {
+        return vista->connected;
+      }
+
+      void setExpFault(int zone,bool fault) {
+         vista->setExpFault(zone,fault);
+      }
+
+
 
     private:
       std::string previousMsg,
@@ -430,7 +432,10 @@ class vistaECPHome : public time::RealTimeClock
       void assignPartitionToZone(zoneType *zt);
 
 #if defined(ESPHOME_MQTT)
-      static void on_json_message(const std::string &topic, JsonObject payload);
+
+      void on_json_message(const std::string &topic, JsonObject payload);
+      static void on_json_message_callback(const std::string &topic, JsonObject payload);
+
 #endif
     public:
       void set_panel_time();
@@ -484,6 +489,8 @@ class vistaECPHome : public time::RealTimeClock
         void printPacket(const char *label, char cbuf[], int len);
 
         //  std::string getF7Lookup(char cbuf[]) ;
+
+
       public:
         void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Arduino.h"
-#include <queue>
 #include "ECPSoftwareSerial.h"
 
 // #define DEBUG
@@ -160,7 +159,7 @@ public:
     bool dataReceived;
     void IRAM_ATTR rxHandleISR(), txHandleISR();
     bool areEqual(char *, char *, uint8_t);
-    bool keybusConnected;
+    bool connected;
     int toDec(int);
     void resetStatus();
     void initSerialHandlers(int, int, int);

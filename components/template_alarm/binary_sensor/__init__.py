@@ -87,15 +87,14 @@ async def setup_entity(var, config):
         cg.add(var.set_object_id(config[CONF_ID].id))
     else:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+    if not config.get(CONF_PUBLISH_INITIAL_STATE):
+        cg.add(var.set_publish_initial_state(True))
 
 async def to_code(config):
     #cg.add_define("USE_TEMPLATE_ALARM_SENSORS")
     var = await new_binary_sensor(config)
 
     await cg.register_component(var, config)
-   
-    if not config.get(CONF_PUBLISH_INITIAL_STATE):
-        cg.add(var.set_publish_initial_state(True))
        
     if CONF_LAMBDA in config:
         template_ = await cg.process_lambda(
