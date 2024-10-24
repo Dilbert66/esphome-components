@@ -69,20 +69,22 @@ typedef void (*GlobalReplaceCallback) (const char * match,          // matching 
                                        unsigned int & replacement_length,
                                        const MatchState & ms);      // MatchState in use (to get captures)
 typedef class MatchState {
-private:
-  
-  char result;  // result of last Match call
+
   
 public:
   
   MatchState () : src (0), result (REGEXP_NOMATCH) {};  // constructor
+
   MatchState (char * s) : result (REGEXP_NOMATCH) 
     { Target (s); };  // constructor from null-terminated string
+    
   MatchState (char * s, const unsigned int len) : result (REGEXP_NOMATCH) 
     { Target (s, len); };  // constructor from string and length
   
   // supply these two:
   char *src;  /* source string */
+  char result;  // result of last Match call
+
   unsigned int src_len;    /* length of source string */
 
   // used internally  

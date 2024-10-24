@@ -42,7 +42,7 @@
 #define maxZonesDefault 32 //set to 64 if your system supports it
 #define maxRelays 8
 #include "dscKeybusInterface.h"
-#include <regex>
+#include "Regexp.h"
 
 extern dscKeybusInterface dsc;
 extern bool forceDisconnect;
@@ -316,23 +316,11 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   
 void set_panel_time();
 
-struct binarySensor{
-    binary_sensor::BinarySensor * ptr;
-    const char * type_id;
-};
-
-struct textSensor{
-    text_sensor::TextSensor * ptr;
-    const char * type_id;
-};
 
 std::vector<binary_sensor::BinarySensor *> bMap;
 std::vector<text_sensor::TextSensor *> tMap;
 
-void add_binary_sensor(binary_sensor::BinarySensor * b,const char * type_id);
-void add_text_sensor(text_sensor::TextSensor* b,const char * type_id); 
-const char * getTypeIdFromBinaryObjectId(const std::string & objid); 
-const char * getTypeIdFromTextObjectId(const std::string & objid);
+void publishPanelStatus(panelStatus ps,bool open,uint8_t partition);
 void publishBinaryState(const std::string& cstr,uint8_t partition,bool open);
 void publishTextState(const std::string & cstr,uint8_t partition,std::string * text);
 
@@ -489,7 +477,8 @@ public:
   void alarm_keypress_partition(std::string keystring, int partition) ;
 private:
 #if defined(ESPHOME_MQTT) 
-static void on_json_message(const std::string &topic, JsonObject payload) ;
+static void on_json_message_callback(const std::string &topic, JsonObject payload) ;
+void on_json_message(const std::string &topic, JsonObject payload) ;
 
 #endif
 

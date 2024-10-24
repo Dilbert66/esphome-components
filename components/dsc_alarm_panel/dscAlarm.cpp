@@ -31,32 +31,17 @@ namespace esphome
 #endif
 
 #if !defined(ARDUINO_MQTT)
-
-    void DSCkeybushome::add_binary_sensor(binary_sensor::BinarySensor *b, const char *type_id)
-    {
-
-     b->set_object_id(type_id);
-
-    }
-
-    void DSCkeybushome::add_text_sensor(text_sensor::TextSensor *t, const char *type_id)
-    {
-
-      t->set_object_id(type_id);
-
-    }
-
-    const char *DSCkeybushome::getTypeIdFromBinaryObjectId(const std::string &objid)
-    {
-    
-      return objid.c_str();
-
-    }
-
-    const char *DSCkeybushome::getTypeIdFromTextObjectId(const std::string &objid)
-    {
-      return objid.c_str();
-
+    void DSCkeybushome::publishPanelStatus(panelStatus ps,bool open,uint8_t partition) {
+         std::string sensor="NIL";
+        switch(ps) {
+          case alarm_panel::trStatus: sensor = "tr"; break;
+          case alarm_panel::batStatus: sensor = "bat"; break;
+          case alarm_panel::acStatus: sensor = "ac"; break;
+          case alarm_panel::rdyStatus:  sensor = "rdy_" ; break;
+          case alarm_panel::armStatus:  sensor = "arm_"; break; 
+          default: break;
+        }                
+      publishBinaryState(sensor,partition,open);
     }
 
     void DSCkeybushome::publishBinaryState(const std::string &cstr, uint8_t partition, bool open)
@@ -95,7 +80,7 @@ namespace esphome
       alarmPanelPtr = this;
 
 #if defined(USE_MQTT)
-      mqtt_callback = on_json_message;
+      mqtt_callback = on_json_message_callback;
 #endif
     }
 
@@ -800,6 +785,11 @@ void DSCkeybushome::setup()
     }
 
 #if defined(ESPHOME_MQTT)
+    void DSCkeybushome::on_json_message_callback(const std::string &topic, JsonObject payload)
+    {
+     alarmPanelPtr->on_json_message(topic,payload);
+    }
+
     void DSCkeybushome::on_json_message(const std::string &topic, JsonObject payload)
     {
       int p = 0;
@@ -815,12 +805,12 @@ void DSCkeybushome::setup()
             c = payload["code"];
           std::string code = c;
           std::string s = payload["state"];
-          alarmPanelPtr->set_alarm_state(s, code, p);
+         set_alarm_state(s, code, p);
         }
         else if (payload.containsKey("keys"))
         {
           std::string s = payload["keys"];
-          alarmPanelPtr->alarm_keypress_partition(s, p);
+          alarm_keypress_partition(s, p);
         }
         else if (payload.containsKey("fault") && payload.containsKey("zone"))
         {
@@ -830,7 +820,7 @@ void DSCkeybushome::setup()
             b = true;
           p = payload["zone"];
           // ESP_LOGI(TAG,"set zone fault %s,%s,%d,%d",s2.c_str(),c,b,p);
-          alarmPanelPtr->set_zone_fault(p, b);
+         set_zone_fault(p, b);
         }
       }
     }
@@ -4189,30 +4179,32 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
+      int z;
+      MatchState ms;
+      char buf[20];
+      char res;
       for (auto obj : bMap)
       {
-        std::string id = obj->get_object_id();
-        const std::regex e("^[zZ]([0-9]+)$");
-        std::smatch m;
-        if (std::regex_search(id, m, e))
-        {
-          int z = toInt(m[1], 10);
-          createZone(z);
+        ms.Target((char*)obj->get_object_id().c_str());
+        res=ms.Match("^[zZ](%d+)$");
+        if (res==REGEXP_MATCHED) {
+                ms.GetCapture(buf,0);
+                z = toInt(buf, 10);
+                createZone(z);
         }
       }
-
+      
       for (auto obj : tMap)
       {
-
-        std::string id = obj->get_object_id();
-        const std::regex e("^[zZ]([0-9]+)$");
-        std::smatch m;
-        if (std::regex_search(id, m, e))
-        {
-          int z = toInt(m[1], 10);
-          createZone(z);
+        ms.Target((char*)obj->get_object_id().c_str());
+        res=ms.Match("^[zZ](%d+)$");
+        if (res==REGEXP_MATCHED) {
+                ms.GetCapture(buf,0);
+                z = toInt(buf, 10);
+                createZone(z);
         }
       }
+
     }
 #endif
 

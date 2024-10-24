@@ -45,16 +45,7 @@ partitionmsg= '''[&](std::string msg,uint8_t partition) {
       alarm_panel::alarmPanelPtr->publishTextState("msg_",partition,&msg); 
     }'''    
 panelstatus= '''[&](alarm_panel::panelStatus ps,bool open,uint8_t partition) {
-      std::string sensor="NIL";
-        switch(ps) {
-          case alarm_panel::trStatus: sensor = "tr"; break;
-          case alarm_panel::batStatus: sensor = "bat"; break;
-          case alarm_panel::acStatus: sensor = "ac"; break;
-          case alarm_panel::rdyStatus:  sensor = "rdy_" ; break;
-          case alarm_panel::armStatus:  sensor = "arm_"; break; 
-          default: break;
-        }                
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,partition,open);
+      alarm_panel::alarmPanelPtr->publishPanelStatus(ps,open,partition);
     }'''      
 line1 ='''[&](std::string msg,uint8_t partition) {
       alarm_panel::alarmPanelPtr->publishTextState("ln1_",partition,&msg);
