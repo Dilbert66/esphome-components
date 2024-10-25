@@ -3,6 +3,7 @@
 #include "esphome/core/controller.h"
 #include "mongoose.h"
 #include "esphome/components/json/json_util.h"
+#include "esphome.h"
 #include <vector>
 #include <algorithm>
 #include <queue>
