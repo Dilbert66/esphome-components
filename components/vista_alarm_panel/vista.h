@@ -169,7 +169,7 @@ public:
     char expansionAddr;
     void setExpFault(int, bool);
     bool newExtCmd, newCmd;
-    bool filterOwnTx;
+    bool filterOwnTx=false;
     expanderType zoneExpanders[MAX_MODULES];
     char b; // used in isr
     bool charAvail();
@@ -249,5 +249,5 @@ private:
     char expectByte;
     volatile uint8_t retries;
     volatile uint8_t retryAddr;
-    volatile bool sending;
+    volatile bool sending=false;
 };
