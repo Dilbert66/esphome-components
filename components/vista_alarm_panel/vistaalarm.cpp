@@ -34,7 +34,7 @@ namespace esphome
   namespace alarm_panel
   {
 
-    Vista * vista;
+    Vista  vista;
     const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
 
     static const char *const TAG = "vista_alarm";
@@ -127,7 +127,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       if (xHandle != NULL)
         vTaskSuspend(xHandle);
 #endif
-      vista->stop();
+      vista.stop();
     }
 
     vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin, int maxzones, int maxpartitions, bool invertrx, bool inverttx, bool invertmon, uint8_t inputrx, uint8_t inputmon) : keypadAddr1(kpaddr),
@@ -326,7 +326,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
           {
             bytes[i / 2] = toInt(s.substr(i, 2), 16);
           }
-          vista->writeDirect(bytes, p, NumberChars / 2);
+          vista.writeDirect(bytes, p, NumberChars / 2);
           return;
         }
         if (payload.containsKey("state"))
@@ -376,7 +376,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
       int addr = partitionKeypads[defaultPartition];
-      vista->write(cmd, addr);
+      vista.write(cmd, addr);
 #endif
     }
 
@@ -396,7 +396,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 #endif
 
       int addr = partitionKeypads[defaultPartition];
-      vista->write(cmd, addr);
+      vista.write(cmd, addr);
     }
 
 #if defined(ARDUINO_MQTT)
@@ -407,7 +407,7 @@ void vistaECPHome::setup()
 {
 #endif
 
-      vista = new Vista();
+
       // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       //  the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
@@ -443,7 +443,7 @@ void vistaECPHome::setup()
 #endif
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);
-      vista->begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
+      vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
 
       if (zoneStatusChangeBinaryCallback != NULL)
       {
@@ -459,11 +459,11 @@ void vistaECPHome::setup()
       }
       firstRun = true;
 
-      vista->lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
+      vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
       // set addresses of expander emulators
       for (int x = 0; x < 9; x++)
       {
-        vista->zoneExpanders[x].expansionAddr = expanderAddr[x];
+        vista.zoneExpanders[x].expansionAddr = expanderAddr[x];
       }
 
       setDefaultKpAddr(defaultPartition);
@@ -492,7 +492,7 @@ void vistaECPHome::setup()
           core // Core where the task should run
       );
 #endif
-ESP_LOGD("test","Completed setup");
+ESP_LOGD(TAG,"Completed setup");
     }
 
     void vistaECPHome::alarm_disarm(std::string code, int partition)
@@ -534,7 +534,7 @@ ESP_LOGD("test","Completed setup");
     void vistaECPHome::set_zone_fault(int zone, bool fault)
     {
 
-      vista->setExpFault(zone, fault);
+      vista.setExpFault(zone, fault);
     }
 
     void vistaECPHome::alarm_keypress(std::string keystring)
@@ -595,7 +595,7 @@ ESP_LOGD("test","Completed setup");
         return;
       addr = partitionKeypads[partition];
       if (addr > 0 and addr < 24)
-        vista->write(keystring.c_str(), addr);
+        vista.write(keystring.c_str(), addr);
     }
 
     void vistaECPHome::send_cmd_bytes(int addr, std::string hexbytes)
@@ -606,7 +606,7 @@ ESP_LOGD("test","Completed setup");
       {
         bytes[i / 2] = toInt(hexbytes.substr(i, 2), 16);
       }
-      vista->writeDirect(bytes, addr, NumberChars / 2);
+      vista.writeDirect(bytes, addr, NumberChars / 2);
 
       return;
     }
@@ -618,7 +618,7 @@ ESP_LOGD("test","Completed setup");
         return;
       a = partitionKeypads[p];
       if (a > 15 && a < 24)
-        vista->setKpAddr(a);
+        vista.setKpAddr(a);
     }
 
     bool vistaECPHome::isInt(std::string s, int base)
@@ -732,11 +732,11 @@ ESP_LOGD("test","Completed setup");
       if (state.compare("S") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
         if (quickArm)
-          vista->write("#3", addr);
+          vista.write("#3", addr);
         else if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("3", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("3", addr);
         }
       }
       // Arm away
@@ -744,32 +744,32 @@ ESP_LOGD("test","Completed setup");
       {
 
         if (quickArm)
-          vista->write("#2", addr);
+          vista.write("#2", addr);
         else if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("2", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("2", addr);
         }
       }
       else if (state.compare("I") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
         if (quickArm)
-          vista->write("#7", addr);
+          vista.write("#7", addr);
         else if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("7", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("7", addr);
         }
       }
       else if (state.compare("N") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
 
         if (quickArm)
-          vista->write("#33", addr);
+          vista.write("#33", addr);
         else if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("33", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("33", addr);
         }
       }
       // Fire command
@@ -788,26 +788,26 @@ ESP_LOGD("test","Completed setup");
       {
         if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("6#", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("6#", addr);
         }
       }
       else if (state.compare("Y") == 0)
       {
         if (code.length() == 4)
         {
-          vista->write(code.c_str(), addr);
-          vista->write("600", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("600", addr);
         }
       }
       else if (state.compare("D") == 0)
       {
         if (code.length() == 4)
         { // ensure we get 4 digit code
-          vista->write(code.c_str(), addr);
-          vista->write("1", addr);
-          vista->write(code.c_str(), addr);
-          vista->write("1", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("1", addr);
+          vista.write(code.c_str(), addr);
+          vista.write("1", addr);
         }
       }
     }
@@ -873,7 +873,7 @@ ESP_LOGD("test","Completed setup");
       bytes[7] = partition;
       bytes[12] = request == sopenzones ? 0x32 : 0x35;
       ESP_LOGD(TAG, "Sending zone status request %d", request);
-      vista->writeDirect(bytes, auiAddr, sizeof(bytes));
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
     char *vistaECPHome::parseAUIMessage(char *cmd, reqStates request)
@@ -980,11 +980,11 @@ ESP_LOGD("test","Completed setup");
     void vistaECPHome::cmdQueueTask(void *args)
     {
 
-      vistaECPHome *_this = (vistaECPHome *)args;
+     // vistaECPHome *_this = (vistaECPHome *)args;
       static unsigned long checkTime = millis();
       for (;;)
       {
-        if (!vista->handle())
+        if (!vista.handle())
           vTaskDelay(4 / portTICK_PERIOD_MS);
         else
           vTaskDelay(2 / portTICK_PERIOD_MS);
@@ -1019,20 +1019,20 @@ void vistaECPHome::update()
       // if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
 #if !defined(ESP32) or !defined(USETASK)
-      vista->handle();
+      vista.handle();
       static unsigned long sendWaitTime = millis();
-      while (!firstRun && vista->connected && vista->sendPending() && vista->cmdAvail())
+      while (!firstRun && vista.connected && vista.sendPending() && vista.cmdAvail())
       {
-        vista->handle();
+        vista.handle();
         if (millis() - sendWaitTime > 10)
           break;
       }
 #endif
 
-      if (vista->cmdAvail())
+      if (vista.cmdAvail())
       {
 
-        vistaCmd = vista->getNextCmd();
+        vistaCmd = vista.getNextCmd();
 
 #if defined(ARDUINO_MQTT)
         if (firstRun)
@@ -1649,7 +1649,7 @@ void vistaECPHome::update()
         {
 
 #if !defined(ESP32) or !defined(USETASK)
-          vista->handle();
+          vista.handle();
 #endif
 
           if (!x.active || !x.partition)
@@ -1756,7 +1756,7 @@ void vistaECPHome::update()
       }
 
 #if !defined(ESP32) or !defined(USETASK)
-      vista->handle();
+      vista.handle();
 #endif
     }
 

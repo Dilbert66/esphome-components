@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Arduino.h"
+#include <queue>
 #include "ECPSoftwareSerial.h"
 
 // #define DEBUG
@@ -9,11 +10,7 @@
 
 #define OUTBUFSIZE 30
 #define CMDBUFSIZE 50
-#ifdef ESP32
-#define CMDQUEUESIZE 5
-#else
-#define CMDQUEUESIZE 2
-#endif
+#define CMDQUEUESIZE 10
 #define FAULTQUEUESIZE 5
 
 // Used to read bits on F7 message
@@ -117,7 +114,7 @@ struct keyType
     uint8_t count;
     uint8_t seq;
 };
-const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0, .seq = 0 };
+const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0};
 
 struct cmdQueueItem
 {
@@ -169,13 +166,14 @@ public:
     char expansionAddr;
     void setExpFault(int, bool);
     bool newExtCmd, newCmd;
-    bool filterOwnTx=false;
+    bool filterOwnTx;
     expanderType zoneExpanders[MAX_MODULES];
     char b; // used in isr
     bool charAvail();
     bool cmdAvail();
     cmdQueueItem getNextCmd();
     bool sendPending();
+    // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
     keyType *outbuf;
@@ -249,5 +247,5 @@ private:
     char expectByte;
     volatile uint8_t retries;
     volatile uint8_t retryAddr;
-    volatile bool sending=false;
+    volatile bool sending;
 };

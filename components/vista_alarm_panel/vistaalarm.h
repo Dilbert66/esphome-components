@@ -52,7 +52,7 @@ namespace esphome
   namespace alarm_panel
   {
 
-extern Vista * vista;
+extern Vista  vista;
 #if defined(ESPHOME_MQTT)
     extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
     const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
@@ -385,14 +385,14 @@ class vistaECPHome : public time::RealTimeClock
 
       void disconnectVista()
       {
-        vista->stop();
+        vista.stop();
       }
       bool connected() {
-        return vista->connected;
+        return vista.connected;
       }
 
       void setExpFault(int zone,bool fault) {
-         vista->setExpFault(zone,fault);
+         vista.setExpFault(zone,fault);
       }
 
 

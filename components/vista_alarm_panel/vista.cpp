@@ -61,7 +61,7 @@ expanderType Vista::getNextFault()
   return zoneExpanders[currentFaultIdx];
 }
 
-expanderType Vista::peekNextFault()
+expanderType  Vista::peekNextFault()
 {
   expanderType currentFault = expanderType_INIT;
   if (inFaultIdx == outFaultIdx)
@@ -497,7 +497,9 @@ void Vista::onExp(char cbuf[])
   // 0xF1 - response to request, 0xf7 - poll, 0x80 - retry ,0x00 relay control
   if (type == 0xF1)
   {
-    expanderType currentFault = peekNextFault(); // check next item. Don't pop it yet
+
+    
+     expanderType currentFault = peekNextFault(); // check next item. Don't pop it yet
     if (currentFault.expansionAddr && expansionAddr == currentFault.expansionAddr)
     {
       getNextFault(); // pop it from the queue since we are processing it now
@@ -800,9 +802,8 @@ void IRAM_ATTR Vista::rxHandleISR()
     if (lowTime > 9000)
     {
       markPulse = 2;
-      expanderType currentFault = inFaultIdx==outFaultIdx?expanderType_INIT:zoneExpanders[faultQueue[outFaultIdx]];
-
-      if (currentFault.expansionAddr && currentFault.expansionAddr < 24)
+     expanderType currentFault = inFaultIdx==outFaultIdx?expanderType_INIT:zoneExpanders[faultQueue[outFaultIdx]];
+     if (currentFault.expansionAddr && currentFault.expansionAddr < 24)
       {
         ackAddr = currentFault.expansionAddr; // use the expander address 07/08/09/10/11 as the requestor
         vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
@@ -1420,11 +1421,8 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   invertRead = invertRx;
 
   // panel data rx interrupt - yellow line
-  #ifdef ESP32
+
   vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 60 * 10, inputRx);
-  #else
-  vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 20 * 10, inputRx);
-  #endif
   if (vistaSerial->isValidGPIOpin(rxPin))
   {
     vistaSerial->begin(4800, SWSERIAL_8E2);
@@ -1440,11 +1438,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
 #ifdef MONITORTX
   // interrupt for capturing keypad/module data on green transmit line
 
-  #ifdef ESP32
   vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
-  #else
-  vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
-  #endif
   if (vistaSerialMonitor->isValidGPIOpin(monitorPin))
   {
     vistaSerialMonitor->begin(4800, SWSERIAL_8E2);
