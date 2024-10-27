@@ -191,9 +191,9 @@ void WebServer::parseUrl(mg_http_message *hm,JsonObject doc) {
 void WebServer::ws_reply(mg_connection *c,const char * data,bool ok) {
     if (c->data[0] != 'W') {
        if (ok) {
-          if (strlen(data) == 0)
+          if (strlen(data) == 0) {
             mg_http_reply(c,204,PSTR("Access-Control-Allow-Origin: *\r\n"),"");
-          else {
+          } else {
             if ( credentials_.crypt) {
                if ( !c->data[1])  {              
                     mg_http_reply(c,404,"","");
@@ -485,11 +485,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
                                         JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=alarm_panel::alarmPanelPtr->getTypeIdFromTextObjectId(obj->get_object_id());
-#else  
   root["id_code"]=obj->get_object_id();
-#endif    
   });
 
 }    
@@ -575,11 +571,7 @@ this->push(STATE,this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());
 std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
   return json::build_json([obj, value, start_config](JsonObject root) {
     set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)  
-  root["id_code"]=alarm_panel::alarmPanelPtr->getTypeIdFromBinaryObjectId(obj->get_object_id());
-#else  
   root["id_code"]=obj->get_object_id();
-#endif     
   
   });
  
@@ -934,23 +926,20 @@ void WebServer::handle_number_request(mg_connection *c,JsonObject doc) {
     //if (mg_vcasecmp(&hm->method, "GET") == 0) {
     if (doc["method"]=="GET") {        
       std::string data = this->number_json(obj, obj->state, DETAIL_STATE);
-     // request->send(200, "application/json", data.c_str());
-      //mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str()); 
     ws_reply(c,data.c_str(),true); 
       return;
     }
-    //if (match.method != "set") {
+
     if (doc["action"] != "set") {
       ws_reply(c,"",false); 
       return;
     }
 
     auto call = obj->make_call();
-    //char buf[100];
-    //if (mg_http_get_var(&hm->body,"value",buf,sizeof(buf)) > 0) {
-   // if (request->hasParam("value")) {
-   if (doc.containsKey("value")) {       
-      auto value = parse_number<float>(doc["value"]);
+
+   if (doc.containsKey("value")) {  
+      std::string value = doc["value"];
+      auto value = parse_number<float>(value);
       if (value.has_value())
         call.set_value(*value);
     }
@@ -990,39 +979,31 @@ void WebServer::on_text_update(text::Text *obj, const std::string &state) {
   //this->events_.send(this->text_json(obj, state, DETAIL_STATE).c_str(), "state");
 this->push(STATE,this->text_json(obj, state, DETAIL_STATE).c_str());   
 }
+
+
+
 void WebServer::handle_text_request(mg_connection *c,JsonObject doc) {
-// struct mg_http_message *hm = (struct mg_http_message *) ev_data;      
+ 
   for (auto *obj : App.get_texts()) {
     if (obj->get_object_id() != doc["oid"])
       continue;
 
-    //if (request->method() == HTTP_GET) {
-   // if (mg_vcasecmp(&hm->method, "GET") == 0) { 
      if (doc["method"]=="GET") {   
       std::string data = this->text_json(obj, obj->state, DETAIL_STATE);
-     // request->send(200, "text/json", data.c_str());
-      //mg_http_reply(c, 200, "Content-Type: 
-     // application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());  
          ws_reply(c,data.c_str(),true); 
       return;
     }
-   // if (match.method != "set") {
      if (doc["action"]!="set") {
-    ws_reply(c,"",false); 
+      ws_reply(c,"",false); 
       return;
     }
-
-    auto call = obj->make_call();
-   // if (request->hasParam("value")) {
-   // char buf[100];
-    //if (mg_http_get_var(&hm->body,"value",buf,sizeof(buf)) > 0) {
-   //   auto value=buf;
-   if (doc.containsKey("value")) {   
-      //String value = request->getParam("value")->value();
+  auto call = obj->make_call();
+   if (doc.containsKey("value")) {  
       call.set_value(doc["value"]);
+      this->defer([call]() mutable { call.perform(); });
     }
 
-    this->defer([call]() mutable { call.perform(); });
+
     ws_reply(c,"",true); 
     return;
   }
@@ -2018,7 +1999,6 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
   
  void WebServer::handleRequest (mg_connection *c,JsonObject doc) {
      std::string d=doc["domain"];
-  //  MG_INFO(("handlerequest domain=%s",d.c_str()));
 #ifdef USE_SENSOR
 
   if (doc["domain"] == "sensor") {

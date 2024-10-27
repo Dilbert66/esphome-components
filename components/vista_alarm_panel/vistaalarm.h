@@ -46,6 +46,7 @@
 
 
 
+
 #if !defined(ARDUINO_MQTT)
 namespace esphome
 {
@@ -55,7 +56,7 @@ namespace esphome
 extern Vista  vista;
 #if defined(ESPHOME_MQTT)
     extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
-    const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
+    extern const char *setalarmcommandtopic; 
 #endif
 
 #endif

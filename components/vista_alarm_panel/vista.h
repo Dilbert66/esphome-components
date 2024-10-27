@@ -118,7 +118,7 @@ struct keyType
     uint8_t count;
     uint8_t seq;
 };
-const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0};
+const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0,. seq = 0};
 
 struct cmdQueueItem
 {

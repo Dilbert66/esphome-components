@@ -47,9 +47,9 @@ namespace esphome
     void DSCkeybushome::publishBinaryState(const std::string &cstr, uint8_t partition, bool open)
     {
      std::string c=cstr;
-      if (partition)
+      if (partition) {
         c +=std::to_string(partition);
-
+      }
          auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor* bs)
                         { return bs->get_object_id() == c; });
                              
@@ -60,9 +60,10 @@ namespace esphome
     void DSCkeybushome::publishTextState(const std::string &cstr, uint8_t partition, std::string *text)
     {
      std::string c=cstr;
-      if (partition)
+     if (partition) {
         c +=std::to_string(partition);
-      auto it = std::find_if(tMap.begin(), tMap.end(), [c](text_sensor::TextSensor* ts)
+     } 
+     auto it = std::find_if(tMap.begin(), tMap.end(), [c](text_sensor::TextSensor* ts)
                          { return ts->get_object_id() == c; });
       if (it != tMap.end() && (*it)->state != *text)
         (*it)->publish_state(*text);

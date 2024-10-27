@@ -42,6 +42,7 @@ namespace esphome
     vistaECPHome *alarmPanelPtr;
 #if defined(ESPHOME_MQTT)
     std::function<void(const std::string &, JsonObject)> mqtt_callback;
+    const char *setalarmcommandtopic = "/alarm/set";
 #endif
 /*
     void vistaECPHome::add_binary_sensor(binary_sensor::BinarySensor *b, const char *type_id)
@@ -189,7 +190,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
-
+return;
       int z;
       MatchState ms;
       char buf[20];
@@ -311,7 +312,8 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
     {
       int p = 0;
 
-      if (topic.find(String(FPSTR(setalarmcommandtopic)).c_str()) != std::string::npos)
+    
+      if (topic.find(setalarmcommandtopic) != std::string::npos)
       {
         if (payload.containsKey("partition"))
           p = payload["partition"];
@@ -406,7 +408,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 void vistaECPHome::setup()
 {
 #endif
-
+      ESP_LOGD(TAG,"Start setup: Free heap: %04X (%d)",ESP.getFreeHeap(),ESP.getFreeHeap());
 
       // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       //  the system to not miss a response window on commands.
@@ -422,7 +424,7 @@ void vistaECPHome::setup()
       mqtt::MQTTDiscoveryInfo mqttDiscInfo = mqtt::global_mqtt_client->get_discovery_info();
       std::string discovery_prefix = mqttDiscInfo.prefix;
       topic = discovery_prefix + "/alarm_control_panel/" + topic_prefix + "/config";
-      mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(), mqtt_callback);
+      mqtt::global_mqtt_client->subscribe_json(topic_prefix + setalarmcommandtopic, mqtt_callback);
 
 #endif
 #if defined(USE_API)
@@ -492,7 +494,7 @@ void vistaECPHome::setup()
           core // Core where the task should run
       );
 #endif
-ESP_LOGD(TAG,"Completed setup");
+ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFreeHeap());
     }
 
     void vistaECPHome::alarm_disarm(std::string code, int partition)
@@ -1012,7 +1014,7 @@ void vistaECPHome::update()
 #if defined(ESPHOME_MQTT)
       if (firstRun && mqtt::global_mqtt_client->is_connected())
       {
-        mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str() + "\"}", 0, 1);
+        mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + setalarmcommandtopic + "\"}", 0, 1);
       }
 #endif
 
