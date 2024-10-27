@@ -3,10 +3,10 @@
 #include "esphome/core/controller.h"
 #include "mongoose.h"
 #include "esphome/components/json/json_util.h"
-#include "esphome.h"
 #include <vector>
 #include <algorithm>
 #include <queue>
+#include "esphome.h"
 #ifdef USE_ESP32
 #include <deque>
 #include <freertos/FreeRTOS.h>
@@ -108,12 +108,14 @@ public:
     publish(out);
   }
 
-  void set_bot_id(std::string&& bot_id) {botId_=std::move(bot_id); }
-  void set_chat_id(std::string&& chat_id) { telegramUserId=std::move(chat_id);}
+  void set_bot_id(std::string&& bot_id) {botId_=bot_id; }
+  void set_chat_id(std::string&& chat_id) { telegramUserId=chat_id;}
   void add_chatid(std::string&& chat_id) {allowed_chat_ids.push_back(std::move(chat_id));}
   void set_api_host(std::string&& api_host) { apiHost_="https://" + std::move(api_host); }
   void set_bot_enable(bool enable) {enableBot_=enable; }
   void set_send_enable(bool enable) {enableSend_=enable;}
+  std::string get_chat_id() {return telegramUserId;}
+  std::string get_bot_id(){ return botId_;}
 
   bool get_bot_status() { return enableBot_;}
   bool get_send_status() { return enableSend_;}
