@@ -3,7 +3,6 @@
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
 #include "mongoose.h"
-#include "esphome.h"
 #include <vector>
 #include <Crypto.h>
 
