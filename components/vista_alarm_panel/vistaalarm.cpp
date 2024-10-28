@@ -190,7 +190,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
-return;
+
       int z;
       MatchState ms;
       char buf[20];
@@ -1055,19 +1055,19 @@ void vistaECPHome::update()
             //FB 04 06 18 98 B0 00 00 00 00 00 00
             //0399512 b0
             vistaCmd.newExtCmd=true;
-            vistaCmd.extcmd[0]=0xfb;
-            vistaCmd.extcmd[1]=4;
-            vistaCmd.extcmd[2]=6;
-            vistaCmd.extcmd[3]=0x18;
-            vistaCmd.extcmd[4]=0x98;
-            vistaCmd.extcmd[5]=0xb0;
+            vistaCmd.cbuf[0]=0xfb;
+            vistaCmd.cbuf[1]=4;
+            vistaCmd.cbuf[2]=6;
+            vistaCmd.cbuf[3]=0x18;
+            vistaCmd.cbuf[4]=0x98;
+            vistaCmd.cbuf[5]=0xb0;
             if (t1==1) {
                 t1=2;
-                vistaCmd.extcmd[5]=0;
+                vistaCmd.cbuf[5]=0;
             } else
             if (t1==2) {
                 t1=0;
-                vistaCmd.extcmd[5]=0xb2;
+                vistaCmd.cbuf[5]=0xb2;
             } else
             if (t1==0) t1=1;
             testtime=millis();
@@ -1088,59 +1088,59 @@ void vistaECPHome::update()
         {
           if (debug > 0)
           {
-            if (vistaCmd.extcmd[0] == 0xF6)
-              printPacket("EXT", vistaCmd.extcmd, vistaCmd.extcmd[3] + 4);
+            if (vistaCmd.cbuf[0] == 0xF6)
+              printPacket("EXT", vistaCmd.cbuf, vistaCmd.cbuf[3] + 4);
             else
-              printPacket("EXT", vistaCmd.extcmd, 13);
+              printPacket("EXT", vistaCmd.cbuf, 13);
             // format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
           }
-          if (vistaCmd.extcmd[0] == 0xFA)
+          if (vistaCmd.cbuf[0] == 0xFA)
           {
-            int z = vistaCmd.extcmd[3];
-            if (vistaCmd.extcmd[2] == 0xf1 && z > 0 && z <= maxZones)
+            int z = vistaCmd.cbuf[3];
+            if (vistaCmd.cbuf[2] == 0xf1 && z > 0 && z <= maxZones)
             { // we have a zone status (zone expander address range)
-              ESP_LOGD(TAG, "fa status");
+              ESP_LOGD(TAG, "fa status update to zone");
               zoneType *zt = getZone(z);
 
               if (zt->active)
               {
                 zt->time = millis();
-                zt->open = vistaCmd.extcmd[4];
+                zt->open = vistaCmd.cbuf[4];
                 zoneStatusUpdate(zt);
               }
             }
-            else if (vistaCmd.extcmd[2] == 0x00)
+            else if (vistaCmd.cbuf[2] == 0x00)
             { // relay update z = 1 to 4
               if (z > 0)
               {
-                relayStatusChangeCallback(vistaCmd.extcmd[1], z, vistaCmd.extcmd[4] ? true : false);
+                relayStatusChangeCallback(vistaCmd.cbuf[1], z, vistaCmd.cbuf[4] ? true : false);
                 if (debug > 0)
 #if defined(ARDUINO_MQTT)
-                  Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+                  Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #else
-              ESP_LOGD(TAG, "Got relay address %d channel %d = %d", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+              ESP_LOGD(TAG, "Got relay address %d channel %d = %d", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #endif
               }
             }
-            else if (vistaCmd.extcmd[2] == 0x0d)
+            else if (vistaCmd.cbuf[2] == 0x0d)
             { // relay update z = 1 to 4 - 1sec on / 1 sec off
               if (z > 0)
               {
-                // relayStatusChangeCallback(vistaCmd.extcmd[1],z,vistaCmd.extcmd[4]?true:false);
+                // relayStatusChangeCallback(vistaCmd.cbuf[1],z,vistaCmd.cbuf[4]?true:false);
                 if (debug > 0)
 #if defined(ARDUINO_MQTT)
-                  Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+                  Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #else
-              ESP_LOGD(TAG, "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.extcmd[1], z, vistaCmd.extcmd[4]);
+              ESP_LOGD(TAG, "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #endif
               }
             }
-            else if (vistaCmd.extcmd[2] == 0xf7)
+            else if (vistaCmd.cbuf[2] == 0xf7)
             { // 30 second zone expander module status update
-              uint8_t faults = vistaCmd.extcmd[4];
+              uint8_t faults = vistaCmd.cbuf[4];
               for (int x = 8; x > 0; x--)
               {
-                z = getZoneFromChannel(vistaCmd.extcmd[1], x); // device id=extcmd[1]
+                z = getZoneFromChannel(vistaCmd.cbuf[1], x); // device id=extcmd[1]
                 if (!z)
                   continue;
                 bool zs = faults & 1 ? true : false; // check first bit . lower bit = channel 8. High bit= channel 1
@@ -1155,13 +1155,13 @@ void vistaECPHome::update()
               }
             }
           }
-          else if (vistaCmd.extcmd[0] == 0xFB && vistaCmd.extcmd[1] == 4)
+          else if (vistaCmd.cbuf[0] == 0xFB && vistaCmd.cbuf[1] == 4)
           {
 
             char rf_serial_char[14];
             char rf_serial_char_out[20];
             // FB 04 06 18 98 B0 00 00 00 00 00 00
-            uint32_t device_serial = (vistaCmd.extcmd[2] << 16) + (vistaCmd.extcmd[3] << 8) + vistaCmd.extcmd[4];
+            uint32_t device_serial = (vistaCmd.cbuf[2] << 16) + (vistaCmd.cbuf[3] << 8) + vistaCmd.cbuf[4];
             sprintf(rf_serial_char, "%03d%04d", device_serial / 10000, device_serial % 10000);
             serialType rf = getRfSerialLookup(rf_serial_char);
             int z = rf.zone;
@@ -1169,24 +1169,24 @@ void vistaECPHome::update()
             if (debug > 0)
             {
 #if defined(ARDUINO_MQTT)
-              Serial.printf("RFX: %s,%02x\n", rf_serial_char, vistaCmd.extcmd[5]);
+              Serial.printf("RFX: %s,%02x\n", rf_serial_char, vistaCmd.cbuf[5]);
 #else
-          ESP_LOGI(TAG, "RFX: %s,%02x", rf_serial_char, vistaCmd.extcmd[5]);
+          ESP_LOGI(TAG, "RFX: %s,%02x", rf_serial_char, vistaCmd.cbuf[5]);
 #endif
             }
-            if (z && !(vistaCmd.extcmd[5] & 4) && !(vistaCmd.extcmd[5] & 1))
+            if (z && !(vistaCmd.cbuf[5] & 4) && !(vistaCmd.cbuf[5] & 1))
             { // ignore heartbeat
               zoneType *zt = getZone(z);
               if (zt->active)
               {
                 zt->time = millis();
-                zt->open = vistaCmd.extcmd[5] & rf.mask ? true : false;
-                zt->lowbat = vistaCmd.extcmd[5] & 2 ? true : false; // low bat
+                zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
+                zt->lowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
                 zoneStatusUpdate(zt);
               }
             }
 
-            sprintf(rf_serial_char_out, "%s,%02x", rf_serial_char, vistaCmd.extcmd[5]);
+            sprintf(rf_serial_char_out, "%s,%02x", rf_serial_char, vistaCmd.cbuf[5]);
             rfMsgChangeCallback(rf_serial_char);
             refreshRfTime = millis();
           }
