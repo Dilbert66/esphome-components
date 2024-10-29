@@ -123,7 +123,6 @@ const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0
 struct cmdQueueItem
 {
     char cbuf[CMDBUFSIZE];
-    char extcmd[OUTBUFSIZE];
     bool newCmd;
     bool newExtCmd;
     struct statusFlagType statusFlags;

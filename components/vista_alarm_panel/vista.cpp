@@ -257,19 +257,22 @@ void Vista::pushCmdQueueItem(uint8_t cbufsize, uint8_t outbufsize)
   q.statusFlags = statusFlags;
   q.newCmd = newCmd;
   q.newExtCmd = newExtCmd;
-  for (uint8_t i = 0; i < cbufsize; i++)
-  {
-    q.cbuf[i] = cbuf[i];
-    yield();
-  }
-  for (uint8_t i = 0; i < outbufsize; i++)
-  {
-    q.extcmd[i] = extcmd[i];
-    yield();
+
+  if (newExtCmd) {
+    for (uint8_t i = 0; i < outbufsize; i++)
+    {
+      q.cbuf[i] = extcmd[i];
+      yield();
+    }
+  } else {
+    for (uint8_t i = 0; i < cbufsize; i++)
+    {
+      q.cbuf[i] = cbuf[i];
+      yield();
+    }
   }
   cmdQueue[incmdIdx] = q;
   incmdIdx = (incmdIdx + 1) % CMDQUEUESIZE;
-  // cmdQueue.push(q);
 }
 
 /**
@@ -802,10 +805,11 @@ void IRAM_ATTR Vista::rxHandleISR()
     if (lowTime > 9000)
     {
       markPulse = 2;
-     expanderType currentFault = inFaultIdx==outFaultIdx?expanderType_INIT:zoneExpanders[faultQueue[outFaultIdx]];
-     if (currentFault.expansionAddr && currentFault.expansionAddr < 24)
+
+     ackAddr = inFaultIdx==outFaultIdx?0:zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
+
+     if (ackAddr > 0 && ackAddr < 24)
       {
-        ackAddr = currentFault.expansionAddr; // use the expander address 07/08/09/10/11 as the requestor
         vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
         b = addrToBitmask2(ackAddr);
         if (b)
@@ -817,7 +821,7 @@ void IRAM_ATTR Vista::rxHandleISR()
       else if (outbufIdx != inbufIdx || retries)
       {
         ackAddr = retries ? retryAddr : outbuf[outbufIdx].kpaddr; // get pending keypad address
-        if (ackAddr && ackAddr < 24 && outbuf[outbufIdx].count < 5)
+        if (ackAddr > 0 && ackAddr < 24 && outbuf[outbufIdx].count < 5)
         {
           outbuf[outbufIdx].count++;
           vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
