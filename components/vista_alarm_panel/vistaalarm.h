@@ -277,6 +277,7 @@ class vistaECPHome : public time::RealTimeClock
 
       uint8_t *partitions;
       std::string topic_prefix, topic;
+      bool haveSystemFlag=false;
 
       struct zoneType
       {
