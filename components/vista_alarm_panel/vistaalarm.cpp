@@ -216,6 +216,10 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       n.active = true;
       extZones.push_back(n);
       ESP_LOGD(TAG,"added zone %d", z);
+      if (zoneStatusChangeCallback != NULL);
+        zoneStatusChangeCallback(z,"C");
+      if (zoneStatusChangeBinaryCallback != NULL)
+        zoneStatusChangeBinaryCallback(z,false);
       return &extZones.back();
     }
 
@@ -434,18 +438,6 @@ void vistaECPHome::setup()
       statusChangeCallback(sac, true, 1);
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
 
-      if (zoneStatusChangeBinaryCallback != NULL)
-      {
-             char s2;    
-            
-
-        for (int x = 1; x <= maxZones; x++)
-        {
-          yield();
-          zoneStatusChangeBinaryCallback(x, false);
-          zoneStatusChangeCallback(x, "C");
-        }
-      }
       firstRun = true;
 
       vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
@@ -1210,7 +1202,7 @@ void vistaECPHome::update()
             {
               size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
               partitionRequest = vistaCmd.cbuf[13];
-              ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
+              //ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
              // if (m[0] & 1)
              // { // only check for openzones/bypassed when status is not armed
                 reqState = sopenzones;
@@ -1396,7 +1388,7 @@ void vistaECPHome::update()
               // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
             }
               // device check status
-              if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.check)
+            if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.check)
               {
                 if (vistaCmd.cbuf[5] > 0x90)
                   getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1416,7 +1408,7 @@ void vistaECPHome::update()
               }
                 // zone fault status
                 // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-               if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.beeps == 1))
+              if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1))
                 {
                   if (vistaCmd.cbuf[5] > 0x90)
                     getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
