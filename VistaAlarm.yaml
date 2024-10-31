@@ -182,7 +182,7 @@ safe_mode:
 ota:
    password: !secret ota_password
    platform: esphome
-   #on_begin:
+   #on_begin: #disabled due to bug in esphome
           #switch.turn_off: connection_status_switch 
 
 time:
