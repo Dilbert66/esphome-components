@@ -1238,8 +1238,7 @@ void vistaECPHome::update()
         else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
         {
           getPartitionsFromMask();
-          if (vistaCmd.statusFlags.systemFlag)
-            haveSystemFlag=true; //yes, we have a system flag so this panel uses it
+
           for (uint8_t partition = 1; partition <= maxPartitions; partition++)
           {
             if (partitions[partition - 1])
@@ -1261,7 +1260,7 @@ void vistaECPHome::update()
 
               partitionStates[partition - 1].lastbeeps = vistaCmd.statusFlags.beeps;
 
-              if ((!haveSystemFlag || vistaCmd.statusFlags.systemFlag) && strstr(vistaCmd.statusFlags.prompt2, HITSTAR))
+              if ( vistaCmd.statusFlags.systemFlag && strstr(vistaCmd.statusFlags.prompt2, HITSTAR))
                 alarm_keypress_partition("*", partition);
             }
           }
@@ -1325,6 +1324,7 @@ void vistaECPHome::update()
         currentLightState.trouble = false;
         currentLightState.bypass = false;
         currentLightState.chime = false;
+        bool refreshSystemStates=false;
 
         // Publishes ready status
 
@@ -1332,10 +1332,12 @@ void vistaECPHome::update()
         {
           currentSystemState = sdisarmed;
           currentLightState.ready = true;
+          refreshSystemStates=true;
         }
         // armed status lights
         if (vistaCmd.cbuf[0] == 0xf7 && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay))
         {
+          refreshSystemStates=true;
           if (vistaCmd.statusFlags.night)
           {
             currentSystemState = sarmednight;
@@ -1388,8 +1390,9 @@ void vistaECPHome::update()
               // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
             }
               // device check status
-            if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.check)
+            if (vistaCmd.cbuf[0] == 0xf7 &&  vistaCmd.statusFlags.check)
               {
+                refreshSystemStates=true; //we also get system flags when a device has a check flag
                 if (vistaCmd.cbuf[5] > 0x90)
                   getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
                 zoneType *zt = getZone(vistaCmd.statusFlags.zone);
@@ -1456,7 +1459,7 @@ void vistaECPHome::update()
           currentLightState.ac = false;
         }
 
-        if (vistaCmd.statusFlags.lowBattery && (vistaCmd.statusFlags.systemFlag|| !haveSystemFlag))
+        if (vistaCmd.statusFlags.lowBattery )
         {
           currentLightState.bat = true;
           lowBatteryTime = millis();
@@ -1530,7 +1533,7 @@ void vistaECPHome::update()
 
         for (uint8_t partition = 1; partition <= maxPartitions; partition++)
         {
-          if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || !haveSystemFlag))
+          if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || refreshSystemStates))
           {
             // system status message
             forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
@@ -1589,7 +1592,7 @@ void vistaECPHome::update()
             if (currentLightState.ac != previousLightState.ac || forceRefresh)
               statusChangeCallback(sac, currentLightState.ac, partition);
 
-            if (vistaCmd.statusFlags.systemFlag || !haveSystemFlag)
+            if (vistaCmd.statusFlags.systemFlag || refreshSystemStates)
             {
               if (currentLightState.away != previousLightState.away || forceRefresh)
                 statusChangeCallback(sarmedaway, currentLightState.away, partition);
