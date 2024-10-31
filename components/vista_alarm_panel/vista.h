@@ -159,7 +159,7 @@ public:
     bool dataReceived;
     void IRAM_ATTR rxHandleISR(), txHandleISR();
     bool areEqual(char *, char *, uint8_t);
-    bool connected;
+    bool keybusConnected,connected;
     int toDec(int);
     void resetStatus();
     void initSerialHandlers(int, int, int);

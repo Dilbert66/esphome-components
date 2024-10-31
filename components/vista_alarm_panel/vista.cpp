@@ -1405,7 +1405,8 @@ void Vista::stop()
     detachInterrupt(monitorPin);
   }
 #endif
-  connected = false;
+  keybusConnected = false;
+  connected=false;
 }
 
 void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx, bool invertTx, bool invertMon, uint8_t inputRx, uint8_t inputMon)
@@ -1462,5 +1463,6 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     printf("Warning monitor rx pin %d is invalid", monitorPin);
   }
 #endif
-  connected = true;
+  keybusConnected = true; //legacy support
+  connected=true;
 }

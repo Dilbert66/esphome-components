@@ -456,7 +456,7 @@ void vistaECPHome::setup()
         beepsCallback("0", p + 1);
       }
       lrrMsgChangeCallback("ESP Restart");
-      rfMsgChangeCallback("");
+      rfMsgChangeCallback(" ");
 #if defined(ESP32) && defined(USETASK)
       esp_chip_info_t info;
       esp_chip_info(&info);
@@ -1002,7 +1002,7 @@ void vistaECPHome::update()
 #if !defined(ESP32) or !defined(USETASK)
       vista.handle();
       static unsigned long sendWaitTime = millis();
-      while (!firstRun && vista.connected && vista.sendPending() && vista.cmdAvail())
+      while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail())
       {
         vista.handle();
         if (millis() - sendWaitTime > 10)
@@ -1526,7 +1526,7 @@ void vistaECPHome::update()
         if ((chkTime - lowBatteryTime) > TTL)
           currentLightState.bat = false;
 
-        if (!currentLightState.ac || currentLightState.bat)
+        if (!currentLightState.ac || currentLightState.bat || vistaCmd.statusFlags.check )
           currentLightState.trouble = true;
 
         currentLightState.alarm = alarmStatus.state;
