@@ -21,6 +21,8 @@ from esphome.const import (
     CONF_STATE,
     CONF_FROM,
     CONF_TO,
+    CONF_INTERNAL,
+    CONF_DISABLED_BY_DEFAULT
 )
 
 
@@ -83,6 +85,13 @@ async def setup_entity(var, config):
         cg.add(var.set_object_id(config[CONF_ID].id))
     else:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+    cg.add(var.set_disabled_by_default(config[CONF_DISABLED_BY_DEFAULT]))
+    if CONF_INTERNAL in config:
+        cg.add(var.set_internal(config[CONF_INTERNAL]))
+    if CONF_ICON in config:
+        cg.add(var.set_icon(config[CONF_ICON]))
+    if CONF_ENTITY_CATEGORY in config:
+        cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))
 
 async def to_code(config):
     #cg.add_define("USE_TEMPLATE_ALARM_SENSORS")

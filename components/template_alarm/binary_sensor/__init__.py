@@ -30,6 +30,8 @@ from esphome.const import (
     CONF_TRIGGER_ID,
     CONF_MQTT_ID,
     CONF_WEB_SERVER_ID,
+    CONF_INTERNAL,
+    CONF_DISABLED_BY_DEFAULT
 )
 
 CONF_TYPE_ID = "id_code"
@@ -87,6 +89,18 @@ async def setup_entity(var, config):
         cg.add(var.set_object_id(config[CONF_ID].id))
     else:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+    if CONF_ICON in config:
+        cg.add(var.set_icon(config[CONF_ICON]))
+    if CONF_ENTITY_CATEGORY in config:
+        cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))    
+    if CONF_INTERNAL in config:
+        cg.add(var.set_internal(config[CONF_INTERNAL]))
+    if CONF_ICON in config:
+        cg.add(var.set_icon(config[CONF_ICON]))
+    if CONF_ENTITY_CATEGORY in config:
+        cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))
+    cg.add(var.set_disabled_by_default(config[CONF_DISABLED_BY_DEFAULT]))
+
     cg.add(var.set_publish_initial_state(True))
 
 async def to_code(config):
