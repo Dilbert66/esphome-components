@@ -149,5 +149,11 @@ private:
     std::atomic<bool> m_isrOverflow;
     std::atomic<uint32_t> m_isrLastCycle;
     int m_rxCurBit; // 0 - 7: data bits. -1: start bit. 8: stop bit.
-    uint8_t m_rxCurByte = 0;
+    uint8_t m_rxCurByte = 0;    
+    uint32_t microsToTicks(uint32_t micros) {
+        return micros << 1;
+    }
+    uint32_t ticksToMicros(uint32_t ticks) {
+        return ticks >> 1;
+    }
 };

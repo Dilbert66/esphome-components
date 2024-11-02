@@ -25,7 +25,7 @@
 #define BIT_MASK_BYTE2_LOW_BAT 0x40
 #define BIT_MASK_BYTE2_ALARM_ZONE 0x20
 #define BIT_MASK_BYTE2_READY 0x10
-#define BIT_MASK_BYTE2_AC_LOSS 0x08
+#define BIT_MASK_BYTE2_UNKNOWN 0x08
 #define BIT_MASK_BYTE2_SYSTEM_FLAG 0x04
 #define BIT_MASK_BYTE2_CHECK_FLAG 0x02
 #define BIT_MASK_BYTE2_FIRE 0x01
@@ -217,7 +217,7 @@ private:
     bool decodePacket();
     uint8_t getExtBytes();
     volatile bool is2400;
-    void pushCmdQueueItem(uint8_t cmdbufsize = CMDBUFSIZE, uint8_t outbufsize = OUTBUFSIZE);
+    void pushCmdQueueItem();
     bool invertRead;
 
     char IRAM_ATTR addrToBitmask1(char addr)

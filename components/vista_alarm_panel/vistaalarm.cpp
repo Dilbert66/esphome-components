@@ -1324,7 +1324,7 @@ void vistaECPHome::update()
         currentLightState.trouble = false;
         currentLightState.bypass = false;
         currentLightState.chime = false;
-        bool refreshSystemStates=false;
+        bool updateSystemState=false;
 
         // Publishes ready status
 
@@ -1332,12 +1332,12 @@ void vistaECPHome::update()
         {
           currentSystemState = sdisarmed;
           currentLightState.ready = true;
-          refreshSystemStates=true;
+          updateSystemState=true;
         }
         // armed status lights
         if (vistaCmd.cbuf[0] == 0xf7 && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay))
         {
-          refreshSystemStates=true;
+          updateSystemState=true;
           if (vistaCmd.statusFlags.night)
           {
             currentSystemState = sarmednight;
@@ -1392,7 +1392,7 @@ void vistaECPHome::update()
               // device check status
             if (vistaCmd.cbuf[0] == 0xf7 &&  vistaCmd.statusFlags.check)
               {
-                refreshSystemStates=true; //we also get system flags when a device has a check flag
+                updateSystemState=true; //we also get system flags when a device has a check flag
                 if (vistaCmd.cbuf[5] > 0x90)
                   getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
                 zoneType *zt = getZone(vistaCmd.statusFlags.zone);
@@ -1533,7 +1533,7 @@ void vistaECPHome::update()
 
         for (uint8_t partition = 1; partition <= maxPartitions; partition++)
         {
-          if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || refreshSystemStates))
+          if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || updateSystemState))
           {
             // system status message
             forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
@@ -1592,7 +1592,7 @@ void vistaECPHome::update()
             if (currentLightState.ac != previousLightState.ac || forceRefresh)
               statusChangeCallback(sac, currentLightState.ac, partition);
 
-            if (vistaCmd.statusFlags.systemFlag || refreshSystemStates)
+            if (vistaCmd.statusFlags.systemFlag || updateSystemState)
             {
               if (currentLightState.away != previousLightState.away || forceRefresh)
                 statusChangeCallback(sarmedaway, currentLightState.away, partition);

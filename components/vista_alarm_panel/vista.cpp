@@ -185,7 +185,7 @@ void Vista::onDisplay(char cbuf[], int *idx)
   //if (statusFlags.systemFlag)
   //{
     statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
-    statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_AC_LOSS) > 0);
+    //statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_UNKNOWN) > 0);
   //}
   //else
   //{
@@ -251,7 +251,7 @@ bool Vista::cmdAvail()
     return true;
 }
 
-void Vista::pushCmdQueueItem(uint8_t cbufsize, uint8_t outbufsize)
+void Vista::pushCmdQueueItem()
 {
   struct cmdQueueItem q;
   q.statusFlags = statusFlags;
@@ -259,13 +259,13 @@ void Vista::pushCmdQueueItem(uint8_t cbufsize, uint8_t outbufsize)
   q.newExtCmd = newExtCmd;
 
   if (newExtCmd) {
-    for (uint8_t i = 0; i < outbufsize; i++)
+    for (uint8_t i = 0; i < OUTBUFSIZE; i++)
     {
       q.cbuf[i] = extcmd[i];
       yield();
     }
   } else {
-    for (uint8_t i = 0; i < cbufsize; i++)
+    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
     {
       q.cbuf[i] = cbuf[i];
       yield();
@@ -297,7 +297,6 @@ void Vista::onLrr(char cbuf[], int *idx)
   sending = true;
   char type = cbuf[3];
   char lcbuf[12];
-  delayMicroseconds(500);
   int lcbuflen = 0;
 
   // 0x52 means respond with only cycle message
@@ -358,6 +357,7 @@ void Vista::onLrr(char cbuf[], int *idx)
 
   if (lrrSupervisor)
   {
+    delayMicroseconds(500);
     vistaSerial->setBaud(4800);
     for (int x = 0; x < lcbuflen; x++)
     {
@@ -548,8 +548,8 @@ void Vista::onExp(char cbuf[])
     return; // we don't acknowledge if we don't know  //0x80 or 0x81
   }
 
-  delayMicroseconds(500);
   uint32_t chksum = 0;
+  delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   for (int x = 0; x < lcbuflen; x++)
   {
@@ -686,7 +686,6 @@ void Vista::writeChars()
     return;
   }
   sending = true;
-  delayMicroseconds(500);
 
   int tmpIdx = 0;
   // header is the bit mask YYXX-XXXX
@@ -777,6 +776,7 @@ void Vista::writeChars()
       tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);
     tmpOutBuf[1] = sz + 1;
   }
+  delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   vistaSerial->write(tmpOutBuf[0]);
   vistaSerial->write(tmpOutBuf[1]);
@@ -1152,7 +1152,7 @@ bool Vista::handle()
 
     if (x)
     {
-      pushCmdQueueItem(0, OUTBUFSIZE);
+      pushCmdQueueItem();
       return true;
     }
   }
@@ -1183,7 +1183,7 @@ bool Vista::handle()
         retryAddr = 0;
         cbuf[0] = 0x78; // for flagging an expect byte found ok
         cbuf[1] = x;
-        pushCmdQueueItem(CMDBUFSIZE, 0);
+        pushCmdQueueItem();
         return 1; // 1 for logging. 0 for normal
       }
       else
@@ -1241,7 +1241,7 @@ bool Vista::handle()
         onDisplay(cbuf, &gidx);
         newCmd = true; // new valid cmd, process it
       }
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1; // return 1 to log packet
     }
 
@@ -1265,7 +1265,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
 #endif
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1;
     }
     // key ack
@@ -1286,7 +1286,7 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 7);
 
 #endif
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1;
     }
 
@@ -1303,7 +1303,7 @@ bool Vista::handle()
       else
         onAUI(cbuf, &gidx);
       newCmd = true;
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1;
     }
     /*
@@ -1331,7 +1331,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 2);
 #endif
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1;
     }
 
@@ -1349,7 +1349,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
 #endif
-      pushCmdQueueItem(CMDBUFSIZE, 0);
+      pushCmdQueueItem();
       return 1;
     }
 
@@ -1373,7 +1373,7 @@ bool Vista::handle()
       }
       yield();
     }
-    pushCmdQueueItem(CMDBUFSIZE, 0);
+    pushCmdQueueItem();
     return 1;
   }
 
