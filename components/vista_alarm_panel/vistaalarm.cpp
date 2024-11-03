@@ -883,30 +883,35 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
     void vistaECPHome::updateZoneState(zoneType *zt, int p, reqStates r, bool state, unsigned long t)
     {
 
-      ESP_LOGD(TAG, "Setting zone %d=%d, partition %d", zt->zone, state, p);
+
+      zt->time = t;
+      zt->partition = p;
       if (r == sopenzones)
       {
         zt->open = state;
         zoneStatusUpdate(zt);
+      ESP_LOGD(TAG, "Setting open zone %d to %d partition %d", zt->zone, state, p);
       }
+      /*
       else if (r == sbypasszones)
       {
         zt->bypass = state;
+        ESP_LOGD(TAG, "Setting bypass zone %d to %d partition %d", zt->zone, state, p);
         zoneStatusUpdate(zt);
       }
-      zt->time = t;
-      zt->partition = p;
+      */
+
     }
 
     void vistaECPHome::processZoneList(uint8_t partition, reqStates request, char *list)
     {
-      if (!list) {
-        return;
+      std::string s="";
+      if (list) {
+        for (uint8_t x = 0; x < sizeof(list); x++) {
+          list[x] = !list[x] ? ',' : list[x];
+        }
+        s = list;
       }
-      for (uint8_t x = 0; x < sizeof(list); x++) {
-        list[x] = !list[x] ? ',' : list[x];
-      }
-      std::string s = list;
       s.append(",");
 
       ESP_LOGD(TAG, "List=%s", s.c_str());
@@ -950,10 +955,11 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       while (it != extZones.end())
       {
         updateZoneState(&(*it), p, request, false, 0);
+        
         it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
       }
-      forceRefreshZones = true;
+
     }
 
 #if defined(ESP32) && defined(USETASK)
