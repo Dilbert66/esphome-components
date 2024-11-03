@@ -890,16 +890,16 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       {
         zt->open = state;
         zoneStatusUpdate(zt);
-      ESP_LOGD(TAG, "Setting open zone %d to %d partition %d", zt->zone, state, p);
+      ESP_LOGD(TAG, "Setting open zone %d to %d,  partition %d", zt->zone, state, p);
       }
-      /*
+      
       else if (r == sbypasszones)
       {
         zt->bypass = state;
-        ESP_LOGD(TAG, "Setting bypass zone %d to %d partition %d", zt->zone, state, p);
-        zoneStatusUpdate(zt);
+      ESP_LOGD(TAG, "Setting bypass zone %d to %d, partition %d", zt->zone, state, p);
+       // zoneStatusUpdate(zt);
       }
-      */
+      
 
     }
 
