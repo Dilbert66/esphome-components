@@ -339,7 +339,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   int activePartition = 1;
   unsigned long cmdWaitTime;
   bool extendedBufferFlag=false;
-  bool troubleFetch=false;
+  bool troubleFetch=true;//future - might make this a config item
 
 
 

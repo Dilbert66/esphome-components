@@ -595,6 +595,7 @@ void DSCkeybushome::setup()
             *currentSelection = 0;
             dsc.write(s, partition);
           }
+          
         }
         else
         {
@@ -619,6 +620,26 @@ void DSCkeybushome::setup()
           *currentSelection = 0;
           dsc.write(key, partition);
         }
+        setStatus(partition - 1, true);
+      }
+      else if (dsc.status[partition - 1] == 0xBA)
+      { // low battery zones
+        if (key == '>')
+        {
+          *currentSelection = getNextOption(*currentSelection);
+          dsc.write(key, partition);
+        }
+        else if (key == '<')
+        {
+          *currentSelection = getPreviousOption(*currentSelection);
+          dsc.write(key, partition);
+        }
+        else
+        {
+          *currentSelection = 0;
+          dsc.write(key, partition);
+        }
+        setStatus(partition - 1, true);
       }
       else if (dsc.status[partition - 1] == 0xA6)
       { // user codes
@@ -1044,41 +1065,48 @@ void DSCkeybushome::setup()
 
     byte DSCkeybushome::getNextOption(byte start)
     {
-      byte option, optionGroup, s;
-      s = start >= maxZones ? 0 : start;
+      byte option, optionGroup,optionBit;
+      byte s = start >= maxZones ? 0 : start;
       for (optionGroup = 0; optionGroup < dscZones; optionGroup++)
       {
-        for (byte optionBit = 0; optionBit < 8; optionBit++)
+        for (optionBit = 0; optionBit < 8; optionBit++)
         {
           option = optionBit + 1 + (optionGroup * 8);
           if (bitRead(programZones[optionGroup], optionBit) && option > s)
           {
+            //ESP_LOGD("test","returning %d",option);
             return option;
           }
         }
       }
-      return 0;
+      if (start > 0)
+          return getNextOption(0);
+      else
+        return 0;
     }
 
     byte DSCkeybushome::getPreviousOption(byte start)
     {
-      byte s;
-      s = start >= maxZones || start == 0 ? maxZones : start;
-      for (int optionGroup = dscZones - 1; optionGroup >= 0 && optionGroup < dscZones; optionGroup--)
+      byte option, optionGroup,optionBit;
+      byte s = start >  0? start : maxZones;
+
+      for (optionGroup = dscZones - 1; optionGroup >= 0 && optionGroup < dscZones; optionGroup--)
       {
-        for (int optionBit = 7; optionBit >= 0 && optionBit < 8; optionBit--)
+        for (optionBit = 7; optionBit >= 0 && optionBit < 8; optionBit--)
         {
-          byte option = optionBit + 1 + (optionGroup * 8);
-          if (bitRead(programZones[optionGroup], optionBit))
+          option = optionBit + 1 + (optionGroup * 8);
+           if (bitRead(programZones[optionGroup], optionBit) && option < s)
           {
-            if (option < s)
-            {
+             // ESP_LOGD("test","returning %d",option);
               return option;
-            }
+
           }
         }
       }
-      return 0;
+      if (start > 0)
+        return getPreviousOption(0);
+      else
+        return 0;
     }
 
     byte DSCkeybushome::getNextUserCode(byte start)
@@ -1593,19 +1621,20 @@ void DSCkeybushome::update()
           {
             panelStatusChangeCallback(trStatus, true, 0); // Trouble alarm tripped
 
-            if (troubleFetch && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked)
+            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+            
             {
-              // partitionStatus[defaultPartition-1].keyPressTime = millis();
-              // dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+              partitionStatus[defaultPartition-1].keyPressTime = millis();
+              dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
             }
           }
           else
           {
             panelStatusChangeCallback(trStatus, false, 0); // Trouble alarm restored
-            if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
             {
-              // partitionStatus[defaultPartition-1].keyPressTime = millis();
-              // dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+             partitionStatus[defaultPartition-1].keyPressTime = millis();
+             dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
             }
           }
         }
@@ -2502,9 +2531,9 @@ void DSCkeybushome::update()
             char s[50];
             std::string name = getZoneName(*selectedOpenZone);
             if (name != "")
-              snprintf(s, 50, PSTR("%s <>"), name.c_str());
+              snprintf(s, 50, PSTR("%s"), name.c_str());
             else
-              snprintf(s, 50, PSTR("zone %02d  <>"), *selectedOpenZone);
+              snprintf(s, 50, PSTR("zone %02d"), *selectedOpenZone);
             lcdLine2 = s;
           }
         }
@@ -2522,9 +2551,9 @@ void DSCkeybushome::update()
               bypassStatus = 'O';
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s  %c"), name.c_str(), bypassStatus);
+              snprintf(s, 50, PSTR("%s  %c *"), name.c_str(), bypassStatus);
             else
-              snprintf(s, 50, PSTR("%02d  %c"), *currentSelection, bypassStatus);
+              snprintf(s, 50, PSTR("%02d  %c *"), *currentSelection, bypassStatus);
             lcdLine2 = s;
           }
         }
@@ -2537,7 +2566,7 @@ void DSCkeybushome::update()
             char s[50];
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s <>"), name.c_str());
+              snprintf(s, 50, PSTR("%s"), name.c_str());
             else
               snprintf(s, 50, PSTR("zone %02d"), *currentSelection);
             lcdLine2 = s;
@@ -2554,7 +2583,7 @@ void DSCkeybushome::update()
             char s[50];
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s <>"), name.c_str());
+              snprintf(s, 50, PSTR("%s"), name.c_str());
             else
               snprintf(s, 50, PSTR("zone %02d"), *currentSelection);
 
@@ -2564,6 +2593,28 @@ void DSCkeybushome::update()
           {
             lcdLine1 = F("No alarms");
             lcdLine2 = F("in memory");
+          }
+        }
+        else if (dsc.status[partition] == 0xBA)
+        { // low battery zones
+          if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
+            *currentSelection = getNextOption(0);
+
+          if (*currentSelection < maxZones && *currentSelection > 0)
+          {
+            char s[50];
+            std::string name = getZoneName(*currentSelection);
+            if (name != "")
+              snprintf(s, 50, PSTR("%s"), name.c_str());
+            else
+              snprintf(s, 50, PSTR("zone %02d"), *currentSelection);
+
+            lcdLine2 = s;
+          }
+          else
+          {
+            lcdLine1 = F("There are no");
+            lcdLine2 = F("low battery zones");
           }
         }
         else if (dsc.status[partition] == 0x9E)
@@ -2658,7 +2709,9 @@ void DSCkeybushome::update()
       {
       case 0x0F:
       case 0x0A:
+
         processProgramZones(4, 0);
+        //0A: 0A 00 80 BA 00 10 00 00 00 54 00 00 00 00 00 00 (74)
         if (dsc.panelData[3] == 0xBA)
           processLowBatteryZones();
         if (dsc.panelData[3] == 0xA1)
@@ -2826,7 +2879,7 @@ void DSCkeybushome::update()
           setStatus(dsc.pgmBuffer.partition - 1, true);
       }
     }
-
+//0A: 0A 00 80 BA 00 10 00 00 00 54 00 00 00 00 00 00 (74)
     void DSCkeybushome::processLowBatteryZones()
     {
       for (byte panelByte = 4; panelByte < 8; panelByte++)
