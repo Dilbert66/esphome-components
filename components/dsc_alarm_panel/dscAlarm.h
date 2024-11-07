@@ -6,6 +6,7 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
+#include "esphome/core/helpers.h"
 
 #if defined(USE_MQTT)
 #include "esphome/components/mqtt/mqtt_client.h"
@@ -326,9 +327,6 @@ void publishTextState(const std::string & cstr,uint8_t partition,std::string * t
 
 void set_panel_time_manual(int year,int month,int day,int hour,int minute); 
 
-#if defined(USE_MQTT)
-  //void set_mqtt_id(mqtt::MQTTClientComponent *mqtt_id) { mqttId = mqtt_id; }
-#endif  
   void set_accessCode(const char * ac);
   void set_maxZones(int mz); 
   void set_userCodes(const char * uc);

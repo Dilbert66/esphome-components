@@ -1,7 +1,7 @@
 // for project documenation visit https://github.com/Dilbert66/esphome-dsckeybus
 
 #include "dscAlarm.h"
-#include "esphome/core/helpers.h"
+
 
 static const char *const TAG = "dscalarm";
 
@@ -18,8 +18,6 @@ void disconnectKeybus()
 }
 
 #if !defined(ARDUINO_MQTT)
-#include "esphome.h"
-
 namespace esphome
 {
   namespace alarm_panel

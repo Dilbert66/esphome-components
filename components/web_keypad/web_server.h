@@ -1,7 +1,10 @@
 #pragma once
 #include "list_entities.h"
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
+#include "esphome/components/network/ip_address.h"
+#include "esphome/components/json/json_util.h"
 #include "mongoose.h"
 #include <vector>
 #include <Crypto.h>
@@ -296,10 +299,10 @@ class WebServer : public Controller, public Component {
 #endif
 
 
-#if defined(USE_DSC_PANEL) || defined (USE_VISTA_PANEL)
+
 void handle_auth_request(mg_connection *c,JsonObject doc);
 void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
-#endif
+
 
 #ifdef USE_TEXT
   void on_text_update(text::Text *obj, const std::string &state) override;

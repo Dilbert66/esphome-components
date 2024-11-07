@@ -1,12 +1,14 @@
 #pragma once
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
+#include "esphome/components/network/ip_address.h"
+#include "esphome/core/automation.h"
 #include "mongoose.h"
 #include "esphome/components/json/json_util.h"
 #include <vector>
 #include <algorithm>
 #include <queue>
-#include "esphome.h"
 #ifdef USE_ESP32
 #include <deque>
 #include <freertos/FreeRTOS.h>

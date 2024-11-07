@@ -28,7 +28,6 @@
 
 
 #if !defined(ARDUINO_MQTT)
-#include "esphome.h"
 namespace esphome
 {
   namespace alarm_panel
@@ -959,7 +958,8 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
       }
-
+      
+      forceRefreshZones = true;
     }
 
 #if defined(ESP32) && defined(USETASK)

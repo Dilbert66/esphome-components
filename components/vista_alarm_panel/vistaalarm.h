@@ -1,9 +1,12 @@
 #pragma once
 
 #if !defined(ARDUINO_MQTT)
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/components/time/real_time_clock.h"
+#include "esphome/core/helpers.h"
+
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
 #include "esphome/components/mqtt/mqtt_client.h"
@@ -16,7 +19,6 @@
 
 #include "vista.h"
 #include <string>
-//#include <regex>
 #include "paneltext.h"
 #include "Regexp.h"
 
