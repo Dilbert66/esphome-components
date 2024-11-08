@@ -231,7 +231,8 @@ void DSCkeybushome::setup()
         partitionStatus[p].editIdx = 0;
         partitionStatus[p].digits = 0;
         beepsCallback("0", p + 1);
-        partitionMsgChangeCallback(" ", p + 1);
+        partitionMsgChangeCallback("No messages", p + 1);
+        partitionStatusChangeCallback("No messages", p + 1);
         line1DisplayCallback("ESP Module Start", p + 1);
         line2DisplayCallback(" ", p + 1);
       }
@@ -240,9 +241,9 @@ void DSCkeybushome::setup()
 
       system1 = 0;
       system0 = 0;
-      troubleMsgStatusCallback(" ");
+      troubleMsgStatusCallback("No messages");
       eventInfoCallback("ESP module start");
-      zoneMsgStatusCallback(" ");
+      zoneMsgStatusCallback("No messages");
     }
 
     std::string DSCkeybushome::getUserName(char *code)
