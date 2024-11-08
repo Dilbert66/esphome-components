@@ -123,6 +123,7 @@ namespace esphome
     void DSCkeybushome::set_defaultPartition(uint8_t dp) { defaultPartition = dp; }
     void DSCkeybushome::set_debug(uint8_t db) { debug = db; }
     void DSCkeybushome::set_trouble_fetch(bool fetch) { troubleFetch=fetch;}
+    void DSCkeybushome::set_trouble_fetch_cmd(const char * cmd) { fetchCmd=cmd;}
     void DSCkeybushome::set_expanderAddr(uint8_t idx, uint8_t addr)
     {
       if (idx == 1)
@@ -1483,7 +1484,7 @@ void DSCkeybushome::update()
           
         {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
-          dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+          dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
         }
             /*
         if (debug > 1)   {
@@ -1513,7 +1514,7 @@ void DSCkeybushome::update()
           if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && !dsc.armed[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].inprogram && troubleFetch)
           {
             partitionStatus[defaultPartition - 1].keyPressTime = millis();
-            dsc.write("*21#7##", defaultPartition); // fetch panel troubles /zone module low battery
+            dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
           }
         }
 
@@ -1633,24 +1634,23 @@ void DSCkeybushome::update()
           {
             panelStatusChangeCallback(trStatus, true, 0); // Trouble alarm tripped
 
-       /*     if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
             
             {
               partitionStatus[defaultPartition-1].keyPressTime = millis();
-              dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+              dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
             }
-            */
+            
           }
           else
           {
             panelStatusChangeCallback(trStatus, false, 0); // Trouble alarm restored
-         /*  if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+           if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
             {
              partitionStatus[defaultPartition-1].keyPressTime = millis();
-             dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
-             //setStatus(defaultPartition - 1, true);
+             dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
             }
-            */
+            
           }
         }
 

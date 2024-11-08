@@ -32,6 +32,7 @@ CONF_AUTOPOPULATE="autopopulate"
 CONF_DETAILEDPARTITIONSTATE="detailed_partition_state"
 CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
+CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 
 #CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
@@ -95,6 +96,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
     cv.Optional(CONF_REFRESHTIME):cv.int_,
+    cv.Optional(CONF_TROUBLEFETCHCMD):cv.string,
     cv.Optional(CONF_TROUBLEFETCH):cv.boolean,
     cv.Optional(CONF_DEBOUNCE,default='false'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
@@ -135,6 +137,8 @@ async def to_code(config):
     if CONF_REFRESHTIME in config:
         cg.add(var.set_refresh_time(config[CONF_REFRESHTIME]));
     if CONF_TROUBLEFETCH in config:
+        cg.add(var.set_trouble_fetch_cmd(config[CONF_TROUBLEFETCHCMD]));
+    if CONF_TROUBLEFETCHCMD in config:
         cg.add(var.set_trouble_fetch(config[CONF_TROUBLEFETCH]));
     if CONF_USERCODES in config:
         cg.add(var.set_userCodes(config[CONF_USERCODES]));

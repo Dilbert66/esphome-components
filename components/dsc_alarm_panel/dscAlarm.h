@@ -335,21 +335,25 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   void set_expanderAddr(uint8_t idx,uint8_t addr);
   void set_refresh_time(uint8_t  rt);
   void set_trouble_fetch(bool fetch);
+  void set_trouble_fetch_cmd(const char * cmd);
 
-  bool troubleFetch=true;
+
+
+  
+
+
+  private: 
 
   int activePartition = 1;
   unsigned long cmdWaitTime;
   bool extendedBufferFlag=false;
  
-
-
-
-  private: 
-  uint32_t refreshTimeSetting=120000;
+  uint32_t refreshTimeSetting=0;
+  bool troubleFetch=true;
   byte debug;
   const char * laststatus;
   const char * accessCode;
+  const char * fetchCmd="*21#7#";
   const char * userCodes;
   byte maxZones = maxZonesDefault; 
   int defaultPartition = 1;
