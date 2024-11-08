@@ -42,27 +42,27 @@ namespace esphome
       publishBinaryState(sensor,partition,open);
     }
 
-    void DSCkeybushome::publishBinaryState(const std::string &cstr, uint8_t partition, bool open)
+    void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t partition, bool open)
     {
-     std::string c=cstr;
+     std::string id=idstr;
       if (partition) {
-        c +=std::to_string(partition);
+        id +=std::to_string(partition);
       }
-         auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor* bs)
-                        { return bs->get_object_id() == c; });
+         auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor* bs)
+                        { return bs->get_object_id() == id; });
                              
       if (it != bMap.end() && (*it)->state != open)
         (*it)->publish_state(open);
     }
 
-    void DSCkeybushome::publishTextState(const std::string &cstr, uint8_t partition, std::string *text)
+    void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t partition, std::string *text)
     {
-     std::string c=cstr;
+     std::string id=idstr;
      if (partition) {
-        c +=std::to_string(partition);
+        id +=std::to_string(partition);
      } 
-     auto it = std::find_if(tMap.begin(), tMap.end(), [c](text_sensor::TextSensor* ts)
-                         { return ts->get_object_id() == c; });
+     auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor* ts)
+                         { return ts->get_object_id() == id; });
       if (it != tMap.end() && (*it)->state != *text)
         (*it)->publish_state(*text);
     }
@@ -122,6 +122,7 @@ namespace esphome
     void DSCkeybushome::set_userCodes(const char *uc) { userCodes = uc; }
     void DSCkeybushome::set_defaultPartition(uint8_t dp) { defaultPartition = dp; }
     void DSCkeybushome::set_debug(uint8_t db) { debug = db; }
+    void DSCkeybushome::set_trouble_fetch(bool fetch) { troubleFetch=fetch;}
     void DSCkeybushome::set_expanderAddr(uint8_t idx, uint8_t addr)
     {
       if (idx == 1)
@@ -129,7 +130,12 @@ namespace esphome
       else if (idx == 2)
         expanderAddr2 = addr;
     }
-
+    void DSCkeybushome::set_refresh_time(uint8_t rt) {
+        if (rt >= 30 )
+          refreshTimeSetting=rt * 1000; //convert seconds to ms
+        if (rt ==0) troubleFetch=false;
+    }
+    
     DSCkeybushome::zoneType *DSCkeybushome::createZone(byte z)
     {
 
@@ -225,18 +231,18 @@ void DSCkeybushome::setup()
         partitionStatus[p].editIdx = 0;
         partitionStatus[p].digits = 0;
         beepsCallback("0", p + 1);
-        partitionMsgChangeCallback("", p + 1);
+        partitionMsgChangeCallback(" ", p + 1);
         line1DisplayCallback("ESP Module Start", p + 1);
-        line2DisplayCallback("", p + 1);
+        line2DisplayCallback(" ", p + 1);
       }
       for (int x = 0; x < dscZones; x++)
         programZones[x] = 0;
 
       system1 = 0;
       system0 = 0;
-      troubleMsgStatusCallback("");
+      troubleMsgStatusCallback(" ");
       eventInfoCallback("ESP module start");
-      zoneMsgStatusCallback("");
+      zoneMsgStatusCallback(" ");
     }
 
     std::string DSCkeybushome::getUserName(char *code)
@@ -1468,20 +1474,27 @@ void DSCkeybushome::update()
         eventTime = millis();
       }
       */
-      /*
+      
       static unsigned long refreshTime;
-      if (!firstrun && millis() - refreshTime > 60000 ) {
-                refreshTime=millis();
-              //  forceRefresh=true;
+      if (!firstrun && millis() - refreshTime > refreshTimeSetting && refreshTimeSetting > 0) {
+        refreshTime=millis();
+        if (!partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+          
+        {
+          partitionStatus[defaultPartition-1].keyPressTime = millis();
+          dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+        }
+            /*
         if (debug > 1)   {
   #ifdef ESP32
           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
           ESP_LOGD(TAG,"Free memory: %5d,freeheap: %5d,minheap: %5d,maxfree:%5d\n", (uint16_t) uxHighWaterMark,esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));
   #endif
         }
+        */
 
       }
-  */
+  
 
       if ((dsc.loop() || forceRefresh) && dsc.panelData[0])
       { // Processes data only when a valid Keybus command has been read
@@ -1496,7 +1509,7 @@ void DSCkeybushome::update()
         else if (delayedStart == 2 && millis() - startWait > 60000)
         {
           delayedStart++;
-          if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && !dsc.armed[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].inprogram)
+          if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && !dsc.armed[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].inprogram && troubleFetch)
           {
             partitionStatus[defaultPartition - 1].keyPressTime = millis();
             dsc.write("*21#7##", defaultPartition); // fetch panel troubles /zone module low battery
@@ -1619,21 +1632,24 @@ void DSCkeybushome::update()
           {
             panelStatusChangeCallback(trStatus, true, 0); // Trouble alarm tripped
 
-            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+       /*     if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
             
             {
               partitionStatus[defaultPartition-1].keyPressTime = millis();
               dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
             }
+            */
           }
           else
           {
             panelStatusChangeCallback(trStatus, false, 0); // Trouble alarm restored
-            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+         /*  if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
             {
              partitionStatus[defaultPartition-1].keyPressTime = millis();
              dsc.write("*21#7##", defaultPartition); //fetch panel troubles /zone module low battery
+             //setStatus(defaultPartition - 1, true);
             }
+            */
           }
         }
 
@@ -2549,9 +2565,9 @@ void DSCkeybushome::update()
               bypassStatus = 'O';
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s  %c *"), name.c_str(), bypassStatus);
+              snprintf(s, 50, PSTR("%s  %c"), name.c_str(), bypassStatus);
             else
-              snprintf(s, 50, PSTR("%02d  %c *"), *currentSelection, bypassStatus);
+              snprintf(s, 50, PSTR("%02d  %c"), *currentSelection, bypassStatus);
             lcdLine2 = s;
           }
         }

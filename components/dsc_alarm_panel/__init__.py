@@ -30,6 +30,8 @@ CONF_DEBOUNCE="debounce"
 CONF_CLEAN="clean_build"
 CONF_AUTOPOPULATE="autopopulate"
 CONF_DETAILEDPARTITIONSTATE="detailed_partition_state"
+CONF_REFRESHTIME="trouble_fetch_update_time"
+CONF_TROUBLEFETCH="trouble_fetch"
 
 #CONF_MQTT_PARENT_ID="mqtt_parent_id"
 
@@ -92,6 +94,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
+    cv.Optional(CONF_REFRESHTIME):cv.int_,
+    cv.Optional(CONF_TROUBLEFETCH):cv.boolean,
     cv.Optional(CONF_DEBOUNCE,default='false'): cv.boolean,      
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
@@ -128,6 +132,10 @@ async def to_code(config):
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
     if CONF_MAXZONES in config:
         cg.add(var.set_maxZones(config[CONF_MAXZONES]));
+    if CONF_REFRESHTIME in config:
+        cg.add(var.set_refresh_time(config[CONF_REFRESHTIME]));
+    if CONF_TROUBLEFETCH in config:
+        cg.add(var.set_trouble_fetch(config[CONF_TROUBLEFETCH]));
     if CONF_USERCODES in config:
         cg.add(var.set_userCodes(config[CONF_USERCODES]));
     if CONF_DEFAULTPARTITION in config:

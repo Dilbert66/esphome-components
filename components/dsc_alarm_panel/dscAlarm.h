@@ -333,16 +333,20 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   void set_defaultPartition(uint8_t dp);
   void set_debug(uint8_t db);
   void set_expanderAddr(uint8_t idx,uint8_t addr);
+  void set_refresh_time(uint8_t  rt);
+  void set_trouble_fetch(bool fetch);
+
+  bool troubleFetch=true;
 
   int activePartition = 1;
   unsigned long cmdWaitTime;
   bool extendedBufferFlag=false;
-  bool troubleFetch=true;//future - might make this a config item
+ 
 
 
 
   private: 
-  
+  uint32_t refreshTimeSetting=120000;
   byte debug;
   const char * laststatus;
   const char * accessCode;
