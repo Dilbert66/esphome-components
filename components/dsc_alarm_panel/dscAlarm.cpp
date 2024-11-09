@@ -866,7 +866,7 @@ void DSCkeybushome::setup()
 
     void DSCkeybushome::set_alarm_state(std::string state, std::string code, int partition)
     {
-
+      
       if (code.length() != 4 || !isInt(code, 10))
         code = ""; // ensure we get a numeric 4 digit code
       // const char * alarmCode = strcpy(new char[code.length() + 1], code.c_str());
@@ -1478,7 +1478,7 @@ void DSCkeybushome::update()
       */
       
       static unsigned long refreshTime;
-      if (!firstrun && millis() - refreshTime > refreshTimeSetting && refreshTimeSetting > 0) {
+      if (!firstrun &&  refreshTimeSetting > 0 && millis() - refreshTime > refreshTimeSetting ) {
         refreshTime=millis();
         if (!partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
           

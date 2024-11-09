@@ -338,10 +338,6 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   void set_trouble_fetch_cmd(const char * cmd);
 
 
-
-  
-
-
   private: 
 
   int activePartition = 1;
