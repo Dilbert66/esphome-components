@@ -137,9 +137,9 @@ async def to_code(config):
     if CONF_REFRESHTIME in config:
         cg.add(var.set_refresh_time(config[CONF_REFRESHTIME]));
     if CONF_TROUBLEFETCH in config:
-        cg.add(var.set_trouble_fetch_cmd(config[CONF_TROUBLEFETCHCMD]));
-    if CONF_TROUBLEFETCHCMD in config:
         cg.add(var.set_trouble_fetch(config[CONF_TROUBLEFETCH]));
+    if CONF_TROUBLEFETCHCMD in config:
+        cg.add(var.set_trouble_fetch_cmd(config[CONF_TROUBLEFETCHCMD]));
     if CONF_USERCODES in config:
         cg.add(var.set_userCodes(config[CONF_USERCODES]));
     if CONF_DEFAULTPARTITION in config:
