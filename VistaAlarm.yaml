@@ -77,6 +77,10 @@ vista_alarm_panel:
   ttl: "30000"  # time  to live  in ms for zone/fire status before expiring; 
   quickarm: "false"
   lrrsupervisor: "false" # set to true if we don't have an LRR monitoring supervisor  we can emulate one to get the statuses
+
+  #enable use of second esp32 core of async polling of panel data. default: true
+  # set to false if you get watchdog errors
+  use_async_polling: true
   
   clean_build: "false" #default is false.  only set to true if getting duplication errors in linking step. Once you compile, reset it back to false.  
   

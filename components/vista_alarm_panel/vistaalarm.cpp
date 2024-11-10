@@ -95,26 +95,26 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
          };
       publishBinaryState(sensor,partition,open);
 }
-    void vistaECPHome::publishBinaryState(const std::string &cstr, uint8_t partition, bool open)
+    void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t partition, bool open)
     {
-     std::string c=cstr;
+     std::string id=idstr;
       if (partition)
-        c +=std::to_string(partition);
+        id +=std::to_string(partition);
 
-         auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor* bs)
-                        { return bs->get_object_id() == c; });
+         auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor* bs)
+                        { return bs->get_object_id() == id; });
                              
       if (it != bMap.end() && (*it)->state != open)
         (*it)->publish_state(open);
     }
 
-    void vistaECPHome::publishTextState(const std::string &cstr, uint8_t partition, std::string *text)
+    void vistaECPHome::publishTextState(const std::string &idstr, uint8_t partition, std::string *text)
     {
-     std::string c=cstr;
+     std::string id=idstr;
       if (partition)
-        c +=std::to_string(partition);
-      auto it = std::find_if(tMap.begin(), tMap.end(), [c](text_sensor::TextSensor* ts)
-                         { return ts->get_object_id() == c; });
+        id +=std::to_string(partition);
+      auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor* ts)
+                         { return ts->get_object_id() == id; });
       if (it != tMap.end() && (*it)->state != *text)
         (*it)->publish_state(*text);
     }

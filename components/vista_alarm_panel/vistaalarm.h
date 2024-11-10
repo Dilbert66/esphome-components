@@ -4,8 +4,8 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
-#include "esphome/components/time/real_time_clock.h"
 #include "esphome/core/helpers.h"
+#include "esphome/components/time/real_time_clock.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -30,7 +30,7 @@
 #define DEFAULTPARTITION 1
 
 #define ASYNC_CORE 1
-#define USETASK
+//#define USETASK
 
 // default pins to use for serial comms to the panel
 // The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.

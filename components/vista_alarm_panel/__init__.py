@@ -50,6 +50,7 @@ CONF_INVERT_MON="invert_mon"
 CONF_INPUT_MON="input_mode_mon"
 CONF_INPUT_RX="input_mode_rx"
 CONF_AUTOPOPULATE="autopopulate"
+CONF_USEASYNC="use_async_polling"
 
 
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
@@ -122,7 +123,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_FIRE): cv.string  ,  
     cv.Optional(CONF_CHECK): cv.string  ,
     cv.Optional(CONF_TRBL): cv.string  ,   
-    cv.Optional(CONF_HITSTAR): cv.string  ,  
+    cv.Optional(CONF_HITSTAR): cv.string  ,
+    cv.Optional(CONF_USEASYNC,default= 'true'): cv.boolean,
     cv.Optional(CONF_INVERT_RX, default='true'): cv.boolean, 
     cv.Optional(CONF_INVERT_TX, default='true'): cv.boolean,   
     cv.Optional(CONF_INVERT_MON, default='true'): cv.boolean,  
@@ -153,7 +155,8 @@ async def to_code(config):
     
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")
-
+    if  config[CONF_USEASYNC]:
+        cg.add_define("USETASK")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
     
     if CONF_ACCESSCODE in config:
@@ -207,7 +210,8 @@ async def to_code(config):
     if CONF_TRBL in config:
         cg.add(var.set_text(6,config[CONF_TRBL]));  
     if CONF_HITSTAR in config:
-        cg.add(var.set_text(7,config[CONF_HITSTAR]));         
+        cg.add(var.set_text(7,config[CONF_HITSTAR]));  
+
         
     cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))   
     cg.add(var.onLine1DisplayChange(cg.RawExpression(line1))) 
