@@ -344,7 +344,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   unsigned long cmdWaitTime;
   bool extendedBufferFlag=false;
  
-  uint32_t refreshTimeSetting=0;
+  uint32_t refreshTimeSetting=5 * 60 * 1000; // milliseconds - 5 minutes
   bool troubleFetch=true;
   byte debug;
   const char * laststatus;

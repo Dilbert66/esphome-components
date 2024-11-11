@@ -1480,11 +1480,12 @@ void DSCkeybushome::update()
       static unsigned long refreshTime;
       if (!firstrun &&  refreshTimeSetting > 0 && millis() - refreshTime > refreshTimeSetting ) {
         refreshTime=millis();
-        if (!partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+        if (dsc.trouble && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
           
         {
           partitionStatus[defaultPartition-1].keyPressTime = millis();
-          dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
+          ESP_LOGD(TAG,"Periodic trouble flag fetch...");
+          dsc.write("*2##", defaultPartition); //fetch panel troubles /zone module low battery
         }
             /*
         if (debug > 1)   {
@@ -1633,25 +1634,20 @@ void DSCkeybushome::update()
           if (dsc.trouble)
           {
             panelStatusChangeCallback(trStatus, true, 0); // Trouble alarm tripped
-
-            if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
-            
-            {
-              partitionStatus[defaultPartition-1].keyPressTime = millis();
-              dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
-            }
-            
           }
           else
           {
             panelStatusChangeCallback(trStatus, false, 0); // Trouble alarm restored
-           if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
-            {
-             partitionStatus[defaultPartition-1].keyPressTime = millis();
-             dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
-            }
-            
+
           }
+          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram &&  !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+          {
+             partitionStatus[defaultPartition-1].keyPressTime = millis();
+             ESP_LOGD(TAG,"Fetching troubles..");
+             dsc.write(fetchCmd, defaultPartition); //fetch panel troubles /zone module low battery
+          }
+            
+          
         }
 
         // Publishes status per partition

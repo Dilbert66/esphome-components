@@ -78,7 +78,7 @@ vista_alarm_panel:
   quickarm: "false"
   lrrsupervisor: "false" # set to true if we don't have an LRR monitoring supervisor  we can emulate one to get the statuses
 
-  #enable use of second esp32 core of async polling of panel data. default: true
+  #enable use of second esp32 core for async polling of panel data. default: true
   # set to false if you get watchdog errors
   use_async_polling: true
   

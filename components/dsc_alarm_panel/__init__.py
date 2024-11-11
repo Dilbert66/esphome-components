@@ -34,8 +34,6 @@ CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 
-#CONF_MQTT_PARENT_ID="mqtt_parent_id"
-
 
 systemstatus= '''[&](std::string statusCode) {
       alarm_panel::alarmPanelPtr->publishTextState("ss",0,&statusCode); 
@@ -116,7 +114,6 @@ async def to_code(config):
               CORE.relative_build_path("src/risc_fix.h"),
           )
 
-    #cg.add_define("USE_CUSTOM_ID")      
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")
