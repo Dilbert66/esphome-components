@@ -951,9 +951,9 @@ void DSCkeybushome::setup()
         s = s.append(s1);
       }
 #if defined(ARDUINO_MQTT)
-      Serial.printf("%s: %s(%d)\n", label, s.c_str(),dsc.panelBitCount);
+      Serial.printf("%s: %02X: %s(%d)\n", label,cmd, s.c_str(),dsc.panelBitCount);
 #else
-  ESP_LOGI(label, "%s %s(%d)", s2, s.c_str(),dsc.panelBitCount);
+  ESP_LOGI(label, "%s %02X: %s(%d)", s2,cmd, s.c_str(),dsc.panelBitCount);
 #endif
 
     }
