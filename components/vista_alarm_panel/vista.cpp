@@ -90,7 +90,11 @@ void Vista::readChars(int ct, char buf[], int *idx)
       buf[idxval++] = c;
       x++;
     }
+#ifdef ESP32
+ taskYIELD();
+#else
     yield();
+#endif
   }
   *idx = idxval;
 }
@@ -262,13 +266,21 @@ void Vista::pushCmdQueueItem()
     for (uint8_t i = 0; i < OUTBUFSIZE; i++)
     {
       q.cbuf[i] = extcmd[i];
-      yield();
+#ifdef ESP32
+ taskYIELD();
+#else
+    yield();
+#endif
     }
   } else {
     for (uint8_t i = 0; i < CMDBUFSIZE; i++)
     {
       q.cbuf[i] = cbuf[i];
-      yield();
+#ifdef ESP32
+ taskYIELD();
+#else
+    yield();
+#endif
     }
   }
   cmdQueue[incmdIdx] = q;
@@ -768,7 +780,11 @@ void Vista::writeChars()
               }
       }
       tmpOutBuf[tmpIdx++] = c;
-      yield();
+#ifdef ESP32
+ taskYIELD();
+#else
+    yield();
+#endif
     }
     if (kt.seq)
       tmpOutBuf[0] = kt.seq;
@@ -884,7 +900,11 @@ bool Vista::validChksum(char cbuf[], int start, int len)
   for (uint8_t x = start; x < len; x++)
   {
     chksum += cbuf[x];
+#ifdef ESP32
+ taskYIELD();
+#else
     yield();
+#endif
   }
   if (chksum % 256 == 0)
     return true;
@@ -1102,7 +1122,11 @@ bool Vista::decodePacket()
   {
     extcmd[2 + i] = extbuf[i]; // populate  buffer 0=cmd, 1=device, rest is tx data
     //  Serial.printf("extcmd %02x\r\n",extcmd[2+i]);
+#ifdef ESP32
+ taskYIELD();
+#else
     yield();
+#endif
   }
   newExtCmd = true;
   return 1;
@@ -1123,7 +1147,11 @@ uint8_t Vista::getExtBytes()
     if (extidx < OUTBUFSIZE)
       extbuf[extidx++] = x;
     markPulse = 0; // reset pulse flag to wait for next inter msg gap
+#ifdef ESP32
+ taskYIELD();
+#else
     yield();
+#endif
   }
 
   if (extidx > 0 && markPulse)
@@ -1371,7 +1399,11 @@ bool Vista::handle()
         cbuf[gidx++] = x;
         i++;
       }
-      yield();
+#ifdef ESP32
+ taskYIELD();
+#else
+    yield();
+#endif
     }
     pushCmdQueueItem();
     return 1;
