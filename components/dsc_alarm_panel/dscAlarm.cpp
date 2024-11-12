@@ -132,7 +132,7 @@ namespace esphome
         expanderAddr2 = addr;
     }
     void DSCkeybushome::set_refresh_time(uint8_t rt) {
-        if (rt >= 30 )
+        if (rt >= 60 )
           refreshTimeSetting=rt * 1000; //convert seconds to ms
         if (rt ==0) troubleFetch=false;
     }
@@ -935,23 +935,27 @@ void DSCkeybushome::setup()
 
     void DSCkeybushome::printPacket(const char *label, char cmd, volatile byte cbuf[], int len)
     {
+
       char s1[4];
-      char s[70];
-      int x = 0;
+
+      std::string s = "";
+
+#if !defined(ARDUINO_MQTT)
+      char s2[25];
+      ESPTime rtc = now();
+      sprintf(s2, "%02d-%02d-%02d %02d:%02d ", rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
+#endif
       for (int c = 0; c < len; c++)
       {
-        sprintf(s1, PSTR("%02X "), cbuf[c]);
-        memcpy(&s[x], s1, 3);
-        x += 3;
+        sprintf(s1, "%02X ", cbuf[c]);
+        s = s.append(s1);
       }
-      s[x] = 0;
-#if !defined(ARDUINO_MQTT)
-      if (debug > 0)
-        ESP_LOGI(label, "%02X: %s (%d)", cmd, s, dsc.panelBitCount);
+#if defined(ARDUINO_MQTT)
+      Serial.printf("%s: %s(%d)\n", label, s.c_str(),dsc.panelBitCount);
 #else
-  if (debug > 0)
-    Serial.printf("%s: %02X: %s\n", label, cmd, s);
+  ESP_LOGI(label, "%s %s(%d)", s2, s.c_str(),dsc.panelBitCount);
 #endif
+
     }
 
     byte DSCkeybushome::getPanelBitNumber(byte panelByte, byte startNumber)
@@ -1521,7 +1525,7 @@ void DSCkeybushome::update()
 
         bool valid05 = check051bCmd();
         if (debug > 1)
-          printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
+          printPacket("Paneldata ", dsc.panelData[0], dsc.panelData, 16);
         if (!valid05)
           return;
 #ifdef SERIALDEBUGCOMMANDS
