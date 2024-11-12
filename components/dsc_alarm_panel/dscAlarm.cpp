@@ -943,7 +943,7 @@ void DSCkeybushome::setup()
 #if !defined(ARDUINO_MQTT)
       char s2[25];
       ESPTime rtc = now();
-      sprintf(s2, "%02d-%02d-%02d %02d:%02d ", rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
+      sprintf(s2, "[%02d-%02d-%02d %02d:%02d]", rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
 #endif
       for (int c = 0; c < len; c++)
       {
@@ -1525,7 +1525,7 @@ void DSCkeybushome::update()
 
         bool valid05 = check051bCmd();
         if (debug > 1)
-          printPacket("Paneldata ", dsc.panelData[0], dsc.panelData, 16);
+          printPacket("Panel ", dsc.panelData[0], dsc.panelData, 16);
         if (!valid05)
           return;
 #ifdef SERIALDEBUGCOMMANDS
@@ -1992,7 +1992,7 @@ void DSCkeybushome::update()
         }
 
         if (debug > 1)
-          printPacket("Moduledata", dsc.moduleCmd, dsc.moduleData, 16);
+          printPacket("Module", dsc.moduleCmd, dsc.moduleData, 16);
 
 #ifdef DEBUGCOMMANDS
         if (debug > 2)
