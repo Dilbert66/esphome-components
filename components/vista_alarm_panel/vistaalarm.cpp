@@ -629,6 +629,34 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       return true;
     }
 
+    void vistaECPHome::updateDisplayLines(uint8_t partition) {
+
+      uint8_t pos=vistaCmd.statusFlags.promptPos;
+      std::string p1=vistaCmd.statusFlags.prompt1;
+      std::string p2=vistaCmd.statusFlags.prompt2;
+      if (pos>0) {
+        char buf[10];
+        std::string sub1,sub2;
+        if (pos>15) {
+          sub1=p2.substr(0,pos-16);
+          if (pos<31)
+            sub2=p2.substr(pos-15);
+         sprintf(buf,"[%c]",p2[pos-16]);
+          p2=sub1 + std::string(buf) + sub2;
+       } else {
+          sub1=p1.substr(0,pos);
+          if (pos<15)
+            sub2=p1.substr(pos+1);
+          sprintf(buf,"[%c]",p2[pos]);
+          p1=sub1 + std::string(buf) + sub2;
+       }
+      }     
+      line1DisplayCallback(p1.c_str(), partition);
+      line2DisplayCallback(p2.c_str(), partition);
+    }
+
+
+
     std::string vistaECPHome::getNameFromPrompt(char *p1, char *p2)
     {
       if (vistaCmd.cbuf[0] != 0xf7) {
@@ -1257,8 +1285,7 @@ void vistaECPHome::update()
           ESP_LOGI(TAG, "Partition: %02X", partition);
 #endif
 
-              line1DisplayCallback(vistaCmd.statusFlags.prompt1, partition);
-              line2DisplayCallback(vistaCmd.statusFlags.prompt2, partition);
+              updateDisplayLines(partition);
               if (partitionStates[partition - 1].lastbeeps != vistaCmd.statusFlags.beeps || forceRefresh)
               {
                 beepsCallback(std::to_string(vistaCmd.statusFlags.beeps), partition);

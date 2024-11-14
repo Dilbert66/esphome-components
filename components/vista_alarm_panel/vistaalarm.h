@@ -493,7 +493,8 @@ class vistaECPHome : public time::RealTimeClock
 
         //  std::string getF7Lookup(char cbuf[]) ;
 
-
+      void updateDisplayLines(uint8_t partition);
+            
       public:
         void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
 

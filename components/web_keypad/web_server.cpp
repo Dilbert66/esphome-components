@@ -258,8 +258,8 @@ const std::string WebServer::escape_json(const char * input) {
     {
         
         switch (input[i]) {
-            case 27 : 
-                    output+="\x27";
+            case 0x1b : 
+                    output+="\x1b";
                     break;
             case '"':
                 output += "\\\"";
