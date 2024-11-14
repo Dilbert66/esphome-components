@@ -363,12 +363,13 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       if (hour > 12)
         hour -= 12;
       char cmd[30];
-      sprintf(cmd, "%s#63*%02d%02d%1d%02d%02d%02d*", accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
+      sprintf(cmd, "%s#63*|%02d%02d%1d%02d%02d%02d*", accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
 #if not defined(ARDUINO_MQTT)
       ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
       int addr = partitionKeypads[defaultPartition];
       vista.write(cmd, addr);
+      
 #endif
     }
 
@@ -380,7 +381,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       if (hour > 12)
         hour -= 12;
       char cmd[30];
-      sprintf(cmd, "%s#63*%02d%02d%1d%02d%02d%02d*", accessCode, hour, minute, ampm, year % 100, month, day);
+      sprintf(cmd, "%s#63*|%02d%02d%1d%02d%02d%02d*", accessCode, hour, minute, ampm, year % 100, month, day);
 #if defined(ARDUINO_MQTT)
       Serial.printf("Setting panel time...\n");
 #else

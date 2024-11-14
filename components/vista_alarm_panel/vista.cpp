@@ -568,7 +568,7 @@ void Vista::onExp(char cbuf[])
 void Vista::write(const char key, uint8_t addr)
 {
 
-  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
+  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || key=='|' || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
   {
     keyType kt;
     kt.key = key;
@@ -718,8 +718,11 @@ void Vista::writeChars()
         break;
       if (!(lastseq == 0 || lastseq == outbuf[outbufIdx].seq))
         break;
+
       kt = getChar();
       c = kt.key;
+      if (c=='|') //break sequence and send the previous immediately
+        break;
       lastkpaddr = kt.kpaddr;
       lastseq = kt.seq;
       retryAddr = kt.kpaddr;
