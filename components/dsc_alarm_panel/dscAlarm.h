@@ -349,7 +349,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   byte debug;
   const char * laststatus;
   const char * accessCode;
-  const char * fetchCmd="*21#7#";
+  const char * fetchCmd="*21#7##";
   const char * userCodes;
   byte maxZones = maxZonesDefault; 
   int defaultPartition = 1;
