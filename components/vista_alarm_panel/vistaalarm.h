@@ -97,7 +97,8 @@ extern Vista  vista;
       sdevicelist,
       spartitionlist,
       spartitionid,
-      sicode
+      sicode,
+      sdate
 
     };
 
@@ -266,8 +267,13 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputRx = 0;
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
-
-
+      bool activeAuiAddr=false;
+      bool sendAuiTime();
+      bool sendAuiTime(int year, int month, int day, int hour, int minute);
+      char auiSeq=8;
+      int8_t dateReqStatus=0;
+      reqStates reqState=sidle;
+      
       const char *accessCode;
       const char *rfSerialLookup;
       bool quickArm;
@@ -376,12 +382,11 @@ class vistaECPHome : public time::RealTimeClock
         bool refreshLights;
       };
 
-      void updateZoneState(zoneType *zt, int p, reqStates r, bool state, unsigned long t);
-      char *parseAUIMessage(char *cmd, reqStates request);
-      void processZoneList(uint8_t partition, reqStates request, char *list);
-      void sendZoneRequest(uint8_t partition, reqStates request);
+      void updateZoneState(zoneType *zt, int p,  bool state, unsigned long t);
+      char *parseAUIMessage(char *cmd);
+      void processZoneList(uint8_t partition, char *list);
+      void sendZoneRequest(uint8_t partition);
       void loadZones();
-
 
     public:
       partitionStateType *partitionStates;

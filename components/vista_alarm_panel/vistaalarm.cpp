@@ -34,7 +34,7 @@ namespace esphome
   {
 
     Vista  vista;
-    const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
+   // const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
 
     static const char *const TAG = "vista_alarm";
 
@@ -352,7 +352,8 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
     void vistaECPHome::set_panel_time()
     {
 #if defined(USE_TIME)
-      if (vistaCmd.statusFlags.programMode)
+      bool r=sendAuiTime();
+      if (vistaCmd.statusFlags.programMode || r)
         return;
       ESPTime rtc = now();
       if (!rtc.is_valid())
@@ -363,7 +364,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       if (hour > 12)
         hour -= 12;
       char cmd[30];
-      sprintf(cmd, "%s#63*|%02d%02d%1d%02d%02d%02d*", accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
+      sprintf(cmd, "%s#63*|%02d%02d%01d%02d%02d%02d*", accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
 #if not defined(ARDUINO_MQTT)
       ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
@@ -375,7 +376,8 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
     void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour, int minute)
     {
-      if (vistaCmd.statusFlags.programMode)
+      bool r=sendAuiTime(year, month, day, hour, minute);
+      if (vistaCmd.statusFlags.programMode || r)
         return;
       char ampm = hour < 12 ? 2 : 1;
       if (hour > 12)
@@ -714,7 +716,6 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       {
         sprintf(s1, "%02X ", cbuf[c]);
         s = s.append(s1);
-       // yield();
       }
 #if defined(ARDUINO_MQTT)
       Serial.printf("%s: %s\n", label, s.c_str());
@@ -873,55 +874,93 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         }
       }
     }
+    bool vistaECPHome::sendAuiTime(int year, int month, int day, int hour, int minute){
+      return false;
+    }
 
-    void vistaECPHome::sendZoneRequest(uint8_t partition, reqStates request)
+    bool vistaECPHome::sendAuiTime()
     {
-      if (!auiAddr || !(request == sopenzones || request == sbypasszones))
+      ESPTime rtc = now();
+      if (!rtc.is_valid () ||  vistaCmd.statusFlags.programMode || !auiAddr || ( reqState!=sidle && reqState!=sdate))
+        return false;
+
+      //char b1[]={00,0x68, 0x62, 0x02, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
+     // char b1[]={0x00 ,0x68 ,0x05 ,0x02 ,0x43 ,0x43};
+    //  auiSeq=auiSeq==0xf?8:auiSeq+1;
+    //  b1[1]=0x60 + auiSeq;
+    //  vista.writeDirect(b1, auiAddr, sizeof(b1));
+      char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35 ,0};
+      auiSeq=auiSeq==0xf?8:auiSeq+1;
+      bytes[1]=0x60 + auiSeq;
+      reqState=sdate;
+      dateReqStatus=0;
+      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,0,rtc.second);
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
+ 
+      return true;
+    }
+
+    void vistaECPHome::sendZoneRequest(uint8_t partition)
+    {
+      if (!auiAddr || !(reqState == sopenzones || reqState == sbypasszones))
         return;
+      auiSeq=auiSeq==0xf?8:auiSeq+1;
       char bytes[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
+      bytes[1]=0x60 + auiSeq;
       bytes[7] = partition;
-      bytes[12] = request == sopenzones ? 0x32 : 0x35;
-      ESP_LOGD(TAG, "Sending zone status request %d", request);
+      bytes[12] = reqState == sopenzones ? 0x32 : 0x35;
+      ESP_LOGD(TAG, "Sending zone status request %d", reqState);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
-    char *vistaECPHome::parseAUIMessage(char *cmd, reqStates request)
+    char *vistaECPHome::parseAUIMessage(char *cmd)
     {
 
       cmd[cmd[1] + 1] = 0; // 0 to terminate cmd to use as string
       char *c = &cmd[8];   // advance to start of fe xx byte
       char *f = NULL;
-      if (request == sopenzones || request == sbypasszones)
+      if (reqState == sopenzones || reqState == sbypasszones)
       {
         char s[] = {0xfe, 0xfe, 0xfe, 0xfe, 0xec, 0};
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
       }
-      else if (request == sidle)
+      else if (reqState == sidle)
       {
         char s[] = {0xf5, 0xec, 0};
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
+      } else if (reqState == sdate){
+            char s[]={0xfe,0};
+            f=strstr(c,s);
+            if (f)
+                return f+strlen(s);
+            else {
+              char s[]={0xfd,0};
+              f=strstr(c,s); 
+              if (f)
+                return f+strlen(s);
+            }
       }
       return NULL;
     }
 
-    void vistaECPHome::updateZoneState(zoneType *zt, int p, reqStates r, bool state, unsigned long t)
+    void vistaECPHome::updateZoneState(zoneType *zt, int p,  bool state, unsigned long t)
     {
 
 
       zt->time = t;
       zt->partition = p;
-      if (r == sopenzones)
+      if (reqState == sopenzones)
       {
         zt->open = state;
         zoneStatusUpdate(zt);
       ESP_LOGD(TAG, "Setting open zone %d to %d,  partition %d", zt->zone, state, p);
       }
       
-      else if (r == sbypasszones)
+      else if (reqState == sbypasszones)
       {
         zt->bypass = state;
       ESP_LOGD(TAG, "Setting bypass zone %d to %d, partition %d", zt->zone, state, p);
@@ -931,7 +970,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
     }
 
-    void vistaECPHome::processZoneList(uint8_t partition, reqStates request, char *list)
+    void vistaECPHome::processZoneList(uint8_t partition,  char *list)
     {
       std::string s="";
       if (list) {
@@ -961,7 +1000,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
            // Yes, range, add all values within to the vector
            for (int z{std::stoi(buf)}; z <= std::stoi(buf1); ++z)
           {
-            updateZoneState(getZone(z), p, request, true, t);
+            updateZoneState(getZone(z), p, true, t);
           }
 
         } else {
@@ -970,7 +1009,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
             ms.GetCapture(buf,0);
             // No, no range, just a plain integer value. Add it to the vector
             int z = std::stoi(buf);
-            updateZoneState(getZone(z), p, request, true, t);
+            updateZoneState(getZone(z), p, true, t);
           }
         }
           s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
@@ -982,7 +1021,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
       while (it != extZones.end())
       {
-        updateZoneState(&(*it), p, request, false, 0);
+        updateZoneState(&(*it), p, false, 0);
         
         it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
@@ -1218,8 +1257,6 @@ void vistaECPHome::update()
           */
         }
         static uint8_t partitionRequest = 0; // partition 1 = 0x31
-        static reqStates reqState = sidle;
-
         if (debug > 0 && vistaCmd.newCmd)
         {
           if (vistaCmd.cbuf[0] == 0xF2)
@@ -1230,9 +1267,11 @@ void vistaECPHome::update()
         if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
         {
           ESP_LOGD(TAG, "state = %d", reqState);
+          if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
+            activeAuiAddr=true;
           if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02 && reqState == sidle)
           { // partition update broadcast
-            char *m = parseAUIMessage(vistaCmd.cbuf, reqState);
+            char *m = parseAUIMessage(vistaCmd.cbuf);
             if (m != NULL)
             {
               size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
@@ -1241,7 +1280,7 @@ void vistaECPHome::update()
              // if (m[0] & 1)
              // { // only check for openzones/bypassed when status is not armed
                 reqState = sopenzones;
-                sendZoneRequest(partitionRequest, reqState);
+                sendZoneRequest(partitionRequest);
            //   }
              // else 
               if (l > 4 && m[0] == 2)
@@ -1253,17 +1292,28 @@ void vistaECPHome::update()
           }
           else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe)
           { // response data from request
-            char *m = parseAUIMessage(vistaCmd.cbuf, reqState);
+            char *m = parseAUIMessage(vistaCmd.cbuf);
 
             if (reqState == sopenzones || reqState == sbypasszones)
             {
-              processZoneList(partitionRequest, reqState, m);
+              processZoneList(partitionRequest, m);
 
               if (reqState==sopenzones) {
                 reqState=sbypasszones;
-                sendZoneRequest(partitionRequest, reqState);
+                sendZoneRequest(partitionRequest);
               } else
                 reqState = sidle;
+            } else if (reqState == sdate){
+              ESP_LOGD("test","success message from sdate");
+              dateReqStatus=1;
+              reqState=sidle;
+            }
+          } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfd) {
+            char *m = parseAUIMessage(vistaCmd.cbuf);
+            if (reqState == sdate){
+              ESP_LOGD("test","failure message from sdate %s",m);
+              dateReqStatus=-1;
+              reqState=sidle;
             }
           }
           else
@@ -1741,7 +1791,6 @@ void vistaECPHome::update()
               sprintf(s1, "LB:%d", x.zone);
             zoneStatusMsg.append(s1);
           }
-          //yield();
         }
 
         if ((zoneStatusMsg != previousZoneStatusMsg || forceRefreshZones || forceRefreshGlobal) && zoneExtendedStatusCallback != NULL)

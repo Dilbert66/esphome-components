@@ -567,6 +567,8 @@ void Vista::onExp(char cbuf[])
 
 void Vista::write(const char key, uint8_t addr)
 {
+  if (!addr || addr > 23)
+    return;
 
   if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || key=='|' || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
   {
@@ -583,6 +585,9 @@ void Vista::write(const char key, uint8_t addr)
 
 void Vista::writeDirect(const char key, uint8_t addr, uint8_t seq)
 {
+  if (!addr || addr > 23)
+    return;
+
   keyType kt;
   kt.key = key;
   kt.kpaddr = addr;
@@ -721,8 +726,9 @@ void Vista::writeChars()
 
       kt = getChar();
       c = kt.key;
-      if (c=='|') //break sequence and send the previous immediately
+      if (c=='|' && !kt.direct) //break sequence and send the previous immediately
         break;
+      
       lastkpaddr = kt.kpaddr;
       lastseq = kt.seq;
       retryAddr = kt.kpaddr;
@@ -824,10 +830,18 @@ void IRAM_ATTR Vista::rxHandleISR()
       }
       else if (outbufIdx != inbufIdx || retries)
       {
-        ackAddr = retries ? retryAddr : outbuf[outbufIdx].kpaddr; // get pending keypad address
-        if (ackAddr > 0 && ackAddr < 24 && outbuf[outbufIdx].count < 5)
+        if (!retries && outbuf[outbufIdx].count > 2) { //after 3 failed retries to send, we remove this entry from the buffer
+          ackAddr=outbuf[outbufIdx].kpaddr;
+          outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
+          while (outbufIdx != inbufIdx && outbuf[outbufIdx].kpaddr==ackAddr)
+            outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // skip any other entries with same address
+        }
+
+        if (outbufIdx != inbufIdx || retries)
         {
-          outbuf[outbufIdx].count++;
+          ackAddr = retries ? retryAddr : outbuf[outbufIdx].kpaddr; // get pending keypad address
+          if (!retries)
+            outbuf[outbufIdx].count++;
           vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
           b = addrToBitmask2(ackAddr);
           if (b)
@@ -836,8 +850,7 @@ void IRAM_ATTR Vista::rxHandleISR()
           if (b)
             vistaSerial->write(b, false, 4800);
         }
-        else
-          outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
+        
       }
       rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
     }
@@ -1283,7 +1296,7 @@ bool Vista::handle()
       cbuf[gidx++] = x;
       readChars(1, cbuf, &gidx);
       uint8_t kpaddr = retries ? retryAddr : peekNextKpAddr();
-      if (cbuf[1] == kpaddr)
+      if (cbuf[1] == kpaddr && kpaddr > 0)
       {
         writeChars();
       }
