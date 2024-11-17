@@ -875,7 +875,17 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       }
     }
     bool vistaECPHome::sendAuiTime(int year, int month, int day, int hour, int minute){
-      return false;
+      if ( vistaCmd.statusFlags.programMode || !auiAddr || ( reqState!=sidle && reqState!=sdate))
+        return false;
+      ESP_LOGD(TAG, "Setting AUI time...");
+      char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35 ,0};
+      auiSeq=auiSeq==0xf?8:auiSeq+1;
+      bytes[1]=0x60 + auiSeq;
+      reqState=sdate;
+      dateReqStatus=0;
+      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",year%100,month,day,hour,minute,0,30);
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
+      return true;
     }
 
     bool vistaECPHome::sendAuiTime()
@@ -883,20 +893,14 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       ESPTime rtc = now();
       if (!rtc.is_valid () ||  vistaCmd.statusFlags.programMode || !auiAddr || ( reqState!=sidle && reqState!=sdate))
         return false;
-
-      //char b1[]={00,0x68, 0x62, 0x02, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
-     // char b1[]={0x00 ,0x68 ,0x05 ,0x02 ,0x43 ,0x43};
-    //  auiSeq=auiSeq==0xf?8:auiSeq+1;
-    //  b1[1]=0x60 + auiSeq;
-    //  vista.writeDirect(b1, auiAddr, sizeof(b1));
+        ESP_LOGD(TAG, "Setting AUI time...");
       char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35 ,0};
       auiSeq=auiSeq==0xf?8:auiSeq+1;
       bytes[1]=0x60 + auiSeq;
       reqState=sdate;
       dateReqStatus=0;
-      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,0,rtc.second);
+      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,0,30); // send fixed 30 seconds as sending rtc.seconds fails sometimes on panel
       vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
- 
       return true;
     }
 
