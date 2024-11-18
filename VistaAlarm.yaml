@@ -37,7 +37,8 @@ vista_alarm_panel:
   #AUI address from program field *189 to use for zone status queries (open/close and bypass). 
   #Ensure it is not assigned to a real keypad or to Total Connect 2.0. For those panels, you can select auiaddr: 5 or 6.
   #As a final option, you can assign it to the same address as your existing AUI display address of 1
-  #Note: Older vista20 panels only have addresses 1 and 2 while newer will have 1,2,5 and 6
+  #Note: Older vista20 panels only have addresses 1 and 2 while newer will have 1,2,5 and 6. For Vista128,Vista250 commercial panels, ensure the address used is setup as an AUI keypad in program #93, device programming
+  
   auiaddr: "2" #use auiaddr: 5 or 6 if you already have address 2 assigned to Total Connect or another keypad
 
   ##esp32

@@ -93,13 +93,12 @@ extern Vista  vista;
       sidle,
       sopenzones,
       sbypasszones,
-      szonelist,
-      sdevicelist,
+      szonecount,
       spartitionlist,
       spartitionid,
+      szoneinfo,
       sicode,
-      sdate
-
+      sdate,
     };
 
 #if defined(ESPHOME_MQTT) && !defined(USE_API)
@@ -267,13 +266,20 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputRx = 0;
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
-      bool activeAuiAddr=false;
+      //bool activeAuiAddr=false;
       bool sendAuiTime();
       bool sendAuiTime(int year, int month, int day, int hour, int minute);
       char auiSeq=8;
-      int8_t dateReqStatus=0;
-      reqStates reqState=sidle;
-      
+      //int8_t dateReqStatus=0;
+
+      struct  {
+        reqStates state=sidle;
+        unsigned long time=0;
+        uint8_t partition=0;
+        uint8_t records=0;
+        uint8_t currentRecord=0;
+      } auiCmd;
+
       const char *accessCode;
       const char *rfSerialLookup;
       bool quickArm;
@@ -384,8 +390,8 @@ class vistaECPHome : public time::RealTimeClock
 
       void updateZoneState(zoneType *zt, int p,  bool state, unsigned long t);
       char *parseAUIMessage(char *cmd);
-      void processZoneList(uint8_t partition, char *list);
-      void sendZoneRequest(uint8_t partition);
+      void processZoneList( char *list);
+      void sendZoneRequest();
       void loadZones();
 
     public:
@@ -446,8 +452,7 @@ class vistaECPHome : public time::RealTimeClock
 
 #endif
     public:
-      void set_panel_time();
-      void set_panel_time_manual(int year, int month, int day, int hour, int minute);
+
 
 #if defined(ARDUINO_MQTT)
       void begin()
@@ -456,6 +461,8 @@ class vistaECPHome : public time::RealTimeClock
   void setup() override;
 #endif
 
+        void set_panel_time();
+        void set_panel_time_manual(int year, int month, int day, int hour, int minute);
         void alarm_disarm(std::string code, int partition);
 
         void alarm_arm_home(int partition);
