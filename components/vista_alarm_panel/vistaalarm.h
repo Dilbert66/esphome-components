@@ -293,7 +293,7 @@ class vistaECPHome : public time::RealTimeClock
 
       uint8_t *partitions;
       std::string topic_prefix, topic;
-
+/*
       struct zoneNameType {
           std::string name;
           std::string type_id;
@@ -302,7 +302,7 @@ class vistaECPHome : public time::RealTimeClock
           mqtt::MQTTBinarySensorComponent * mqptr;
 #endif
       };
-
+*/
       struct zoneType
       {
         uint16_t zone;
@@ -449,7 +449,7 @@ class vistaECPHome : public time::RealTimeClock
 
 
       std::vector<zoneType> extZones{};
-      std::vector<zoneNameType*> autoZones{};
+   //   std::vector<zoneNameType*> autoZones{};
 
       zoneType nz;
 
