@@ -269,7 +269,7 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t auiAddr = 0;
       //bool activeAuiAddr=false;
       bool sendAuiTime();
-      bool sendAuiTime(int year, int month, int day, int hour, int minute);
+      bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
       char auiSeq=8;
       //int8_t dateReqStatus=0;
 
@@ -279,6 +279,7 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t partition=0;
         uint8_t records=0;
         uint8_t record=0;
+        bool pending=false;
       } auiCmd;
 
       const char *accessCode;
@@ -477,7 +478,7 @@ class vistaECPHome : public time::RealTimeClock
 #endif
 
         void set_panel_time();
-        void set_panel_time_manual(int year, int month, int day, int hour, int minute);
+        void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
         void alarm_disarm(std::string code, int partition);
 
         void alarm_arm_home(int partition);

@@ -374,9 +374,9 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 #endif
     }
 
-    void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour, int minute)
+    void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour, int minute,int seconds, int dow)
     {
-      bool r=sendAuiTime(year, month, day, hour, minute);
+      bool r=sendAuiTime(year, month, day, hour, minute, seconds,dow);
       if (vistaCmd.statusFlags.programMode || r)
         return;
       char ampm = hour < 12 ? 2 : 1;
@@ -410,6 +410,7 @@ void vistaECPHome::setup()
       auiCmd.records=0;
       auiCmd.record=0;
       auiCmd.partition=0x31;
+      auiCmd.pending=false;
       */
       bMap = App.get_binary_sensors();
       tMap = App.get_text_sensors();  
@@ -884,7 +885,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         }
       }
     }
-    bool vistaECPHome::sendAuiTime(int year, int month, int day, int hour, int minute){
+    bool vistaECPHome::sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow){
       if ( vistaCmd.statusFlags.programMode || !auiAddr || ( auiCmd.state!=sidle && auiCmd.state!=sdate))
         return false;
       ESP_LOGD(TAG, "Setting AUI time...");
@@ -894,7 +895,8 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       auiCmd.state=sdate;
       auiCmd.time=millis();
       //dateReqStatus=0;
-      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",year%100,month,day,hour,minute,0,0);
+      auiCmd.pending=true;
+      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%02d%1d",year%100,month,day,hour,minute,seconds,dow);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
       return true;
     }
@@ -910,8 +912,11 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       bytes[1]=0x60 + auiSeq;
       auiCmd.state=sdate;
       auiCmd.time=millis();
+      auiCmd.pending=true;
       //dateReqStatus=0;
-      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%01d%02d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,0,0); // send fixed 0 seconds as sending rtc.second fails sometimes on panel
+      // 32 34 31 31 31 39 31 35 32 37 30 33 39 F1 
+      float sec=rtc.second/60*100;
+      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%02d%1d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,rtc.second,rtc.day_of_week-1); 
       vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
       return true;
     }
@@ -925,6 +930,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       bytes[1]=0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
       bytes[12] = auiCmd.state == sopenzones ? 0x32 : 0x35;
+      auiCmd.pending=true;
       ESP_LOGD(TAG, "Sending zone status request %d", auiCmd.state);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
@@ -939,6 +945,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         auiCmd.state=sidle;
         return;
       }
+      auiCmd.pending=true;
       auiSeq=auiSeq==0xf?8:auiSeq+1;
       char bytes[] = {0x00, 0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x43 ,0x61};
       bytes[1]=0x60 + auiSeq;
@@ -955,7 +962,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         auiCmd.state=sidle;
         return;
       }
-
+      auiCmd.pending=true;
       auiSeq=auiSeq==0xf?8:auiSeq+1;
       char bytes[] = {0x00 ,0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x45 ,0x43 ,0xF5 ,0x31 ,0xFB ,0x43 ,0x6C};
       bytes[1]=0x60 + auiSeq;
@@ -1180,9 +1187,9 @@ void vistaECPHome::update()
           n->mqptr->call();
 #endif
       }
-      if (auiCmd.state==szonecount) 
+      if (auiCmd.state==szonecount && !auiCmd.pending) 
         getZoneCount();
-      else if (auiCmd.state==szoneinfo)
+      else if (auiCmd.state==szoneinfo && !auiCmd.pending)
         getZoneRecord();
 */
 #endif    
@@ -1428,12 +1435,14 @@ void vistaECPHome::update()
               if (auiCmd.state==sopenzones) {
                 auiCmd.state=sbypasszones;
                 auiCmd.time=millis();
+                auiCmd.pending=false;
                 sendZoneRequest();
               } else 
                 auiCmd.state = sidle;
             } else if (auiCmd.state == sdate){
               //dateReqStatus=1;
               auiCmd.state=sidle;
+              auiCmd.pending=false;
 
             } 
          #if defined(AUTOPOPULATE)
@@ -1452,6 +1461,7 @@ void vistaECPHome::update()
             }
             */
         #endif
+          auiCmd.pending=false;
           } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfd) {
             char *m = parseAUIMessage(vistaCmd.cbuf);
               ESP_LOGD(TAG,"failure message from %d",auiCmd.state);
@@ -1464,9 +1474,13 @@ void vistaECPHome::update()
                 auiCmd.state=sidle;
                } else
                 auiCmd.state=sidle;
+              auiCmd.pending=false;
           }
-          else
+          else {
             auiCmd.state = sidle;
+            auiCmd.pending=false;
+          }
+
           return;
         }
         else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
