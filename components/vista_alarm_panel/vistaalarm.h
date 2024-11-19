@@ -6,6 +6,7 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/components/time/real_time_clock.h"
+#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -277,7 +278,7 @@ class vistaECPHome : public time::RealTimeClock
         unsigned long time=0;
         uint8_t partition=0;
         uint8_t records=0;
-        uint8_t currentRecord=0;
+        uint8_t record=0;
       } auiCmd;
 
       const char *accessCode;
@@ -291,6 +292,15 @@ class vistaECPHome : public time::RealTimeClock
 
       uint8_t *partitions;
       std::string topic_prefix, topic;
+
+      struct zoneNameType {
+          std::string name;
+          std::string type_id;
+          template_alarm_::TemplateBinarySensor * ptr;
+#if defined(ESPHOME_MQTT)
+          mqtt::MQTTBinarySensorComponent * mqptr;
+#endif
+      };
 
       struct zoneType
       {
@@ -393,6 +403,10 @@ class vistaECPHome : public time::RealTimeClock
       void processZoneList( char *list);
       void sendZoneRequest();
       void loadZones();
+      void loadZone(int z,std::string &&name);
+      void getZoneCount();
+      void getZoneRecord();
+      void processZoneInfo(char *list);
 
     public:
       partitionStateType *partitionStates;
@@ -434,6 +448,7 @@ class vistaECPHome : public time::RealTimeClock
 
 
       std::vector<zoneType> extZones{};
+      std::vector<zoneNameType*> autoZones{};
 
       zoneType nz;
 

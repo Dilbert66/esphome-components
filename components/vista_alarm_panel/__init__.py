@@ -128,7 +128,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_INVERT_RX, default='true'): cv.boolean, 
     cv.Optional(CONF_INVERT_TX, default='true'): cv.boolean,   
     cv.Optional(CONF_INVERT_MON, default='true'): cv.boolean,  
-    cv.Optional(CONF_AUTOPOPULATE,default='true'): cv.boolean,  
+    cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
     cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
     cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),    
     }
