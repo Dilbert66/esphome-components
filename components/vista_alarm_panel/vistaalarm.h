@@ -6,7 +6,7 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/components/time/real_time_clock.h"
-#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+//#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
