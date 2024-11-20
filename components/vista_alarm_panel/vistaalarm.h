@@ -6,7 +6,14 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/components/time/real_time_clock.h"
-//#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+
+#if defined(AUTOPOPULATE)
+#if defined(TEMPLATE_ALARM)
+#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+#else
+#include "esphome/components/template/binary_sensor/template_binary_sensor.h"
+#endif
+#endif
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -293,16 +300,15 @@ class vistaECPHome : public time::RealTimeClock
 
       uint8_t *partitions;
       std::string topic_prefix, topic;
-/*
+
+#if defined(AUTOPOPULATE)
       struct zoneNameType {
           std::string name;
-          std::string type_id;
-          template_alarm_::TemplateBinarySensor * ptr;
-#if defined(ESPHOME_MQTT)
-          mqtt::MQTTBinarySensorComponent * mqptr;
-#endif
+          uint8_t zone;
+          uint8_t zone_type;
+          uint8_t device_type;
       };
-*/
+#endif
       struct zoneType
       {
         uint16_t zone;
@@ -404,7 +410,7 @@ class vistaECPHome : public time::RealTimeClock
       void processZoneList( char *list);
       void sendZoneRequest();
       void loadZones();
-      void loadZone(int z,std::string &&name);
+      void loadZone(int zone,std::string &&name,uint8_t zonetype,uint8_t devicetype);
       void getZoneCount();
       void getZoneRecord();
       void processZoneInfo(char *list);
@@ -449,7 +455,10 @@ class vistaECPHome : public time::RealTimeClock
 
 
       std::vector<zoneType> extZones{};
-   //   std::vector<zoneNameType*> autoZones{};
+
+      #if defined(AUTOPOPULATE)
+      std::vector<zoneNameType> autoZones{};
+      #endif
 
       zoneType nz;
 

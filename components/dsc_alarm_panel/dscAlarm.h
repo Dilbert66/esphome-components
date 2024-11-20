@@ -8,6 +8,8 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 
+#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+
 #if defined(USE_MQTT)
 #include "esphome/components/mqtt/mqtt_client.h"
 #endif
@@ -466,7 +468,8 @@ public:
 private:
 
   void loadZones();
- 
+  //void loadZone(int z);
+  //template_alarm_::TemplateBinarySensor * gptr;
   void processMenu(byte key, byte partition = -1) ;
 
   void getPrevIdx(const char * tpl, byte partition) ;

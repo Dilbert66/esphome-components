@@ -830,7 +830,7 @@ void IRAM_ATTR Vista::rxHandleISR()
       }
       else if (outbufIdx != inbufIdx || retries)
       {
-        if (!retries && outbuf[outbufIdx].count > 2) { //after 3 failed retries to send, we remove this entry from the buffer
+        if (!retries && outbuf[outbufIdx].count > 4) { //after 5 failed retries to send, we remove this entry from the buffer
           ackAddr=outbuf[outbufIdx].kpaddr;
           outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
           while (outbufIdx != inbufIdx && outbuf[outbufIdx].kpaddr==ackAddr)

@@ -104,7 +104,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
          auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor* bs)
                         { return bs->get_object_id() == id; });
                              
-      if (it != bMap.end() && (*it)->state != open)
+     if (it != bMap.end() && (*it)->state != open)
         (*it)->publish_state(open);
     }
 
@@ -115,7 +115,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
         id +=std::to_string(partition);
       auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor* ts)
                          { return ts->get_object_id() == id; });
-      if (it != tMap.end() && (*it)->state != *text)
+    if (it != tMap.end() && (*it)->state != *text)
         (*it)->publish_state(*text);
     }
 
@@ -406,12 +406,7 @@ void vistaECPHome::setup()
       // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       //  the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
-   /*   auiCmd.state=szonecount;
-      auiCmd.records=0;
-      auiCmd.record=0;
-      auiCmd.partition=0x31;
-      auiCmd.pending=false;
-      */
+
       bMap = App.get_binary_sensors();
       tMap = App.get_text_sensors();  
       set_update_interval(8); // set looptime to 8ms
@@ -914,8 +909,6 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       auiCmd.time=millis();
       auiCmd.pending=true;
       //dateReqStatus=0;
-      // 32 34 31 31 31 39 31 35 32 37 30 33 39 F1 
-      float sec=rtc.second/60*100;
       sprintf(&bytes[8],"%02d%02d%02d%02d%02d%02d%1d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,rtc.second,rtc.day_of_week-1); 
       vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
       return true;
@@ -923,7 +916,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
     void vistaECPHome::sendZoneRequest()
     {
-      if (!auiAddr || !(auiCmd.state == sopenzones || auiCmd.state == sbypasszones ))
+      if (!auiAddr || !(auiCmd.state == sopenzones || auiCmd.state == sbypasszones ) || auiCmd.pending)
         return;
       auiSeq=auiSeq==0xf?8:auiSeq+1;
       char bytes[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
@@ -931,12 +924,13 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       bytes[7] = auiCmd.partition;
       bytes[12] = auiCmd.state == sopenzones ? 0x32 : 0x35;
       auiCmd.pending=true;
-      ESP_LOGD(TAG, "Sending zone status request %d", auiCmd.state);
+      auiCmd.time=millis();
+      ESP_LOGD(TAG, "Sending zone status request %d, header %02X", auiCmd.state, bytes[1]);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
     #if defined(AUTOPOPULATE)
-    /*
+    
     void vistaECPHome::getZoneCount()
     {
       if (!auiAddr || !auiCmd.state==szonecount)
@@ -946,8 +940,8 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         return;
       }
       auiCmd.pending=true;
-      auiSeq=auiSeq==0xf?8:auiSeq+1;
       char bytes[] = {0x00, 0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x43 ,0x61};
+      auiSeq=auiSeq==0xf?8:auiSeq+1;
       bytes[1]=0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
       ESP_LOGD(TAG, "Sending partition %c zone count request %d", auiCmd.partition, auiCmd.state);
@@ -963,58 +957,70 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         return;
       }
       auiCmd.pending=true;
+      char bytes[] = {0x00 ,0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x45 ,0x43 ,0xF5 ,0x30,0x30,0x31 ,0xFB ,0x43 ,0x6C,0};
       auiSeq=auiSeq==0xf?8:auiSeq+1;
-      char bytes[] = {0x00 ,0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x45 ,0x43 ,0xF5 ,0x31 ,0xFB ,0x43 ,0x6C};
       bytes[1]=0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
-      bytes[12]=auiCmd.record;
-      ESP_LOGD(TAG, "Sending partition %c zone record %d request %d", auiCmd.partition,auiCmd.record, auiCmd.state);
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes));
+      sprintf(&bytes[12],"%03d%c%c%c",auiCmd.record,0xfb,0x43,0x6c); 
+      ESP_LOGD(TAG, "Sending partition %c zone record %d request %d,Total records: %d", auiCmd.partition,auiCmd.record, auiCmd.state,auiCmd.records);
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
     }
+
+  void  vistaECPHome::loadZone(int zone,std::string &&name,uint8_t zonetype,uint8_t devicetype) {
+
+    zoneNameType  nz;
+    nz.name = name;
+    nz.zone=zone;
+    nz.zone_type=zonetype;
+    nz.device_type=devicetype;
+    autoZones.push_back(nz);
+
+
+ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,devicetype);
+
+ }
 
 
 // 31 00 31 00 31 00 46 52 4F 4E 54 20 44 4F 4F 52 44
     void vistaECPHome::processZoneInfo(char *list) {
       std::string s="";
       if (list) {
-        for (uint8_t x = 0; x < sizeof(list); x++) {
-          list[x] = !list[x] ? ',' : list[x];
-        }
         s = list;
       }
       s.append(",");
       uint8_t x=1;
       uint8_t z,zt,dt;
-      std::string name;
+      std::string name="";
       size_t pos;
       while ((pos = s.find(',')) != std::string::npos && x < 5)
         {
+         std::string s1="";
          if (x==1) {
-          std::string s1 = s.substr(0, pos);
+          s1 = s.substr(0, pos);
           z=std::stoi(s1.c_str());
           x=2;
          } else if (x==2){
-          std::string s1=s.substr(0,pos);
+          s1=s.substr(0,pos);
           zt=std::stoi(s1.c_str());
           x=3;
          } else if (x==3){
-          std::string s1=s.substr(0,pos);
+          s1=s.substr(0,pos);
           dt=std::stoi(s1.c_str());
           x=4;
          } else if (x==4){
-          std::string s1=s.substr(0,pos);
+          s1=s.substr(0,pos);
           name=s1;
           x=5;
          }
-        s.erase(0, pos + 1); 
+        s.erase(0, pos +1); 
         }
         if (name=="" && z)
           name="Zone " + std::to_string(z);
         if (z)
-          loadZone(z,name.c_str());
+          loadZone(z,name.c_str(),zt,dt);
 
     }
-    */
+   
 #endif
 
     char *vistaECPHome::parseAUIMessage(char *cmd)
@@ -1023,6 +1029,9 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       cmd[cmd[1] + 1] = 0; // 0 to terminate cmd to use as string
       char *c = &cmd[8];   // advance to start of fe xx byte
       char *f = NULL;
+      for (uint8_t x = 0; x < cmd[1] -7; x++) {
+        c[x] = !c[x] ? ',' : c[x];
+      }
       if (auiCmd.state == sopenzones || auiCmd.state == sbypasszones)
       {
         char s[] = {0xfe, 0xfe, 0xfe, 0xfe, 0xec, 0};
@@ -1065,21 +1074,19 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
     void vistaECPHome::updateZoneState(zoneType *zt, int p,  bool state, unsigned long t)
     {
 
-
-      zt->time = t;
       zt->partition = p;
+      zt->time = t;
       if (auiCmd.state == sopenzones)
       {
+
         zt->open = state;
         zoneStatusUpdate(zt);
       ESP_LOGD(TAG, "Setting open zone %d to %d,  partition %d", zt->zone, state, p);
       }
-      
       else if (auiCmd.state == sbypasszones)
       {
         zt->bypass = state;
       ESP_LOGD(TAG, "Setting bypass zone %d to %d, partition %d", zt->zone, state, p);
-       // zoneStatusUpdate(zt);
       }
       
 
@@ -1089,18 +1096,15 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
     {
       std::string s="";
       if (list) {
-        for (uint8_t x = 0; x < sizeof(list); x++) {
-          list[x] = !list[x] ? ',' : list[x];
-        }
         s = list;
       }
       s.append(",");
 
-      ESP_LOGD(TAG, "List=%s", s.c_str());
+      ESP_LOGD(TAG, "Response: %s", s.c_str());
       uint8_t p = auiCmd.partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
 
       // Search all occurences of integers or ranges
-      unsigned long t = millis();
+        unsigned long t = millis();
         size_t pos;
         char buf[5],buf1[5];
         MatchState ms;
@@ -1136,7 +1140,8 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
       while (it != extZones.end())
       {
-        updateZoneState(&(*it), p, false, 0);
+
+        updateZoneState(&(*it), p, false, millis()); 
         
         it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
@@ -1180,22 +1185,34 @@ void vistaECPHome::update()
 #endif
 
 #if defined(AUTOPOPULATE)
-/*
-      for (auto n : autoZones) {
-          n->ptr->call();
-#if defined(ESPHOME_MQTT)
-          n->mqptr->call();
-#endif
-      }
-      if (auiCmd.state==szonecount && !auiCmd.pending) 
-        getZoneCount();
-      else if (auiCmd.state==szoneinfo && !auiCmd.pending)
-        getZoneRecord();
-*/
+      
+/*//test code to auto load zones from panel - future
+      static uint8_t currentAUIPartition=0x30;
+      if (currentAUIPartition <= (maxPartitions+0x30)) {
+        if (auiCmd.state==sidle) {
+          auiCmd.state=szonecount;
+          auiCmd.pending=false;
+        }
+        if (auiCmd.state==szonecount && !auiCmd.pending) {
+          currentAUIPartition++;
+          auiCmd.partition=currentAUIPartition;
+          auiCmd.records=0;
+          auiCmd.record=0;
+          auiCmd.pending=false;
+          getZoneCount();
+       } else if (auiCmd.state==szoneinfo && !auiCmd.pending) {
+          getZoneRecord();
+        }     
+      }  
+      */
+
 #endif    
 
-      if (auiCmd.state != sidle && (millis() - auiCmd.time) > 2000) //reset auicmd state if no f2 response after 2 seconds
+      if (auiCmd.state != sidle && (millis() - auiCmd.time) > 5000)  {//reset auicmd state if no f2 response after 5 seconds
+        ESP_LOGD("test","1. Setting auicmd state to idle");
         auiCmd.state=sidle;
+        auiCmd.pending=false;
+      }
 #if defined(ESPHOME_MQTT)
       if (firstRun && mqtt::global_mqtt_client->is_connected())
       {
@@ -1399,7 +1416,7 @@ void vistaECPHome::update()
 
         if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
         {
-          ESP_LOGD(TAG, "state = %d", auiCmd.state);
+          ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state,auiCmd.pending);
           //if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
            // activeAuiAddr=true;
           if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02 && auiCmd.state == sidle)
@@ -1412,8 +1429,8 @@ void vistaECPHome::update()
              // if (m[0] & 1)
              // { 
                  auiCmd.state = sopenzones;
-                 auiCmd.time=millis();
                  auiCmd.partition=vistaCmd.cbuf[13];
+                 auiCmd.pending=false;
                  sendZoneRequest();
            //   }
              // else 
@@ -1424,29 +1441,27 @@ void vistaECPHome::update()
               }
             }
           }
-          else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe)
+          else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
           { // response data from request
             char *m = parseAUIMessage(vistaCmd.cbuf);
+            auiCmd.time=millis();
             ESP_LOGD(TAG,"success message from %d",auiCmd.state);
+            auiCmd.pending=false;
             if (auiCmd.state == sopenzones || auiCmd.state == sbypasszones)
             {
               processZoneList(m);
 
               if (auiCmd.state==sopenzones) {
                 auiCmd.state=sbypasszones;
-                auiCmd.time=millis();
-                auiCmd.pending=false;
                 sendZoneRequest();
               } else 
                 auiCmd.state = sidle;
             } else if (auiCmd.state == sdate){
               //dateReqStatus=1;
               auiCmd.state=sidle;
-              auiCmd.pending=false;
-
             } 
          #if defined(AUTOPOPULATE)
-        /*    else if (auiCmd.state == szonecount) {
+            else if (auiCmd.state == szonecount) {
                if (m!= NULL)
                 auiCmd.records=std::stoi(m);
                 if (auiCmd.records > 0) {
@@ -1455,15 +1470,20 @@ void vistaECPHome::update()
                 } else
                   auiCmd.state=sidle;
             } else if (auiCmd.state == szoneinfo) {
+              if (m!= NULL) {
                processZoneInfo(m);
+               auiCmd.record++;
                if (auiCmd.record > auiCmd.records)
                 auiCmd.state=sidle;
+              }
             }
-            */
+
         #endif
-          auiCmd.pending=false;
-          } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfd) {
+
+          } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && ( vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10]==0xfd)) {
             char *m = parseAUIMessage(vistaCmd.cbuf);
+              auiCmd.time=millis();
+              auiCmd.pending=false;
               ESP_LOGD(TAG,"failure message from %d",auiCmd.state);
               if (auiCmd.state==szoneinfo) {
                  auiCmd.record++;
@@ -1474,13 +1494,7 @@ void vistaECPHome::update()
                 auiCmd.state=sidle;
                } else
                 auiCmd.state=sidle;
-              auiCmd.pending=false;
           }
-          else {
-            auiCmd.state = sidle;
-            auiCmd.pending=false;
-          }
-
           return;
         }
         else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
@@ -2665,16 +2679,21 @@ void vistaECPHome::update()
     }
 
 #if defined(AUTOPOPULATE)
-/*
+
+ /*
 void  vistaECPHome::loadZone(int z,std::string &&name) {
     std::string n=std::to_string(z);
     std::string type_id="z" + n;
 
-    std::vector<binary_sensor::BinarySensor *> m = App.get_binary_sensors();
-  //  auto it = std::find_if(m.begin(), m.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
-    //if (it != m.end()) return;
 
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
+    if (it != bMap.end()) return;
+  #if defined(TEMPLATE_ALARM)
     template_alarm_::TemplateBinarySensor * ptr = new template_alarm_::TemplateBinarySensor();
+  #else
+    template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
+  #endif 
+
     zoneNameType *  nz = new zoneNameType();
     nz->name = name;
     nz->type_id=type_id;
@@ -2687,7 +2706,7 @@ void  vistaECPHome::loadZone(int z,std::string &&name) {
 
 ESP_LOGD(TAG,"get name=%s,get object_id=%s",ptr->get_name().c_str(),ptr->get_object_id().c_str());
 
-   // bst->ptr->set_device_class("window");
+   // ptr->set_device_class("window");
     ptr->set_publish_initial_state(true);
     ptr->set_disabled_by_default(false);
 #if defined(ESPHOME_MQTT)
@@ -2697,12 +2716,17 @@ ESP_LOGD(TAG,"get name=%s,get object_id=%s",ptr->get_name().c_str(),ptr->get_obj
     mqptr->call();
     nz->mqptr=mqptr;
 #endif
+  #if defined(TEMPLATE_ALARM)
     ptr->set_component_source("template_alarm.binary_sensor");
+  #else
+    ptr->set_component_source("template.binary_sensor");
+  #endif
     App.register_component(ptr);
+    ptr->setup();
     ptr->call();
+    createZone(z);
 }
-*/
-
+    */
 #endif
 
 #if !defined(ARDUINO_MQTT)

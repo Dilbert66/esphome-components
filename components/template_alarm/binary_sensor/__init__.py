@@ -104,7 +104,7 @@ async def setup_entity(var, config):
     cg.add(var.set_publish_initial_state(True))
 
 async def to_code(config):
-    #cg.add_define("USE_TEMPLATE_ALARM_SENSORS")
+    cg.add_define("TEMPLATE_ALARM")
     var = await new_binary_sensor(config)
 
     await cg.register_component(var, config)

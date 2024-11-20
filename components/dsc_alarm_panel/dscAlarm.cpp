@@ -174,6 +174,7 @@ void DSCkeybushome::setup()
 #endif
       bMap = App.get_binary_sensors();
       tMap = App.get_text_sensors();
+
       eventStatusMsg.reserve(64);
       if (debug > 2)
         Serial.begin(115200);
@@ -1501,7 +1502,7 @@ void DSCkeybushome::update()
         */
 
       }
-  
+      //  gptr->call();
 
       if ((dsc.loop() || forceRefresh) && dsc.panelData[0])
       { // Processes data only when a valid Keybus command has been read
@@ -2007,6 +2008,7 @@ void DSCkeybushome::update()
         }
 #endif
       }
+
       forceRefresh = false;
       firstrun = false;
     }
@@ -2161,7 +2163,7 @@ void DSCkeybushome::update()
         break;
       case 0x8F:
         lcdLine1 = F("Invalid      ");
-        lcdLine2 = F("access code     ");
+        lcdLine2 = F("Access_code     ");
         break;
       case 0x9E:
         lcdLine1 = F("Press (*) for <>");
@@ -2169,7 +2171,7 @@ void DSCkeybushome::update()
         break;
       case 0x9F:
         lcdLine1 = F("Enter  ");
-        lcdLine2 = F("access code   ");
+        lcdLine2 = F("Access_code   ");
         break;
       case 0xA0:
         lcdLine1 = F("Zone bypass   <>");
@@ -2197,10 +2199,10 @@ void DSCkeybushome::update()
         break;
       case 0xA5:
         lcdLine1 = F("Enter        ");
-        lcdLine2 = F("master code     ");
+        lcdLine2 = F("Master code     ");
         break;
       case 0xA6:
-        lcdLine1 = F("*5:  Access Code");
+        lcdLine1 = F("*5:  Access code");
         lcdLine2 = F("code? (2 digits)");
         // digits = 2;
         break;
@@ -2694,12 +2696,12 @@ void DSCkeybushome::update()
             lcdLine2 = s;
           }
         }
-        else // Sends the access code when needed by the panel for arming
+        else // Sends the Access_code when needed by the panel for arming
           if (dsc.status[partition] == 0x9F && dsc.accessCodePrompt && isInt(accessCode, 10))
           {
             dsc.accessCodePrompt = false;
             dsc.write(accessCode, partition + 1);
-             if (debug > 0) ESP_LOGI(TAG, "got access code prompt for partition %d", partition + 1);
+             if (debug > 0) ESP_LOGI(TAG, "got Access code prompt for partition %d", partition + 1);
           }
 
         if (options)
@@ -3263,7 +3265,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("Keypad");
         lcdLine2 = F("lockout");
         break;
-        // 0x99 - 0xBD: Armed: Access codes 1-34, 40-42
+        // 0x99 - 0xBD: Armed: Access_codes 1-34, 40-42
       case 0xBE:
         lcdLine1 = F("Armed:");
         lcdLine2 = F("Partial");
@@ -3272,7 +3274,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("Armed:");
         lcdLine2 = F("Special");
         break;
-        // 0xC0 - 0xE4: Disarmed: Access codes 1-34, 40-42
+        // 0xC0 - 0xE4: Disarmed: Access_codes 1-34, 40-42
       case 0xE5:
         lcdLine1 = F("Auto-arm");
         lcdLine2 = F("canc");
@@ -3423,9 +3425,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3440,9 +3442,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3452,7 +3454,7 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = F("Unknown data0");
+        lcdLine1 = F("Unknown_data0");
         lcdLine2 = " ";
       }
 
@@ -3539,9 +3541,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3705,10 +3707,10 @@ void DSCkeybushome::update()
         lcdLine1 = F("Armed:");
         lcdLine2 = F("No ent del");
         break;
-        // 0x9E - 0xC2: *1: Access codes 1-34, 40-42
-        // 0xC3 - 0xC5: *5: Access codes 40-42
-        // 0xC6 - 0xE5: Access codes 1-34, 40-42
-        // 0xE6 - 0xE8: *6: Access codes 40-42
+        // 0x9E - 0xC2: *1: Access_codes 1-34, 40-42
+        // 0xC3 - 0xC5: *5: Access_codes 40-42
+        // 0xC6 - 0xE5: Access_codes 1-34, 40-42
+        // 0xE6 - 0xE8: *6: Access_codes 40-42
         // 0xE9 - 0xF0: Keypad restored: Slots 1-8
         // 0xF1 - 0xF8: Keypad trouble: Slots 1-8
         // 0xF9 - 0xFE: Zone expander restored: 1-6
@@ -3739,9 +3741,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3756,9 +3758,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3772,9 +3774,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3790,9 +3792,9 @@ void DSCkeybushome::update()
         if (dscCode >= 35)
           dscCode += 5;
         if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master code:"));
+          strcpy_P(lcdMessage, PSTR("Master_code:"));
         else
-          strcpy_P(lcdMessage, PSTR("Access code:"));
+          strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4105,7 +4107,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("Armed:");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4119,7 +4121,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("Disarmed:");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4332,7 +4334,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*1: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4346,7 +4348,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*2: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4360,7 +4362,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*2: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4374,7 +4376,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*3: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4388,7 +4390,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*3: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4421,7 +4423,7 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] + 0x23;
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4436,7 +4438,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*5: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4450,7 +4452,7 @@ void DSCkeybushome::update()
         lcdLine1 = F("*6: ");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access code:"));
+        strcpy_P(lcdMessage, PSTR("Access_code:"));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4558,7 +4560,7 @@ void DSCkeybushome::update()
       case 0x9E:
         return F("Enter * code");
       case 0x9F:
-        return F("Access code");
+        return F("Access_code");
       case 0xA0:
         return F("Zone bypass");
       case 0xA1:
@@ -4646,24 +4648,20 @@ void DSCkeybushome::update()
       }
     }
 
-#if defined(AUTOPOPULATE)
 /*
+#if defined(AUTOPOPULATE)
 void DSCkeybushome::loadZone(int z) {
     std::string n=std::to_string(z);
     std::string type_id="z" + n;
+    std::string name="Zone " + n;
+    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
+    if (it != bMap.end()) return;
 
-    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_type_id() == type_id; } );
-     if (it != bMap.end()) return;
-
-    template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
+    template_alarm_::TemplateBinarySensor * ptr = new template_alarm_::TemplateBinarySensor();
     App.register_binary_sensor(ptr);
 
-    ptr->name_static="Zone " + n ;
-    ptr->object_id_static=str_snake_case(ptr->name_static);
-    ptr->type_id_static=type_id;
-    ptr->set_name(ptr->name_static.c_str());
-    ptr->set_object_id(ptr->object_id_static.c_str());
-    ptr->set_type_id(ptr->type_id_static.c_str());
+    ptr->set_name("Zone 19");
+    ptr->set_object_id("z19");
 
 //ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());
 
@@ -4676,14 +4674,14 @@ void DSCkeybushome::loadZone(int z) {
     App.register_component(mqptr);
     mqptr->call();
 #endif
-    ptr->set_component_source("template.binary_sensor");
+    ptr->set_component_source("template_alarm.binary_sensor");
     App.register_component(ptr);
-    //ptr->call();
+    ptr->call();
+    gptr=ptr;
 
-    //bMap=App.get_binary_sensors();
 }
-*/
 #endif
+*/
 
 #if !defined(ARDUINO_MQTT)
   }
