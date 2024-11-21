@@ -8,8 +8,6 @@
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 
-#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
-
 #if defined(USE_MQTT)
 #include "esphome/components/mqtt/mqtt_client.h"
 #endif
