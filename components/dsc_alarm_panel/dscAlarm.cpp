@@ -272,7 +272,7 @@ void DSCkeybushome::setup()
           s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
         }
       }
-      return name;
+      return name.substr(0,20);
     }
 
     void DSCkeybushome::set_default_partition(int partition)
