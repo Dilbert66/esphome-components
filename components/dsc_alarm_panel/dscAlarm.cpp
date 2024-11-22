@@ -3363,7 +3363,7 @@ void DSCkeybushome::update()
         decoded = false;
       }
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       if (dsc.panelData[panelByte] >= 0x09 && dsc.panelData[panelByte] <= 0x28)
@@ -3533,7 +3533,7 @@ void DSCkeybushome::update()
         decoded = false;
       }
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
       if (dsc.panelData[panelByte] >= 0x24 && dsc.panelData[panelByte] <= 0x28)
       {
@@ -3722,7 +3722,7 @@ void DSCkeybushome::update()
         decoded = false;
       }
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
       if (dsc.panelData[panelByte] >= 0x67 && dsc.panelData[panelByte] <= 0x69)
       {
@@ -3943,7 +3943,7 @@ void DSCkeybushome::update()
         decoded = false;
       }
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       if (dsc.panelData[panelByte] <= 0x04)
@@ -4029,7 +4029,7 @@ void DSCkeybushome::update()
         decoded = false;
       }
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       if (dsc.panelData[panelByte] <= 0x1F)
@@ -4098,7 +4098,7 @@ void DSCkeybushome::update()
       bool decoded = true;
       String lcdLine1;
       String lcdLine2;
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       if (dsc.panelData[panelByte] <= 0x39)
@@ -4146,7 +4146,7 @@ void DSCkeybushome::update()
       bool decoded = false;
       String lcdLine1;
       String lcdLine2;
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       switch (dsc.panelData[panelByte])
@@ -4325,7 +4325,7 @@ void DSCkeybushome::update()
       // std::string lcdLine2;
       String lcdLine1;
       String lcdLine2;
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
 
       if (dsc.panelData[panelByte] >= 0x4A && dsc.panelData[panelByte] <= 0x83)
@@ -4414,7 +4414,7 @@ void DSCkeybushome::update()
     {
       bool decoded = true;
 
-      char lcdMessage[50];
+      char lcdMessage[100];
       char charBuffer[4];
       String lcdLine1;
       String lcdLine2;
