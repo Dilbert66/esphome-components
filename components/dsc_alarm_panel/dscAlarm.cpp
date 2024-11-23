@@ -1,4 +1,4 @@
-// for project documenation visit https://github.com/Dilbert66/esphome-dsckeybus
+// for project documentation visit https://github.com/Dilbert66/esphome-dsckeybus
 
 #include "dscAlarm.h"
 
@@ -48,6 +48,7 @@ namespace esphome
       if (partition) {
         id +=std::to_string(partition);
       }
+      //  id(id)->publish_state(open);
          auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor* bs)
                         { return bs->get_object_id() == id; });
                              
@@ -266,13 +267,13 @@ void DSCkeybushome::setup()
           token3 = token1.substr(pos1 + 1);
           if (token2 == code)
           {
-            name = token3;
+            name.append(":").append(token3);
             break;
           }
           s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
         }
       }
-      return name.substr(0,20);
+      return name.substr(0,24);
     }
 
     void DSCkeybushome::set_default_partition(int partition)
@@ -2980,7 +2981,7 @@ void DSCkeybushome::update()
         return; // Skips 0xAA data when 0xEC extended event buffer data is available
       eventStatusMsg = "";
       char eventInfo[45] = "";
-      char charBuffer[4];
+      char charBuffer[5];
       if (!showEvent)
       {
         strcat_P(eventInfo, PSTR("E:"));
@@ -3079,7 +3080,7 @@ void DSCkeybushome::update()
         extendedBufferFlag = true;
       eventStatusMsg = "";
       char eventInfo[45] = "";
-      char charBuffer[4];
+      char charBuffer[5];
       if (!showEvent)
       {
         strcat(eventInfo, "E:");
@@ -3364,7 +3365,7 @@ void DSCkeybushome::update()
       }
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       if (dsc.panelData[panelByte] >= 0x09 && dsc.panelData[panelByte] <= 0x28)
       {
@@ -3382,7 +3383,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
       {
         lcdLine1 = F("Zone alarm");
-        strcpy_P(lcdMessage, PSTR(" restored:"));
+        strcpy_P(lcdMessage, PSTR("restored:"));
         byte zone = dsc.panelData[panelByte] - 40;
         // if (zone > 0 && zone < maxZones)
         // zoneStatus[zone-1].alarm=false;
@@ -3408,7 +3409,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x76 && dsc.panelData[panelByte] <= 0x95)
       {
         lcdLine1 = F("Zone tamper");
-        strcpy_P(lcdMessage, PSTR(" restored: "));
+        strcpy_P(lcdMessage, PSTR("restored:"));
         byte zone = dsc.panelData[panelByte] - 0x75;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->tamper = false;
@@ -3420,14 +3421,14 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x99 && dsc.panelData[panelByte] <= 0xBD)
       {
-        lcdLine1 = F("Armed:");
+        lcdLine1 = F("Armed");
         byte dscCode = dsc.panelData[panelByte] - 0x98;
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+       // if (dscCode == 40)
+       //   strcpy_P(lcdMessage, PSTR("Master code "));
+      //  else
+          strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3437,14 +3438,14 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xC0 && dsc.panelData[panelByte] <= 0xE4)
       {
-        lcdLine1 = F("Disarmed:");
+        lcdLine1 = F("Disarmed");
         byte dscCode = dsc.panelData[panelByte] - 0xBF;
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+      //  if (dscCode == 40)
+      //    strcpy_P(lcdMessage, PSTR("Master code "));
+       // else
+          strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3534,16 +3535,16 @@ void DSCkeybushome::update()
       }
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
       if (dsc.panelData[panelByte] >= 0x24 && dsc.panelData[panelByte] <= 0x28)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x03;
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+        //if (dscCode == 40)
+        //  strcpy_P(lcdMessage, PSTR("Master code "));
+       // else
+          strcpy_P(lcdMessage, PSTR("User "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3555,7 +3556,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x2C && dsc.panelData[panelByte] <= 0x4B)
       {
         lcdLine1 = F("Zone bat");
-        strcpy_P(lcdMessage, PSTR("rest:"));
+        strcpy_P(lcdMessage, PSTR("restored:"));
         getZone(dsc.panelData[panelByte] - 42)->batteryLow = false;
         itoa(dsc.panelData[panelByte] - 43, charBuffer, 10);
         strcat(lcdMessage, charBuffer);
@@ -3579,7 +3580,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x6C && dsc.panelData[panelByte] <= 0x8B)
       {
         lcdLine1 = F("Zone fault");
-        strcpy_P(lcdMessage, PSTR("rest:"));
+        strcpy_P(lcdMessage, PSTR("restored:"));
         // zoneStatus[dsc.panelData[panelByte] - 106].open=false;
         itoa(dsc.panelData[panelByte] - 107, charBuffer, 10);
         strcat(lcdMessage, charBuffer);
@@ -3723,7 +3724,7 @@ void DSCkeybushome::update()
       }
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
       if (dsc.panelData[panelByte] >= 0x67 && dsc.panelData[panelByte] <= 0x69)
       {
         strcpy_P(lcdMessage, PSTR("Cmd O/P:"));
@@ -3737,13 +3738,13 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x9E && dsc.panelData[panelByte] <= 0xC2)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9D;
-        lcdLine1 = F("*1: ");
+        lcdLine1 = F("[*1]");
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+       // if (dscCode == 40)
+       //   strcpy_P(lcdMessage, PSTR("Master code "));
+     //   else
+          strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3754,13 +3755,13 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xC3 && dsc.panelData[panelByte] <= 0xC5)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xA0;
-        lcdLine1 = F("*5: ");
+        lcdLine1 = F("[*5]");
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+       // if (dscCode == 40)
+        //  strcpy_P(lcdMessage, PSTR("Master code "));
+     //   else
+          strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3773,10 +3774,10 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] - 0xC5;
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+        //if (dscCode == 40)
+      //    strcpy_P(lcdMessage, PSTR("Master code "));
+      //  else
+          strcpy_P(lcdMessage, PSTR("User "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3788,13 +3789,13 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xE6 && dsc.panelData[panelByte] <= 0xE8)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xC3;
-        lcdLine1 = F("");
+        lcdLine1 = F("[*6]");
         if (dscCode >= 35)
           dscCode += 5;
-        if (dscCode == 40)
-          strcpy_P(lcdMessage, PSTR("Master_code:"));
-        else
-          strcpy_P(lcdMessage, PSTR("Access_code:"));
+      //  if (dscCode == 40)
+      //    strcpy_P(lcdMessage, PSTR("Master code "));
+      //  else
+          strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -3804,8 +3805,8 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xE9 && dsc.panelData[panelByte] <= 0xF0)
       {
-        lcdLine1 = F("Keypad rest");
-        strcpy_P(lcdMessage, PSTR(" slot:"));
+        lcdLine1 = F("Keypad rest ");
+        strcpy_P(lcdMessage, PSTR("slot:"));
         itoa(dsc.panelData[panelByte] - 232, charBuffer, 10);
         strcat(lcdMessage, charBuffer);
         lcdLine2 = lcdMessage;
@@ -3814,7 +3815,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xF1 && dsc.panelData[panelByte] <= 0xF8)
       {
-        lcdLine1 = F("Keypad trble ");
+        lcdLine1 = F("Keypad trouble");
         strcpy_P(lcdMessage, PSTR("slot: "));
         itoa(dsc.panelData[panelByte] - 240, charBuffer, 10);
         strcat(lcdMessage, charBuffer);
@@ -3828,7 +3829,7 @@ void DSCkeybushome::update()
         itoa(dsc.panelData[panelByte] - 248, charBuffer, 10);
         strcat(lcdMessage, charBuffer);
         lcdLine1 = lcdMessage;
-        lcdLine2 = F(" rest");
+        lcdLine2 = F("rest");
         decoded = true;
       }
 
@@ -3944,7 +3945,7 @@ void DSCkeybushome::update()
       }
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       if (dsc.panelData[panelByte] <= 0x04)
       {
@@ -4030,7 +4031,7 @@ void DSCkeybushome::update()
       }
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       if (dsc.panelData[panelByte] <= 0x1F)
       {
@@ -4047,7 +4048,7 @@ void DSCkeybushome::update()
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
         lcdLine1 = F("Zone alarm");
-        strcpy_P(lcdMessage, PSTR(" rest: "));
+        strcpy_P(lcdMessage, PSTR("restored: "));
         byte zone = dsc.panelData[panelByte] + 1;
         //   if (zone > 0 && zone < maxZones)
         //    zoneStatus[zone-1].alarm=false;
@@ -4071,7 +4072,7 @@ void DSCkeybushome::update()
       else if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
         lcdLine1 = F("Zone tamper");
-        strcpy_P(lcdMessage, PSTR(" rest:"));
+        strcpy_P(lcdMessage, PSTR("restored"));
         byte zone = dsc.panelData[panelByte] - 63;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->tamper = false;
@@ -4099,15 +4100,15 @@ void DSCkeybushome::update()
       String lcdLine1;
       String lcdLine2;
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       if (dsc.panelData[panelByte] <= 0x39)
       {
         byte dscCode = dsc.panelData[panelByte] + 0x23;
-        lcdLine1 = F("Armed:");
+        lcdLine1 = F("Armed");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4118,10 +4119,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x73)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x17;
-        lcdLine1 = F("Disarmed:");
+        lcdLine1 = F("Disarmed");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4147,7 +4148,7 @@ void DSCkeybushome::update()
       String lcdLine1;
       String lcdLine2;
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       switch (dsc.panelData[panelByte])
       {
@@ -4326,15 +4327,15 @@ void DSCkeybushome::update()
       String lcdLine1;
       String lcdLine2;
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
 
       if (dsc.panelData[panelByte] >= 0x4A && dsc.panelData[panelByte] <= 0x83)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x27;
-        lcdLine1 = F("*1: ");
+        lcdLine1 = F("[*1]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4345,10 +4346,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] <= 0x24)
       {
         byte dscCode = dsc.panelData[panelByte] + 1;
-        lcdLine1 = F("*2: ");
+        lcdLine1 = F("[*2]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4359,10 +4360,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x84 && dsc.panelData[panelByte] <= 0xBD)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x61;
-        lcdLine1 = F("*2: ");
+        lcdLine1 = F("[*2]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4373,10 +4374,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x25 && dsc.panelData[panelByte] <= 0x49)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x24;
-        lcdLine1 = F("*3: ");
+        lcdLine1 = F("[*3]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4387,10 +4388,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xBE && dsc.panelData[panelByte] <= 0xF7)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9B;
-        lcdLine1 = F("*3: ");
+        lcdLine1 = F("[*3]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4415,7 +4416,7 @@ void DSCkeybushome::update()
       bool decoded = true;
 
       char lcdMessage[100];
-      char charBuffer[4];
+      char charBuffer[5];
       String lcdLine1;
       String lcdLine2;
       if (dsc.panelData[panelByte] <= 0x39)
@@ -4423,7 +4424,7 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] + 0x23;
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("User "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4435,10 +4436,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x95)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x39;
-        lcdLine1 = F("*5: ");
+        lcdLine1 = F("[*5]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
@@ -4449,10 +4450,10 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x96 && dsc.panelData[panelByte] <= 0xF1)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x95;
-        lcdLine1 = F("*6: ");
+        lcdLine1 = F("[*6]");
         if (dscCode >= 40)
           dscCode += 3;
-        strcpy_P(lcdMessage, PSTR("Access_code:"));
+        strcpy_P(lcdMessage, PSTR("by user "));
         itoa(dscCode, charBuffer, 10);
         std::string c = getUserName(charBuffer);
         strcat(lcdMessage, c.c_str());
