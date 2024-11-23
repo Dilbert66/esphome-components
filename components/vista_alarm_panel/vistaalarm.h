@@ -98,15 +98,15 @@ extern Vista  vista;
 
     enum reqStates
     {
-      sidle,
-      sopenzones,
-      sbypasszones,
-      szonecount,
-      spartitionlist,
-      spartitionid,
-      szoneinfo,
-      sicode,
-      sdate,
+      rsidle,
+      rsopenzones,
+      rsbypasszones,
+      rszonecount,
+      rspartitionlist,
+      rspartitionid,
+      rszoneinfo,
+      rsicode,
+      rsdate,
     };
 
 #if defined(ESPHOME_MQTT) && !defined(USE_API)
@@ -276,18 +276,20 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t auiAddr = 0;
       //bool activeAuiAddr=false;
       bool sendAuiTime();
-      bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
+      //bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
       char auiSeq=8;
+      void processAuiQueue();
       //int8_t dateReqStatus=0;
 
-      struct  {
-        reqStates state=sidle;
+      struct auiCmdType {
+        reqStates state=rsidle;
         unsigned long time=0;
         uint8_t partition=0;
         uint8_t records=0;
         uint8_t record=0;
         bool pending=false;
-      } auiCmd;
+      };
+
 
       const char *accessCode;
       const char *rfSerialLookup;
@@ -453,11 +455,13 @@ class vistaECPHome : public time::RealTimeClock
       static void cmdQueueTask(void *args);
 #endif
 
-
+      auiCmdType auiCmd;
       std::vector<zoneType> extZones{};
+      std::queue<auiCmdType> auiQueue{};
 
       #if defined(AUTOPOPULATE)
       std::vector<zoneNameType> autoZones{};
+      void fetchPanelZones()
       #endif
 
       zoneType nz;
@@ -487,7 +491,7 @@ class vistaECPHome : public time::RealTimeClock
 #endif
 
         void set_panel_time();
-        void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
+      //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
         void alarm_disarm(std::string code, int partition);
 
         void alarm_arm_home(int partition);
