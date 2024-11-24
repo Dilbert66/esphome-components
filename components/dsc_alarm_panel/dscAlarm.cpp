@@ -2695,7 +2695,7 @@ void DSCkeybushome::update()
             if (checkUserCode(*currentSelection))
               programmed = 'P';
             char c[5];
-             snprintf(c,4,"%02d",*currentSelection);
+             snprintf(c,4,"%d",*currentSelection);
              std::string name = getUserName(c);
              if (name != "")
                snprintf(s, 50, PSTR("%s   %c"), name.c_str(),programmed);
