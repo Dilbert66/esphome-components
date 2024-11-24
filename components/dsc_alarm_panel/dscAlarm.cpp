@@ -266,8 +266,9 @@ void DSCkeybushome::setup()
           token2 = token1.substr(0, pos1);
           token3 = token1.substr(pos1 + 1);
           if (token2 == code)
-          {
-            name.append(":").append(token3);
+          { 
+            //name= token3 + std::string(" (") + name + std::string(")");
+            name= name + std::string(" ") + token3;
             break;
           }
           s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
@@ -2546,10 +2547,10 @@ void DSCkeybushome::update()
           }
           if (*selectedOpenZone && *selectedOpenZone < maxZones)
           { // open zones
-            char s[50];
+            char s[51];
             std::string name = getZoneName(*selectedOpenZone);
             if (name != "")
-              snprintf(s, 50, PSTR("%s"), name.c_str());
+              snprintf(s, 50, PSTR(" %02d %s"), *selectedOpenZone,name.c_str());
             else
               snprintf(s, 50, PSTR("zone %02d"), *selectedOpenZone);
             lcdLine2 = s;
@@ -2561,7 +2562,7 @@ void DSCkeybushome::update()
             *currentSelection = getNextEnabledZone(0, partition + 1);
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
-            char s[50];
+            char s[51];
             char bypassStatus = ' ';
             if (getZone(*currentSelection - 1)->bypassed)
               bypassStatus = 'B';
@@ -2569,7 +2570,7 @@ void DSCkeybushome::update()
               bypassStatus = 'O';
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s  %c"), name.c_str(), bypassStatus);
+              snprintf(s, 50, PSTR("%02d %s  %c"),*currentSelection, name.c_str(), bypassStatus);
             else
               snprintf(s, 50, PSTR("%02d  %c"), *currentSelection, bypassStatus);
             lcdLine2 = s;
@@ -2581,7 +2582,7 @@ void DSCkeybushome::update()
             *currentSelection = getNextAlarmedZone(0, partition + 1);
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
-            char s[50];
+            char s[51];
             std::string name = getZoneName(*currentSelection);
             if (name != "")
               snprintf(s, 50, PSTR("%s"), name.c_str());
@@ -2598,10 +2599,10 @@ void DSCkeybushome::update()
             *currentSelection = getNextOption(0);
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
-            char s[50];
+            char s[51];
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s"), name.c_str());
+              snprintf(s, 50, PSTR("%02d %s"),*currentSelection, name.c_str());
             else
               snprintf(s, 50, PSTR("zone %02d"), *currentSelection);
 
@@ -2620,10 +2621,10 @@ void DSCkeybushome::update()
 
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
-            char s[50];
+            char s[51];
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%s"), name.c_str());
+              snprintf(s, 50, PSTR("%02d %s"), *currentSelection, name.c_str());
             else
               snprintf(s, 50, PSTR("zone %02d"), *currentSelection);
 
@@ -2689,11 +2690,17 @@ void DSCkeybushome::update()
             *currentSelection = getNextUserCode(0);
           if (*currentSelection < 96)
           {
-            char s[16];
+            char s[51];
             char programmed = ' ';
             if (checkUserCode(*currentSelection))
               programmed = 'P';
-            sprintf(s, PSTR("%02d   %c"), *currentSelection, programmed);
+            char c[5];
+             snprintf(c,4,"%02d",*currentSelection);
+             std::string name = getUserName(c);
+             if (name != "")
+               snprintf(s, 50, PSTR("%s   %c"), name.c_str(),programmed);
+            else
+              snprintf(s,50, PSTR("%02d   %c"), *currentSelection, programmed);
             lcdLine2 = s;
           }
         }
