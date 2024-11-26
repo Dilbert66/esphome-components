@@ -445,6 +445,9 @@ void begin() ;
 
  private:  
   std::string getUserName(char * code) ;
+  void toLower(std::string * s);
+ const char * getPartitionStatus(byte partition);
+
 public:
   void set_default_partition(int partition);
 
