@@ -3050,6 +3050,8 @@ void DSCkeybushome::update()
         return;
       }
       byte partition = dsc.panelData[3] >> 6;
+      if (!partition)
+        partition=activePartition;
         if (showEvent)
           strcat_P(eventInfo, PSTR(",'p':"));
         else
@@ -3061,7 +3063,7 @@ void DSCkeybushome::update()
       if (showEvent) {
         eventStatusMsg =  std::string("'time':'") + eventInfo + std::string("',") ;
        }  else
-        line1DisplayCallback(eventInfo, partition);
+        line1DisplayCallback(eventInfo, activePartition);
 
       switch (dsc.panelData[5] & 0x03)
       {
@@ -3178,7 +3180,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg = eventInfo;
       else
-        line1DisplayCallback(eventInfo, partition);
+        line1DisplayCallback(eventInfo, activePartition);
 
       switch (dsc.panelData[7])
       {
@@ -3501,7 +3503,7 @@ void DSCkeybushome::update()
       if (showEvent) {
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
        }  else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus1(byte panelByte, byte partition, bool showEvent)
@@ -3678,7 +3680,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus2(byte panelByte, byte partition, bool showEvent)
@@ -3898,7 +3900,7 @@ void DSCkeybushome::update()
           eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
 
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus3(byte panelByte, byte partition, bool showEvent)
@@ -4066,7 +4068,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus4(byte panelByte, byte partition, bool showEvent)
@@ -4167,7 +4169,7 @@ void DSCkeybushome::update()
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
 
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus5(byte panelByte, byte partition, bool showEvent)
@@ -4225,7 +4227,7 @@ void DSCkeybushome::update()
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
 
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus14(byte panelByte, byte partition, bool showEvent)
@@ -4335,7 +4337,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
     long int DSCkeybushome::toInt(std::string s, int base)
     {
@@ -4390,7 +4392,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus17(byte panelByte, byte partition, bool showEvent)
@@ -4491,7 +4493,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus18(byte panelByte, byte partition, bool showEvent)
@@ -4563,7 +4565,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus1B(byte panelByte, byte partition, bool showEvent)
@@ -4597,7 +4599,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), partition);
+        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::toLower(std::string * s) {
