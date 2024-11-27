@@ -444,7 +444,7 @@ void begin() ;
 #endif      
 
  private:  
-  std::string getUserName(char * code) ;
+  std::string getUserName(int usercode,bool addCode=false) ;
   void toLower(std::string * s);
  const char * getPartitionStatus(byte partition);
 
@@ -545,7 +545,7 @@ void update() override;
 #endif
 
 
- std::string getZoneName(int zone); 
+ std::string getZoneName(int zone,bool addzone=false); 
 
   void setStatus(byte partition, bool force = false, bool skip = false);
 
