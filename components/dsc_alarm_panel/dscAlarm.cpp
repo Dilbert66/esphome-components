@@ -84,16 +84,17 @@ namespace esphome
 #endif
     }
 
-    std::string DSCkeybushome::getZoneName(int zone,bool addzone)
+    std::string DSCkeybushome::getZoneName(int zone,bool append)
     {
+      
       std::string c = "z" + std::to_string(zone);
       auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor* bs)
                         { return bs->get_object_id() == c; });
       if (it != bMap.end()) {
-        if (addzone)
-        return std::to_string(zone).append(" (").append((*it)->get_name()).append(")");
-      else
-        return (*it)->get_name();
+        if (append)
+          return std::to_string(zone).append(" (").append((*it)->get_name()).append(")");
+        else
+          return (*it)->get_name();
       }
       return "";
     }
@@ -253,7 +254,7 @@ void DSCkeybushome::setup()
       zoneMsgStatusCallback("No messages");
     }
 
-    std::string DSCkeybushome::getUserName(int usercode,bool addcode)
+    std::string DSCkeybushome::getUserName(int usercode,bool append)
     {
       std::string name ="";
       std::string code=std::to_string(usercode);
@@ -278,7 +279,7 @@ void DSCkeybushome::setup()
           s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
         }
       }
-      if (addcode)
+      if (append)
         return code.append(" (").append(name.substr(0,24)).append(")");
       else
         return name.substr(0,24);

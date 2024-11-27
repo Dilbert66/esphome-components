@@ -491,12 +491,13 @@ def binary_sensor_schema(
 async def setup_entity(var, config):
     """Set up generic properties of an Entity"""
     cg.add(var.set_name(config[CONF_NAME]))
+
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_object_id(config[CONF_TYPE_ID]))
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_object_id(config[CONF_ID].id))
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
     else:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))    
 
 async def setup_binary_sensor_core_(var, config):
     await setup_entity(var, config)

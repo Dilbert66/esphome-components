@@ -79,12 +79,14 @@ async def new_text_sensor(config, *args):
 async def setup_entity(var, config):
     """Set up generic properties of an Entity"""
     cg.add(var.set_name(config[CONF_NAME]))
+    
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_object_id(config[CONF_TYPE_ID]))
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_object_id(config[CONF_ID].id))
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
     else:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+
     cg.add(var.set_disabled_by_default(config[CONF_DISABLED_BY_DEFAULT]))
     if CONF_INTERNAL in config:
         cg.add(var.set_internal(config[CONF_INTERNAL]))
