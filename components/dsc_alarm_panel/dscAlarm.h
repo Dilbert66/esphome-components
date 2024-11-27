@@ -122,7 +122,7 @@ const char am4[] PROGMEM = "Alarm Memory: (*3) to view";
 const char am5[] PROGMEM = "Open Zones:Scroll to view <>";
 
 const char ml0[] PROGMEM = "System is Ready:Ready to Arm <>";
-const char ml1[] PROGMEM = "Secure System:Before Arming <>";
+const char ml1[] PROGMEM = "Secure System: Before Arming <>";
 
 const char STATUS_EXIT[] PROGMEM = "arming";
 const char STATUS_ENTRY[] PROGMEM = "pending";

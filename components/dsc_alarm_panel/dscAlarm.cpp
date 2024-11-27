@@ -2053,165 +2053,165 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         break;
       case 0x02:
-        lcdLine1 = F("Stay         ");
-        lcdLine2 = F("zones open      ");
+        lcdLine1 = F("Stay");
+        lcdLine2 = F("zones open");
         break;
       case 0x03:
         lcdLine1 = F("Zones open  <>");
         lcdLine2 = F(" ");
         break;
       case 0x04:
-        lcdLine1 = F("Armed:       ");
-        lcdLine2 = F("Stay            ");
+        lcdLine1 = F("Armed");
+        lcdLine2 = F("Stay");
         break;
       case 0x05:
-        lcdLine1 = F("Armed:       ");
-        lcdLine2 = F("Away            ");
+        lcdLine1 = F("Armed");
+        lcdLine2 = F("Away");
         break;
       case 0x06:
-        lcdLine1 = F("Armed: Stay  ");
-        lcdLine2 = F("No entry delay  ");
+        lcdLine1 = F("Armed Stay");
+        lcdLine2 = F("No entry delay");
         break;
       case 0x07:
-        lcdLine1 = F("Failed       ");
-        lcdLine2 = F("to arm          ");
+        lcdLine1 = F("Failed");
+        lcdLine2 = F("to arm");
         break;
       case 0x08:
-        lcdLine1 = F("Exit delay   ");
-        lcdLine2 = F("in progress     ");
+        lcdLine1 = F("Exit delay");
+        lcdLine2 = F("in progress");
         break;
       case 0x09:
-        lcdLine1 = F("Arming:      ");
-        lcdLine2 = F("No entry delay  ");
+        lcdLine1 = F("Arming");
+        lcdLine2 = F("No entry delay");
         break;
       case 0x0B:
-        lcdLine1 = F("Quick exit   ");
-        lcdLine2 = F("in progress     ");
+        lcdLine1 = F("Quick exit");
+        lcdLine2 = F("in progress");
         break;
       case 0x0C:
-        lcdLine1 = F("Entry delay  ");
-        lcdLine2 = F("in progress     ");
+        lcdLine1 = F("Entry delay");
+        lcdLine2 = F("in progress");
         break;
       case 0x0D:
-        lcdLine1 = F("Entry delay  ");
-        lcdLine2 = F("after alarm     ");
+        lcdLine1 = F("Entry delay");
+        lcdLine2 = F("after alarm");
         break;
       case 0x0E:
-        lcdLine1 = F("Not          ");
-        lcdLine2 = F("available       ");
+        lcdLine1 = F("Not");
+        lcdLine2 = F("available");
         break;
       case 0x10:
-        lcdLine1 = F("Keypad       ");
-        lcdLine2 = F("lockout         ");
+        lcdLine1 = F("Keypad");
+        lcdLine2 = F("lockout");
         break;
       case 0x11:
         lcdLine1 = F("Partition in alarm");
-        lcdLine2 = F("  ");
+        lcdLine2 = F(" ");
         break;
       case 0x12:
         lcdLine1 = F("Battery check");
-        lcdLine2 = F("in progress     ");
+        lcdLine2 = F("in progress");
         break;
       case 0x14:
-        lcdLine1 = F("Auto-arm     ");
-        lcdLine2 = F("in progress     ");
+        lcdLine1 = F("Auto-arm");
+        lcdLine2 = F("in progress");
         break;
       case 0x15:
-        lcdLine1 = F("Arming with  ");
-        lcdLine2 = F("bypass zones    ");
+        lcdLine1 = F("Arming with");
+        lcdLine2 = F("bypass zones");
         break;
       case 0x16:
-        lcdLine1 = F("Armed: Away  ");
-        lcdLine2 = F("No entry delay  ");
+        lcdLine1 = F("Armed: Away");
+        lcdLine2 = F("No entry delay");
         break;
       case 0x17:
-        lcdLine1 = F("Power saving ");
-        lcdLine2 = F("Keypad blanked  ");
+        lcdLine1 = F("Power saving");
+        lcdLine2 = F("Keypad blanked");
         break;
       case 0x19:
-        lcdLine1 = F("Alarm        ");
-        lcdLine2 = F("occurred        ");
+        lcdLine1 = F("Alarm");
+        lcdLine2 = F("occurred");
         break;
       case 0x22:
         lcdLine1 = F("Alarms occurred");
         lcdLine2 = F("Press # to exit");
         break;
       case 0x2F:
-        lcdLine1 = F("Keypad LCD   ");
-        lcdLine2 = F("test            ");
+        lcdLine1 = F("Keypad LCD");
+        lcdLine2 = F("test");
         break;
       case 0x33:
-        lcdLine1 = F("Command      ");
-        lcdLine2 = F("output active   ");
+        lcdLine1 = F("Command");
+        lcdLine2 = F("output active");
         break;
       case 0x3D:
-        lcdLine1 = F("Alarm        ");
-        lcdLine2 = F("occurred        ");
+        lcdLine1 = F("Alarm");
+        lcdLine2 = F("occurred");
         break;
       case 0x3E:
-        lcdLine1 = F("Disarmed     ");
+        lcdLine1 = F("Disarmed");
         lcdLine2 = F(" ");
 
         break;
       case 0x40:
-        lcdLine1 = F("Keypad       ");
-        lcdLine2 = F("blanked         ");
+        lcdLine1 = F("Keypad");
+        lcdLine2 = F("blanked");
         break;
       case 0x80:
-        lcdLine1 = F("Invalid entry   ");
-        lcdLine2 = F("         ");
+        lcdLine1 = F("Invalid entry");
+        lcdLine2 = F(" ");
         break;
       case 0x8A:
-        lcdLine1 = F("Activate     ");
+        lcdLine1 = F("Activate");
         lcdLine2 = F("stay/away zones ");
         break;
       case 0x8B:
-        lcdLine1 = F("Quick exit   ");
+        lcdLine1 = F("Quick exit");
         lcdLine2 = F(" ");
         break;
       case 0x8E:
-        lcdLine1 = F("Invalid      ");
-        lcdLine2 = F("option          ");
+        lcdLine1 = F("Invalid");
+        lcdLine2 = F("option");
         break;
       case 0x8F:
-        lcdLine1 = F("Invalid      ");
-        lcdLine2 = F("Access_code     ");
+        lcdLine1 = F("Invalid");
+        lcdLine2 = F("Access_code");
         break;
       case 0x9E:
         lcdLine1 = F("Press (*) for <>");
         lcdLine2 = F(" ");
         break;
       case 0x9F:
-        lcdLine1 = F("Enter  ");
-        lcdLine2 = F("Access_code   ");
+        lcdLine1 = F("Enter");
+        lcdLine2 = F("Access_code");
         break;
       case 0xA0:
-        lcdLine1 = F("Zone bypass   <>");
+        lcdLine1 = F("Zone bypass <>");
         lcdLine2 = F(" ");
         break;
       case 0xA1:
-        lcdLine1 = F("Trouble menu     <>    ");
+        lcdLine1 = F("Trouble menu <>");
         lcdLine2 = F(" ");
         break;
       case 0xA2:
-        lcdLine1 = F("Alarm memory     <> ");
+        lcdLine1 = F("Alarm memory <>");
         lcdLine2 = F(" ");
         break;
       case 0xA3:
-        lcdLine1 = F("Door         ");
-        lcdLine2 = F("chime enabled   ");
+        lcdLine1 = F("Door");
+        lcdLine2 = F("chime enabled");
         partitionStatus[partition].chime = true;
         panelStatusChangeCallback(chimeStatus, true, partition + 1);
         break;
       case 0xA4:
-        lcdLine1 = F("Door         ");
+        lcdLine1 = F("Door");
         lcdLine2 = F("chime disabled  ");
         partitionStatus[partition].chime = false;
         panelStatusChangeCallback(chimeStatus, false, partition + 1);
         break;
       case 0xA5:
-        lcdLine1 = F("Enter        ");
-        lcdLine2 = F("Master code     ");
+        lcdLine1 = F("Enter");
+        lcdLine2 = F("Master code");
         break;
       case 0xA6:
         lcdLine1 = F("*5:  Access code");
@@ -2219,16 +2219,16 @@ void DSCkeybushome::update()
         // digits = 2;
         break;
       case 0xA7:
-        lcdLine1 = F("*5 Enter new ");
-        lcdLine2 = F("4-digit code    ");
+        lcdLine1 = F("*5 Enter new");
+        lcdLine2 = F("4-digit code");
         partitionStatus[partition].digits = 4;
         break;
       case 0xA9:
         lcdLine1 = F("*6: User functions");
-        lcdLine2 = F("function?  ");
+        lcdLine2 = F("function?");
         break;
       case 0xAA:
-        lcdLine1 = F(" HHMM    MMDDYY   ");
+        lcdLine1 = F(" HHMM    MMDDYY");
         lcdLine2 = F("");
         partitionStatus[partition].digits = 16;
         break;
@@ -2238,37 +2238,37 @@ void DSCkeybushome::update()
         partitionStatus[partition].digits = 4;
         break;
       case 0xAC:
-        lcdLine1 = F("*6:          ");
-        lcdLine2 = F("Auto-arm on     ");
+        lcdLine1 = F("*6");
+        lcdLine2 = F("Auto-arm on");
         break;
       case 0xAD:
-        lcdLine1 = F("*6:          ");
-        lcdLine2 = F("Auto-arm off    ");
+        lcdLine1 = F("*6");
+        lcdLine2 = F("Auto-arm off");
         break;
       case 0xAF:
-        lcdLine1 = F("*6:          ");
-        lcdLine2 = F("System test     ");
+        lcdLine1 = F("*6");
+        lcdLine2 = F("System test");
         break;
       case 0xB0:
-        lcdLine1 = F("*6:          ");
-        lcdLine2 = F("Enable DLS      ");
+        lcdLine1 = F("*6");
+        lcdLine2 = F("Enable DLS");
         break;
       case 0xB1:
-        lcdLine1 = F("*6    ");
+        lcdLine1 = F("*6");
         lcdLine2 = F("b1 command");
         break;
       case 0xB2:
       case 0xB3:
-        lcdLine1 = F("*7:          ");
-        lcdLine2 = F("Command output  ");
+        lcdLine1 = F("*7");
+        lcdLine2 = F("Command output");
         break;
       case 0xB7:
-        lcdLine1 = F("Enter        ");
-        lcdLine2 = F("installer code  ");
+        lcdLine1 = F("Enter");
+        lcdLine2 = F("installer code");
         break;
       case 0xB8:
-        lcdLine1 = F("Enter *      ");
-        lcdLine2 = F("function code   ");
+        lcdLine1 = F("Enter *");
+        lcdLine2 = F("function code");
         break;
       case 0xB9:
         lcdLine1 = F("Zone Tamper <>");
@@ -2279,8 +2279,8 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         break;
       case 0xBC:
-        lcdLine1 = F("*5 Enter new ");
-        lcdLine2 = F("6-digit code    ");
+        lcdLine1 = F("*5 Enter new");
+        lcdLine2 = F("6-digit code");
         partitionStatus[partition].digits = 6;
         break;
       case 0xBF:
@@ -2292,11 +2292,11 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         break;
       case 0xC7:
-        lcdLine1 = F("Partition    ");
+        lcdLine1 = F("Partition");
         lcdLine2 = F("disabled        ");
         break;
       case 0xC8:
-        lcdLine1 = F("Service req.  <>");
+        lcdLine1 = F("Service req. <>");
         lcdLine2 = F(" ");
         break;
       case 0xCD:
@@ -2308,57 +2308,57 @@ void DSCkeybushome::update()
         lcdLine2 = F("monitor select. ");
         break;
       case 0xD0:
-        lcdLine1 = F("*2: Keypads  ");
-        lcdLine2 = F("low battery     ");
+        lcdLine1 = F("*2: Keypads");
+        lcdLine2 = F("low battery");
         break;
       case 0xD1:
-        lcdLine1 = F("*2: Keyfobs  ");
-        lcdLine2 = F("low battery     ");
+        lcdLine1 = F("*2: Keyfobs");
+        lcdLine2 = F("low battery");
         break;
       case 0xD4:
-        lcdLine1 = F("*2: Sensors  ");
-        lcdLine2 = F("RF Delinquency  ");
+        lcdLine1 = F("*2: Sensors");
+        lcdLine2 = F("RF Delinquency");
         break;
       case 0xE4:
         lcdLine1 = F("Section:");
-        lcdLine2 = F("(3 digits)  ");
+        lcdLine2 = F("(3 digits)");
         break;
       case 0xE5:
-        lcdLine1 = F("Keypad       ");
-        lcdLine2 = F("slot assignment ");
+        lcdLine1 = F("Keypad");
+        lcdLine2 = F("slot assignmen");
         break;
       case 0xE6:
         lcdLine1 = F("Input:");
-        lcdLine2 = F("(2 digits) ");
+        lcdLine2 = F("(2 digits)");
         partitionStatus[partition].digits = 2;
         break;
       case 0xE7:
-        lcdLine1 = F("Input:       ");
+        lcdLine1 = F("Input:");
         partitionStatus[partition].digits = 3;
-        lcdLine2 = F("(3 digits)   ");
+        lcdLine2 = F("(3 digits)");
         partitionStatus[partition].decimalInput = true;
         break;
       case 0xE8:
-        lcdLine1 = F("Input:       ");
+        lcdLine1 = F("Input:");
         partitionStatus[partition].digits = 4;
-        lcdLine2 = F("(4 digits)   ");
+        lcdLine2 = F("(4 digits)");
         break;
       case 0xE9:
-        lcdLine1 = F("Input:       ");
+        lcdLine1 = F("Input:");
         partitionStatus[partition].digits = 5;
-        lcdLine2 = F("(5 digits)    ");
+        lcdLine2 = F("(5 digits)");
         break;
       case 0xEA:
-        lcdLine1 = F("Input hex:   ");
+        lcdLine1 = F("Input hex:");
         partitionStatus[partition].digits = 2;
         partitionStatus[partition].hex = true;
-        lcdLine2 = F("(2 digits)    ");
+        lcdLine2 = F("(2 digits)");
         break;
       case 0xEB:
         lcdLine1 = F("Input hex:");
         partitionStatus[partition].digits = 4;
         partitionStatus[partition].hex = true;
-        lcdLine2 = F("(4 digits) ");
+        lcdLine2 = F("(4 digits)");
         break;
       case 0xEC:
         lcdLine1 = F("Input hex:");
@@ -2367,58 +2367,58 @@ void DSCkeybushome::update()
         lcdLine2 = F("(6 digits)");
         break;
       case 0xED:
-        lcdLine1 = F("Input hex:   ");
+        lcdLine1 = F("Input hex:");
         partitionStatus[partition].digits = 32;
         partitionStatus[partition].hex = true;
         lcdLine2 = F("(32 digits)  ");
         break;
       case 0xEE:
-        lcdLine1 = F("options:     ");
+        lcdLine1 = F("options:");
         options = true;
         lcdLine2 = F("option per zone ");
         break;
       case 0xEF:
-        lcdLine1 = F("Module       ");
-        lcdLine2 = F("supervision   ");
+        lcdLine1 = F("Module");
+        lcdLine2 = F("supervision");
         break;
       case 0xF0:
-        lcdLine1 = F("Function     ");
-        lcdLine2 = F("key 1      ");
+        lcdLine1 = F("Function");
+        lcdLine2 = F("key 1");
         break;
       case 0xF1:
-        lcdLine1 = F("Function     ");
-        lcdLine2 = F("key 2        ");
+        lcdLine1 = F("Function");
+        lcdLine2 = F("key 2");
         break;
       case 0xF2:
-        lcdLine1 = F("Function     ");
-        lcdLine2 = F("key 3       ");
+        lcdLine1 = F("Function");
+        lcdLine2 = F("key 3");
         break;
       case 0xF3:
-        lcdLine1 = F("Function     ");
-        lcdLine2 = F("key 4      ");
+        lcdLine1 = F("Function");
+        lcdLine2 = F("key 4");
         break;
       case 0xF4:
-        lcdLine1 = F("Function     ");
-        lcdLine2 = F("key 5           ");
+        lcdLine1 = F("Function");
+        lcdLine2 = F("key 5");
         break;
       case 0xF5:
         lcdLine1 = F("Wireless mod.");
-        lcdLine2 = F("placement test  ");
+        lcdLine2 = F("placement test");
         break;
       case 0xF6:
-        lcdLine1 = F("Activate     ");
-        lcdLine2 = F("device for test ");
+        lcdLine1 = F("Activate");
+        lcdLine2 = F("device for test");
         break;
       case 0xF7:
-        lcdLine1 = F("Sub-section: ");
-        lcdLine2 = F("(2 digits)  ");
+        lcdLine1 = F("Sub-section:");
+        lcdLine2 = F("(2 digits)");
         break;
       case 0xF8:
-        lcdLine1 = F("Keypad    ");
+        lcdLine1 = F("Keypad");
         lcdLine2 = F("programming");
         break;
       case 0xFA:
-        lcdLine1 = F("Input:   ");
+        lcdLine1 = F("Input:");
         partitionStatus[partition].digits = 6;
         lcdLine2 = F("(6 digits) ");
         break;
