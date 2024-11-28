@@ -33,6 +33,7 @@ CONF_DETAILEDPARTITIONSTATE="detailed_partition_state"
 CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
+CONF_EVENTFORMAT="event_format"
 
 
 systemstatus= '''[&](std::string statusCode) {
@@ -100,6 +101,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
+    cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),    
     }
 )
 
@@ -113,7 +115,8 @@ async def to_code(config):
               os.path.join(pathlib.Path(__file__).parent.resolve(),"risc_fix.h"),
               CORE.relative_build_path("src/risc_fix.h"),
           )
-
+    if config[CONF_EVENTFORMAT]=="json":
+        cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_AUTOPOPULATE]:
         cg.add_define("AUTOPOPULATE")
