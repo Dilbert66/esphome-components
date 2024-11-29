@@ -3063,6 +3063,8 @@ void DSCkeybushome::update()
       if (showEvent) {
        #ifdef USE_JSON_EVENT
         strcat(eventInfo,"'");
+        #else
+        strcat(eventInfo,"] ");
        #endif
       }
       if (dsc.panelData[6] == 0 && dsc.panelData[7] == 0)
@@ -3075,28 +3077,13 @@ void DSCkeybushome::update()
 
         if (!partition)
           partition=activePartition;
-      
-      if (maxPartitions() > 1) { 
-       if (showEvent) {
-        #ifdef USE_JSON_EVENT
-            strcat_P(eventInfo, PSTR(",'p':"));
-          #else
-          strcat_P(eventInfo,PSTR("] Partition: "));
-        #endif
-          } else
-            strcat_P(eventInfo, PSTR(", p:"));
-        itoa(partition, charBuffer, 10);
-        strcat(eventInfo, charBuffer);
-        strcat(eventInfo,", ");
 
-      } else {
-        #if !defined(USE_JSON_EVENT)
-         if (showEvent) {
-          strcat_P(eventInfo,PSTR("] "));
-         }
-        #endif
-      }
-
+        if (!showEvent) {
+          strcat_P(eventInfo, PSTR(", p:"));
+          itoa(partition, charBuffer, 10);
+          strcat(eventInfo, charBuffer);
+        }
+ 
       if (showEvent)
         eventStatusMsg = eventInfo;
       else
@@ -3120,9 +3107,12 @@ void DSCkeybushome::update()
       if (showEvent && eventStatusMsg != "")
       {
         #ifdef USE_JSON_EVENT
-        eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append("'}");
+        eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append(String(FPSTR(",'partition':")).c_str()).append(partition).append("}");
         #else
-        eventStatusMsg.append(String(FPSTR(", Partition Status: ")).c_str()).append(getPartitionStatus(partition-1));
+        if (maxPartitions()>1)
+          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status: ")).c_str()).append(getPartitionStatus(partition-1));
+      else
+        eventStatusMsg.append(String(FPSTR(", Partition status: ")).c_str()).append(getPartitionStatus(partition-1));
         #endif
         eventInfoCallback(eventStatusMsg);
         eventTime = millis();
@@ -3203,6 +3193,8 @@ void DSCkeybushome::update()
       if (showEvent) {
        #ifdef USE_JSON_EVENT
         strcat(eventInfo,"'");
+        #else
+        strcat_P(eventInfo,PSTR("] "));
        #endif
       }
 
@@ -3211,45 +3203,26 @@ void DSCkeybushome::update()
       if (dsc.panelData[2] != 0)
       {
 
-       if (maxPartitions() > 1) {
-        if (showEvent) {
-       #ifdef USE_JSON_EVENT
-          strcat_P(eventInfo, PSTR(",'p':"));
-        #else
-        strcat_P(eventInfo,PSTR("] Partition: "));
-      #endif
-         } else
+        if (!showEvent) {
           strcat_P(eventInfo, PSTR(", p:"));
-        
        }
-        #if !defined(USE_JSON_EVENT)
-        else {
-          if (showEvent) {
-            strcat_P(eventInfo,PSTR("] "));
-          }
-        }
-      #endif
-      
 
-      }
-       
+     
         byte bitCount = 0;
         for (byte bit = 0; bit <= 7; bit++)
         {
           if (bitRead(dsc.panelData[2], bit))
           {
-            itoa((bitCount + 1), charBuffer, 10);
             partition=bitCount+1;
             break;
           }
           bitCount++;
         }
-        if (maxPartitions() > 1) {
+        if (!showEvent) {
+          itoa(partition, charBuffer, 10);
           strcat(eventInfo, charBuffer);
-          strcat(eventInfo,", ");
         }
-      
-
+      }
       if (showEvent) 
         eventStatusMsg = eventInfo;
       else
@@ -3294,10 +3267,14 @@ void DSCkeybushome::update()
       if (showEvent && eventStatusMsg != "")
       {
         #ifdef USE_JSON_EVENT
-        eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append("'}");
+        eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append(String(FPSTR(",'partition':")).c_str()).append(partition).append("}");
         #else
-        eventStatusMsg.append(String(FPSTR(", Partition Status: ")).c_str()).append(getPartitionStatus(partition-1));
+        if (maxPartitions()>1)
+          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status: ")).c_str()).append(getPartitionStatus(partition-1));
+      else
+        eventStatusMsg.append(String(FPSTR(", Partition status: ")).c_str()).append(getPartitionStatus(partition-1));
         #endif
+
         eventInfoCallback(eventStatusMsg);
         eventTime = millis();
       }
