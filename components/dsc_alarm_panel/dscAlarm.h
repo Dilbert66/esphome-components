@@ -418,6 +418,7 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   std::string previousZoneStatusMsg,eventStatusMsg; 
   
   private:
+
   byte  lastStatus[dscPartitions];  
   bool relayStatus[16],
   previousRelayStatus[16];
@@ -434,7 +435,8 @@ void set_panel_time_manual(int year,int month,int day,int hour,int minute);
   std::string topic,topic_prefix;
   #endif
   bool zoneActive(byte zone);
-  long int toInt(std::string s, int base); 
+  long int toInt(std::string s, int base);
+  byte maxPartitions(); 
   
 #if defined(ARDUINO_MQTT)
 public:
@@ -444,7 +446,7 @@ void begin() ;
 #endif      
 
  private:  
-  std::string getUserName(int usercode,bool append=false) ;
+  std::string getUserName(int usercode,bool append=false,bool returncode=false) ;
   void toLower(std::string * s);
  const char * getPartitionStatus(byte partition);
 
