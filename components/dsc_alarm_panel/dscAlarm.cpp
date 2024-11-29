@@ -3514,12 +3514,9 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-  #ifdef USE_JSON_EVENT
-      toLower(&eventstr);
-  #endif
-
       if (showEvent) {
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -3684,9 +3681,10 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         eventstr="unknown data";
       }
-     toLower(&eventstr);
+
       if (showEvent)
-           #ifdef USE_JSON_EVENT
+        #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -3897,9 +3895,10 @@ void DSCkeybushome::update()
         lcdLine2 = " ";
         eventstr="unknown data";
       }
-      toLower(&eventstr);
+
       if (showEvent) 
       #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4073,9 +4072,9 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
       if (showEvent)
       #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4167,10 +4166,10 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         eventstr="unknown data";
       }
-      toLower(&eventstr);
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4223,10 +4222,10 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4330,10 +4329,11 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
+
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4393,10 +4393,11 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
+
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4485,10 +4486,11 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
+
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4553,10 +4555,11 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
+
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
@@ -4595,10 +4598,11 @@ void DSCkeybushome::update()
         eventstr="unknown data";
       }
 
-      toLower(&eventstr);
+
 
       if (showEvent)
         #ifdef USE_JSON_EVENT
+        toLower(&eventstr);
         eventStatusMsg.append(String(FPSTR(",'event':'")).c_str()).append(eventstr).append(String(FPSTR("','user':'")).c_str()).append(userstr).append(String(FPSTR("','zone':'")).c_str()).append(zonestr).append("'");
         #else
         eventStatusMsg.append(String(FPSTR(", Event: ")).c_str()).append(eventstr);
