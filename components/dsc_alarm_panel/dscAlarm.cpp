@@ -3110,9 +3110,9 @@ void DSCkeybushome::update()
         eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append(String(FPSTR(",'partition':")).c_str()).append(partition).append("}");
         #else
         if (maxPartitions()>1)
-          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status: ")).c_str()).append(getPartitionStatus(partition-1));
+          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status is ")).c_str()).append(getPartitionStatus(partition-1));
       else
-        eventStatusMsg.append(String(FPSTR(", Partition status: ")).c_str()).append(getPartitionStatus(partition-1));
+        eventStatusMsg.append(String(FPSTR(", Partition status is ")).c_str()).append(getPartitionStatus(partition-1));
         #endif
         eventInfoCallback(eventStatusMsg);
         eventTime = millis();
@@ -3270,9 +3270,9 @@ void DSCkeybushome::update()
         eventStatusMsg=std::string("{") + eventStatusMsg.append(String(FPSTR(",'status':'")).c_str()).append(getPartitionStatus(partition-1)).append(String(FPSTR(",'partition':")).c_str()).append(partition).append("}");
         #else
         if (maxPartitions()>1)
-          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status: ")).c_str()).append(getPartitionStatus(partition-1));
+          eventStatusMsg.append(String(FPSTR(", Partition ")).c_str()).append(std::to_string(partition)).append(String(FPSTR(" status is ")).c_str()).append(getPartitionStatus(partition-1));
       else
-        eventStatusMsg.append(String(FPSTR(", Partition status: ")).c_str()).append(getPartitionStatus(partition-1));
+        eventStatusMsg.append(String(FPSTR(", Partition status is ")).c_str()).append(getPartitionStatus(partition-1));
         #endif
 
         eventInfoCallback(eventStatusMsg);
@@ -3450,7 +3450,7 @@ void DSCkeybushome::update()
       
       if (dsc.panelData[panelByte] >= 0x09 && dsc.panelData[panelByte] <= 0x28)
       {
-        lcdLine1=F("Zone alarm ON");
+        lcdLine1=F("Zone alarm on");
         byte zone = dsc.panelData[panelByte] - 8;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->alarm = true;
@@ -3462,7 +3462,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
       {
-        lcdLine1 = F("Zone alarm OFF");
+        lcdLine1 = F("Zone alarm off");
         byte zone = dsc.panelData[panelByte] - 40;
         // if (zone > 0 && zone < maxZones)
         // zoneStatus[zone-1].alarm=false;
@@ -3498,7 +3498,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x99 && dsc.panelData[panelByte] <= 0xBD)
       {
-        lcdLine1 = F("Armed by user");
+        lcdLine1 = F("Armed by");
         byte dscCode = dsc.panelData[panelByte] - 0x98;
         if (dscCode >= 35)
           dscCode += 5;
@@ -3510,7 +3510,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xC0 && dsc.panelData[panelByte] <= 0xE4)
       {
-        lcdLine1 = F("Disarmed by user");
+        lcdLine1 = F("Disarmed by");
         byte dscCode = dsc.panelData[panelByte] - 0xBF;
         if (dscCode >= 35)
           dscCode += 5;
@@ -3534,9 +3534,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        }  else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -3702,9 +3702,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
       } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -3826,7 +3826,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x9E && dsc.panelData[panelByte] <= 0xC2)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9D;
-        lcdLine1 = F("[*1] by user");
+        lcdLine1 = F("[*1] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr= getUserName(dscCode,false,true);
@@ -3839,7 +3839,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xC3 && dsc.panelData[panelByte] <= 0xC5)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xA0;
-        lcdLine1 = F("[*5] by user");
+        lcdLine1 = F("[*5] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr= getUserName(dscCode,false,true);
@@ -3863,7 +3863,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xE6 && dsc.panelData[panelByte] <= 0xE8)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xC3;
-        lcdLine1 = F("[*6] by user");
+        lcdLine1 = F("[*6] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr= getUserName(dscCode,false,true);
@@ -3916,9 +3916,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        }  else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4092,9 +4092,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4130,7 +4130,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] <= 0x1F)
       {
-        lcdLine1=F("Zone alarm ON");
+        lcdLine1=F("Zone alarm on");
         byte zone = dsc.panelData[panelByte] + 33;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->alarm = true;
@@ -4141,7 +4141,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
-        lcdLine1 = F("Zone alarm OFF");
+        lcdLine1 = F("Zone alarm off");
         byte zone = dsc.panelData[panelByte] + 1;
         //   if (zone > 0 && zone < maxZones)
         //    zoneStatus[zone-1].alarm=false;
@@ -4152,7 +4152,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x40 && dsc.panelData[panelByte] <= 0x5F)
       {
-        lcdLine1=F("Zone tamper ON");
+        lcdLine1=F("Zone tamper on");
         byte zone = dsc.panelData[panelByte] - 31;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->tamper = true;
@@ -4163,7 +4163,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
-        lcdLine1 = F("Tamper zone OFF");
+        lcdLine1 = F("Tamper zone off");
         byte zone = dsc.panelData[panelByte] - 63;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->tamper = false;
@@ -4187,9 +4187,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
       } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4207,7 +4207,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] <= 0x39)
       {
         byte dscCode = dsc.panelData[panelByte] + 0x23;
-        lcdLine1 = F("Armed by user");
+        lcdLine1 = F("Armed by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4219,7 +4219,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x73)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x17;
-        lcdLine1 = F("Disarmed by user");
+        lcdLine1 = F("Disarmed by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4243,9 +4243,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4309,7 +4309,7 @@ void DSCkeybushome::update()
        */
       if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
-        lcdLine1 = F("Zone fault ON");
+        lcdLine1 = F("Zone fault on");
         byte dscCode = dsc.panelData[panelByte] - 63;
         zonestr=getZoneName(dscCode,true);
         lcdLine2=zonestr.c_str();
@@ -4327,7 +4327,7 @@ void DSCkeybushome::update()
        */
       if (dsc.panelData[panelByte] >= 0x80 && dsc.panelData[panelByte] <= 0x9F)
       {
-        lcdLine1 = F("Zone bypass ON");
+        lcdLine1 = F("Zone bypass on");
         byte dscCode = dsc.panelData[panelByte] - 95;
         zonestr=getZoneName(dscCode,true);
         lcdLine2=zonestr.c_str();
@@ -4351,9 +4351,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
       } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4415,9 +4415,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4434,7 +4434,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x4A && dsc.panelData[panelByte] <= 0x83)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x27;
-        lcdLine1 = F("[*1] by user");
+        lcdLine1 = F("[*1] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode,false,true);
@@ -4447,7 +4447,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] <= 0x24)
       {
         byte dscCode = dsc.panelData[panelByte] + 1;
-        lcdLine1 = F("[*2] by user");
+        lcdLine1 = F("[*2] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4459,7 +4459,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x84 && dsc.panelData[panelByte] <= 0xBD)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x61;
-        lcdLine1 = F("[*2] by user");
+        lcdLine1 = F("[*2] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4471,7 +4471,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x25 && dsc.panelData[panelByte] <= 0x49)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x24;
-        lcdLine1 = F("[*3] by user");
+        lcdLine1 = F("[*3] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4483,7 +4483,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xBE && dsc.panelData[panelByte] <= 0xF7)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9B;
-        lcdLine1 = F("[*3] by user");
+        lcdLine1 = F("[*3] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4508,9 +4508,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4540,7 +4540,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x95)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x39;
-        lcdLine1 = F("[*5] by user");
+        lcdLine1 = F("[*5] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4552,7 +4552,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x96 && dsc.panelData[panelByte] <= 0xF1)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x95;
-        lcdLine1 = F("[*6] by user");
+        lcdLine1 = F("[*6] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr= getUserName(dscCode,false,true);
@@ -4577,9 +4577,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(String(FPSTR(": ")).c_str()).append(zonestr);
+         eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
        } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
@@ -4620,9 +4620,9 @@ void DSCkeybushome::update()
         #else
         eventStatusMsg.append(eventstr);
         if (userstr!="")
-          eventStatusMsg.append(": ").append(userstr);
+          eventStatusMsg.append(" ").append(userstr);
         if (zonestr!="")
-         eventStatusMsg.append(zonestr);
+        eventStatusMsg.append(String(FPSTR(" for ")).c_str()).append(zonestr);
         #endif
       } else
         line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
