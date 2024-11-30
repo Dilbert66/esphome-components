@@ -1494,6 +1494,7 @@ void vistaECPHome::update()
               auiCmd.state=rsidle;
             } 
          #if defined(AUTOPOPULATE)
+         /*
             else if (auiCmd.state == rszonecount) {
                if (m!= NULL)
                 auiCmd.records=std::stoi(m);
@@ -1510,7 +1511,7 @@ void vistaECPHome::update()
                 auiCmd.state=rsidle;
               }
             }
-
+*/
         #endif
 
           } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && ( vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10]==0xfd)) {
@@ -1705,7 +1706,7 @@ void vistaECPHome::update()
               }
                 // zone fault status
                 // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-              if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1))
+              if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
                 {
                   if (vistaCmd.cbuf[5] > 0x90)
                     getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1727,7 +1728,7 @@ void vistaECPHome::update()
                   zt->time = millis();
                 }
                   // zone bypass status
-                if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
+                if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant)  && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
                   {
                     if (vistaCmd.cbuf[5] > 0x90)
                       getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
