@@ -241,8 +241,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
       serialType rf;
       rf.zone = 0;
-      ESP_LOGD(TAG,"Checking rf serial code %s",serialCode);
-      if (rfSerialLookup != NULL && *rfSerialLookup)
+      if (rfSerialLookup  != NULL && *rfSerialLookup)
       {
         std::string serial = serialCode;
 
@@ -250,7 +249,6 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
         size_t pos, pos1, pos2;
         s.append(",");
-      ESP_LOGD(TAG,"Checking rf serial code ");
         while ((pos = s.find(',')) != std::string::npos)
         {
           std::string token, token1, token2, token3;
@@ -1278,20 +1276,22 @@ void vistaECPHome::update()
     forceRefreshZones = true;
     forceRefreshGlobal = true;
 #endif
-        /*
+        
         //rf testing code
+        /*
         static unsigned long testtime=millis();
         static char t1=0;
         if (!vistaCmd.newExtCmd && millis() - testtime > 10000) {
-            //FB 04 06 18 98 B0 00 00 00 00 00 00
+            //FB 04 04 E9 58 80 00 00 00 00 00 00 00 
             //0399512 b0
             vistaCmd.newExtCmd=true;
             vistaCmd.cbuf[0]=0xfb;
             vistaCmd.cbuf[1]=4;
-            vistaCmd.cbuf[2]=6;
-            vistaCmd.cbuf[3]=0x18;
-            vistaCmd.cbuf[4]=0x98;
-            vistaCmd.cbuf[5]=0xb0;
+            vistaCmd.cbuf[2]=4;
+            vistaCmd.cbuf[3]=0xe9;
+            vistaCmd.cbuf[4]=0x58;
+            vistaCmd.cbuf[5]=0x80;
+            
             if (t1==1) {
                 t1=2;
                 vistaCmd.cbuf[5]=0;
@@ -1301,6 +1301,7 @@ void vistaECPHome::update()
                 vistaCmd.cbuf[5]=0xb2;
             } else
             if (t1==0) t1=1;
+            
             testtime=millis();
         }
        */
@@ -1393,7 +1394,7 @@ void vistaECPHome::update()
             char rf_serial_char_out[20];
             // FB 04 06 18 98 B0 00 00 00 00 00 00
             uint32_t device_serial = (vistaCmd.cbuf[2] << 16) + (vistaCmd.cbuf[3] << 8) + vistaCmd.cbuf[4];
-            sprintf(rf_serial_char, "%03d%04d", device_serial / 10000, device_serial % 10000);
+            snprintf(rf_serial_char, 14,"%03d%04d", device_serial / 10000, device_serial % 10000);
             serialType rf = getRfSerialLookup(rf_serial_char);
             int z = rf.zone;
 
