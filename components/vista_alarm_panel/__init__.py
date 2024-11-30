@@ -94,10 +94,10 @@ relay='''[&](uint8_t addr,int channel,bool open) {
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(AlarmComponent),
-    cv.Optional(CONF_ACCESSCODE): cv.string  ,
+    cv.Optional(CONF_ACCESSCODE,default=""): cv.string  ,
     cv.Optional(CONF_MAXZONES,default=32): cv.int_, 
     cv.Optional(CONF_MAXPARTITIONS,default=1): cv.int_, 
-    cv.Optional(CONF_RFSERIAL): cv.string, 
+    cv.Optional(CONF_RFSERIAL,default=""): cv.string, 
     cv.Optional(CONF_DEFAULTPARTITION): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL): cv.int_, 
     cv.Optional(CONF_KEYPAD1,default=17): cv.int_, 
