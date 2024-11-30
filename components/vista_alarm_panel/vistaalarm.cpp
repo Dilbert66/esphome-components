@@ -241,7 +241,8 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
       serialType rf;
       rf.zone = 0;
-      if (rfSerialLookup && *rfSerialLookup)
+      ESP_LOGD(TAG,"Checking rf serial code %s",serialCode);
+      if (rfSerialLookup != NULL && *rfSerialLookup)
       {
         std::string serial = serialCode;
 
@@ -249,6 +250,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
         size_t pos, pos1, pos2;
         s.append(",");
+      ESP_LOGD(TAG,"Checking rf serial code ");
         while ((pos = s.find(',')) != std::string::npos)
         {
           std::string token, token1, token2, token3;
