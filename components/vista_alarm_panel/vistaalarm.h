@@ -492,21 +492,21 @@ class vistaECPHome : public time::RealTimeClock
 
         void set_panel_time();
       //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
-        void alarm_disarm(std::string code, int partition);
+        void alarm_disarm(std::string code, int32_t partition);
 
-        void alarm_arm_home(int partition);
+        void alarm_arm_home(int32_t partition);
 
-        void alarm_arm_night(int partition);
+        void alarm_arm_night(int32_t partition);
 
-        void alarm_arm_away(int partition);
+        void alarm_arm_away(int32_t partition);
 
-        void alarm_trigger_fire(std::string code, int partition);
+        void alarm_trigger_fire(std::string code, int32_t partition);
 
-        void alarm_trigger_panic(std::string code, int partition);
+        void alarm_trigger_panic(std::string code, int32_t partition);
 
-        void set_zone_fault(int zone, bool fault);
+        void set_zone_fault(int32_t zone, bool fault);
 
-        void set_keypad_address(int addr)
+        void set_keypad_address(int32_t addr)
         {
           // if (addr > 0 and addr < 24)
           ///  vista.setKpAddr(addr); //disabled for now
@@ -514,8 +514,8 @@ class vistaECPHome : public time::RealTimeClock
 
         void alarm_keypress(std::string keystring);
 
-        void alarm_keypress_partition(std::string keystring, int partition);
-        void send_cmd_bytes(int addr, std::string hexbytes);
+        void alarm_keypress_partition(std::string keystring, int32_t partition);
+        void send_cmd_bytes(int32_t addr, std::string hexbytes);
         void setDefaultKpAddr(uint8_t p);
 
       private:

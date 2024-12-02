@@ -509,43 +509,43 @@ void vistaECPHome::setup()
 ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFreeHeap());
     }
 
-    void vistaECPHome::alarm_disarm(std::string code, int partition)
+    void vistaECPHome::alarm_disarm(std::string code, int32_t partition)
     {
 
       set_alarm_state("D", code, partition);
     }
 
-    void vistaECPHome::alarm_arm_home(int partition)
+    void vistaECPHome::alarm_arm_home(int32_t partition)
     {
 
       set_alarm_state("S", "", partition);
     }
 
-    void vistaECPHome::alarm_arm_night(int partition)
+    void vistaECPHome::alarm_arm_night(int32_t partition)
     {
 
       set_alarm_state("N", "", partition);
     }
 
-    void vistaECPHome::alarm_arm_away(int partition)
+    void vistaECPHome::alarm_arm_away(int32_t partition)
     {
 
       set_alarm_state("A", "", partition);
     }
 
-    void vistaECPHome::alarm_trigger_fire(std::string code, int partition)
+    void vistaECPHome::alarm_trigger_fire(std::string code, int32_t partition)
     {
 
       set_alarm_state("F", code, partition);
     }
 
-    void vistaECPHome::alarm_trigger_panic(std::string code, int partition)
+    void vistaECPHome::alarm_trigger_panic(std::string code, int32_t partition)
     {
 
       set_alarm_state("P", code, partition);
     }
 
-    void vistaECPHome::set_zone_fault(int zone, bool fault)
+    void vistaECPHome::set_zone_fault(int32_t zone, bool fault)
     {
 
       vista.setExpFault(zone, fault);
@@ -557,7 +557,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       alarm_keypress_partition(keystring, defaultPartition);
     }
 
-    void vistaECPHome::alarm_keypress_partition(std::string keystring, int partition)
+    void vistaECPHome::alarm_keypress_partition(std::string keystring, int32_t partition)
     {
       if (keystring == "R")
       {
@@ -612,7 +612,7 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
         vista.write(keystring.c_str(), addr);
     }
 
-    void vistaECPHome::send_cmd_bytes(int addr, std::string hexbytes)
+    void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes)
     {
       
       std::string::iterator end_pos = std::remove(hexbytes.begin(), hexbytes.end(), ' ');

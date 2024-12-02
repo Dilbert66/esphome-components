@@ -198,7 +198,7 @@ void DSCkeybushome::setup()
       topic = discovery_prefix + "/alarm_control_panel/" + topic_prefix + "/config";
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(), mqtt_callback);
 #endif
-#if defined(USE_API)
+ #if defined(USE_API)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
 #if !defined(ARDUINO_MQTT) && defined(USE_TIME)
@@ -215,7 +215,7 @@ void DSCkeybushome::setup()
       register_service(&DSCkeybushome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&DSCkeybushome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
       register_service(&DSCkeybushome::set_default_partition, "set_default_partition", {"partition"});
-#endif
+ #endif
 
       firstrun = true;
       systemStatusChangeCallback(String(FPSTR(STATUS_OFFLINE)).c_str());
@@ -290,7 +290,7 @@ void DSCkeybushome::setup()
           return "";
     }
 
-    void DSCkeybushome::set_default_partition(int partition)
+    void DSCkeybushome::set_default_partition(int32_t partition)
     {
       if (partition > 0 && partition < dscPartitions)
       {
@@ -299,7 +299,7 @@ void DSCkeybushome::setup()
       }
     }
 
-    void DSCkeybushome::set_zone_fault(int zone, bool fault)
+    void DSCkeybushome::set_zone_fault(int32_t zone, bool fault)
     {
 #if not defined(DISABLE_EXPANDER)
 #if !defined(ARDUINO_MQTT)
@@ -797,7 +797,7 @@ void DSCkeybushome::setup()
       alarm_keypress_partition(keystring, defaultPartition);
     }
 
-    void DSCkeybushome::alarm_keypress_partition(std::string keystring, int partition)
+    void DSCkeybushome::alarm_keypress_partition(std::string keystring, int32_t partition)
     {
       if (!partition)
         partition = defaultPartition;
@@ -880,7 +880,7 @@ void DSCkeybushome::setup()
       return (*p == 0);
     }
 
-    void DSCkeybushome::set_alarm_state(std::string state, std::string code, int partition)
+    void DSCkeybushome::set_alarm_state(std::string state, std::string code, int32_t partition)
     {
       
       if (code.length() != 4 || !isInt(code, 10))

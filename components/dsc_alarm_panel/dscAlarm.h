@@ -451,9 +451,9 @@ void begin() ;
  const char * getPartitionStatus(byte partition);
 
 public:
-  void set_default_partition(int partition);
+  void set_default_partition(int32_t partition);
 
-  void set_zone_fault(int zone, bool fault) ;
+  void set_zone_fault(int32_t zone, bool fault) ;
 
   void alarm_disarm(std::string code) ;
 
@@ -482,7 +482,7 @@ private:
 public:
   void alarm_keypress(std::string keystring) ;
 
-  void alarm_keypress_partition(std::string keystring, int partition) ;
+  void alarm_keypress_partition(std::string keystring, int32_t partition) ;
 private:
 #if defined(ESPHOME_MQTT) 
 static void on_json_message_callback(const std::string &topic, JsonObject payload) ;
@@ -492,7 +492,7 @@ void on_json_message(const std::string &topic, JsonObject payload) ;
 
   bool isInt(std::string s, int base) ;
 public:
-  void set_alarm_state(std::string state, std::string code = "", int partition = 0) ;
+  void set_alarm_state(std::string state, std::string code = "", int32_t partition = 0) ;
 
 private:
 
