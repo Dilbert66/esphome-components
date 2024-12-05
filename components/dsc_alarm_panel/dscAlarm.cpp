@@ -1724,6 +1724,7 @@ void DSCkeybushome::update()
           // Publishes exit delay status
           if (dsc.exitDelayChanged[partition] || forceRefresh)
           {
+            clearZoneAlarms(partition+1);
             dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
           }
 
@@ -2162,7 +2163,6 @@ void DSCkeybushome::update()
       case 0x3E:
         lcdLine1 = F("Disarmed");
         lcdLine2 = F(" ");
-
         break;
       case 0x40:
         lcdLine1 = F("Keypad");

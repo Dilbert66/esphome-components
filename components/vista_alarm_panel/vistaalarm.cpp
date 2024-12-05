@@ -454,9 +454,7 @@ void vistaECPHome::setup()
 #if defined(USE_API)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
-      register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {
-         "addr","hexdata"
-      });
+      register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", { "addr","hexdata"});
       register_service(&vistaECPHome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&vistaECPHome::alarm_disarm, "alarm_disarm", {"code", "partition"});
       register_service(&vistaECPHome::alarm_arm_home, "alarm_arm_home", {"partition"});
@@ -465,7 +463,6 @@ void vistaECPHome::setup()
       register_service(&vistaECPHome::alarm_trigger_panic, "alarm_trigger_panic", {"code", "partition"});
       register_service(&vistaECPHome::alarm_trigger_fire, "alarm_trigger_fire", {"code", "partition"});
       register_service(&vistaECPHome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
-
 #endif
       systemStatusChangeCallback(STATUS_ONLINE, 1);
       statusChangeCallback(sac, true, 1);

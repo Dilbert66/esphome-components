@@ -1,13 +1,14 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID,CONF_BINARY_SENSORS,CONF_TEXT_SENSORS
 from esphome.core import CORE
 import os
 import logging
 import pathlib
 from esphome.components.esp32 import get_esp32_variant
 from esphome.components.esp32.const import ( VARIANT_ESP32C3 )
-from esphome.helpers import copy_file_if_changed
+from esphome.helpers import copy_file_if_changed, sanitize, snake_case
+from esphome.components import binary_sensor,text_sensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ CONF_INPUT_MON="input_mode_mon"
 CONF_INPUT_RX="input_mode_rx"
 CONF_AUTOPOPULATE="autopopulate"
 CONF_USEASYNC="use_async_polling"
+CONF_TYPE_ID="code"
 
 
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
@@ -90,6 +92,23 @@ relay='''[&](uint8_t addr,int channel,bool open) {
       alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
     }'''
 
+ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
+    {
+        cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
+        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+    },
+    key=CONF_ID,
+
+)
+
+ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
+    {
+        cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
+        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+    },
+    key=CONF_ID,
+
+)
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -130,7 +149,9 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_INVERT_MON, default='true'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
     cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
-    cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),    
+    cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
+    cv.Optional(CONF_BINARY_SENSORS): cv.ensure_list(ALARM_PANEL_BINARY_SENSOR_SCHEMA),
+    cv.Optional(CONF_TEXT_SENSORS): cv.ensure_list(ALARM_PANEL_TEXT_SENSOR_SCHEMA),    
     }
 )
 
@@ -214,8 +235,24 @@ async def to_code(config):
     cg.add(var.onZoneStatusChangeBinarySensor(cg.RawExpression(zonebinary)))    
     cg.add(var.onZoneStatusChange(cg.RawExpression(zonestatus)))
     cg.add(var.onRelayStatusChange(cg.RawExpression(relay)))      
-    
     await cg.register_component(var, config)
+
+    # for sensor in config.get(CONF_BINARY_SENSORS, []):
+    #     bs = await cg.get_variable(sensor[CONF_ID])
+    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
+    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
+    #     elif sensor[CONF_ID].is_manual:
+    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
+    #     cg.add(bs.set_disabled_by_default(False))
+    #     cg.add(bs.set_publish_initial_state(True))
+
+    # for sensor in config.get(CONF_TEXT_SENSORS, []):
+    #     ts = await cg.get_variable(sensor[CONF_ID])
+    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
+    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
+    #     elif sensor[CONF_ID].is_manual:
+    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
+    #     cg.add(ts.set_disabled_by_default(False))   
     
 def real_clean_build():
     import shutil
