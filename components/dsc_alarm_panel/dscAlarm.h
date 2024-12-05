@@ -270,6 +270,8 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   std:: function < void(std::string) > eventInfoCallback;
   std:: function < void(std::string, int) > lightsCallback;
   std:: function < void(std::string, int) > beepsCallback;
+  std:: function < void(std::string , int) > zoneAlarmCallback;
+  std:: function < void(std::string , int) > userArmingDisarmingCallback;
 
   void onZoneStatusChange(std:: function < void(uint8_t zone, bool isOpen) > callback) {
     zoneStatusChangeCallback = callback;
@@ -313,6 +315,12 @@ DSCkeybushome(byte dscClockPin , byte dscReadPin , byte dscWritePin ,bool setInv
   }
   void onBeeps(std:: function < void(std::string beep, int partition) > callback) {
     beepsCallback = callback;
+  }
+  void onZoneAlarm(std:: function < void(std::string zone, int partition) > callback) {
+    zoneAlarmCallback = callback;
+  }
+  void onUserArmingDisarming(std:: function < void(std::string user, int partition) > callback) {
+    userArmingDisarmingCallback = callback;
   }
   
 void set_panel_time();

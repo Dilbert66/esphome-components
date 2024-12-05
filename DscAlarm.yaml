@@ -429,6 +429,20 @@ text_sensor:
     name: "Trouble Msg" 
     icon: "mdi:alert-box"
 
+# name of the zone that triggered the last alarm
+# zone alarm id code = (za_ + partition number)
+  - platform: template_alarm
+    id: za_1
+    name: zone alarm (za_1)
+    icon: "mdi:alert-box" 
+
+# name or id of the user that last armed/disarmed the partition
+# user id code = (user_ + partition number)
+  - platform: template_alarm
+    id: user_1
+    name: Arming/Disarming user (user_1)
+    icon: "mdi:alert-box" 
+
 
  #optional. Example button config to send a keypad cmd. This one sends a PGM1 relay on cmd on partition 1
 button:

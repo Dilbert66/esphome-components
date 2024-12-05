@@ -245,6 +245,8 @@ void DSCkeybushome::setup()
         partitionStatusChangeCallback("No messages", p + 1);
         line1DisplayCallback("ESP Module Start", p + 1);
         line2DisplayCallback(" ", p + 1);
+        userArmingDisarmingCallback(" ",p+1);
+        zoneAlarmCallback(" ",p+1);
       }
       for (int x = 0; x < dscZones; x++)
         programZones[x] = 0;
@@ -1207,9 +1209,11 @@ void DSCkeybushome::setup()
     {
       for (int zone = 0; zone < maxZones; zone++)
       {
-        if (getZone(zone)->partition == partition)
+        if (getZone(zone)->partition == partition) {
           getZone(zone)->alarm = false;
+        }
       }
+      zoneAlarmCallback(" ",partition);
     }
 
     void DSCkeybushome::clearZoneBypass(byte partition)
@@ -3458,6 +3462,7 @@ void DSCkeybushome::update()
         zonestr=getZoneName(zone,false);
         lcdLine2 =zonestr.c_str();
         eventstr=lcdLine1.c_str();
+        zoneAlarmCallback(zonestr,partition);
       }
 
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
@@ -3506,6 +3511,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr=lcdLine1.c_str();
+        userArmingDisarmingCallback(userstr,partition);
       }
 
       if (dsc.panelData[panelByte] >= 0xC0 && dsc.panelData[panelByte] <= 0xE4)
@@ -3518,6 +3524,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr=lcdLine1.c_str();
+        userArmingDisarmingCallback(userstr,partition);
       }
 
       if (!decoded)
@@ -4138,6 +4145,7 @@ void DSCkeybushome::update()
         lcdLine2=zonestr.c_str();
         decoded = true;
         eventstr=lcdLine1.c_str();
+        zoneAlarmCallback(zonestr,partition);
       }
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
@@ -4214,6 +4222,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr=lcdLine1.c_str();
+        userArmingDisarmingCallback(userstr,partition);
       }
 
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x73)
@@ -4226,6 +4235,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr=lcdLine1.c_str();
+        userArmingDisarmingCallback(userstr,partition);
       }
 
       if (!decoded)
