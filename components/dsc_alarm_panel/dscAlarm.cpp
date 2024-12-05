@@ -3360,6 +3360,7 @@ void DSCkeybushome::update()
       case 0xBF:
         lcdLine1 = F("Armed");
         lcdLine2 = F("Special");
+        userArmingDisarmingCallback("<quick arm>",partition);
         break;
         // 0xC0 - 0xE4: Disarmed: Access_codes 1-34, 40-42
       case 0xE5:
