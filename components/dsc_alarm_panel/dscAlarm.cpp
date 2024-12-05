@@ -1209,7 +1209,8 @@ void DSCkeybushome::setup()
     {
       for (int zone = 0; zone < maxZones; zone++)
       {
-        if (getZone(zone)->partition == partition) {
+        uint8_t p=getZone(zone)->partition;
+        if (p == partition || p==0) {
           getZone(zone)->alarm = false;
         }
       }
@@ -1220,7 +1221,8 @@ void DSCkeybushome::setup()
     {
       for (int zone = 0; zone < maxZones; zone++)
       {
-        if (getZone(zone)->partition == partition)
+        uint8_t p=getZone(zone)->partition;
+        if (p == partition || p==0)
           getZone(zone)->bypassed = false;
       }
     }
