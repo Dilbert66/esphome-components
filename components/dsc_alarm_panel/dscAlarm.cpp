@@ -2630,11 +2630,12 @@ void DSCkeybushome::update()
 
             lcdLine2 = s;
           }
-          else
+          else if (!force)
           {
             lcdLine1 = F("No alarms");
             lcdLine2 = F("in memory");
           }
+          
         }
         else if (dsc.status[partition] == 0xBA)
         { // low battery zones
