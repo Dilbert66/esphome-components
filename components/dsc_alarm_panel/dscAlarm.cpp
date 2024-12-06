@@ -30,13 +30,20 @@ namespace esphome
 
 #if !defined(ARDUINO_MQTT)
     void DSCkeybushome::publishPanelStatus(panelStatus ps,bool open,uint8_t partition) {
+
          std::string sensor="NIL";
         switch(ps) {
-          case alarm_panel::trStatus: sensor = "tr"; break;
-          case alarm_panel::batStatus: sensor = "bat"; break;
-          case alarm_panel::acStatus: sensor = "ac"; break;
-          case alarm_panel::rdyStatus:  sensor = "rdy_" ; break;
-          case alarm_panel::armStatus:  sensor = "arm_"; break; 
+          // case alarm_panel::trStatus: sensor = "tr"; break;
+          // case alarm_panel::batStatus: sensor = "bat"; break;
+          // case alarm_panel::acStatus: sensor = "ac"; break;
+          // case alarm_panel::rdyStatus:  sensor = "rdy_" ; break;
+          // case alarm_panel::armStatus:  sensor = "arm_"; break; 
+
+          case trStatus: sensor = "tr"; break;
+          case batStatus: sensor = "bat"; break;
+          case acStatus: sensor = "ac"; break;
+          case rdyStatus:  sensor = "rdy_" ; break;
+          case armStatus:  sensor = "arm_"; break; 
           default: break;
         }                
       publishBinaryState(sensor,partition,open);
