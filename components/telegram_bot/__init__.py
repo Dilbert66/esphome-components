@@ -17,10 +17,19 @@ from esphome.const import (
     CONF_ON_MESSAGE,
     CONF_TRIGGER_ID,
 )
+import os
+import pathlib
+import logging
+from esphome.helpers import copy_file_if_changed
 from esphome.core import CORE, coroutine_with_priority
 
-DEPENDENCIES = ["network","mg_lib"]
-AUTO_LOAD = ["json","mg_lib"]
+_LOGGER = logging.getLogger(__name__)
+# DEPENDENCIES = ["network","mg_lib"]
+# AUTO_LOAD = ["json","mg_lib"]
+
+DEPENDENCIES = ["network"]
+AUTO_LOAD = ["json"]
+
 CONF_API_HOST="telegram_host"
 CONF_CHAT_ID="chat_id"
 CONF_BOT_ID="bot_id"
@@ -310,6 +319,17 @@ async def to_code(config):
         cg.add(var.set_bot_enable(config[CONF_ENABLEBOT]));
     if CONF_ENABLESEND in config and config[CONF_ENABLESEND]:
         cg.add(var.set_send_enable(config[CONF_ENABLESEND]));
+    
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.h_h")
+    dst=CORE.relative_build_path("src/mongoose.h")
+    if os.path.isfile(src) and not os.path.isfile(dst):
+        copy_file_if_changed(src,dst)
+        _LOGGER.info("Copied mongoose.h")
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.c_c")
+    dst=CORE.relative_build_path("src/mongoose.c")
+    if os.path.isfile(src) and not os.path.isfile(dst):
+        copy_file_if_changed(src,dst)
+        _LOGGER.info("Copied mongoose.c")
 
     for conf in config.get(CONF_ON_MESSAGE, []):
         if CONF_CMD in conf:

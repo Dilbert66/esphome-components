@@ -25,10 +25,17 @@ from esphome.const import (
     PLATFORM_BK72XX,
     PLATFORM_RTL87XX,
 )
+import os
+import pathlib
+import logging
+from esphome.helpers import copy_file_if_changed
 from esphome.core import CORE, coroutine_with_priority
 
-DEPENDENCIES = ["network","mg_lib"]
-AUTO_LOAD = ["json","mg_lib"]
+# DEPENDENCIES = ["network","mg_lib"]
+# AUTO_LOAD = ["json","mg_lib"]
+_LOGGER = logging.getLogger(__name__)
+DEPENDENCIES = ["network"]
+AUTO_LOAD = ["json"]
 
 CONF_CONFIG ="config_local"
 CONF_KEYPAD_URL="config_url"
@@ -156,7 +163,6 @@ def add_resource_as_progmem(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    #cg.add_library("CryptoAES_CBC", None) 
     cg.add_library("intrbiz/Crypto",None)
     cg.add_define("USE_WEBSERVER")
     version = config[CONF_VERSION]
@@ -232,6 +238,19 @@ async def to_code(config):
         cg.add(var.set_keypad_config(output))
     if CORE.using_arduino:
         if CORE.is_esp32:        
-            cg.add_library("Update", None)        
+            cg.add_library("Update", None)     
+
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.h_h")
+    dst=CORE.relative_build_path("src/mongoose.h")
+    if os.path.isfile(src) and not os.path.isfile(dst):
+        copy_file_if_changed(src,dst)
+        _LOGGER.info("Copied mongoose.h")
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.c_c")
+    dst=CORE.relative_build_path("src/mongoose.c")
+    if os.path.isfile(src) and not os.path.isfile(dst):
+        copy_file_if_changed(src,dst)
+        _LOGGER.info("Copied mongoose.c")
+  
+
     #cg.add_library("rweather/CryptoLegacy", ">0.1.0")
 

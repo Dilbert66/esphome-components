@@ -17,7 +17,7 @@ This component is part of a complete system that I use to create a standalone al
 
 I will document each option later but for now, I'm providing a fairly complete example below that I use on with vista20 alarm system.  If you have not created a telegram bot before, I've listed a quick list of the required steps below. You can get further details if you need by doing a search on the web or from telegram's site.  Basically what you need is a bot_id (token) to use for connecting to the telegram api and to receive and send cmds. The chat_id is needed in order to have a default destination  to send notifications back to. This can also be a group chat_id.   The example below basically creates a menu of cmds that the user can use to control their alarm system or retrieve system statuses back. This will of course be different on every application.
 
-You will first need a fully working yaml config.  The options below will need to be added to that config.  The implementation uses the esphome "custom components" feature which allows the yaml config to download any external source code as needed.  You can also copy the code directly to a folder on your system if you prefer.   The example below as shown, will download the "telegram_bot" and "mg_lib" components from my github page when you do your local install/compile.  I've also provided two switch configurations that you can use to turn the bot and notify functions off or on from Home assistant or from the web_server application.
+You will first need a fully working yaml config.  The options below will need to be added to that config.  The implementation uses the esphome "custom components" feature which allows the yaml config to download any external source code as needed.  You can also copy the code directly to a folder on your system if you prefer.   The example below as shown, will download the "telegram_bot" component from my github page when you do your local install/compile.  I've also provided two switch configurations that you can use to turn the bot and notify functions off or on from Home assistant or from the web_server application.
 
 ## Bot creation
 ### Get your bot id:
@@ -74,11 +74,8 @@ Example bot config:
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
   #- source:  my_components #uncomment to use alocal directory  called "my_components"
-    components: [telegram_bot,mg_lib] #components to load
+    components: [telegram_bot] #components to load
     refresh: 10min  #frequency to check for new versions
-
-mg_lib:   
-
 
 telegram_bot:
   id: webnotify
@@ -252,10 +249,9 @@ Please note that this app is using the mongoose.ws web application library inste
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
   #- source:  my_components #uncomment to use alocal directory  called "my_components"
-    components: [web_keypad,mg_lib] #components to load
+    components: [web_keypad] #components to load
     refresh: 10min  #frequency to check for new versions
 
-mg_lib: 
 
 web_keypad:
   port: 80  
