@@ -24,16 +24,14 @@ from esphome.const import (
     CONF_INTERNAL,
     CONF_DISABLED_BY_DEFAULT
 )
-
+from .. import component_ns
 
 from esphome.core import CORE, coroutine_with_priority
 
 CONF_TYPE_ID = "id_code"
 
-template_ns = cg.esphome_ns.namespace('alarm_sensor')
-
-TemplateTextSensor = template_ns.class_(
-    "TemplateTextSensor", text_sensor.TextSensor, cg.PollingComponent
+AlarmTextSensor = component_ns.class_(
+    "AlarmTextSensor", text_sensor.TextSensor, cg.PollingComponent
 )
 
 CONFIG_SCHEMA = (
@@ -41,7 +39,7 @@ CONFIG_SCHEMA = (
     .extend(
         {
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
-            cv.GenerateID(): cv.declare_id(TemplateTextSensor),
+            cv.GenerateID(): cv.declare_id(AlarmTextSensor),
             cv.Optional(CONF_LAMBDA): cv.returning_lambda,
         }
     )

@@ -4,10 +4,10 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 
 namespace esphome {
-namespace alarm_sensor {
+namespace alarm_panel {
 
 
-class TemplateBinarySensor : public Component, public binary_sensor::BinarySensor{
+class AlarmBinarySensor : public Component, public binary_sensor::BinarySensor{
  public:
   void set_template(std::function<optional<bool>()> &&f) { this->f_ = f; }
 
@@ -22,5 +22,5 @@ private:
  
 };
 
-}  // namespace alarm_sensor
+}  // namespace alarm_panel
 }  // namespace esphome

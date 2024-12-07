@@ -1,13 +1,13 @@
-#include "template_binary_sensor.h"
+#include "alarm_binary_sensor.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
-namespace alarm_sensor {
+namespace alarm_panel {
 
 
 static const char *const TAG = "alarm.binary_sensor";
 
-void TemplateBinarySensor::setup() {
+void AlarmBinarySensor::setup() {
 
   
   if (!this->publish_initial_state_)
@@ -21,7 +21,7 @@ void TemplateBinarySensor::setup() {
 
 }
 
-void TemplateBinarySensor::loop() {
+void AlarmBinarySensor::loop() {
   if (this->f_ == nullptr)
     return;
 
@@ -30,7 +30,7 @@ void TemplateBinarySensor::loop() {
     this->publish_state(*s);
   }
 }
-void TemplateBinarySensor::dump_config() { LOG_BINARY_SENSOR("", "Alarm Binary Sensor", this); }
+void AlarmBinarySensor::dump_config() { LOG_BINARY_SENSOR("", "Alarm Binary Sensor", this); }
 
-}  // namespace alarm_sensor
+}  // namespace alarm_panel
 }  // namespace esphome

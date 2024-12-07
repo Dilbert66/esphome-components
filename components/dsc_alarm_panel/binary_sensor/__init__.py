@@ -33,18 +33,17 @@ from esphome.const import (
     CONF_INTERNAL,
     CONF_DISABLED_BY_DEFAULT
 )
+from .. import component_ns
 
 CONF_TYPE_ID = "id_code"
 
-template_ns = cg.esphome_ns.namespace('alarm_sensor')
-
-TemplateBinarySensor = template_ns.class_(
-    "TemplateBinarySensor", binary_sensor.BinarySensor, cg.Component
+AlarmBinarySensor = component_ns.class_(
+    "AlarmBinarySensor", binary_sensor.BinarySensor, cg.Component
 )
 
 
 CONFIG_SCHEMA = (
-    binary_sensor.binary_sensor_schema(TemplateBinarySensor)
+    binary_sensor.binary_sensor_schema(AlarmBinarySensor)
     .extend(
         {
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  

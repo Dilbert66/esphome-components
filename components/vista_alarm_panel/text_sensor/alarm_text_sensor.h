@@ -5,9 +5,9 @@
 #include "esphome/components/text_sensor/text_sensor.h"
 
 namespace esphome {
-namespace alarm_sensor {
+namespace alarm_panel {
 
-class TemplateTextSensor : public text_sensor::TextSensor, public PollingComponent {
+class AlarmTextSensor : public text_sensor::TextSensor, public PollingComponent {
  public:
   void set_template(std::function<optional<std::string>()> &&f);
 
@@ -24,5 +24,5 @@ class TemplateTextSensor : public text_sensor::TextSensor, public PollingCompone
    
 };
 
-}  // namespace alarm_sensor
+}  // namespace alarm_panel
 }  // namespace esphome
