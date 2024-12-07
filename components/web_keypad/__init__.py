@@ -151,9 +151,9 @@ def add_resource_as_progmem(
         content_encoded = gzip.compress(content_encoded)
     content_encoded_size = len(content_encoded)
     bytes_as_int = ", ".join(str(x) for x in content_encoded)
-    uint8_t = f"const uint8_t ESPHOME_WEBSERVER_{resource_name}[{content_encoded_size}] PROGMEM = {{{bytes_as_int}}}"
+    uint8_t = f"const uint8_t ESPHOME_WEBKEYPAD_{resource_name}[{content_encoded_size}] PROGMEM = {{{bytes_as_int}}}"
     size_t = (
-        f"const size_t ESPHOME_WEBSERVER_{resource_name}_SIZE = {content_encoded_size}"
+        f"const size_t ESPHOME_WEBKEYPAD_{resource_name}_SIZE = {content_encoded_size}"
     )
     cg.add_global(cg.RawExpression(uint8_t))
     cg.add_global(cg.RawExpression(size_t))
@@ -164,13 +164,12 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     cg.add_library("intrbiz/Crypto",None)
-    cg.add_define("USE_WEBSERVER")
     version = config[CONF_VERSION]
 
     cg.add(var.set_port(config[CONF_PORT]))
-    cg.add_define("USE_WEBSERVER")
-    cg.add_define("USE_WEBSERVER_PORT", config[CONF_PORT])
-    cg.add_define("USE_WEBSERVER_VERSION", version)
+    cg.add_define("USE_WEBKEYPAD")
+    cg.add_define("USE_WEBKEYPAD_PORT", config[CONF_PORT])
+    cg.add_define("USE_WEBKEYPAD_VERSION", version)
     
     if lambda_config := config.get(CONF_SERVICE_LAMBDA):
         lambda_ = await cg.process_lambda(
@@ -191,7 +190,7 @@ async def to_code(config):
     if CONF_PARTITIONS in config:
         cg.add(var.set_partitions(config[CONF_PARTITIONS]))   
     if config[CONF_ENABLE_PRIVATE_NETWORK_ACCESS]:
-        cg.add_define("USE_WEBSERVER_PRIVATE_NETWORK_ACCESS")
+        cg.add_define("USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS")
 
     if CONF_CERTIFICATE in config:
         cg.add(var.set_certificate(config[CONF_CERTIFICATE]))
@@ -201,24 +200,24 @@ async def to_code(config):
         cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION]));    
                
     if CONF_CSS_INCLUDE in config:
-        cg.add_define("USE_WEBSERVER_CSS_INCLUDE")
+        cg.add_define("USE_WEBKEYPAD_CSS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_CSS_INCLUDE])
         with open(file=path, encoding="utf-8") as css_file:
             add_resource_as_progmem("CSS_INCLUDE", css_file.read())
             
     if  config[CONF_JSLOCAL]:
-        cg.add_define("USE_WEBSERVER_JS_INCLUDE")
+        cg.add_define("USE_WEBKEYPAD_JS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_JSLOCAL])
         with open(file=path, encoding="utf-8") as js_file:
             add_resource_as_progmem("JS_INCLUDE", js_file.read())  
             
     if (CONF_JS_URL in config and config[CONF_JS_URL] and config[CONF_LOCAL]) and not config[CONF_JSLOCAL]:
-        cg.add_define("USE_WEBSERVER_JS_INCLUDE")
+        cg.add_define("USE_WEBKEYPAD_JS_INCLUDE")
         response = requests.get(config[CONF_JS_URL])
         add_resource_as_progmem("JS_INCLUDE", response.text)   
         
     if CONF_JS_INCLUDE in config and not config[CONF_JSLOCAL]:
-        cg.add_define("USE_WEBSERVER_JS_INCLUDE")
+        cg.add_define("USE_WEBKEYPAD_JS_INCLUDE")
         path = CORE.relative_config_path(config[CONF_JS_INCLUDE])
         with open(file=path, encoding="utf-8") as js_file:
             add_resource_as_progmem("JS_INCLUDE", js_file.read())

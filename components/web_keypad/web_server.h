@@ -16,19 +16,19 @@
 #endif
 
 
-#if USE_WEBSERVER_VERSION == 2
-extern const uint8_t ESPHOME_WEBSERVER_INDEX_HTML[] PROGMEM;
-extern const size_t ESPHOME_WEBSERVER_INDEX_HTML_SIZE;
+#if USE_WEBKEYPAD_VERSION == 2
+extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
+extern const size_t ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE;
 #endif
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
-extern const uint8_t ESPHOME_WEBSERVER_CSS_INCLUDE[] PROGMEM;
-extern const size_t ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE;
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
+extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
+extern const size_t ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE;
 #endif
 
-#ifdef USE_WEBSERVER_JS_INCLUDE
-extern const uint8_t ESPHOME_WEBSERVER_JS_INCLUDE[] PROGMEM;
-extern const size_t ESPHOME_WEBSERVER_JS_INCLUDE_SIZE;
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
+extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
+extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 #endif
 
 
@@ -80,7 +80,7 @@ class WebServer : public Controller, public Component {
  public:
   WebServer();
 
-#if USE_WEBSERVER_VERSION == 1
+#if USE_WEBKEYPAD_VERSION == 1
   /** Set the URL to the CSS <link> that's sent to each client. Defaults to
    * https://esphome.io/_static/webserver-v1.min.css
    *
@@ -96,7 +96,7 @@ class WebServer : public Controller, public Component {
   void set_js_url(const char *js_url);
 #endif
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
   /** Set local path to the script that's embedded in the index page. Defaults to
    *
    * @param css_include Local path to web server script.
@@ -104,7 +104,7 @@ class WebServer : public Controller, public Component {
   void set_css_include(const char *css_include);
 #endif
 
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
   /** Set local path to the script that's embedded in the index page. Defaults to
    *
    * @param js_include Local path to web server script.
@@ -197,17 +197,17 @@ class WebServer : public Controller, public Component {
   
   long int toInt(const std::string &s, int base); 
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
   /// Handle included css request under '/0.css'.
   void handle_css_request(struct mg_connection *c);
 #endif
 
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
   /// Handle included js request under '/0.js'.
   void handle_js_request(struct mg_connection *c);
 #endif
 
-#ifdef USE_WEBSERVER_PRIVATE_NETWORK_ACCESS
+#ifdef USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS
   // Handle Private Network Access CORS OPTIONS request
   void handle_pna_cors_request(struct mg_connection *c);
 #endif
@@ -380,14 +380,14 @@ static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
   const char * _json_keypad_config;
-#if USE_WEBSERVER_VERSION == 1
+#if USE_WEBKEYPAD_VERSION == 1
   const char *css_url_{nullptr};
   const char *js_url_{nullptr};
 #endif
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
   const char *css_include_{nullptr};
 #endif
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
   const char *js_include_{nullptr};
 #endif
   bool include_internal_{false};

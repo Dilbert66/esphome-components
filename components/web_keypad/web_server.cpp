@@ -39,17 +39,12 @@
 namespace esphome {
 namespace web_keypad {
 
-//CBC<AES256> cbc;
 #define KEYSIZE 32
-
-//#define KEYSIZE 16
-//CBC<AES128> cbc;
-
 
 static const char *const TAG = "web_server";
 void * webServerPtr;
 
-#ifdef USE_WEBSERVER_PRIVATE_NETWORK_ACCESS
+#ifdef USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS
 static const char *const HEADER_PNA_NAME = "Private-Network-Access-Name";
 static const char *const HEADER_PNA_ID = "Private-Network-Access-ID";
 static const char *const HEADER_CORS_REQ_PNA = "Access-Control-Request-Private-Network";
@@ -59,7 +54,7 @@ static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-N
 
 
 
-#if USE_WEBSERVER_VERSION == 1
+#if USE_WEBKEYPAD_VERSION == 1
 /*
 void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &klass, const std::string &action,
                const std::function<void(AsyncResponseStream &stream, EntityBase *obj)> &action_func = nullptr) {
@@ -220,15 +215,15 @@ WebServer::WebServer()
    webServerPtr=this;
 }
 
-#if USE_WEBSERVER_VERSION == 1
+#if USE_WEBKEYPAD_VERSION == 1
 void WebServer::set_css_url(const char *css_url) { this->css_url_ = css_url; }
 void WebServer::set_js_url(const char *js_url) { this->js_url_ = js_url; }
 #endif
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
 void WebServer::set_css_include(const char *css_include) { this->css_include_ = css_include; }
 #endif
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
 void WebServer::set_js_include(const char *js_include) { this->js_include_ = js_include; }
 #endif
 
@@ -356,18 +351,18 @@ void WebServer::dump_config() {
 }
 float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
-#if USE_WEBSERVER_VERSION == 2
+#if USE_WEBKEYPAD_VERSION == 2
 void WebServer::handle_index_request(struct mg_connection *c) {
   
-          const char * buf= (const char *) ESPHOME_WEBSERVER_INDEX_HTML;  
-          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_INDEX_HTML_SIZE );
-          mg_send(c,buf,ESPHOME_WEBSERVER_INDEX_HTML_SIZE);
+          const char * buf= (const char *) ESPHOME_WEBKEYPAD_INDEX_HTML;  
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE );
+          mg_send(c,buf,ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
           c->is_resp = 0;  
 
 }
 #endif
 
-#ifdef USE_WEBSERVER_PRIVATE_NETWORK_ACCESS
+#ifdef USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS
 void WebServer::handle_pna_cors_request(struct mg_connection *c) {
 
  std::string mac = get_mac_address_pretty();  
@@ -377,24 +372,24 @@ void WebServer::handle_pna_cors_request(struct mg_connection *c) {
 }
 #endif
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
 void WebServer::handle_css_request(struct mg_connection *c) {
    
-          const char * buf= (const char *) ESPHOME_WEBSERVER_CSS_INCLUDE;
-          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE );
-          mg_send(c,buf,ESPHOME_WEBSERVER_CSS_INCLUDE_SIZE);
+          const char * buf= (const char *) ESPHOME_WEBKEYPAD_CSS_INCLUDE;
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE );
+          mg_send(c,buf,ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE);
           c->is_resp = 0;    
      
 }
 #endif
 
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
 void WebServer::handle_js_request(struct mg_connection *c) {
 
          
-          const char * buf= (const char *) ESPHOME_WEBSERVER_JS_INCLUDE;
-          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBSERVER_JS_INCLUDE_SIZE );
-          mg_send(c,buf,ESPHOME_WEBSERVER_JS_INCLUDE_SIZE);
+          const char * buf= (const char *) ESPHOME_WEBKEYPAD_JS_INCLUDE;
+          mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE );
+          mg_send(c,buf,ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
           c->is_resp = 0; 
            
 }
@@ -1939,7 +1934,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
     return;
   }
 
-#ifdef USE_WEBSERVER_CSS_INCLUDE
+#ifdef USE_WEBKEYPAD_CSS_INCLUDE
   if (mg_http_match_uri(hm, "/0.css")) { 
     this->handle_css_request(c);
     c->is_draining=1;        
@@ -1947,7 +1942,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
   }
 #endif
 
-#ifdef USE_WEBSERVER_JS_INCLUDE
+#ifdef USE_WEBKEYPAD_JS_INCLUDE
   if (mg_http_match_uri(hm, "/0.js")) { 
     this->handle_js_request(c);
     c->is_draining=1;  //uses about 22k or more of ram and doesnt free it so close it when done sending
@@ -1955,7 +1950,7 @@ void WebServer::handleWebRequest(struct mg_connection *c,mg_http_message *hm) {
   }
 #endif
 
-#ifdef USE_WEBSERVER_PRIVATE_NETWORK_ACCESS
+#ifdef USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS
   //if (request->method() == HTTP_OPTIONS && request->hasHeader(HEADER_CORS_REQ_PNA)) {
    // this->handle_pna_cors_request(c);
    // return;
