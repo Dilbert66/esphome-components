@@ -442,6 +442,11 @@ text_sensor:
     id: ss_1  
     name: "System Status partition 1"
     icon: "mdi:shield"
+# sample filter to change "not_ready" status to "disarmed" for use in HA Alarm Panel
+#    filters:
+#      - lambda: |-
+#          if (x == "not_ready") x="disarmed";
+#          return x;
 
 #Partition 2 example
   - platform: vista_alarm_panel

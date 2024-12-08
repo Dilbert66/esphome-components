@@ -63,7 +63,7 @@ WebNotify::WebNotify()
 
 void WebNotify::publish(SendData& out) {
 
-  if (!enableSend_) {
+  if (!enableSend_ && !out.force ) {
     ESP_LOGE(TAG,"Message sending is not enabled");
     return;
   }
@@ -238,7 +238,7 @@ bool WebNotify::processMessage(const char *payload) {
 }
 
 void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
-
+  int *i = &((struct c_res_s *) c->fn_data)->i;
   if (global_notify == NULL) {
     ESP_LOGE(TAG,"Global telegram pointer is null");
     return;
@@ -281,6 +281,7 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
       if (c->tls==NULL) return;
     }
     ESP_LOGD(TAG,"TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));
+
     if (global_notify->messages.size()) {
       global_notify->sending=true;       //we are connecting so flag connection as open
 
@@ -310,8 +311,44 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
       mg_printf(c,"Cache-Control: no-cache\r\n\r\n");
       // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
     }
+    
+  } 
+  /*
+  else if (ev == MG_EV_POLL && *i != 0) {
+     ESP_LOGD(TAG,"data 1a= %d",*i);
+     *i=0;
+     struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
+     if (global_notify->messages.size()) {
+      global_notify->sending=true;       //we are connecting so flag connection as open
 
-  } else if (ev == MG_EV_HTTP_MSG) {
+      outMessage outmsg=global_notify->messages.front();
+
+      mg_printf(c,"POST /bot%s",global_notify->botId_.c_str());
+      if (outmsg.type==mtEditMessageText)
+          mg_printf(c,"/editMessageText HTTP/1.1\r\n");
+      else if(outmsg.type==mtAnswerCallbackQuery)
+          mg_printf(c,"/answerCallbackQuery HTTP/1.1\r\n");
+      else if (outmsg.type==mtEditMessageReplyMarkup)
+          mg_printf(c,"/editMessageReplyMarkup HTTP/1.1\r\n");
+      else if (outmsg.type==mtDeleteMessage)
+          mg_printf(c,"/deleteMessage HTTP/1.1\r\n");
+      else
+          mg_printf(c,"/sendMessage HTTP/1.1\r\n");
+      mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
+      mg_printf(c,"Content-Type: application/json\r\n");
+      mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
+      // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+    } else if ( global_notify->enableBot_) {
+      global_notify->sending=false;
+      mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
+      mg_printf(c,"/getUpdates?limit=1&timeout=120&offset=%d HTTP/1.1\r\n",global_notify->lastMsgReceived);
+      mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
+      mg_printf(c,"Accept: application/json\r\n");
+      mg_printf(c,"Cache-Control: no-cache\r\n\r\n");
+      // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
+    }
+  } */ 
+  else if (ev == MG_EV_HTTP_MSG) {
 
     // Response is received. Print it
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
@@ -358,7 +395,7 @@ void WebNotify::loop() {
   if (network::is_connected() ) {
     if (((millis() - retryDelay) > delayTime) && !connected && botId_.length() > 0 &&  (enableBot_ || (messages.size() && enableSend_))) {
       ESP_LOGD(TAG,"Connecting to api");
-      mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,this);  // Create client connection
+      mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,&c_res);  // Create client connection
     }
   }
   static unsigned long checkTime = millis();

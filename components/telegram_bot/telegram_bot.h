@@ -2,10 +2,10 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
-#include "esphome/components/network/ip_address.h"
 #include "esphome/core/automation.h"
-#include "mongoose.h"
+#include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
+#include "mongoose.h"
 #include <vector>
 #include <algorithm>
 #include <queue>
@@ -50,7 +50,14 @@ struct SendData {
   bool one_time_keyboard=false;
   bool show_alert=false;
   bool selective=false;
+  bool force=false;
 };
+
+
+  struct c_res_s {
+  int i=0;
+  struct mg_connection *c;
+  };
 
 class WebNotify : public Controller, public Component {
 public:
@@ -63,6 +70,7 @@ public:
 
   void dump_config() override;
   void publish(SendData& out);
+  
 
   void publish(const std::string & chat_id,const std::string& message,const std::string& reply_markup="",const std::string & parse_mode="html",bool disable_notification=false,bool disable_web_page_preview=false,bool resize_keyboard=false,bool one_time_keyboard=false) {
     SendData out;
@@ -78,13 +86,29 @@ public:
     publish(out);
   };
 
-  void publish(const std::string & message) {publish("",message); }
+  void publish(const std::string & message,bool force=false) {
+    SendData out;
+    out.parse_mode="html";
+    out.text=message;
+    out.force=force;
+    publish(out);
+     }
 
-  void answerCallbackQuery(const std::string & message,const std::string & callback_id,bool show_alert=false) {
+    void publish(const std::string & chat_id,const std::string & message,bool force=false) {
+    SendData out;
+    out.chat_id=chat_id;
+    out.parse_mode="html";
+    out.text=message;
+    out.force=force;
+    publish(out);
+     }
+
+  void answerCallbackQuery(const std::string & message,const std::string & callback_id,bool show_alert=false,bool force=false) {
     SendData out;
     out.message_id=callback_id;
     out.show_alert=show_alert;
     out.type=mtAnswerCallbackQuery;
+    out.force=force;
     publish(out);
   }
 
@@ -112,13 +136,12 @@ public:
 
   void set_bot_id(std::string&& bot_id) {botId_=bot_id; }
   void set_chat_id(std::string&& chat_id) { telegramUserId=chat_id;}
+  std::string get_chat_id() {return telegramUserId;}
+  std::string get_bot_id(){ return botId_;}
   void add_chatid(std::string&& chat_id) {allowed_chat_ids.push_back(std::move(chat_id));}
   void set_api_host(std::string&& api_host) { apiHost_="https://" + std::move(api_host); }
   void set_bot_enable(bool enable) {enableBot_=enable; }
   void set_send_enable(bool enable) {enableSend_=enable;}
-  std::string get_chat_id() {return telegramUserId;}
-  std::string get_bot_id(){ return botId_;}
-
   bool get_bot_status() { return enableBot_;}
   bool get_send_status() { return enableSend_;}
   using on_message_callback_t = void( RemoteData& x);
@@ -139,6 +162,10 @@ private:
     std::string msg;
     msgtype type;
   };
+
+
+  struct c_res_s c_res;
+
 
   std::string apiHost_ = "https://api.telegram.org/";
   const uint64_t timeout_ms = 1500;  // Connect timeout in milliseconds
@@ -177,6 +204,7 @@ public:
   TEMPLATABLE_VALUE(bool,disable_web_page_preview)
   TEMPLATABLE_VALUE(bool,resize_keyboard)
   TEMPLATABLE_VALUE(bool,one_time_keyboard)
+  TEMPLATABLE_VALUE(bool,force)
 
   void play(Ts... x) override {
     SendData y;
@@ -209,6 +237,8 @@ public:
     y.text=this->message_.value(x...);
     if (this->title_.value(x...) !="")
       y.text=  this->title_.value(x...)+"\n"+y.text;
+    if (this->force_.value(x...))
+      y.force=  this->force_.value(x...);
     y.type=mtSendMessage;
     this->parent_->publish(y);
 

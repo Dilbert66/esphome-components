@@ -54,6 +54,7 @@ CONF_SHOW_ALERT="show_alert"
 CONF_MESSAGE_ID="message_id"
 CONF_TITLE="title"
 CONF_SELECTIVE="selective"
+CONF_FORCE="force"
 
 
 web_notify_ns = cg.esphome_ns.namespace("web_notify")
@@ -113,6 +114,7 @@ TELEGRAM_PUBLISH_ACTION_SCHEMA = cv.Schema(
         cv.Optional(CONF_DISABLE_WEB_PREVIEW): cv.templatable(cv.boolean),
         cv.Optional(CONF_RESIZE_KEYBOARD): cv.templatable(cv.boolean),
         cv.Optional(CONF_ONE_TIME_KEYBOARD): cv.templatable(cv.boolean),
+        cv.Optional(CONF_FORCE): cv.templatable(cv.boolean),
 
     }
 )
@@ -156,6 +158,9 @@ async def telegram_publish_action_to_code(config, action_id, template_arg, args)
     if CONF_ONE_TIME_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_ONE_TIME_KEYBOARD], args, cg.bool_)
         cg.add(var.set_one_time_keyboard(template_));
+    if CONF_FORCE in config:
+        template_ = await cg.templatable(config[CONF_FORCE], args, cg.bool_)
+        cg.add(var.set_force(template_));
     return var
 
 

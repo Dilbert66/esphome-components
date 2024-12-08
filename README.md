@@ -67,6 +67,7 @@ The on_message actions will send a RemoteData structure x to lambda's that holds
   x.message_id -> current message id.  Used in replies, edits, etc.
   x.callback_id -> callback id of callback messaged. Used to answer back to inline_keyboard actions.
   x.is_first_cmd -> boolean - Will be true after reboot and false after the first command is received
+  x.force -> boolean - Force publish even if notify is off
 ```
 
 Example bot config:
@@ -115,8 +116,9 @@ telegram_bot:
 
     - command: "/status,/s"
       then: 
-        - lambda: |-
-            webnotify->publish(x.chat_id,"System state:"+id(ss_1).state);   
+            webnotify->publish(x.chat_id,"System state is "+id(ss_1).state,1); # note 3rd arg "1"  is "force publish"
+            std::string m=webnotify->get_send_status()?"on":"off";
+            webnotify->publish(x.chat_id,"Notify is " + m,1); 
 
     - command: "/keys,/k"
       then: 
@@ -133,10 +135,10 @@ telegram_bot:
         - lambda: |-
            if (x.args=="on") {
             webnotify->set_send_enable(true);
-            webnotify->publish(x.chat_id,"Notify is on");
+            webnotify->publish(x.chat_id,"Notify is on",1);
            } else {
             webnotify->set_send_enable(false);
-            webnotify->publish(x.chat_id,"Notify is off");
+            webnotify->publish(x.chat_id,"Notify is off",1);
            }
 
     - command: "/reboot,/r"
