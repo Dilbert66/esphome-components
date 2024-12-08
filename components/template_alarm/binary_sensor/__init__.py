@@ -56,56 +56,56 @@ CONFIG_SCHEMA = (
 )
 
 
-async def new_binary_sensor(config, *args):
-    var = cg.new_Pvariable(config[CONF_ID], *args)
-    await register_binary_sensor(var, config)
-    return var
+# async def new_binary_sensor(config, *args):
+#     var = cg.new_Pvariable(config[CONF_ID], *args)
+#     await register_binary_sensor(var, config)
+#     return var
 
-async def register_binary_sensor(var, config):
-    if not CORE.has_id(config[CONF_ID]):
-        var = cg.Pvariable(config[CONF_ID], var)
-    cg.add(cg.App.register_binary_sensor(var))
-    await setup_binary_sensor_core_(var, config)
+# async def register_binary_sensor(var, config):
+#     if not CORE.has_id(config[CONF_ID]):
+#         var = cg.Pvariable(config[CONF_ID], var)
+#     cg.add(cg.App.register_binary_sensor(var))
+#     await setup_binary_sensor_core_(var, config)
 
-async def setup_binary_sensor_core_(var, config):
-    await setup_entity(var, config)
-    if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
-        cg.add(var.set_device_class(device_class))
+# async def setup_binary_sensor_core_(var, config):
+#     await setup_entity(var, config)
+#     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
+#         cg.add(var.set_device_class(device_class))
 
-    if (mqtt_id := config.get(CONF_MQTT_ID)) is not None:
-        mqtt_ = cg.new_Pvariable(mqtt_id, var)
-        await mqtt.register_mqtt_component(mqtt_, config)
+#     if (mqtt_id := config.get(CONF_MQTT_ID)) is not None:
+#         mqtt_ = cg.new_Pvariable(mqtt_id, var)
+#         await mqtt.register_mqtt_component(mqtt_, config)
 
-    if (webserver_id := config.get(CONF_WEB_SERVER_ID)) is not None:
-        web_server_ = await cg.get_variable(webserver_id)
-        web_server.add_entity_to_sorting_list(web_server_, var, config)
+#     if (webserver_id := config.get(CONF_WEB_SERVER_ID)) is not None:
+#         web_server_ = await cg.get_variable(webserver_id)
+#         web_server.add_entity_to_sorting_list(web_server_, var, config)
 
-async def setup_entity(var, config):
+async def setup_entity_alarm(var, config):
     """Set up generic properties of an Entity"""
-    cg.add(var.set_name(config[CONF_NAME]))
+    #cg.add(var.set_name(config[CONF_NAME]))
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-    else:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
-    if CONF_ICON in config:
-        cg.add(var.set_icon(config[CONF_ICON]))
-    if CONF_ENTITY_CATEGORY in config:
-        cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))    
-    if CONF_INTERNAL in config:
-        cg.add(var.set_internal(config[CONF_INTERNAL]))
-    if CONF_ICON in config:
-        cg.add(var.set_icon(config[CONF_ICON]))
-    if CONF_ENTITY_CATEGORY in config:
-        cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))
-    cg.add(var.set_disabled_by_default(config[CONF_DISABLED_BY_DEFAULT]))
-
+    # else:
+    #     cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+    # if CONF_ICON in config:
+    #     cg.add(var.set_icon(config[CONF_ICON]))
+    # if CONF_ENTITY_CATEGORY in config:
+    #     cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))    
+    # if CONF_INTERNAL in config:
+    #     cg.add(var.set_internal(config[CONF_INTERNAL]))
+    # if CONF_ICON in config:
+    #     cg.add(var.set_icon(config[CONF_ICON]))
+    # if CONF_ENTITY_CATEGORY in config:
+    #     cg.add(var.set_entity_category(config[CONF_ENTITY_CATEGORY]))
+    # cg.add(var.set_disabled_by_default(config[CONF_DISABLED_BY_DEFAULT]))
     cg.add(var.set_publish_initial_state(True))
 
 async def to_code(config):
     cg.add_define("TEMPLATE_ALARM")
-    var = await new_binary_sensor(config)
+    var = await binary_sensor.new_binary_sensor(config)
+    await setup_entity_alarm(var,config)
 
     await cg.register_component(var, config)
        

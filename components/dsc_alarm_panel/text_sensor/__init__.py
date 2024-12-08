@@ -52,8 +52,6 @@ async def setup_entity_alarm(var, config):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-    else:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
 
 
 async def to_code(config):
