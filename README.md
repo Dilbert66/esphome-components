@@ -80,8 +80,8 @@ external_components:
 
 telegram_bot:
   id: webnotify
-  bot_id: "123467890:SAMPLETELEGRAMBOTKEYSAMPLETELEGRAM"
-  chat_id: "123455222" #default chat id to send to. Can also be a group id.
+  bot_id: "123467890:SAMPLETELEGRAMBOTKEYSAMPLETELEGRAM"  #can also use a lambda value.
+  chat_id: "123455222" #default chat id to send to. Can also be a group id or a lambda value.
   bot_enable: true #if you dont need to have the receive bot set to false. Only publish action will be available.
   allowed_chat_ids:  #chat id's that are allowed to send cmds. Can also be group id's. Use "*" to allow all.
     - "12345522"
@@ -231,8 +231,27 @@ Switches to control bot and notify functions:
           webnotify->set_send_enable(true);
     turn_off_action:
       - lambda: |-
-          webnotify->set_send_enable(false);      
+          webnotify->set_send_enable(false);  
+    
  ```   
+Example below of using a text field to populate the chat_id field. You can then set it from the web or HA. The value will be stored in flash;
+Use this entry for the telegram chat_id:
+  chat_id: !lambda 'return id(chatidtext).state;'
+```
+text:
+  - platform: template
+    id: chatidtext
+    name: "set_chat_id"
+    mode: text
+    initial_value: "xxxxxxxxxx"
+    restore_value: true
+    optimistic: true
+    set_action: 
+       - lambda: |-
+          webnotify->set_chat_id(std::string(x));
+          ESP_LOGD("test","set chat id to %s",std::string(x).c_str());
+```
+```
 ![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
 # ESP32 web keypad component. 

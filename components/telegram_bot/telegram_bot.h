@@ -135,7 +135,10 @@ public:
   }
 
   void set_bot_id(std::string&& bot_id) {botId_=bot_id; }
-  void set_chat_id(std::string&& chat_id) { telegramUserId=chat_id;}
+  void set_chat_id(std::string&& chat_id) { telegramUserId=chat_id; 
+  if (telegramUserId !="" && std::find(allowed_chat_ids.begin(),  allowed_chat_ids.end(),telegramUserId)== allowed_chat_ids.end())
+    allowed_chat_ids.push_back(telegramUserId);
+  }
   std::string get_chat_id() {return telegramUserId;}
   std::string get_bot_id(){ return botId_;}
   void add_chatid(std::string&& chat_id) {allowed_chat_ids.push_back(std::move(chat_id));}
@@ -153,6 +156,9 @@ public:
   }
 
   std::string telegramUserId="";
+
+  void set_bot_id_f(std::function<optional<std::string>()> &&f);
+  void set_chat_id_f(std::function<optional<std::string>()> &&f);
 
 private:
   struct mg_mgr mgr;
@@ -185,6 +191,11 @@ private:
   bool isAllowed(std::string chat_id);
   void parseArgs(RemoteData& x);
   bool processMessage(const char * payload);
+
+  protected:
+
+  optional<std::function<optional<std::string>()>> chat_id_f_{};
+  optional<std::function<optional<std::string>()>> bot_id_f_{};
 
 };
 

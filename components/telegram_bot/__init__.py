@@ -78,8 +78,8 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(WebNotify),
             #cv.Optional(CONF_API_HOST, default="api.telegram.org"): cv.string_strict ,
-            cv.Required(CONF_CHAT_ID): cv.string_strict,
-            cv.Required(CONF_BOT_ID): cv.string_strict,
+            cv.Required(CONF_CHAT_ID): cv.templatable(cv.string_strict),
+            cv.Required(CONF_BOT_ID): cv.templatable(cv.string_strict),
             cv.Optional(CONF_ENABLEBOT,default=False): cv.boolean,
             cv.Optional(CONF_ENABLESEND,default=True): cv.boolean,
             cv.Optional(CONF_ALLOWED_IDS):cv.ensure_list(cv.string_strict),
@@ -312,18 +312,29 @@ async def to_code(config):
     if CONF_ALLOWED_IDS in config:
         for anid in config[CONF_ALLOWED_IDS]:
             cg.add(var.add_chatid(anid))
-    #if CONF_API_HOST in config and config[CONF_API_HOST]:
-        #cg.add(var.set_api_host(config[CONF_API_HOST]));
-    if CONF_BOT_ID in config and config[CONF_BOT_ID]:
-        cg.add(var.set_bot_id(config[CONF_BOT_ID]));
+    #if CONF_BOT_ID in config and config[CONF_BOT_ID]:
+     #   cg.add(var.set_bot_id(config[CONF_BOT_ID]));
+    #if CONF_CHAT_ID in config and config[CONF_CHAT_ID]:
+     #   cg.add(var.set_chat_id(config[CONF_CHAT_ID]));
     if CONF_API_HOST in config and config[CONF_API_HOST]:
         cg.add(var.set_api_host(config[CONF_API_HOST]));
-    if CONF_CHAT_ID in config and config[CONF_CHAT_ID]:
-        cg.add(var.set_chat_id(config[CONF_CHAT_ID]));
     if CONF_ENABLEBOT in config and config[CONF_ENABLEBOT]:
         cg.add(var.set_bot_enable(config[CONF_ENABLEBOT]));
     if CONF_ENABLESEND in config and config[CONF_ENABLESEND]:
         cg.add(var.set_send_enable(config[CONF_ENABLESEND]));
+    
+    if CONF_CHAT_ID in config and config[CONF_CHAT_ID]:
+        if (cg.is_template(config[CONF_CHAT_ID])):
+            template_ = await cg.templatable(config[CONF_CHAT_ID], "", cg.std_string)
+            cg.add(var.set_chat_id_f(template_))
+        else:
+            cg.add(var.set_chat_id(config[CONF_CHAT_ID]));
+    if CONF_BOT_ID in config and config[CONF_BOT_ID]:
+        if (cg.is_template(config[CONF_BOT_ID])):
+            template_ = await cg.templatable(config[CONF_BOT_ID], "", cg.std_string)
+            cg.add(var.set_bot_id_f(template_))
+        else:
+            cg.add(var.set_bot_id(config[CONF_BOT_ID]));
     
     src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.h_h")
     dst=CORE.relative_build_path("src/mongoose.h")

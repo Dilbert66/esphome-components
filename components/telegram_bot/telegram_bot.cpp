@@ -228,8 +228,10 @@ bool WebNotify::processMessage(const char *payload) {
       global_notify->lastMsgReceived = update_id+1;
     } else {
       bool ok=root["ok"];
-      if (!ok)
+      if (!ok) {
+        global_notify->retryDelay=millis();
         ESP_LOGD(TAG,"Error response from server: %s",payload);
+      }
     }
     return true;
 
@@ -380,6 +382,20 @@ void  WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data) {
 
 void WebNotify::setup() {
   ESP_LOGCONFIG(TAG, "Setting up web client...");
+
+  if (this->chat_id_f_.has_value()) {
+    auto val = (*this->chat_id_f_)();
+    if (val.has_value()) {
+      telegramUserId=*val;
+    }
+  }
+  if (this->bot_id_f_.has_value()) {
+    auto val = (*this->bot_id_f_)();
+    if (val.has_value()) {
+      botId_=*val;
+    }
+  }
+  ESP_LOGD(TAG,"chat id=[%s],bot id=[%s]",telegramUserId.c_str(),botId_.c_str());
   if (telegramUserId !="")
     allowed_chat_ids.push_back(telegramUserId);
   mg_mgr_init(&mgr);
@@ -412,6 +428,10 @@ void WebNotify::dump_config() {
   // ESP_LOGCONFIG(TAG, "Web Server:");
   // ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address().c_str(), port_);
 }
+
+
+void WebNotify::set_bot_id_f(std::function<optional<std::string>()> &&f) { this->bot_id_f_ = f; }
+void WebNotify::set_chat_id_f(std::function<optional<std::string>()> &&f) { this->chat_id_f_ = f; }
 
 WebNotify * global_notify=nullptr;
 
