@@ -396,8 +396,7 @@ void WebNotify::setup() {
     }
   }
   ESP_LOGD(TAG,"chat id=[%s],bot id=[%s]",telegramUserId.c_str(),botId_.c_str());
-  if (telegramUserId !="")
-    allowed_chat_ids.push_back(telegramUserId);
+ 
   mg_mgr_init(&mgr);
   // std::string msg="{\"chat_id\":"+std::string(telegramUserId.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
   //outMessage out;
