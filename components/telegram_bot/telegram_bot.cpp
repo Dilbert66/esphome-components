@@ -386,13 +386,13 @@ void WebNotify::setup() {
   if (this->chat_id_f_.has_value()) {
     auto val = (*this->chat_id_f_)();
     if (val.has_value()) {
-      telegramUserId_=*val;
+      set_chat_id(std::string(*val));
     }
   }
   if (this->bot_id_f_.has_value()) {
     auto val = (*this->bot_id_f_)();
     if (val.has_value()) {
-      botId_=*val;
+     set_bot_id(std::string(*val));
     }
   }
   ESP_LOGD(TAG,"chat id=[%s],bot id=[%s]",telegramUserId_.c_str(),botId_.c_str());
@@ -409,7 +409,7 @@ void WebNotify::loop() {
 
   if (network::is_connected() ) {
     if (((millis() - retryDelay) > delayTime) && !connected && botId_.length() > 0 &&  (enableBot_ || (messages.size() && enableSend_))) {
-      ESP_LOGD(TAG,"Connecting to api");
+      ESP_LOGD(TAG,"Connecting to telegram api");
       mg_http_connect(&mgr,apiHost_.c_str(), notify_fn,&c_res);  // Create client connection
     }
   }
