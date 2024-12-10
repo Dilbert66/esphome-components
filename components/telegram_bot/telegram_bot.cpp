@@ -386,7 +386,7 @@ void WebNotify::setup() {
   if (this->chat_id_f_.has_value()) {
     auto val = (*this->chat_id_f_)();
     if (val.has_value()) {
-      telegramUserId=*val;
+      telegramUserId_=*val;
     }
   }
   if (this->bot_id_f_.has_value()) {
@@ -395,10 +395,10 @@ void WebNotify::setup() {
       botId_=*val;
     }
   }
-  ESP_LOGD(TAG,"chat id=[%s],bot id=[%s]",telegramUserId.c_str(),botId_.c_str());
+  ESP_LOGD(TAG,"chat id=[%s],bot id=[%s]",telegramUserId_.c_str(),botId_.c_str());
  
   mg_mgr_init(&mgr);
-  // std::string msg="{\"chat_id\":"+std::string(telegramUserId.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
+  // std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
   //outMessage out;
   //out.msg=msg;
   //out.type=mtSendMessage;

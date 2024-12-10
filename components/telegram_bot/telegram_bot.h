@@ -63,15 +63,12 @@ class WebNotify : public Controller, public Component {
 public:
   WebNotify();
 
-  // (In most use cases you won't need these)
-  /// Setup the internal web server and register handlers.
   void setup() override;
   void loop() override;
 
   void dump_config() override;
   void publish(SendData& out);
   
-
   void publish(const std::string & chat_id,const std::string& message,const std::string& reply_markup="",const std::string & parse_mode="html",bool disable_notification=false,bool disable_web_page_preview=false,bool resize_keyboard=false,bool one_time_keyboard=false) {
     SendData out;
     out.text=message;
@@ -135,11 +132,11 @@ public:
   }
 
   void set_bot_id(std::string&& bot_id) {botId_=bot_id; }
-  void set_chat_id(std::string&& chat_id) { telegramUserId=chat_id; 
-  if (telegramUserId !="" && std::find(allowed_chat_ids.begin(),  allowed_chat_ids.end(),telegramUserId)== allowed_chat_ids.end())
-    allowed_chat_ids.push_back(telegramUserId);
+  void set_chat_id(std::string&& chat_id) { telegramUserId_=chat_id; 
+  if (telegramUserId_ !="" && std::find(allowed_chat_ids.begin(),  allowed_chat_ids.end(),telegramUserId_)== allowed_chat_ids.end())
+    allowed_chat_ids.push_back(telegramUserId_);
   }
-  std::string get_chat_id() {return telegramUserId;}
+  std::string get_chat_id() {return telegramUserId_;}
   std::string get_bot_id(){ return botId_;}
   void add_chatid(std::string&& chat_id) {allowed_chat_ids.push_back(std::move(chat_id));}
   void set_api_host(std::string&& api_host) { apiHost_="https://" + std::move(api_host); }
@@ -155,7 +152,7 @@ public:
     this->on_message_.add(std::move(callback));
   }
 
-  std::string telegramUserId="";
+  std::string telegramUserId_="";
 
   void set_bot_id_f(std::function<optional<std::string>()> &&f);
   void set_chat_id_f(std::function<optional<std::string>()> &&f);
@@ -169,9 +166,7 @@ private:
     msgtype type;
   };
 
-
   struct c_res_s c_res;
-
 
   std::string apiHost_ = "https://api.telegram.org/";
   const uint64_t timeout_ms = 1500;  // Connect timeout in milliseconds
@@ -185,14 +180,12 @@ private:
   bool sending=false;
   bool connected=false;
   unsigned long retryDelay=0;
-  int delayTime=15000; //ms
+  int delayTime=30000; //ms
   std::queue<outMessage> messages;
   std::vector<std::string> allowed_chat_ids;
   bool isAllowed(std::string chat_id);
   void parseArgs(RemoteData& x);
   bool processMessage(const char * payload);
-
-  protected:
 
   optional<std::function<optional<std::string>()>> chat_id_f_{};
   optional<std::function<optional<std::string>()>> bot_id_f_{};
@@ -234,7 +227,7 @@ public:
     if (this->to_.value(x...) !="")
       y.chat_id=  this->to_.value(x...);
     else
-      y.chat_id =  this->parent_->telegramUserId;
+      y.chat_id =  this->parent_->telegramUserId_;
 
     if (this->disable_notification_.value(x...))
       y.disable_notification=  this->disable_notification_.value(x...);
