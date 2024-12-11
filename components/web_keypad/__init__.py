@@ -238,17 +238,15 @@ async def to_code(config):
     if CORE.using_arduino:
         if CORE.is_esp32:        
             cg.add_library("Update", None)     
-
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.h_h")
+            
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     dst=CORE.relative_build_path("src/mongoose.h")
     if os.path.isfile(src) and not os.path.isfile(dst):
         copy_file_if_changed(src,dst)
-        _LOGGER.info("Copied mongoose.h")
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.c_c")
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
     dst=CORE.relative_build_path("src/mongoose.c")
     if os.path.isfile(src) and not os.path.isfile(dst):
         copy_file_if_changed(src,dst)
-        _LOGGER.info("Copied mongoose.c")
   
 
     #cg.add_library("rweather/CryptoLegacy", ">0.1.0")

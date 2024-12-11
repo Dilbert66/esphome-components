@@ -323,11 +323,12 @@ async def to_code(config):
             trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback")
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
 
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.h_h")
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     dst=CORE.relative_build_path("src/mongoose.h")
     if os.path.isfile(src) and not os.path.isfile(dst):
         copy_file_if_changed(src,dst)
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose.c_c")
+    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
     dst=CORE.relative_build_path("src/mongoose.c")
     if os.path.isfile(src) and not os.path.isfile(dst):
         copy_file_if_changed(src,dst)
+
