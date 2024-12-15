@@ -254,7 +254,7 @@ text:
 
 ![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
-# ESP32 web keypad component. 
+# ESP32 Web Keypad component. 
 
 This component provides a virtual keypad for each partition of your alarm system via a web page as well providing all sensor statuses. You can configure all buttons and keys using a config file. I’ve provided an example yaml file in my components directory. Just configure the yaml as usual for your system. There is an added section called web_keypad: for this new feature. 
 
