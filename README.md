@@ -251,7 +251,7 @@ text:
           webnotify->set_chat_id(std::string(x));
           ESP_LOGD("test","set chat id to %s",std::string(x).c_str());
 ```
-```
+
 ![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
 # ESP32 web keypad component. 
