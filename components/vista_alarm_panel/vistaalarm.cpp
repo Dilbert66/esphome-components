@@ -1,6 +1,32 @@
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 #include "vistaalarm.h"
 
+//#include "driver/timer.h"
+
+// #define TIMER_DIVIDER         64  //  Hardware timer clock divider
+// #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
+
+
+// static void tg_timer_init(timer_group_t group, timer_idx_t timer)
+// {
+//     /* Select and initialize basic parameters of the timer */
+//     timer_config_t config = {
+//         .alarm_en = TIMER_ALARM_DIS,
+//         .counter_en = TIMER_PAUSE,
+//         .intr_type=  TIMER_INTR_LEVEL,
+//         .counter_dir = TIMER_COUNT_UP,
+//         .auto_reload = TIMER_AUTORELOAD_DIS,
+//         .divider = TIMER_DIVIDER,
+//     }; // default clock source is APB
+//     timer_init(group, timer, &config);
+
+//     /* Timer's counter will initially start from value below.
+//        Also, if auto_reload is set, this value will be automatically reload on alarm */
+//     timer_set_counter_value(group, timer, 0);
+
+ 
+//     timer_start(group, timer);
+// }
 
 #if defined(ESP32) && defined(USETASK)
 #include <esp_chip_info.h>
@@ -26,15 +52,14 @@
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
-
 #if !defined(ARDUINO_MQTT)
 namespace esphome
 {
   namespace alarm_panel
   {
 
-    Vista  vista;
-   // const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
+    Vista vista;
+    // const char zoneRequest_INIT[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
 
     static const char *const TAG = "vista_alarm";
 
@@ -43,79 +68,81 @@ namespace esphome
     std::function<void(const std::string &, JsonObject)> mqtt_callback;
     const char *setalarmcommandtopic = "/alarm/set";
 #endif
-/*
-    void vistaECPHome::add_binary_sensor(binary_sensor::BinarySensor *b, const char *type_id)
+
+    void vistaECPHome::publishStatusChange(sysState led, bool open, uint8_t partition)
     {
-
-     b->set_object_id(type_id);
-
+      std::string sensor = "NIL";
+      switch (led)
+      {
+      case sfire:
+        sensor = "fire_";
+        break;
+      case salarm:
+        sensor = "alm_";
+        break;
+      case strouble:
+        sensor = "trbl_";
+        break;
+      case sarmedstay:
+        sensor = "arms_";
+        break;
+      case sarmedaway:
+        sensor = "arma_";
+        break;
+      case sinstant:
+        sensor = "armi_";
+        break;
+      case sready:
+        sensor = "rdy_";
+        break;
+      case sac:
+        publishBinaryState("ac", 0, open);
+        return;
+      case sbypass:
+        sensor = "byp_";
+        break;
+      case schime:
+        sensor = "chm_";
+        break;
+      case sbat:
+        publishBinaryState("bat", 0, open);
+        return;
+      case sarmednight:
+        sensor = "armn_";
+        break;
+      case sarmed:
+        sensor = "arm_";
+        break;
+      case soffline:
+        break;
+      case sunavailable:
+        break;
+      default:
+        break;
+      };
+      publishBinaryState(sensor, partition, open);
     }
-
-    void vistaECPHome::add_text_sensor(text_sensor::TextSensor *t, const char *type_id)
-    {
-
-      t->set_object_id(type_id);
-
-    }
-
-    const char *vistaECPHome::getTypeIdFromBinaryObjectId(const std::string &objid)
-    {
-    
-      return objid.c_str();
-
-    }
-
-    const char *vistaECPHome::getTypeIdFromTextObjectId(const std::string &objid)
-    {
-      return objid.c_str();
-
-    }
-*/
-
-void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition) 
-{
-      std::string sensor="NIL";   
-      switch(led) {
-                case sfire: sensor="fire_";break;
-                case salarm: sensor="alm_";break;
-                case strouble: sensor="trbl_";break;
-                case sarmedstay:sensor="arms_";break;
-                case sarmedaway: sensor="arma_";break;
-                case sinstant: sensor="armi_";break; 
-                case sready: sensor="rdy_";break; 
-                case sac: publishBinaryState("ac",0,open);return;       
-                case sbypass: sensor="byp_";break;  
-                case schime: sensor="chm_";break;
-                case sbat: publishBinaryState("bat",0,open);return;  
-                case sarmednight: sensor="armn_";break;  
-                case sarmed: sensor="arm_";break;  
-                case soffline: break;       
-                case sunavailable: break; 
-                default: break;
-         };
-      publishBinaryState(sensor,partition,open);
-}
     void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t partition, bool open)
     {
-     std::string id=idstr;
+      std::string id = idstr;
       if (partition)
-        id +=std::to_string(partition);
+        id += std::to_string(partition);
 
-         auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor* bs)
-                        { return bs->get_object_id() == id; });
-                             
-     if (it != bMap.end() && (*it)->state != open)
+      auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
+                             { return bs->get_object_id() == id; });
+
+      if (it != bMap.end() && (*it)->state != open)
         (*it)->publish_state(open);
     }
 
     void vistaECPHome::publishTextState(const std::string &idstr, uint8_t partition, std::string *text)
     {
-     std::string id=idstr;
+      std::string id = idstr;
       if (partition)
-        id +=std::to_string(partition);
-      auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor* ts)
-                         { return ts->get_object_id() == id; });
-    if (it != tMap.end() && (*it)->state != *text)
+        id += std::to_string(partition);
+      auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
+                             { return ts->get_object_id() == id; });
+      if (it != tMap.end() && (*it)->state != *text)
         (*it)->publish_state(*text);
     }
 
@@ -172,7 +199,6 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       }
     }
 
-
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
@@ -183,26 +209,27 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       char res;
       for (auto obj : bMap)
       {
-        ms.Target((char*)obj->get_object_id().c_str());
-        res=ms.Match("^[zZ](%d+)$");
-        if (res==REGEXP_MATCHED) {
-                ms.GetCapture(buf,0);
-                z = toInt(buf, 10);
-                createZone(z);
-        }
-      }
-      
-      for (auto obj : tMap)
-      {
-        ms.Target((char*)obj->get_object_id().c_str());
-        res=ms.Match("^[zZ](%d+)$");
-        if (res==REGEXP_MATCHED) {
-                ms.GetCapture(buf,0);
-                z = toInt(buf, 10);
-                createZone(z);
+        ms.Target((char *)obj->get_object_id().c_str());
+        res = ms.Match("^[zZ](%d+)$");
+        if (res == REGEXP_MATCHED)
+        {
+          ms.GetCapture(buf, 0);
+          z = toInt(buf, 10);
+          createZone(z);
         }
       }
 
+      for (auto obj : tMap)
+      {
+        ms.Target((char *)obj->get_object_id().c_str());
+        res = ms.Match("^[zZ](%d+)$");
+        if (res == REGEXP_MATCHED)
+        {
+          ms.GetCapture(buf, 0);
+          z = toInt(buf, 10);
+          createZone(z);
+        }
+      }
     }
 #endif
 
@@ -214,11 +241,12 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
       n.zone = z;
       n.active = true;
       extZones.push_back(n);
-      ESP_LOGD(TAG,"added zone %d", z);
-      if (zoneStatusChangeCallback != NULL);
-        zoneStatusChangeCallback(z,"C");
+      ESP_LOGD(TAG, "added zone %d", z);
+      if (zoneStatusChangeCallback != NULL)
+        ;
+      zoneStatusChangeCallback(z, "C");
       if (zoneStatusChangeBinaryCallback != NULL)
-        zoneStatusChangeBinaryCallback(z,false);
+        zoneStatusChangeBinaryCallback(z, false);
       return &extZones.back();
     }
 
@@ -241,7 +269,7 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 
       serialType rf;
       rf.zone = 0;
-      if (rfSerialLookup  != NULL && *rfSerialLookup)
+      if (rfSerialLookup != NULL && *rfSerialLookup)
       {
         std::string serial = serialCode;
 
@@ -295,14 +323,13 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
 #if defined(ESPHOME_MQTT)
     void vistaECPHome::on_json_message_callback(const std::string &topic, JsonObject payload)
     {
-     alarmPanelPtr->on_json_message(topic,payload);
+      alarmPanelPtr->on_json_message(topic, payload);
     }
 
     void vistaECPHome::on_json_message(const std::string &topic, JsonObject payload)
     {
       int p = 0;
 
-    
       if (topic.find(setalarmcommandtopic) != std::string::npos)
       {
         if (payload.containsKey("partition"))
@@ -349,37 +376,47 @@ void vistaECPHome::publishStatusChange(sysState led,bool open,uint8_t partition)
     }
 #endif
 
-void vistaECPHome::processAuiQueue() {
-  if (auiCmd.state != rsidle && (millis() - auiCmd.time) > 5000)  {//reset auicmd state if no f2 response after 5 seconds
-        ESP_LOGD("TAG","Setting auicmd state to idle");
-        auiCmd.state=rsidle;
-        auiCmd.pending=false;
-  }
-  if (auiQueue.size()>0 && auiCmd.state==rsidle) {
-    auiCmd=auiQueue.front();
-    auiQueue.pop();
-    switch (auiCmd.state) {
-      case rsdate: sendAuiTime();break;
-      case rsopenzones: sendZoneRequest();break;
-      default: break;
+    void vistaECPHome::processAuiQueue()
+    {
+      if (auiCmd.state != rsidle && (millis() - auiCmd.time) > 5000)
+      { // reset auicmd state if no f2 response after 5 seconds
+        ESP_LOGD("TAG", "Setting auicmd state to idle");
+        auiCmd.state = rsidle;
+        auiCmd.pending = false;
+      }
+      if (auiQueue.size() > 0 && auiCmd.state == rsidle)
+      {
+        auiCmd = auiQueue.front();
+        auiQueue.pop();
+        switch (auiCmd.state)
+        {
+        case rsdate:
+          sendAuiTime();
+          break;
+        case rsopenzones:
+          sendZoneRequest();
+          break;
+        default:
+          break;
+        }
+      }
     }
 
-  }
-
-
-}
-
-void vistaECPHome::set_panel_time()
+    void vistaECPHome::set_panel_time()
     {
 #if defined(USE_TIME)
- 
-      if (auiAddr) {
-        if (auiCmd.state != rsidle) {
+
+      if (auiAddr)
+      {
+        if (auiCmd.state != rsidle)
+        {
           auiCmdType c;
-          c.state=rsdate;
+          c.state = rsdate;
           if (auiQueue.size() < 5)
             auiQueue.push(c);
-       } else sendAuiTime();
+        }
+        else
+          sendAuiTime();
       }
       if (vistaCmd.statusFlags.programMode || auiAddr)
         return;
@@ -398,13 +435,13 @@ void vistaECPHome::set_panel_time()
 #endif
       int addr = partitionKeypads[defaultPartition];
       vista.write(cmd, addr);
-      
+
 #endif
     }
     /*
 void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour, int minute,int seconds, int dow)
     {
-      
+
       bool r=sendAuiTime(year, month, day, hour, minute, seconds,dow);
       if (vistaCmd.statusFlags.programMode || r)
         return;
@@ -425,20 +462,20 @@ void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour,
     */
 
 #if defined(ARDUINO_MQTT)
-void vistaECPHome::begin()
+    void vistaECPHome::begin()
     {
 #else
 void vistaECPHome::setup()
 {
 #endif
-      ESP_LOGD(TAG,"Start setup: Free heap: %04X (%d)",ESP.getFreeHeap(),ESP.getFreeHeap());
-
+      ESP_LOGD(TAG, "Start setup: Free heap: %04X (%d)", ESP.getFreeHeap(), ESP.getFreeHeap());
+     //tg_timer_init(TIMER_GROUP_0, TIMER_0);
       // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       //  the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
 
       bMap = App.get_binary_sensors();
-      tMap = App.get_text_sensors();  
+      tMap = App.get_text_sensors();
       set_update_interval(8); // set looptime to 8ms
       loadZones();
 
@@ -454,7 +491,7 @@ void vistaECPHome::setup()
 #if defined(USE_API)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
-      register_service( & vistaECPHome::send_cmd_bytes, "send_cmd_bytes", { "addr","hexdata"});
+      register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata"});
       register_service(&vistaECPHome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&vistaECPHome::alarm_disarm, "alarm_disarm", {"code", "partition"});
       register_service(&vistaECPHome::alarm_arm_home, "alarm_arm_home", {"partition"});
@@ -503,7 +540,7 @@ void vistaECPHome::setup()
           core // Core where the task should run
       );
 #endif
-ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFreeHeap());
+      ESP_LOGD(TAG, "Completed setup. Free heap=%04X (%d)", ESP.getFreeHeap(), ESP.getFreeHeap());
     }
 
     void vistaECPHome::alarm_disarm(std::string code, int32_t partition)
@@ -611,10 +648,9 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
     void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes)
     {
-      
+
       std::string::iterator end_pos = std::remove(hexbytes.begin(), hexbytes.end(), ' ');
       hexbytes.erase(end_pos, hexbytes.end());
-
 
       int NumberChars = hexbytes.length();
       char *bytes = new char[NumberChars / 2];
@@ -665,72 +701,78 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
       return true;
     }
 
-    void vistaECPHome::updateDisplayLines(uint8_t partition) {
+    void vistaECPHome::updateDisplayLines(uint8_t partition)
+    {
 
-      uint8_t pos=vistaCmd.statusFlags.promptPos;
-      std::string p1=vistaCmd.statusFlags.prompt1;
-      std::string p2=vistaCmd.statusFlags.prompt2;
-      if (pos>0) {
+      uint8_t pos = vistaCmd.statusFlags.promptPos;
+      std::string p1 = vistaCmd.statusFlags.prompt1;
+      std::string p2 = vistaCmd.statusFlags.prompt2;
+      if (pos > 0)
+      {
         char buf[10];
-        std::string sub1,sub2;
-        if (pos>15) {
-          sub1=p2.substr(0,pos-16);
-          if (pos<31)
-            sub2=p2.substr(pos-15);
-         sprintf(buf,"[%c]",p2[pos-16]);
-          p2=sub1 + std::string(buf) + sub2;
-       } else {
-          sub1=p1.substr(0,pos);
-          if (pos<15)
-            sub2=p1.substr(pos+1);
-          sprintf(buf,"[%c]",p2[pos]);
-          p1=sub1 + std::string(buf) + sub2;
-       }
-      }     
+        std::string sub1, sub2;
+        if (pos > 15)
+        {
+          sub1 = p2.substr(0, pos - 16);
+          if (pos < 31)
+            sub2 = p2.substr(pos - 15);
+          sprintf(buf, "[%c]", p2[pos - 16]);
+          p2 = sub1 + std::string(buf) + sub2;
+        }
+        else
+        {
+          sub1 = p1.substr(0, pos);
+          if (pos < 15)
+            sub2 = p1.substr(pos + 1);
+          sprintf(buf, "[%c]", p2[pos]);
+          p1 = sub1 + std::string(buf) + sub2;
+        }
+      }
       line1DisplayCallback(p1.c_str(), partition);
       line2DisplayCallback(p2.c_str(), partition);
     }
 
-
-
     std::string vistaECPHome::getNameFromPrompt(char *p1, char *p2)
     {
-      if (vistaCmd.cbuf[0] != 0xf7) {
+      if (vistaCmd.cbuf[0] != 0xf7)
+      {
         return "";
       }
       std::string p = std::string(p1) + std::string(p2);
 
-        MatchState ms;
-        char buf[5];
-        char buf1[20];
-        ms.Target((char *)p.c_str());
-        char res=ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
-        if (res==REGEXP_MATCHED) {
-          ms.GetCapture(buf,0);
-          ms.GetCapture(buf1,1);
-          ESP_LOGD(TAG, "name match=%s,zone=%s", buf1, buf);
-          return std::string(buf1);
-        }
+      MatchState ms;
+      char buf[5];
+      char buf1[20];
+      ms.Target((char *)p.c_str());
+      char res = ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+      if (res == REGEXP_MATCHED)
+      {
+        ms.GetCapture(buf, 0);
+        ms.GetCapture(buf1, 1);
+        ESP_LOGD(TAG, "name match=%s,zone=%s", buf1, buf);
+        return std::string(buf1);
+      }
       return "";
     }
 
-
     int vistaECPHome::getZoneFromPrompt(char *p1)
     {
-      if (vistaCmd.cbuf[0] != 0xf7) {
+      if (vistaCmd.cbuf[0] != 0xf7)
+      {
         return 0;
       }
-        MatchState ms;
-        char buf[5];
-        ms.Target(p1);
-        char res=ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
-        if (res==REGEXP_MATCHED) {
-          ms.GetCapture(buf,0);
-          int z = toInt(buf, 10);
-          vistaCmd.statusFlags.zone = z;
-          ESP_LOGD(TAG, "zone match=%d", z);
-          return z;
-        }
+      MatchState ms;
+      char buf[5];
+      ms.Target(p1);
+      char res = ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+      if (res == REGEXP_MATCHED)
+      {
+        ms.GetCapture(buf, 0);
+        int z = toInt(buf, 10);
+        vistaCmd.statusFlags.zone = z;
+        ESP_LOGD(TAG, "zone match=%d", z);
+        return z;
+      }
       return 0;
     }
 
@@ -756,7 +798,6 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
   ESP_LOGI(label, "%s %s", s2, s.c_str());
 #endif
     }
-
 
     void vistaECPHome::set_alarm_state(std::string const &state, std::string code, int partition)
     {
@@ -928,50 +969,51 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
     bool vistaECPHome::sendAuiTime()
     {
       ESPTime rtc = now();
-      if (!rtc.is_valid () ||  vistaCmd.statusFlags.programMode || !auiAddr || ( auiCmd.state!=rsidle && auiCmd.state!=rsdate))
+      if (!rtc.is_valid() || vistaCmd.statusFlags.programMode || !auiAddr || (auiCmd.state != rsidle && auiCmd.state != rsdate))
         return false;
-        ESP_LOGD(TAG, "Setting AUI time...");
-      char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35 ,0};
-      auiSeq=auiSeq==0xf?8:auiSeq+1;
-      bytes[1]=0x60 + auiSeq;
-      auiCmd.state=rsdate;
-      auiCmd.time=millis();
-      auiCmd.pending=true;
-      //dateReqStatus=0;
-      sprintf(&bytes[8],"%02d%02d%02d%02d%02d%02d%1d",rtc.year%100,rtc.month,rtc.day_of_month,rtc.hour,rtc.minute,rtc.second,rtc.day_of_week-1); 
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
+      ESP_LOGD(TAG, "Setting AUI time...");
+      char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35, 0};
+      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
+      bytes[1] = 0x60 + auiSeq;
+      auiCmd.state = rsdate;
+      auiCmd.time = millis();
+      auiCmd.pending = true;
+      // dateReqStatus=0;
+      sprintf(&bytes[8], "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute, rtc.second, rtc.day_of_week - 1);
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes) - 1);
       return true;
     }
 
     void vistaECPHome::sendZoneRequest()
     {
-      if (!auiAddr || !(auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones ) || auiCmd.pending)
+      if (!auiAddr || !(auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones) || auiCmd.pending)
         return;
-      auiSeq=auiSeq==0xf?8:auiSeq+1;
+      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
       char bytes[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
-      bytes[1]=0x60 + auiSeq;
+      bytes[1] = 0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
       bytes[12] = auiCmd.state == rsopenzones ? 0x32 : 0x35;
-      auiCmd.pending=true;
-      auiCmd.time=millis();
+      auiCmd.pending = true;
+      auiCmd.time = millis();
       ESP_LOGD(TAG, "Sending zone status request %d, header %02X", auiCmd.state, bytes[1]);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
-    #if defined(AUTOPOPULATE)
-    
+#if defined(AUTOPOPULATE)
+
     void vistaECPHome::getZoneCount()
     {
-      if (!auiAddr || !auiCmd.state==rszonecount)
+      if (!auiAddr || !auiCmd.state == rszonecount)
         return;
-      if ( !auiCmd.partition || auiCmd.partition > (maxPartitions + 0x30)) {
-        auiCmd.state=rsidle;
+      if (!auiCmd.partition || auiCmd.partition > (maxPartitions + 0x30))
+      {
+        auiCmd.state = rsidle;
         return;
       }
-      auiCmd.pending=true;
-      char bytes[] = {0x00, 0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x43 ,0x61};
-      auiSeq=auiSeq==0xf?8:auiSeq+1;
-      bytes[1]=0x60 + auiSeq;
+      auiCmd.pending = true;
+      char bytes[] = {0x00, 0x68, 0x62, 0x0C, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x43, 0x61};
+      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
+      bytes[1] = 0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
       ESP_LOGD(TAG, "Sending partition %c zone count request %d", auiCmd.partition, auiCmd.state);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
@@ -979,77 +1021,84 @@ ESP_LOGD(TAG,"Completed setup. Free heap=%04X (%d)",ESP.getFreeHeap(),ESP.getFre
 
     void vistaECPHome::getZoneRecord()
     {
-      if (!auiAddr || !auiCmd.state==rszoneinfo )
+      if (!auiAddr || !auiCmd.state == rszoneinfo)
         return;
-      if  (auiCmd.record > auiCmd.records || auiCmd.records==0 ){
-        auiCmd.state=rsidle;
+      if (auiCmd.record > auiCmd.records || auiCmd.records == 0)
+      {
+        auiCmd.state = rsidle;
         return;
       }
-      auiCmd.pending=true;
-      char bytes[] = {0x00 ,0x68 ,0x62 ,0x0C ,0x45 ,0x49 ,0xF5 ,0x31 ,0xFB ,0x45 ,0x43 ,0xF5 ,0x30,0x30,0x31 ,0xFB ,0x43 ,0x6C,0};
-      auiSeq=auiSeq==0xf?8:auiSeq+1;
-      bytes[1]=0x60 + auiSeq;
+      auiCmd.pending = true;
+      char bytes[] = {0x00, 0x68, 0x62, 0x0C, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x43, 0xF5, 0x30, 0x30, 0x31, 0xFB, 0x43, 0x6C, 0};
+      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
+      bytes[1] = 0x60 + auiSeq;
       bytes[7] = auiCmd.partition;
-      sprintf(&bytes[12],"%03d%c%c%c",auiCmd.record,0xfb,0x43,0x6c); 
-      ESP_LOGD(TAG, "Sending partition %c zone record %d request %d,Total records: %d", auiCmd.partition,auiCmd.record, auiCmd.state,auiCmd.records);
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes)-1);
+      sprintf(&bytes[12], "%03d%c%c%c", auiCmd.record, 0xfb, 0x43, 0x6c);
+      ESP_LOGD(TAG, "Sending partition %c zone record %d request %d,Total records: %d", auiCmd.partition, auiCmd.record, auiCmd.state, auiCmd.records);
+      vista.writeDirect(bytes, auiAddr, sizeof(bytes) - 1);
     }
 
-  void  vistaECPHome::loadZone(int zone,std::string &&name,uint8_t zonetype,uint8_t devicetype) {
+    void vistaECPHome::loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype)
+    {
 
-    zoneNameType  nz;
-    nz.name = name;
-    nz.zone=zone;
-    nz.zone_type=zonetype;
-    nz.device_type=devicetype;
-    autoZones.push_back(nz);
+      zoneNameType nz;
+      nz.name = name;
+      nz.zone = zone;
+      nz.zone_type = zonetype;
+      nz.device_type = devicetype;
+      autoZones.push_back(nz);
 
+      ESP_LOGD(TAG, "got name=%s,zone=%d,zt=%d,dt=%d", name.c_str(), zone, zonetype, devicetype);
+    }
 
-ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,devicetype);
-
- }
-
-
-// 31 00 31 00 31 00 46 52 4F 4E 54 20 44 4F 4F 52 44
-    void vistaECPHome::processZoneInfo(char *list) {
-      std::string s="";
-      if (list) {
+    // 31 00 31 00 31 00 46 52 4F 4E 54 20 44 4F 4F 52 44
+    void vistaECPHome::processZoneInfo(char *list)
+    {
+      std::string s = "";
+      if (list)
+      {
         s = list;
       }
       s.append(",");
-      uint8_t x=1;
-      uint8_t z,zt,dt;
-      std::string name="";
+      uint8_t x = 1;
+      uint8_t z, zt, dt;
+      std::string name = "";
       size_t pos;
       while ((pos = s.find(',')) != std::string::npos && x < 5)
+      {
+        std::string s1 = "";
+        if (x == 1)
         {
-         std::string s1="";
-         if (x==1) {
           s1 = s.substr(0, pos);
-          z=std::stoi(s1.c_str());
-          x=2;
-         } else if (x==2){
-          s1=s.substr(0,pos);
-          zt=std::stoi(s1.c_str());
-          x=3;
-         } else if (x==3){
-          s1=s.substr(0,pos);
-          dt=std::stoi(s1.c_str());
-          x=4;
-         } else if (x==4){
-          s1=s.substr(0,pos);
-          name=s1;
-          x=5;
-         }
-        s.erase(0, pos +1); 
+          z = std::stoi(s1.c_str());
+          x = 2;
         }
-        if (name=="" && z)
-          name="Zone " + std::to_string(z);
-        if (z)
-          loadZone(z,name.c_str(),zt,dt);
-
+        else if (x == 2)
+        {
+          s1 = s.substr(0, pos);
+          zt = std::stoi(s1.c_str());
+          x = 3;
+        }
+        else if (x == 3)
+        {
+          s1 = s.substr(0, pos);
+          dt = std::stoi(s1.c_str());
+          x = 4;
+        }
+        else if (x == 4)
+        {
+          s1 = s.substr(0, pos);
+          name = s1;
+          x = 5;
+        }
+        s.erase(0, pos + 1);
+      }
+      if (name == "" && z)
+        name = "Zone " + std::to_string(z);
+      if (z)
+        loadZone(z, name.c_str(), zt, dt);
     }
-   
+
 #endif
 
     char *vistaECPHome::parseAUIMessage(char *cmd)
@@ -1058,7 +1107,8 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
       cmd[cmd[1] + 1] = 0; // 0 to terminate cmd to use as string
       char *c = &cmd[8];   // advance to start of fe xx byte
       char *f = NULL;
-      for (uint8_t x = 0; x < cmd[1] -7; x++) { //convert 0 to comma
+      for (uint8_t x = 0; x < cmd[1] - 7; x++)
+      { // convert 0 to comma
         c[x] = !c[x] ? ',' : c[x];
       }
       if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
@@ -1067,40 +1117,46 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
-      } else if (auiCmd.state == rszoneinfo)
+      }
+      else if (auiCmd.state == rszoneinfo)
       {
         char s[] = {0xfe, 0xfe, 0xfe, 0xec, 0};
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
-      } else if (auiCmd.state == rszonecount)
+      }
+      else if (auiCmd.state == rszonecount)
       {
         char s[] = {0xfe, 0xfe, 0};
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
-      } else if (auiCmd.state == rsidle)
+      }
+      else if (auiCmd.state == rsidle)
       {
         char s[] = {0xf5, 0xec, 0};
         f = strstr(c, s);
         if (f)
           return f + strlen(s);
-      } else if (auiCmd.state == rsdate){
-            char s[]={0xfe,0};
-            f=strstr(c,s);
-            if (f)
-                return f+strlen(s);
-              
-      } else {
-              char s[]={0xfd,0}; //error 
-              f=strstr(c,s); 
-              if (f)
-                return f+strlen(s);
-        }
+      }
+      else if (auiCmd.state == rsdate)
+      {
+        char s[] = {0xfe, 0};
+        f = strstr(c, s);
+        if (f)
+          return f + strlen(s);
+      }
+      else
+      {
+        char s[] = {0xfd, 0}; // error
+        f = strstr(c, s);
+        if (f)
+          return f + strlen(s);
+      }
       return NULL;
     }
 
-    void vistaECPHome::updateZoneState(zoneType *zt, int p,  bool state, unsigned long t)
+    void vistaECPHome::updateZoneState(zoneType *zt, int p, bool state, unsigned long t)
     {
       zt->partition = p;
       zt->time = t;
@@ -1108,19 +1164,20 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
       {
         zt->open = state;
         zoneStatusUpdate(zt);
-      ESP_LOGD(TAG, "Setting open zone %d to %d,  partition %d", zt->zone, state, p);
+        ESP_LOGD(TAG, "Setting open zone %d to %d,  partition %d", zt->zone, state, p);
       }
       else if (auiCmd.state == rsbypasszones)
       {
         zt->bypass = state;
-      ESP_LOGD(TAG, "Setting bypass zone %d to %d, partition %d", zt->zone, state, p);
+        ESP_LOGD(TAG, "Setting bypass zone %d to %d, partition %d", zt->zone, state, p);
       }
     }
 
     void vistaECPHome::processZoneList(char *list)
     {
-      std::string s="";
-      if (list) {
+      std::string s = "";
+      if (list)
+      {
         s = list;
       }
       s.append(",");
@@ -1129,36 +1186,39 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
       uint8_t p = auiCmd.partition - 0x30; // set 0x31 - 0x34 to 1 - 4 range
 
       // Search all occurences of integers or ranges
-        unsigned long t = millis();
-        size_t pos;
-        char buf[5],buf1[5];
-        MatchState ms;
-        while ((pos = s.find(',')) != std::string::npos)
+      unsigned long t = millis();
+      size_t pos;
+      char buf[5], buf1[5];
+      MatchState ms;
+      while ((pos = s.find(',')) != std::string::npos)
+      {
+        std::string s1 = s.substr(0, pos);
+        ms.Target((char *)s1.c_str());
+        char res = ms.Match("(%d+)-(%d+)");
+        if (res == REGEXP_MATCHED)
         {
-         std::string s1 = s.substr(0, pos);
-         ms.Target((char*)s1.c_str());
-         char res=ms.Match("(%d+)-(%d+)");
-        if (res==REGEXP_MATCHED) {
-            ms.GetCapture(buf,0);
-            ms.GetCapture(buf1,1);
-           // Yes, range, add all values within to the vector
-           for (int z{std::stoi(buf)}; z <= std::stoi(buf1); ++z)
+          ms.GetCapture(buf, 0);
+          ms.GetCapture(buf1, 1);
+          // Yes, range, add all values within to the vector
+          for (int z{std::stoi(buf)}; z <= std::stoi(buf1); ++z)
           {
             updateZoneState(getZone(z), p, true, t);
           }
-
-        } else {
-          res=ms.Match("(%d+)");
-          if (res==REGEXP_MATCHED) {
-            ms.GetCapture(buf,0);
+        }
+        else
+        {
+          res = ms.Match("(%d+)");
+          if (res == REGEXP_MATCHED)
+          {
+            ms.GetCapture(buf, 0);
             // No, no range, just a plain integer value. Add it to the vector
             int z = std::stoi(buf);
             updateZoneState(getZone(z), p, true, t);
           }
         }
-          s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
-        }
-      
+        s.erase(0, pos + 1); /* erase() function store the current positon and move to next token. */
+      }
+
       // clear  bypass/open zones for partition p that were not set above
       auto it = std::find_if(extZones.begin(), extZones.end(), [&p, &t](zoneType &f)
                              { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
@@ -1166,12 +1226,12 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
       while (it != extZones.end())
       {
 
-        updateZoneState(&(*it), p, false, millis()); 
-        
+        updateZoneState(&(*it), p, false, millis());
+
         it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
       }
-      
+
       forceRefreshZones = true;
     }
 
@@ -1180,7 +1240,7 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
     void vistaECPHome::cmdQueueTask(void *args)
     {
 
-     // vistaECPHome *_this = (vistaECPHome *)args;
+      // vistaECPHome *_this = (vistaECPHome *)args;
       static unsigned long checkTime = millis();
       for (;;)
       {
@@ -1201,459 +1261,479 @@ ESP_LOGD(TAG,"got name=%s,zone=%d,zt=%d,dt=%d",name.c_str(),zone,zonetype,device
     }
 #endif
 
-
 #if defined(AUTOPOPULATE)
-void vistaECPHome::fetchPanelZones()  {
-  /*
-//test code to auto load zones from panel - future
-      static uint8_t currentAUIPartition=0x30;
-      if (currentAUIPartition <= (maxPartitions+0x30)) {
-        if (auiCmd.state==rsidle) {
-          auiCmd.state=szonecount;
-          auiCmd.pending=false;
-        }
-        if (auiCmd.state==szonecount && !auiCmd.pending) {
-          currentAUIPartition++;
-          auiCmd.partition=currentAUIPartition;
-          auiCmd.records=0;
-          auiCmd.record=0;
-          auiCmd.pending=false;
-          getZoneCount();
-       } else if (auiCmd.state==rszoneinfo && !auiCmd.pending) {
-          getZoneRecord();
-        }     
-      }  
-      }
-      */
-#endif  
+    void vistaECPHome::fetchPanelZones()
+    {
+      /*
+    //test code to auto load zones from panel - future
+          static uint8_t currentAUIPartition=0x30;
+          if (currentAUIPartition <= (maxPartitions+0x30)) {
+            if (auiCmd.state==rsidle) {
+              auiCmd.state=szonecount;
+              auiCmd.pending=false;
+            }
+            if (auiCmd.state==szonecount && !auiCmd.pending) {
+              currentAUIPartition++;
+              auiCmd.partition=currentAUIPartition;
+              auiCmd.records=0;
+              auiCmd.record=0;
+              auiCmd.pending=false;
+              getZoneCount();
+           } else if (auiCmd.state==rszoneinfo && !auiCmd.pending) {
+              getZoneRecord();
+            }
+          }
+          }
+          */
+#endif
 
 #if defined(ARDUINO_MQTT)
-    void vistaECPHome::loop()
-    {
+      void vistaECPHome::loop()
+      {
 #else
 void vistaECPHome::update()
 {
 #endif
+        // static unsigned long t1=millis();
+        // if (millis() - t1 > 5000) {
+        //   t1=millis();
+        //   uint64_t t;
+        //   timer_get_counter_value(TIMER_GROUP_0, TIMER_0,&t) ;
+        //   ESP_LOGD("test","Micros = %d, millis=%d,t=%d",micros(),millis(),t);
+        // }
 
-      processAuiQueue();
+
+        processAuiQueue();
 
 #if defined(ESPHOME_MQTT)
-      if (firstRun && mqtt::global_mqtt_client->is_connected())
-      {
-        mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + setalarmcommandtopic + "\"}", 0, 1);
-      }
+        if (firstRun && mqtt::global_mqtt_client->is_connected())
+        {
+          mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + setalarmcommandtopic + "\"}", 0, 1);
+        }
 #endif
 
-      // if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
+        // if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
 #if !defined(ESP32) or !defined(USETASK)
-      vista.handle();
-      static unsigned long sendWaitTime = millis();
-      while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail())
-      {
         vista.handle();
-        if (millis() - sendWaitTime > 10)
-          break;
-      }
+        static unsigned long sendWaitTime = millis();
+        while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail())
+        {
+          vista.handle();
+          if (millis() - sendWaitTime > 10)
+            break;
+        }
 #endif
 
-      if (vista.cmdAvail())
-      {
+        if (vista.cmdAvail())
+        {
 
-        vistaCmd = vista.getNextCmd();
+          vistaCmd = vista.getNextCmd();
 
 #if defined(ARDUINO_MQTT)
-        if (firstRun)
-        {
-          forceRefreshZones = true;
-          forceRefreshGlobal = true;
-          
-        }
+          if (firstRun)
+          {
+            forceRefreshZones = true;
+            forceRefreshGlobal = true;
+          }
 #else
     forceRefreshZones = true;
     forceRefreshGlobal = true;
 #endif
-        
-        //rf testing code
-        /*
-        static unsigned long testtime=millis();
-        static char t1=0;
-        if (!vistaCmd.newExtCmd && millis() - testtime > 10000) {
-            //FB 04 04 E9 58 80 00 00 00 00 00 00 00 
-            //0399512 b0
-            vistaCmd.newExtCmd=true;
-            vistaCmd.cbuf[0]=0xfb;
-            vistaCmd.cbuf[1]=4;
-            vistaCmd.cbuf[2]=4;
-            vistaCmd.cbuf[3]=0xe9;
-            vistaCmd.cbuf[4]=0x58;
-            vistaCmd.cbuf[5]=0x80;
-            
-            if (t1==1) {
-                t1=2;
-                vistaCmd.cbuf[5]=0;
-            } else
-            if (t1==2) {
-                t1=0;
-                vistaCmd.cbuf[5]=0xb2;
-            } else
-            if (t1==0) t1=1;
-            
-            testtime=millis();
-        }
-       */
-        if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0)
-        {
-          if (vistaCmd.cbuf[0] == 0xF7)
-            printPacket("CHK", vistaCmd.cbuf, 45);
-          else
-            printPacket("CHK", vistaCmd.cbuf, 13);
-          return;
-        }
 
-        static unsigned long refreshLrrTime, refreshRfTime;
-        // process ext messages for zones
-        if (vistaCmd.newExtCmd)
-        {
-          if (debug > 0)
-          {
-            if (vistaCmd.cbuf[0] == 0xF6)
-              printPacket("EXT", vistaCmd.cbuf, vistaCmd.cbuf[3] + 4);
-            else
-              printPacket("EXT", vistaCmd.cbuf, 13);
-            // format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
+          // rf testing code
+          /*
+          static unsigned long testtime=millis();
+          static char t1=0;
+          if (!vistaCmd.newExtCmd && millis() - testtime > 10000) {
+              //FB 04 04 E9 58 80 00 00 00 00 00 00 00
+              //0399512 b0
+              vistaCmd.newExtCmd=true;
+              vistaCmd.cbuf[0]=0xfb;
+              vistaCmd.cbuf[1]=4;
+              vistaCmd.cbuf[2]=4;
+              vistaCmd.cbuf[3]=0xe9;
+              vistaCmd.cbuf[4]=0x58;
+              vistaCmd.cbuf[5]=0x80;
+
+              if (t1==1) {
+                  t1=2;
+                  vistaCmd.cbuf[5]=0;
+              } else
+              if (t1==2) {
+                  t1=0;
+                  vistaCmd.cbuf[5]=0xb2;
+              } else
+              if (t1==0) t1=1;
+
+              testtime=millis();
           }
-          if (vistaCmd.cbuf[0] == 0xFA)
+         */
+          if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0)
           {
-            int z = vistaCmd.cbuf[3];
-            if (vistaCmd.cbuf[2] == 0xf1 && z > 0 && z <= maxZones)
-            { // we have a zone status (zone expander address range)
-              ESP_LOGD(TAG, "fa status update to zone");
-              zoneType *zt = getZone(z);
+            if (vistaCmd.cbuf[0] == 0xF7)
+              printPacket("CHK", vistaCmd.cbuf, 45);
+            else
+              printPacket("CHK", vistaCmd.cbuf, 13);
+            return;
+          }
 
-              if (zt->active)
-              {
-                zt->time = millis();
-                zt->open = vistaCmd.cbuf[4];
-                zoneStatusUpdate(zt);
-              }
+          static unsigned long refreshLrrTime, refreshRfTime;
+          // process ext messages for zones
+          if (vistaCmd.newExtCmd)
+          {
+            if (debug > 0)
+            {
+              if (vistaCmd.cbuf[0] == 0xF6)
+                printPacket("EXT", vistaCmd.cbuf, vistaCmd.cbuf[3] + 4);
+              else
+                printPacket("EXT", vistaCmd.cbuf, 13);
+              // format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
             }
-            else if (vistaCmd.cbuf[2] == 0x00)
-            { // relay update z = 1 to 4
-              if (z > 0)
-              {
-                relayStatusChangeCallback(vistaCmd.cbuf[1], z, vistaCmd.cbuf[4] ? true : false);
-                if (debug > 0)
+            if (vistaCmd.cbuf[0] == 0xFA)
+            {
+              int z = vistaCmd.cbuf[3];
+              if (vistaCmd.cbuf[2] == 0xf1 && z > 0 && z <= maxZones)
+              { // we have a zone status (zone expander address range)
+                ESP_LOGD(TAG, "fa status update to zone");
+                zoneType *zt = getZone(z);
+
+                if (zt->active)
+                {
+                  zt->time = millis();
+                  zt->open = vistaCmd.cbuf[4];
+                  zoneStatusUpdate(zt);
+                }
+              }
+              else if (vistaCmd.cbuf[2] == 0x00)
+              { // relay update z = 1 to 4
+                if (z > 0)
+                {
+                  relayStatusChangeCallback(vistaCmd.cbuf[1], z, vistaCmd.cbuf[4] ? true : false);
+                  if (debug > 0)
 #if defined(ARDUINO_MQTT)
-                  Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
+                    Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #else
               ESP_LOGD(TAG, "Got relay address %d channel %d = %d", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #endif
+                }
               }
-            }
-            else if (vistaCmd.cbuf[2] == 0x0d)
-            { // relay update z = 1 to 4 - 1sec on / 1 sec off
-              if (z > 0)
-              {
-                // relayStatusChangeCallback(vistaCmd.cbuf[1],z,vistaCmd.cbuf[4]?true:false);
-                if (debug > 0)
+              else if (vistaCmd.cbuf[2] == 0x0d)
+              { // relay update z = 1 to 4 - 1sec on / 1 sec off
+                if (z > 0)
+                {
+                  // relayStatusChangeCallback(vistaCmd.cbuf[1],z,vistaCmd.cbuf[4]?true:false);
+                  if (debug > 0)
 #if defined(ARDUINO_MQTT)
-                  Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
+                    Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #else
               ESP_LOGD(TAG, "Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off", vistaCmd.cbuf[1], z, vistaCmd.cbuf[4]);
 #endif
-              }
-            }
-            else if (vistaCmd.cbuf[2] == 0xf7)
-            { // 30 second zone expander module status update
-              uint8_t faults = vistaCmd.cbuf[4];
-              for (int x = 8; x > 0; x--)
-              {
-                z = getZoneFromChannel(vistaCmd.cbuf[1], x); // device id=extcmd[1]
-                if (!z)
-                  continue;
-                bool zs = faults & 1 ? true : false; // check first bit . lower bit = channel 8. High bit= channel 1
-                faults = faults >> 1;                // get next zone status bit from field
-                zoneType *zt = getZone(z);
-                if (zt->open != zs && zt->active)
-                {
-                  zt->open = zs;
-                  zoneStatusUpdate(zt);
                 }
-                zt->time = millis();
+              }
+              else if (vistaCmd.cbuf[2] == 0xf7)
+              { // 30 second zone expander module status update
+                uint8_t faults = vistaCmd.cbuf[4];
+                for (int x = 8; x > 0; x--)
+                {
+                  z = getZoneFromChannel(vistaCmd.cbuf[1], x); // device id=extcmd[1]
+                  if (!z)
+                    continue;
+                  bool zs = faults & 1 ? true : false; // check first bit . lower bit = channel 8. High bit= channel 1
+                  faults = faults >> 1;                // get next zone status bit from field
+                  zoneType *zt = getZone(z);
+                  if (zt->open != zs && zt->active)
+                  {
+                    zt->open = zs;
+                    zoneStatusUpdate(zt);
+                  }
+                  zt->time = millis();
+                }
               }
             }
-          }
-          else if (vistaCmd.cbuf[0] == 0xFB && vistaCmd.cbuf[1] == 4)
-          {
-
-            char rf_serial_char[14];
-            char rf_serial_char_out[20];
-            // FB 04 06 18 98 B0 00 00 00 00 00 00
-            uint32_t device_serial = (vistaCmd.cbuf[2] << 16) + (vistaCmd.cbuf[3] << 8) + vistaCmd.cbuf[4];
-            snprintf(rf_serial_char, 14,"%03d%04d", device_serial / 10000, device_serial % 10000);
-            serialType rf = getRfSerialLookup(rf_serial_char);
-            int z = rf.zone;
-
-            if (debug > 0)
+            else if (vistaCmd.cbuf[0] == 0xFB && vistaCmd.cbuf[1] == 4)
             {
+
+              char rf_serial_char[14];
+              char rf_serial_char_out[20];
+              // FB 04 06 18 98 B0 00 00 00 00 00 00
+              uint32_t device_serial = (vistaCmd.cbuf[2] << 16) + (vistaCmd.cbuf[3] << 8) + vistaCmd.cbuf[4];
+              snprintf(rf_serial_char, 14, "%03d%04d", device_serial / 10000, device_serial % 10000);
+              serialType rf = getRfSerialLookup(rf_serial_char);
+              int z = rf.zone;
+
+              if (debug > 0)
+              {
 #if defined(ARDUINO_MQTT)
-              Serial.printf("RFX: %s,%02x\n", rf_serial_char, vistaCmd.cbuf[5]);
+                Serial.printf("RFX: %s,%02x\n", rf_serial_char, vistaCmd.cbuf[5]);
 #else
           ESP_LOGI(TAG, "RFX: %s,%02x", rf_serial_char, vistaCmd.cbuf[5]);
 #endif
-            }
-            if (z && !(vistaCmd.cbuf[5] & 4) && !(vistaCmd.cbuf[5] & 1))
-            { // ignore heartbeat
-              zoneType *zt = getZone(z);
-              if (zt->active)
-              {
-                zt->time = millis();
-                zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
-                zt->lowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
-                zoneStatusUpdate(zt);
               }
-            }
-
-            sprintf(rf_serial_char_out, "%s,%02x", rf_serial_char, vistaCmd.cbuf[5]);
-            rfMsgChangeCallback(rf_serial_char);
-            refreshRfTime = millis();
-          }
-          /* rf_serial_char
-
-              1 - ? (loop flag?)
-              2 - Low battery
-              3 -	Supervision required /heartbeat
-              4 - ?
-              5 -	Loop 3
-              6 -	Loop 2
-              7 -	Loop 4
-              8 -	Loop 1
-
-          */
-        }
-        
-        if (debug > 0 && vistaCmd.newCmd)
-        {
-          if (vistaCmd.cbuf[0] == 0xF2)
-            printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1] + 2);
-          else
-            printPacket("CMD", vistaCmd.cbuf, 13);
-        }
-
-        if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
-        {
-          ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state,auiCmd.pending);
-          //if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
-           // activeAuiAddr=true;
-          if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
-          { // partition update broadcast
-            char *m = parseAUIMessage(vistaCmd.cbuf);
-            if (m != NULL )
-            {
-              size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
-              //ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
-             // if (m[0] & 1)
-             // { 
-             if (auiCmd.state == rsidle) {
-              auiCmd.state = rsopenzones;
-              auiCmd.partition=vistaCmd.cbuf[13];
-              auiCmd.pending=false;
-              sendZoneRequest();
-             } else if (auiCmd.state != rsopenzones && auiCmd.state!=rsbypasszones) {
-              auiCmdType c;
-              c.state=rsopenzones;
-              c.partition=vistaCmd.cbuf[13];
-              if (auiQueue.size() < 5) auiQueue.push(c);
-             }
-           //   }
-             // else 
-              if (l > 4 && m[0] == 2)
-              {
-                // we have an exit delay
-                // exitDelay=m[5] for partition partitionRequest
+              if (z && !(vistaCmd.cbuf[5] & 4) && !(vistaCmd.cbuf[5] & 1))
+              { // ignore heartbeat
+                zoneType *zt = getZone(z);
+                if (zt->active)
+                {
+                  zt->time = millis();
+                  zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
+                  zt->lowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
+                  zoneStatusUpdate(zt);
+                }
               }
+
+              sprintf(rf_serial_char_out, "%s,%02x", rf_serial_char, vistaCmd.cbuf[5]);
+              rfMsgChangeCallback(rf_serial_char);
+              refreshRfTime = millis();
             }
+            /* rf_serial_char
+
+                1 - ? (loop flag?)
+                2 - Low battery
+                3 -	Supervision required /heartbeat
+                4 - ?
+                5 -	Loop 3
+                6 -	Loop 2
+                7 -	Loop 4
+                8 -	Loop 1
+
+            */
           }
-          else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
-          { // response data from request
-            char *m = parseAUIMessage(vistaCmd.cbuf);
-            auiCmd.time=millis();
-            ESP_LOGD(TAG,"success message from %d",auiCmd.state);
-            auiCmd.pending=false;
-            if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
-            {
-              processZoneList(m);
 
-              if (auiCmd.state==rsopenzones) {
-                auiCmd.state=rsbypasszones;
-                sendZoneRequest();
-              } else 
-                auiCmd.state = rsidle;
-            } else if (auiCmd.state == rsdate){
-              auiCmd.state=rsidle;
-            } 
-         #if defined(AUTOPOPULATE)
-         /*
-            else if (auiCmd.state == rszonecount) {
-               if (m!= NULL)
-                auiCmd.records=std::stoi(m);
-                if (auiCmd.records > 0) {
-                  auiCmd.state=rszoneinfo;
-                  auiCmd.record=1; 
-                } else
-                  auiCmd.state=rsidle;
-            } else if (auiCmd.state == rszoneinfo) {
-              if (m!= NULL) {
-               processZoneInfo(m);
-               auiCmd.record++;
-               if (auiCmd.record > auiCmd.records)
-                auiCmd.state=rsidle;
-              }
-            }
-*/
-        #endif
-
-          } else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && ( vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10]==0xfd)) {
-            char *m = parseAUIMessage(vistaCmd.cbuf);
-              auiCmd.time=millis();
-              auiCmd.pending=false;
-              ESP_LOGD(TAG,"failure message from %d",auiCmd.state);
-              if (auiCmd.state==rszoneinfo) {
-                 auiCmd.record++;
-                if (auiCmd.record > auiCmd.records)
-                  auiCmd.state=rsidle;
-              } else if (auiCmd.state==rsdate) {
-                //dateReqStatus=-1;
-                auiCmd.state=rsidle;
-               } else
-                auiCmd.state=rsidle;
-          }
-          return;
-        }
-        else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
-        {
-          getPartitionsFromMask();
-
-          for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+          if (debug > 0 && vistaCmd.newCmd)
           {
-            if (partitions[partition - 1])
+            if (vistaCmd.cbuf[0] == 0xF2)
+              printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1] + 2);
+            else
+              printPacket("CMD", vistaCmd.cbuf, 13);
+          }
+
+          if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
+          {
+            ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
+            // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
+            //  activeAuiAddr=true;
+            if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
+            { // partition update broadcast
+              char *m = parseAUIMessage(vistaCmd.cbuf);
+              if (m != NULL)
+              {
+                size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
+                // ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
+                // if (m[0] & 1)
+                // {
+                if (auiCmd.state == rsidle)
+                {
+                  auiCmd.state = rsopenzones;
+                  auiCmd.partition = vistaCmd.cbuf[13];
+                  auiCmd.pending = false;
+                  sendZoneRequest();
+                }
+                else if (auiCmd.state != rsopenzones && auiCmd.state != rsbypasszones)
+                {
+                  auiCmdType c;
+                  c.state = rsopenzones;
+                  c.partition = vistaCmd.cbuf[13];
+                  if (auiQueue.size() < 5)
+                    auiQueue.push(c);
+                }
+                //   }
+                // else
+                if (l > 4 && m[0] == 2)
+                {
+                  // we have an exit delay
+                  // exitDelay=m[5] for partition partitionRequest
+                }
+              }
+            }
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
+            { // response data from request
+              char *m = parseAUIMessage(vistaCmd.cbuf);
+              auiCmd.time = millis();
+              ESP_LOGD(TAG, "success message from %d", auiCmd.state);
+              auiCmd.pending = false;
+              if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
+              {
+                processZoneList(m);
+
+                if (auiCmd.state == rsopenzones)
+                {
+                  auiCmd.state = rsbypasszones;
+                  sendZoneRequest();
+                }
+                else
+                  auiCmd.state = rsidle;
+              }
+              else if (auiCmd.state == rsdate)
+              {
+                auiCmd.state = rsidle;
+              }
+#if defined(AUTOPOPULATE)
+              /*
+                 else if (auiCmd.state == rszonecount) {
+                    if (m!= NULL)
+                     auiCmd.records=std::stoi(m);
+                     if (auiCmd.records > 0) {
+                       auiCmd.state=rszoneinfo;
+                       auiCmd.record=1;
+                     } else
+                       auiCmd.state=rsidle;
+                 } else if (auiCmd.state == rszoneinfo) {
+                   if (m!= NULL) {
+                    processZoneInfo(m);
+                    auiCmd.record++;
+                    if (auiCmd.record > auiCmd.records)
+                     auiCmd.state=rsidle;
+                   }
+                 }
+     */
+#endif
+            }
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd))
             {
-              forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
+              char *m = parseAUIMessage(vistaCmd.cbuf);
+              auiCmd.time = millis();
+              auiCmd.pending = false;
+              ESP_LOGD(TAG, "failure message from %d", auiCmd.state);
+              if (auiCmd.state == rszoneinfo)
+              {
+                auiCmd.record++;
+                if (auiCmd.record > auiCmd.records)
+                  auiCmd.state = rsidle;
+              }
+              else if (auiCmd.state == rsdate)
+              {
+                // dateReqStatus=-1;
+                auiCmd.state = rsidle;
+              }
+              else
+                auiCmd.state = rsidle;
+            }
+            return;
+          }
+          else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
+          {
+            getPartitionsFromMask();
+
+            for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+            {
+              if (partitions[partition - 1])
+              {
+                forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
 
 #if defined(ARDUINO_MQTT)
-              Serial.printf("Partition: %02X\n", partition);
+                Serial.printf("Partition: %02X\n", partition);
 #else
           ESP_LOGI(TAG, "Partition: %02X", partition);
 #endif
 
-              updateDisplayLines(partition);
-              if (partitionStates[partition - 1].lastbeeps != vistaCmd.statusFlags.beeps || forceRefresh)
-              {
-                beepsCallback(std::to_string(vistaCmd.statusFlags.beeps), partition);
+                updateDisplayLines(partition);
+                if (partitionStates[partition - 1].lastbeeps != vistaCmd.statusFlags.beeps || forceRefresh)
+                {
+                  beepsCallback(std::to_string(vistaCmd.statusFlags.beeps), partition);
+                }
+
+                partitionStates[partition - 1].lastbeeps = vistaCmd.statusFlags.beeps;
+
+                if (vistaCmd.statusFlags.systemFlag && strstr(vistaCmd.statusFlags.prompt2, HITSTAR))
+                  alarm_keypress_partition("*", partition);
               }
-
-              partitionStates[partition - 1].lastbeeps = vistaCmd.statusFlags.beeps;
-
-              if ( vistaCmd.statusFlags.systemFlag && strstr(vistaCmd.statusFlags.prompt2, HITSTAR))
-                alarm_keypress_partition("*", partition);
             }
-          }
 #if defined(ARDUINO_MQTT)
-          Serial.printf("Prompt: %s\n", vistaCmd.statusFlags.prompt1);
-          Serial.printf("Prompt: %s\n", vistaCmd.statusFlags.prompt2);
-          Serial.printf("Beeps: %d\n", vistaCmd.statusFlags.beeps);
+            Serial.printf("Prompt: %s\n", vistaCmd.statusFlags.prompt1);
+            Serial.printf("Prompt: %s\n", vistaCmd.statusFlags.prompt2);
+            Serial.printf("Beeps: %d\n", vistaCmd.statusFlags.beeps);
 #else
       ESP_LOGI(TAG, "Prompt: %s", vistaCmd.statusFlags.prompt1);
       ESP_LOGI(TAG, "Prompt: %s", vistaCmd.statusFlags.prompt2);
       ESP_LOGI(TAG, "Beeps: %d", vistaCmd.statusFlags.beeps);
 #endif
-        }
-
-        // publishes lrr status messages
-        if ((vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58 && vistaCmd.newCmd) || firstRun)
-        { // we show all lrr messages with type 58
-
-          int c = vistaCmd.statusFlags.lrr.code;
-          int q = vistaCmd.statusFlags.lrr.qual;
-          int z = vistaCmd.statusFlags.lrr.zone;
-
-          std::string qual;
-          char msg[50];
-          if (c < 400)
-            qual = (q == 3) ? PSTR(" Cleared") : "";
-          else if (c == 570)
-            qual = (q == 1) ? PSTR(" Active") : " Cleared";
-          else
-            qual = (q == 1) ? PSTR(" Restored") : "";
-          if (c)
-          {
-            String lrrString = String(statusText(c));
-
-            std::string uf = PSTR("user");
-            if (lrrString[0] == 'Z')
-              uf = PSTR("zone");
-
-            sprintf(msg, "%d: %s %s %d%s", c, &lrrString[1], uf.c_str(), z, qual.c_str());
-
-            lrrMsgChangeCallback(msg);
-            refreshLrrTime = millis();
           }
-        }
 
-        // done other cmd processing.  Process f7 now
-        if (vistaCmd.cbuf[0] != 0xf7 || vistaCmd.cbuf[12] == 0x77)
-          return;
+          // publishes lrr status messages
+          if ((vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58 && vistaCmd.newCmd) || firstRun)
+          { // we show all lrr messages with type 58
 
-        currentSystemState = sunavailable;
-        currentLightState.stay = false;
-        currentLightState.away = false;
-        currentLightState.night = false;
-        currentLightState.instant = false;
-        currentLightState.ready = false;
-        currentLightState.alarm = false;
-        currentLightState.armed = false;
-        currentLightState.ac = true;
-        currentLightState.fire = false;
-        currentLightState.check = false;
-        currentLightState.trouble = false;
-        currentLightState.bypass = false;
-        currentLightState.chime = false;
-        bool updateSystemState=false;
+            int c = vistaCmd.statusFlags.lrr.code;
+            int q = vistaCmd.statusFlags.lrr.qual;
+            int z = vistaCmd.statusFlags.lrr.zone;
 
-        // Publishes ready status
+            std::string qual;
+            char msg[50];
+            if (c < 400)
+              qual = (q == 3) ? PSTR(" Cleared") : "";
+            else if (c == 570)
+              qual = (q == 1) ? PSTR(" Active") : " Cleared";
+            else
+              qual = (q == 1) ? PSTR(" Restored") : "";
+            if (c)
+            {
+              String lrrString = String(statusText(c));
 
-        if (vistaCmd.statusFlags.ready)
-        {
-          currentSystemState = sdisarmed;
-          currentLightState.ready = true;
-          updateSystemState=true;
-        }
-        // armed status lights
-        if (vistaCmd.cbuf[0] == 0xf7 && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay))
-        {
-          updateSystemState=true;
-          if (vistaCmd.statusFlags.night)
-          {
-            currentSystemState = sarmednight;
-            currentLightState.night = true;
-            currentLightState.stay = true;
+              std::string uf = PSTR("user");
+              if (lrrString[0] == 'Z')
+                uf = PSTR("zone");
+
+              sprintf(msg, "%d: %s %s %d%s", c, &lrrString[1], uf.c_str(), z, qual.c_str());
+
+              lrrMsgChangeCallback(msg);
+              refreshLrrTime = millis();
+            }
           }
-          else if (vistaCmd.statusFlags.armedAway)
+
+          // done other cmd processing.  Process f7 now
+          if (vistaCmd.cbuf[0] != 0xf7 || vistaCmd.cbuf[12] == 0x77)
+            return;
+
+          currentSystemState = sunavailable;
+          currentLightState.stay = false;
+          currentLightState.away = false;
+          currentLightState.night = false;
+          currentLightState.instant = false;
+          currentLightState.ready = false;
+          currentLightState.alarm = false;
+          currentLightState.armed = false;
+          currentLightState.ac = true;
+          currentLightState.fire = false;
+          currentLightState.check = false;
+          currentLightState.trouble = false;
+          currentLightState.bypass = false;
+          currentLightState.chime = false;
+          bool updateSystemState = false;
+
+          // Publishes ready status
+
+          if (vistaCmd.statusFlags.ready)
           {
-            currentSystemState = sarmedaway;
-            currentLightState.away = true;
+            currentSystemState = sdisarmed;
+            currentLightState.ready = true;
+            updateSystemState = true;
           }
-          else
+          // armed status lights
+          if (vistaCmd.cbuf[0] == 0xf7 && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay))
           {
-            currentSystemState = sarmedstay;
-            currentLightState.stay = true;
+            updateSystemState = true;
+            if (vistaCmd.statusFlags.night)
+            {
+              currentSystemState = sarmednight;
+              currentLightState.night = true;
+              currentLightState.stay = true;
+            }
+            else if (vistaCmd.statusFlags.armedAway)
+            {
+              currentSystemState = sarmedaway;
+              currentLightState.away = true;
+            }
+            else
+            {
+              currentSystemState = sarmedstay;
+              currentLightState.stay = true;
+            }
+            currentLightState.armed = true;
           }
-          currentLightState.armed = true;
-        }
           // zone fire status
           // int tz;
-        if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.fireZone)
+          if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.fireZone)
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1664,1111 +1744,1111 @@ void vistaECPHome::update()
             getZone(vistaCmd.statusFlags.zone)->fire = true;
             // ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);
           }
-           // zone alarm status
-          if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag &&  vistaCmd.statusFlags.alarm )
-            {
-              if (vistaCmd.cbuf[5] > 0x90)
-                getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
-              // if (promptContains(p1,ALARM,tz) && !vistaCmd.statusFlags.systemFlag) {
-              zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-              if (!zt->alarm && zt->active)
-              {
-                zt->alarm = true;
-                zoneStatusUpdate(zt);
-              }
-              if (!zt->partition && zt->active)
-                assignPartitionToZone(zt);
-              zt->time = millis();
-              alarmStatus.zone = vistaCmd.statusFlags.zone;
-              alarmStatus.time = zt->time;
-              alarmStatus.state = true;
-              // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
-            }
-              // device check status
-            if (vistaCmd.cbuf[0] == 0xf7 &&  vistaCmd.statusFlags.check)
-              {
-                updateSystemState=true; //we also get system flags when a device has a check flag
-                if (vistaCmd.cbuf[5] > 0x90)
-                  getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
-                zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-                if (!zt->check && zt->active)
-                {
-                  zt->check = true;
-                  zt->open = false;
-                  zt->alarm = false;
-                  currentLightState.trouble = true;
-                  zoneStatusUpdate(zt);
-                  // ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );
-                }
-                if (!zt->partition && zt->active)
-                  assignPartitionToZone(zt);
-                zt->time = millis();
-              }
-                // zone fault status
-                // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-              if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
-                {
-                  if (vistaCmd.cbuf[5] > 0x90)
-                    getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
-                  // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
-                  // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
-
-                  zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-                  if (!zt->open && zt->active)
-                  {
-                    zt->open = true;
-                    zt->check = false;
-                    zt->bypass = false;
-                    zoneStatusUpdate(zt);
-                  }
-                  if (!zt->partition && zt->active)
-                    assignPartitionToZone(zt);
-
-                  // ESP_LOGD("test","fault found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->open);
-                  zt->time = millis();
-                }
-                  // zone bypass status
-                if (vistaCmd.cbuf[0] == 0xf7 &&  !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant)  && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
-                  {
-                    if (vistaCmd.cbuf[5] > 0x90)
-                      getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
-                    // if (promptContains(p1,BYPAS,tz) && !vistaCmd.statusFlags.systemFlag) {
-
-                    zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-
-                    if (!zt->bypass && zt->active)
-                    {
-                      zt->bypass = true;
-                      zoneStatusUpdate(zt);
-                    }
-                    if (!zt->partition && zt->active)
-                      assignPartitionToZone(zt);
-                    zt->time = millis();
-
-                    // ESP_LOGD("test","bypass found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->bypass);
-                  }
-
-        // trouble lights
-        if (!vistaCmd.statusFlags.acPower)
-        {
-          currentLightState.ac = false;
-        }
-
-        if (vistaCmd.statusFlags.lowBattery )
-        {
-          currentLightState.bat = true;
-          lowBatteryTime = millis();
-        }
-        // ESP_LOGE(TAG,"ac=%d,batt status = %d,systemflag=%d,lightbat status=%d,trouble=%d", currentLightState.ac,vistaCmd.statusFlags.lowBattery,vistaCmd.statusFlags.systemFlag,currentLightState.bat,currentLightState.trouble);
-
-        if (vistaCmd.statusFlags.fire)
-        {
-          currentLightState.fire = true;
-          currentSystemState = striggered;
-        }
-
-        if (vistaCmd.statusFlags.inAlarm)
-        {
-          currentSystemState = striggered;
-          alarmStatus.zone = 99;
-          alarmStatus.time = millis();
-          alarmStatus.state = true;
-        }
-
-        if (vistaCmd.statusFlags.chime)
-        {
-          currentLightState.chime = true;
-        }
-
-        if (vistaCmd.statusFlags.bypass)
-        {
-          currentLightState.bypass = true;
-        }
-
-        if (vistaCmd.statusFlags.check)
-        {
-          currentLightState.check = true;
-        }
-        if (vistaCmd.statusFlags.instant)
-        {
-          currentLightState.instant = true;
-        }
-
-        // if ( vistaCmd.statusFlags.cancel ) {
-        //    currentLightState.canceled=true;
-        //	}    else  currentLightState.canceled=false;
-        unsigned long chkTime = millis();
-        // clear alarm statuses  when timer expires
-        if ((chkTime - fireStatus.time) > TTL)
-        {
-          fireStatus.state = false;
-          if (fireStatus.zone > 0 && fireStatus.zone <= maxZones)
-            getZone(fireStatus.zone)->fire = false;
-        }
-        if ((chkTime - alarmStatus.time) > TTL)
-        {
-          alarmStatus.state = false;
-          if (alarmStatus.zone > 0 && alarmStatus.zone <= maxZones)
-            getZone(alarmStatus.zone)->alarm = false;
-        }
-        if ((chkTime - panicStatus.time) > TTL)
-        {
-          panicStatus.state = false;
-          if (panicStatus.zone > 0 && panicStatus.zone <= maxZones)
-            getZone(panicStatus.zone)->panic = false;
-        }
-        //  if ((millis() - systemPrompt.time) > TTL) systemPrompt.state = false;
-        if ((chkTime - lowBatteryTime) > TTL)
-          currentLightState.bat = false;
-
-        if (!currentLightState.ac || currentLightState.bat || vistaCmd.statusFlags.check )
-          currentLightState.trouble = true;
-
-        currentLightState.alarm = alarmStatus.state;
-
-        for (uint8_t partition = 1; partition <= maxPartitions; partition++)
-        {
-          if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || updateSystemState))
+          // zone alarm status
+          if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.alarm)
           {
-            // system status message
-            forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
-
-            if (currentSystemState != partitionStates[partition - 1].previousSystemState || forceRefresh)
-              switch (currentSystemState)
-              {
-              case striggered:
-                systemStatusChangeCallback(STATUS_TRIGGERED, partition);
-                break;
-              case sarmedaway:
-                systemStatusChangeCallback(STATUS_ARMED, partition);
-                break;
-              case sarmednight:
-                systemStatusChangeCallback(STATUS_NIGHT, partition);
-                break;
-              case sarmedstay:
-                systemStatusChangeCallback(STATUS_STAY, partition);
-                break;
-              case sunavailable:
-                systemStatusChangeCallback(STATUS_NOT_READY, partition);
-                break;
-              case sdisarmed:
-                systemStatusChangeCallback(STATUS_OFF, partition);
-                break;
-              default:
-                systemStatusChangeCallback(STATUS_NOT_READY, partition);
-              }
-            partitionStates[partition - 1].previousSystemState = currentSystemState;
-            partitionStates[partition - 1].refreshStatus = false;
-          }
-        }
-
-        for (uint8_t partition = 1; partition <= maxPartitions; partition++)
-        {
-          if ((partitions[partition - 1] && partitionTargets == 1))
-          {
-
-            // publish status on change only - keeps api traffic down
-            previousLightState = partitionStates[partition - 1].previousLightState;
-
-            forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
-
-            // ESP_LOGD("test","refreshing partition statuse partitions: %d,force refresh=%d",partition,forceRefresh);
-            if (currentLightState.fire != previousLightState.fire || forceRefresh)
-              statusChangeCallback(sfire, currentLightState.fire, partition);
-            if (currentLightState.alarm != previousLightState.alarm || forceRefresh)
-              statusChangeCallback(salarm, currentLightState.alarm, partition);
-            if ((currentLightState.trouble != previousLightState.trouble || forceRefresh))
-              statusChangeCallback(strouble, currentLightState.trouble, partition);
-            if (currentLightState.chime != previousLightState.chime || forceRefresh)
-              statusChangeCallback(schime, currentLightState.chime, partition);
-            // if (currentLightState.check != previousLightState.check || forceRefresh)
-            //   statusChangeCallback(scheck, currentLightState.check, partition);
-
-            if (currentLightState.ac != previousLightState.ac || forceRefresh)
-              statusChangeCallback(sac, currentLightState.ac, partition);
-
-            if (vistaCmd.statusFlags.systemFlag || updateSystemState)
+            if (vistaCmd.cbuf[5] > 0x90)
+              getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
+            // if (promptContains(p1,ALARM,tz) && !vistaCmd.statusFlags.systemFlag) {
+            zoneType *zt = getZone(vistaCmd.statusFlags.zone);
+            if (!zt->alarm && zt->active)
             {
-              if (currentLightState.away != previousLightState.away || forceRefresh)
-                statusChangeCallback(sarmedaway, currentLightState.away, partition);
-              if (currentLightState.stay != previousLightState.stay || forceRefresh)
-                statusChangeCallback(sarmedstay, currentLightState.stay, partition);
-              if (currentLightState.night != previousLightState.night || forceRefresh)
-                statusChangeCallback(sarmednight, currentLightState.night, partition);
-              if (currentLightState.instant != previousLightState.instant || forceRefresh)
-                statusChangeCallback(sinstant, currentLightState.instant, partition);
-              if (currentLightState.armed != previousLightState.armed || forceRefresh)
-                statusChangeCallback(sarmed, currentLightState.armed, partition);
+              zt->alarm = true;
+              zoneStatusUpdate(zt);
             }
-            if (currentLightState.bat != previousLightState.bat || forceRefresh)
-              statusChangeCallback(sbat, currentLightState.bat, partition);
-            if (currentLightState.bypass != previousLightState.bypass || forceRefresh)
-              statusChangeCallback(sbypass, currentLightState.bypass, partition);
-            if (currentLightState.ready != previousLightState.ready || forceRefresh)
-              statusChangeCallback(sready, currentLightState.ready, partition);
-
-            //  if (currentLightState.canceled != previousLightState.canceled)
-            //   statusChangeCallback(scanceled,currentLightState.canceled,partition);
-
-            partitionStates[partition - 1].previousLightState = currentLightState;
-            partitionStates[partition - 1].refreshLights = false;
+            if (!zt->partition && zt->active)
+              assignPartitionToZone(zt);
+            zt->time = millis();
+            alarmStatus.zone = vistaCmd.statusFlags.zone;
+            alarmStatus.time = zt->time;
+            alarmStatus.state = true;
+            // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
           }
-        }
+          // device check status
+          if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.statusFlags.check)
+          {
+            updateSystemState = true; // we also get system flags when a device has a check flag
+            if (vistaCmd.cbuf[5] > 0x90)
+              getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
+            zoneType *zt = getZone(vistaCmd.statusFlags.zone);
+            if (!zt->check && zt->active)
+            {
+              zt->check = true;
+              zt->open = false;
+              zt->alarm = false;
+              currentLightState.trouble = true;
+              zoneStatusUpdate(zt);
+              // ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );
+            }
+            if (!zt->partition && zt->active)
+              assignPartitionToZone(zt);
+            zt->time = millis();
+          }
+          // zone fault status
+          // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
+          if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
+          {
+            if (vistaCmd.cbuf[5] > 0x90)
+              getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
+            // if (vistaCmd.statusFlags.zone==4) vistaCmd.statusFlags.zone=997;
+            // if (promptContains(p1,FAULT,tz) && !vistaCmd.statusFlags.systemFlag) {
 
-        std::string zoneStatusMsg = "";
-        char s1[16];
-        // clears restored zones after timeout
-        for (auto &x : extZones)
-        {
+            zoneType *zt = getZone(vistaCmd.statusFlags.zone);
+            if (!zt->open && zt->active)
+            {
+              zt->open = true;
+              zt->check = false;
+              zt->bypass = false;
+              zoneStatusUpdate(zt);
+            }
+            if (!zt->partition && zt->active)
+              assignPartitionToZone(zt);
+
+            // ESP_LOGD("test","fault found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->open);
+            zt->time = millis();
+          }
+          // zone bypass status
+          if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
+          {
+            if (vistaCmd.cbuf[5] > 0x90)
+              getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
+            // if (promptContains(p1,BYPAS,tz) && !vistaCmd.statusFlags.systemFlag) {
+
+            zoneType *zt = getZone(vistaCmd.statusFlags.zone);
+
+            if (!zt->bypass && zt->active)
+            {
+              zt->bypass = true;
+              zoneStatusUpdate(zt);
+            }
+            if (!zt->partition && zt->active)
+              assignPartitionToZone(zt);
+            zt->time = millis();
+
+            // ESP_LOGD("test","bypass found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->bypass);
+          }
+
+          // trouble lights
+          if (!vistaCmd.statusFlags.acPower)
+          {
+            currentLightState.ac = false;
+          }
+
+          if (vistaCmd.statusFlags.lowBattery)
+          {
+            currentLightState.bat = true;
+            lowBatteryTime = millis();
+          }
+          // ESP_LOGE(TAG,"ac=%d,batt status = %d,systemflag=%d,lightbat status=%d,trouble=%d", currentLightState.ac,vistaCmd.statusFlags.lowBattery,vistaCmd.statusFlags.systemFlag,currentLightState.bat,currentLightState.trouble);
+
+          if (vistaCmd.statusFlags.fire)
+          {
+            currentLightState.fire = true;
+            currentSystemState = striggered;
+          }
+
+          if (vistaCmd.statusFlags.inAlarm)
+          {
+            currentSystemState = striggered;
+            alarmStatus.zone = 99;
+            alarmStatus.time = millis();
+            alarmStatus.state = true;
+          }
+
+          if (vistaCmd.statusFlags.chime)
+          {
+            currentLightState.chime = true;
+          }
+
+          if (vistaCmd.statusFlags.bypass)
+          {
+            currentLightState.bypass = true;
+          }
+
+          if (vistaCmd.statusFlags.check)
+          {
+            currentLightState.check = true;
+          }
+          if (vistaCmd.statusFlags.instant)
+          {
+            currentLightState.instant = true;
+          }
+
+          // if ( vistaCmd.statusFlags.cancel ) {
+          //    currentLightState.canceled=true;
+          //	}    else  currentLightState.canceled=false;
+          unsigned long chkTime = millis();
+          // clear alarm statuses  when timer expires
+          if ((chkTime - fireStatus.time) > TTL)
+          {
+            fireStatus.state = false;
+            if (fireStatus.zone > 0 && fireStatus.zone <= maxZones)
+              getZone(fireStatus.zone)->fire = false;
+          }
+          if ((chkTime - alarmStatus.time) > TTL)
+          {
+            alarmStatus.state = false;
+            if (alarmStatus.zone > 0 && alarmStatus.zone <= maxZones)
+              getZone(alarmStatus.zone)->alarm = false;
+          }
+          if ((chkTime - panicStatus.time) > TTL)
+          {
+            panicStatus.state = false;
+            if (panicStatus.zone > 0 && panicStatus.zone <= maxZones)
+              getZone(panicStatus.zone)->panic = false;
+          }
+          //  if ((millis() - systemPrompt.time) > TTL) systemPrompt.state = false;
+          if ((chkTime - lowBatteryTime) > TTL)
+            currentLightState.bat = false;
+
+          if (!currentLightState.ac || currentLightState.bat || vistaCmd.statusFlags.check)
+            currentLightState.trouble = true;
+
+          currentLightState.alarm = alarmStatus.state;
+
+          for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+          {
+            if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd.statusFlags.systemFlag || updateSystemState))
+            {
+              // system status message
+              forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
+
+              if (currentSystemState != partitionStates[partition - 1].previousSystemState || forceRefresh)
+                switch (currentSystemState)
+                {
+                case striggered:
+                  systemStatusChangeCallback(STATUS_TRIGGERED, partition);
+                  break;
+                case sarmedaway:
+                  systemStatusChangeCallback(STATUS_ARMED, partition);
+                  break;
+                case sarmednight:
+                  systemStatusChangeCallback(STATUS_NIGHT, partition);
+                  break;
+                case sarmedstay:
+                  systemStatusChangeCallback(STATUS_STAY, partition);
+                  break;
+                case sunavailable:
+                  systemStatusChangeCallback(STATUS_NOT_READY, partition);
+                  break;
+                case sdisarmed:
+                  systemStatusChangeCallback(STATUS_OFF, partition);
+                  break;
+                default:
+                  systemStatusChangeCallback(STATUS_NOT_READY, partition);
+                }
+              partitionStates[partition - 1].previousSystemState = currentSystemState;
+              partitionStates[partition - 1].refreshStatus = false;
+            }
+          }
+
+          for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+          {
+            if ((partitions[partition - 1] && partitionTargets == 1))
+            {
+
+              // publish status on change only - keeps api traffic down
+              previousLightState = partitionStates[partition - 1].previousLightState;
+
+              forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
+
+              // ESP_LOGD("test","refreshing partition statuse partitions: %d,force refresh=%d",partition,forceRefresh);
+              if (currentLightState.fire != previousLightState.fire || forceRefresh)
+                statusChangeCallback(sfire, currentLightState.fire, partition);
+              if (currentLightState.alarm != previousLightState.alarm || forceRefresh)
+                statusChangeCallback(salarm, currentLightState.alarm, partition);
+              if ((currentLightState.trouble != previousLightState.trouble || forceRefresh))
+                statusChangeCallback(strouble, currentLightState.trouble, partition);
+              if (currentLightState.chime != previousLightState.chime || forceRefresh)
+                statusChangeCallback(schime, currentLightState.chime, partition);
+              // if (currentLightState.check != previousLightState.check || forceRefresh)
+              //   statusChangeCallback(scheck, currentLightState.check, partition);
+
+              if (currentLightState.ac != previousLightState.ac || forceRefresh)
+                statusChangeCallback(sac, currentLightState.ac, partition);
+
+              if (vistaCmd.statusFlags.systemFlag || updateSystemState)
+              {
+                if (currentLightState.away != previousLightState.away || forceRefresh)
+                  statusChangeCallback(sarmedaway, currentLightState.away, partition);
+                if (currentLightState.stay != previousLightState.stay || forceRefresh)
+                  statusChangeCallback(sarmedstay, currentLightState.stay, partition);
+                if (currentLightState.night != previousLightState.night || forceRefresh)
+                  statusChangeCallback(sarmednight, currentLightState.night, partition);
+                if (currentLightState.instant != previousLightState.instant || forceRefresh)
+                  statusChangeCallback(sinstant, currentLightState.instant, partition);
+                if (currentLightState.armed != previousLightState.armed || forceRefresh)
+                  statusChangeCallback(sarmed, currentLightState.armed, partition);
+              }
+              if (currentLightState.bat != previousLightState.bat || forceRefresh)
+                statusChangeCallback(sbat, currentLightState.bat, partition);
+              if (currentLightState.bypass != previousLightState.bypass || forceRefresh)
+                statusChangeCallback(sbypass, currentLightState.bypass, partition);
+              if (currentLightState.ready != previousLightState.ready || forceRefresh)
+                statusChangeCallback(sready, currentLightState.ready, partition);
+
+              //  if (currentLightState.canceled != previousLightState.canceled)
+              //   statusChangeCallback(scanceled,currentLightState.canceled,partition);
+
+              partitionStates[partition - 1].previousLightState = currentLightState;
+              partitionStates[partition - 1].refreshLights = false;
+            }
+          }
+
+          std::string zoneStatusMsg = "";
+          char s1[16];
+          // clears restored zones after timeout
+          for (auto &x : extZones)
+          {
 
 #if !defined(ESP32) or !defined(USETASK)
-          vista.handle();
+            vista.handle();
 #endif
 
-          if (!x.active || !x.partition)
-            continue;
+            if (!x.active || !x.partition)
+              continue;
 
-          if (x.open && partitionStates[x.partition - 1].previousLightState.ready)
-          {
-            x.open = false;
-            x.check = false;
-            x.alarm = false;
-            zoneStatusUpdate(&x);
+            if (x.open && partitionStates[x.partition - 1].previousLightState.ready)
+            {
+              x.open = false;
+              x.check = false;
+              x.alarm = false;
+              zoneStatusUpdate(&x);
+            }
+
+            if (x.bypass && !partitionStates[x.partition - 1].previousLightState.bypass)
+            {
+              x.bypass = false;
+            }
+
+            if (x.alarm && !partitionStates[x.partition - 1].previousLightState.alarm)
+            {
+              x.alarm = false;
+            }
+
+            if (!x.bypass && x.open && (millis() - x.time) > TTL)
+            {
+              x.open = false;
+              zoneStatusUpdate(&x);
+            }
+            if (!x.bypass && x.check && (millis() - x.time) > TTL)
+            {
+              x.check = false;
+              zoneStatusUpdate(&x);
+            }
+
+            if (forceRefreshZones || forceRefreshGlobal)
+            {
+              zoneStatusUpdate(&x);
+            }
+
+            if (x.open)
+            {
+              if (zoneStatusMsg != "")
+                sprintf(s1, ",OP:%d", x.zone);
+              else
+                sprintf(s1, "OP:%d", x.zone);
+              zoneStatusMsg.append(s1);
+            }
+            if (x.alarm)
+            {
+              if (zoneStatusMsg != "")
+                sprintf(s1, ",AL:%d", x.zone);
+              else
+                sprintf(s1, "AL:%d", x.zone);
+              zoneStatusMsg.append(s1);
+            }
+            if (x.bypass)
+            {
+              if (zoneStatusMsg != "")
+                sprintf(s1, ",BY:%d", x.zone);
+              else
+                sprintf(s1, "BY:%d", x.zone);
+              zoneStatusMsg.append(s1);
+            }
+            if (x.check)
+            {
+              if (zoneStatusMsg != "")
+                sprintf(s1, ",CK:%d", x.zone);
+              else
+                sprintf(s1, "CK:%d", x.zone);
+              zoneStatusMsg.append(s1);
+            }
+            if (x.lowbat)
+            { // low rf battery
+              if (zoneStatusMsg != "")
+                sprintf(s1, ",LB:%d", x.zone);
+              else
+                sprintf(s1, "LB:%d", x.zone);
+              zoneStatusMsg.append(s1);
+            }
           }
 
-          if (x.bypass && !partitionStates[x.partition - 1].previousLightState.bypass)
-          {
-            x.bypass = false;
-          }
+          if ((zoneStatusMsg != previousZoneStatusMsg || forceRefreshZones || forceRefreshGlobal) && zoneExtendedStatusCallback != NULL)
+            zoneExtendedStatusCallback(zoneStatusMsg);
 
-          if (x.alarm && !partitionStates[x.partition - 1].previousLightState.alarm)
-          {
-            x.alarm = false;
-          }
+          previousZoneStatusMsg = zoneStatusMsg;
 
-          if (!x.bypass && x.open && (millis() - x.time) > TTL)
-          {
-            x.open = false;
-            zoneStatusUpdate(&x);
-          }
-          if (!x.bypass && x.check && (millis() - x.time) > TTL)
-          {
-            x.check = false;
-            zoneStatusUpdate(&x);
-          }
-
-          if (forceRefreshZones || forceRefreshGlobal)
-          {
-            zoneStatusUpdate(&x);
-          }
-
-          if (x.open)
-          {
-            if (zoneStatusMsg != "")
-              sprintf(s1, ",OP:%d", x.zone);
-            else
-              sprintf(s1, "OP:%d", x.zone);
-            zoneStatusMsg.append(s1);
-          }
-          if (x.alarm)
-          {
-            if (zoneStatusMsg != "")
-              sprintf(s1, ",AL:%d", x.zone);
-            else
-              sprintf(s1, "AL:%d", x.zone);
-            zoneStatusMsg.append(s1);
-          }
-          if (x.bypass)
-          {
-            if (zoneStatusMsg != "")
-              sprintf(s1, ",BY:%d", x.zone);
-            else
-              sprintf(s1, "BY:%d", x.zone);
-            zoneStatusMsg.append(s1);
-          }
-          if (x.check)
-          {
-            if (zoneStatusMsg != "")
-              sprintf(s1, ",CK:%d", x.zone);
-            else
-              sprintf(s1, "CK:%d", x.zone);
-            zoneStatusMsg.append(s1);
-          }
-          if (x.lowbat)
-          { // low rf battery
-            if (zoneStatusMsg != "")
-              sprintf(s1, ",LB:%d", x.zone);
-            else
-              sprintf(s1, "LB:%d", x.zone);
-            zoneStatusMsg.append(s1);
-          }
+          //    chkTime = millis();
+          /*
+                  if (chkTime - refreshLrrTime > 30000)
+                  {
+                    if (firstRun)
+                      lrrMsgChangeCallback("ESP Restart");
+                  else
+                    lrrMsgChangeCallback("");
+                  refreshLrrTime = chkTime;
+                  }
+          */
+          /*
+                  if (chkTime - refreshRfTime > 30000)
+                  {
+                    rfMsgChangeCallback("");
+                    refreshRfTime = chkTime;
+                  }
+          */
+          firstRun = false;
+          forceRefreshZones = false;
+          forceRefreshGlobal = false;
         }
 
-        if ((zoneStatusMsg != previousZoneStatusMsg || forceRefreshZones || forceRefreshGlobal) && zoneExtendedStatusCallback != NULL)
-          zoneExtendedStatusCallback(zoneStatusMsg);
-
-        previousZoneStatusMsg = zoneStatusMsg;
-
-    //    chkTime = millis();
-/*
-        if (chkTime - refreshLrrTime > 30000)
-        {
-          if (firstRun)
-            lrrMsgChangeCallback("ESP Restart");
-        else
-          lrrMsgChangeCallback("");
-        refreshLrrTime = chkTime;
-        }
-*/
-/*
-        if (chkTime - refreshRfTime > 30000)
-        {
-          rfMsgChangeCallback("");
-          refreshRfTime = chkTime;
-        }
-*/
-        firstRun = false;
-        forceRefreshZones = false;
-        forceRefreshGlobal = false;
+#if !defined(ESP32) or !defined(USETASK)
+        vista.handle();
+#endif
       }
 
-#if !defined(ESP32) or !defined(USETASK)
-      vista.handle();
-#endif
-    }
-
-    const __FlashStringHelper *vistaECPHome::statusText(int statusCode)
-    {
-      switch (statusCode)
+      const __FlashStringHelper *vistaECPHome::statusText(int statusCode)
       {
+        switch (statusCode)
+        {
 
-      case 100:
-        return F("ZMedical");
-      case 101:
-        return F("ZPersonal Emergency");
-      case 102:
-        return F("ZFail to report in");
-      case 110:
-        return F("ZFire");
-      case 111:
-        return F("ZSmoke");
-      case 112:
-        return F("ZCombustion");
-      case 113:
-        return F("ZWater Flow");
-      case 114:
-        return F("ZHeat");
-      case 115:
-        return F("ZPull Station");
-      case 116:
-        return F("ZDuct");
-      case 117:
-        return F("ZFlame");
-      case 118:
-        return F("ZNear Alarm");
-      case 120:
-        return F("ZPanic");
-      case 121:
-        return F("UDuress");
-      case 122:
-        return F("ZSilent");
-      case 123:
-        return F("ZAudible");
-      case 124:
-        return F("ZDuress – Access granted");
-      case 125:
-        return F("ZDuress – Egress granted");
-      case 126:
-        return F("UHoldup suspicion print");
-      case 127:
-        return F("URemote Silent Panic");
-      case 129:
-        return F("ZPanic Verifier");
-      case 130:
-        return F("ZBurglary");
-      case 131:
-        return F("ZPerimeter");
-      case 132:
-        return F("ZInterior");
-      case 133:
-        return F("Z24 Hour (Safe)");
-      case 134:
-        return F("ZEntry/Exit");
-      case 135:
-        return F("ZDay/Night");
-      case 136:
-        return F("ZOutdoor");
-      case 137:
-        return F("ZTamper");
-      case 138:
-        return F("ZNear alarm");
-      case 139:
-        return F("ZIntrusion Verifier");
-      case 140:
-        return F("ZGeneral Alarm");
-      case 141:
-        return F("ZPolling loop open");
-      case 142:
-        return F("ZPolling loop short");
-      case 143:
-        return F("ZExpansion module failure");
-      case 144:
-        return F("ZSensor tamper");
-      case 145:
-        return F("ZExpansion module tamper");
-      case 146:
-        return F("ZSilent Burglary");
-      case 147:
-        return F("ZSensor Supervision Failure");
-      case 150:
-        return F("Z24 Hour NonBurglary");
-      case 151:
-        return F("ZGas detected");
-      case 152:
-        return F("ZRefrigeration");
-      case 153:
-        return F("ZLoss of heat");
-      case 154:
-        return F("ZWater Leakage");
+        case 100:
+          return F("ZMedical");
+        case 101:
+          return F("ZPersonal Emergency");
+        case 102:
+          return F("ZFail to report in");
+        case 110:
+          return F("ZFire");
+        case 111:
+          return F("ZSmoke");
+        case 112:
+          return F("ZCombustion");
+        case 113:
+          return F("ZWater Flow");
+        case 114:
+          return F("ZHeat");
+        case 115:
+          return F("ZPull Station");
+        case 116:
+          return F("ZDuct");
+        case 117:
+          return F("ZFlame");
+        case 118:
+          return F("ZNear Alarm");
+        case 120:
+          return F("ZPanic");
+        case 121:
+          return F("UDuress");
+        case 122:
+          return F("ZSilent");
+        case 123:
+          return F("ZAudible");
+        case 124:
+          return F("ZDuress – Access granted");
+        case 125:
+          return F("ZDuress – Egress granted");
+        case 126:
+          return F("UHoldup suspicion print");
+        case 127:
+          return F("URemote Silent Panic");
+        case 129:
+          return F("ZPanic Verifier");
+        case 130:
+          return F("ZBurglary");
+        case 131:
+          return F("ZPerimeter");
+        case 132:
+          return F("ZInterior");
+        case 133:
+          return F("Z24 Hour (Safe)");
+        case 134:
+          return F("ZEntry/Exit");
+        case 135:
+          return F("ZDay/Night");
+        case 136:
+          return F("ZOutdoor");
+        case 137:
+          return F("ZTamper");
+        case 138:
+          return F("ZNear alarm");
+        case 139:
+          return F("ZIntrusion Verifier");
+        case 140:
+          return F("ZGeneral Alarm");
+        case 141:
+          return F("ZPolling loop open");
+        case 142:
+          return F("ZPolling loop short");
+        case 143:
+          return F("ZExpansion module failure");
+        case 144:
+          return F("ZSensor tamper");
+        case 145:
+          return F("ZExpansion module tamper");
+        case 146:
+          return F("ZSilent Burglary");
+        case 147:
+          return F("ZSensor Supervision Failure");
+        case 150:
+          return F("Z24 Hour NonBurglary");
+        case 151:
+          return F("ZGas detected");
+        case 152:
+          return F("ZRefrigeration");
+        case 153:
+          return F("ZLoss of heat");
+        case 154:
+          return F("ZWater Leakage");
 
-      case 155:
-        return F("ZFoil Break");
-      case 156:
-        return F("ZDay Trouble");
-      case 157:
-        return F("ZLow bottled gas level");
-      case 158:
-        return F("ZHigh temp");
-      case 159:
-        return F("ZLow temp");
-      case 160:
-        return F("ZAwareness Zone Response");
-      case 161:
-        return F("ZLoss of air flow");
-      case 162:
-        return F("ZCarbon Monoxide detected");
-      case 163:
-        return F("ZTank level");
-      case 168:
-        return F("ZHigh Humidity");
-      case 169:
-        return F("ZLow Humidity");
-      case 200:
-        return F("ZFire Supervisory");
-      case 201:
-        return F("ZLow water pressure");
-      case 202:
-        return F("ZLow CO2");
-      case 203:
-        return F("ZGate valve sensor");
-      case 204:
-        return F("ZLow water level");
-      case 205:
-        return F("ZPump activated");
-      case 206:
-        return F("ZPump failure");
-      case 300:
-        return F("ZSystem Trouble");
-      case 301:
-        return F("ZAC Loss");
-      case 302:
-        return F("ZLow system battery");
-      case 303:
-        return F("ZRAM Checksum bad");
-      case 304:
-        return F("ZROM checksum bad");
-      case 305:
-        return F("ZSystem reset");
-      case 306:
-        return F("ZPanel programming changed");
-      case 307:
-        return F("ZSelftest failure");
-      case 308:
-        return F("ZSystem shutdown");
-      case 309:
-        return F("ZBattery test failure");
-      case 310:
-        return F("ZGround fault");
-      case 311:
-        return F("ZBattery Missing/Dead");
-      case 312:
-        return F("ZPower Supply Overcurrent");
-      case 313:
-        return F("UEngineer Reset");
-      case 314:
-        return F("ZPrimary Power Supply Failure");
+        case 155:
+          return F("ZFoil Break");
+        case 156:
+          return F("ZDay Trouble");
+        case 157:
+          return F("ZLow bottled gas level");
+        case 158:
+          return F("ZHigh temp");
+        case 159:
+          return F("ZLow temp");
+        case 160:
+          return F("ZAwareness Zone Response");
+        case 161:
+          return F("ZLoss of air flow");
+        case 162:
+          return F("ZCarbon Monoxide detected");
+        case 163:
+          return F("ZTank level");
+        case 168:
+          return F("ZHigh Humidity");
+        case 169:
+          return F("ZLow Humidity");
+        case 200:
+          return F("ZFire Supervisory");
+        case 201:
+          return F("ZLow water pressure");
+        case 202:
+          return F("ZLow CO2");
+        case 203:
+          return F("ZGate valve sensor");
+        case 204:
+          return F("ZLow water level");
+        case 205:
+          return F("ZPump activated");
+        case 206:
+          return F("ZPump failure");
+        case 300:
+          return F("ZSystem Trouble");
+        case 301:
+          return F("ZAC Loss");
+        case 302:
+          return F("ZLow system battery");
+        case 303:
+          return F("ZRAM Checksum bad");
+        case 304:
+          return F("ZROM checksum bad");
+        case 305:
+          return F("ZSystem reset");
+        case 306:
+          return F("ZPanel programming changed");
+        case 307:
+          return F("ZSelftest failure");
+        case 308:
+          return F("ZSystem shutdown");
+        case 309:
+          return F("ZBattery test failure");
+        case 310:
+          return F("ZGround fault");
+        case 311:
+          return F("ZBattery Missing/Dead");
+        case 312:
+          return F("ZPower Supply Overcurrent");
+        case 313:
+          return F("UEngineer Reset");
+        case 314:
+          return F("ZPrimary Power Supply Failure");
 
-      case 315:
-        return F("ZSystem Trouble");
-      case 316:
-        return F("ZSystem Tamper");
+        case 315:
+          return F("ZSystem Trouble");
+        case 316:
+          return F("ZSystem Tamper");
 
-      case 317:
-        return F("ZControl Panel System Tamper");
-      case 320:
-        return F("ZSounder/Relay");
-      case 321:
-        return F("ZBell 1");
-      case 322:
-        return F("ZBell 2");
-      case 323:
-        return F("ZAlarm relay");
-      case 324:
-        return F("ZTrouble relay");
-      case 325:
-        return F("ZReversing relay");
-      case 326:
-        return F("ZNotification Appliance Ckt. # 3");
-      case 327:
-        return F("ZNotification Appliance Ckt. #4");
-      case 330:
-        return F("ZSystem Peripheral trouble");
-      case 331:
-        return F("ZPolling loop open");
-      case 332:
-        return F("ZPolling loop short");
-      case 333:
-        return F("ZExpansion module failure");
-      case 334:
-        return F("ZRepeater failure");
-      case 335:
-        return F("ZLocal printer out of paper");
-      case 336:
-        return F("ZLocal printer failure");
-      case 337:
-        return F("ZExp. Module DC Loss");
-      case 338:
-        return F("ZExp. Module Low Batt.");
-      case 339:
-        return F("ZExp. Module Reset");
-      case 341:
-        return F("ZExp. Module Tamper");
-      case 342:
-        return F("ZExp. Module AC Loss");
-      case 343:
-        return F("ZExp. Module selftest fail");
-      case 344:
-        return F("ZRF Receiver Jam Detect");
+        case 317:
+          return F("ZControl Panel System Tamper");
+        case 320:
+          return F("ZSounder/Relay");
+        case 321:
+          return F("ZBell 1");
+        case 322:
+          return F("ZBell 2");
+        case 323:
+          return F("ZAlarm relay");
+        case 324:
+          return F("ZTrouble relay");
+        case 325:
+          return F("ZReversing relay");
+        case 326:
+          return F("ZNotification Appliance Ckt. # 3");
+        case 327:
+          return F("ZNotification Appliance Ckt. #4");
+        case 330:
+          return F("ZSystem Peripheral trouble");
+        case 331:
+          return F("ZPolling loop open");
+        case 332:
+          return F("ZPolling loop short");
+        case 333:
+          return F("ZExpansion module failure");
+        case 334:
+          return F("ZRepeater failure");
+        case 335:
+          return F("ZLocal printer out of paper");
+        case 336:
+          return F("ZLocal printer failure");
+        case 337:
+          return F("ZExp. Module DC Loss");
+        case 338:
+          return F("ZExp. Module Low Batt.");
+        case 339:
+          return F("ZExp. Module Reset");
+        case 341:
+          return F("ZExp. Module Tamper");
+        case 342:
+          return F("ZExp. Module AC Loss");
+        case 343:
+          return F("ZExp. Module selftest fail");
+        case 344:
+          return F("ZRF Receiver Jam Detect");
 
-      case 345:
-        return F("ZAES Encryption disabled/ enabled");
-      case 350:
-        return F("ZCommunication  trouble");
-      case 351:
-        return F("ZTelco 1 fault");
-      case 352:
-        return F("ZTelco 2 fault");
-      case 353:
-        return F("ZLong Range Radio xmitter fault");
-      case 354:
-        return F("ZFailure to communicate event");
-      case 355:
-        return F("ZLoss of Radio supervision");
-      case 356:
-        return F("ZLoss of central polling");
-      case 357:
-        return F("ZLong Range Radio VSWR problem");
-      case 358:
-        return F("ZPeriodic Comm Test Fail /Restore");
+        case 345:
+          return F("ZAES Encryption disabled/ enabled");
+        case 350:
+          return F("ZCommunication  trouble");
+        case 351:
+          return F("ZTelco 1 fault");
+        case 352:
+          return F("ZTelco 2 fault");
+        case 353:
+          return F("ZLong Range Radio xmitter fault");
+        case 354:
+          return F("ZFailure to communicate event");
+        case 355:
+          return F("ZLoss of Radio supervision");
+        case 356:
+          return F("ZLoss of central polling");
+        case 357:
+          return F("ZLong Range Radio VSWR problem");
+        case 358:
+          return F("ZPeriodic Comm Test Fail /Restore");
 
-      case 359:
-        return F("Z");
+        case 359:
+          return F("Z");
 
-      case 360:
-        return F("ZNew Registration");
-      case 361:
-        return F("ZAuthorized  Substitution Registration");
-      case 362:
-        return F("ZUnauthorized  Substitution Registration");
-      case 365:
-        return F("ZModule Firmware Update Start/Finish");
-      case 366:
-        return F("ZModule Firmware Update Failed");
+        case 360:
+          return F("ZNew Registration");
+        case 361:
+          return F("ZAuthorized  Substitution Registration");
+        case 362:
+          return F("ZUnauthorized  Substitution Registration");
+        case 365:
+          return F("ZModule Firmware Update Start/Finish");
+        case 366:
+          return F("ZModule Firmware Update Failed");
 
-      case 370:
-        return F("ZProtection loop");
-      case 371:
-        return F("ZProtection loop open");
-      case 372:
-        return F("ZProtection loop short");
-      case 373:
-        return F("ZFire trouble");
-      case 374:
-        return F("ZExit error alarm (zone)");
-      case 375:
-        return F("ZPanic zone trouble");
-      case 376:
-        return F("ZHoldup zone trouble");
-      case 377:
-        return F("ZSwinger Trouble");
-      case 378:
-        return F("ZCrosszone Trouble");
+        case 370:
+          return F("ZProtection loop");
+        case 371:
+          return F("ZProtection loop open");
+        case 372:
+          return F("ZProtection loop short");
+        case 373:
+          return F("ZFire trouble");
+        case 374:
+          return F("ZExit error alarm (zone)");
+        case 375:
+          return F("ZPanic zone trouble");
+        case 376:
+          return F("ZHoldup zone trouble");
+        case 377:
+          return F("ZSwinger Trouble");
+        case 378:
+          return F("ZCrosszone Trouble");
 
-      case 380:
-        return F("ZSensor trouble");
-      case 381:
-        return F("ZLoss of supervision  RF");
-      case 382:
-        return F("ZLoss of supervision  RPM");
-      case 383:
-        return F("ZSensor tamper");
-      case 384:
-        return F("ZRF low battery");
-      case 385:
-        return F("ZSmoke detector Hi sensitivity");
-      case 386:
-        return F("ZSmoke detector Low sensitivity");
-      case 387:
-        return F("ZIntrusion detector Hi sensitivity");
-      case 388:
-        return F("ZIntrusion detector Low sensitivity");
-      case 389:
-        return F("ZSensor selftest failure");
-      case 391:
-        return F("ZSensor Watch trouble");
-      case 392:
-        return F("ZDrift Compensation Error");
-      case 393:
-        return F("ZMaintenance Alert");
-      case 394:
-        return F("ZCO Detector needs replacement");
-      case 400:
-        return F("UOpen/Close");
-      case 401:
-        return F("UArmed AWAY");
-      case 402:
-        return F("UGroup O/C");
-      case 403:
-        return F("UAutomatic O/C");
-      case 404:
-        return F("ULate to O/C (Note: use 453 or 454 instead )");
-      case 405:
-        return F("UDeferred O/C (Obsolete do not use )");
-      case 406:
-        return F("UCancel");
-      case 407:
-        return F("URemote arm/disarm");
-      case 408:
-        return F("UQuick arm");
-      case 409:
-        return F("UKeyswitch O/C");
-      case 411:
-        return F("UCallback request made");
-      case 412:
-        return F("USuccessful  download/access");
-      case 413:
-        return F("UUnsuccessful access");
-      case 414:
-        return F("USystem shutdown command received");
-      case 415:
-        return F("UDialer shutdown command received");
+        case 380:
+          return F("ZSensor trouble");
+        case 381:
+          return F("ZLoss of supervision  RF");
+        case 382:
+          return F("ZLoss of supervision  RPM");
+        case 383:
+          return F("ZSensor tamper");
+        case 384:
+          return F("ZRF low battery");
+        case 385:
+          return F("ZSmoke detector Hi sensitivity");
+        case 386:
+          return F("ZSmoke detector Low sensitivity");
+        case 387:
+          return F("ZIntrusion detector Hi sensitivity");
+        case 388:
+          return F("ZIntrusion detector Low sensitivity");
+        case 389:
+          return F("ZSensor selftest failure");
+        case 391:
+          return F("ZSensor Watch trouble");
+        case 392:
+          return F("ZDrift Compensation Error");
+        case 393:
+          return F("ZMaintenance Alert");
+        case 394:
+          return F("ZCO Detector needs replacement");
+        case 400:
+          return F("UOpen/Close");
+        case 401:
+          return F("UArmed AWAY");
+        case 402:
+          return F("UGroup O/C");
+        case 403:
+          return F("UAutomatic O/C");
+        case 404:
+          return F("ULate to O/C (Note: use 453 or 454 instead )");
+        case 405:
+          return F("UDeferred O/C (Obsolete do not use )");
+        case 406:
+          return F("UCancel");
+        case 407:
+          return F("URemote arm/disarm");
+        case 408:
+          return F("UQuick arm");
+        case 409:
+          return F("UKeyswitch O/C");
+        case 411:
+          return F("UCallback request made");
+        case 412:
+          return F("USuccessful  download/access");
+        case 413:
+          return F("UUnsuccessful access");
+        case 414:
+          return F("USystem shutdown command received");
+        case 415:
+          return F("UDialer shutdown command received");
 
-      case 416:
-        return F("ZSuccessful Upload");
-      case 418:
-        return F("URemote Cancel");
-      case 419:
-        return F("URemote Verify");
-      case 421:
-        return F("UAccess denied");
-      case 422:
-        return F("UAccess report by user");
-      case 423:
-        return F("ZForced Access");
-      case 424:
-        return F("UEgress Denied");
-      case 425:
-        return F("UEgress Granted");
-      case 426:
-        return F("ZAccess Door propped open");
-      case 427:
-        return F("ZAccess point Door Status Monitor trouble");
-      case 428:
-        return F("ZAccess point Request To Exit trouble");
-      case 429:
-        return F("UAccess program mode entry");
-      case 430:
-        return F("UAccess program mode exit");
-      case 431:
-        return F("UAccess threat level change");
-      case 432:
-        return F("ZAccess relay/trigger fail");
-      case 433:
-        return F("ZAccess RTE shunt");
-      case 434:
-        return F("ZAccess DSM shunt");
-      case 435:
-        return F("USecond Person Access");
-      case 436:
-        return F("UIrregular Access");
-      case 441:
-        return F("UArmed STAY");
-      case 442:
-        return F("UKeyswitch Armed STAY");
-      case 443:
-        return F("UArmed with System Trouble Override");
-      case 450:
-        return F("UException O/C");
-      case 451:
-        return F("UEarly O/C");
-      case 452:
-        return F("ULate O/C");
-      case 453:
-        return F("UFailed to Open");
-      case 454:
-        return F("UFailed to Close");
-      case 455:
-        return F("UAutoarm Failed");
-      case 456:
-        return F("UPartial Arm");
-      case 457:
-        return F("UExit Error (user)");
-      case 458:
-        return F("UUser on Premises");
-      case 459:
-        return F("URecent Close");
-      case 461:
-        return F("ZWrong Code Entry");
-      case 462:
-        return F("ULegal Code Entry");
-      case 463:
-        return F("URearm after Alarm");
-      case 464:
-        return F("UAutoarm Time Extended");
-      case 465:
-        return F("ZPanic Alarm Reset");
-      case 466:
-        return F("UService On/Off Premises");
+        case 416:
+          return F("ZSuccessful Upload");
+        case 418:
+          return F("URemote Cancel");
+        case 419:
+          return F("URemote Verify");
+        case 421:
+          return F("UAccess denied");
+        case 422:
+          return F("UAccess report by user");
+        case 423:
+          return F("ZForced Access");
+        case 424:
+          return F("UEgress Denied");
+        case 425:
+          return F("UEgress Granted");
+        case 426:
+          return F("ZAccess Door propped open");
+        case 427:
+          return F("ZAccess point Door Status Monitor trouble");
+        case 428:
+          return F("ZAccess point Request To Exit trouble");
+        case 429:
+          return F("UAccess program mode entry");
+        case 430:
+          return F("UAccess program mode exit");
+        case 431:
+          return F("UAccess threat level change");
+        case 432:
+          return F("ZAccess relay/trigger fail");
+        case 433:
+          return F("ZAccess RTE shunt");
+        case 434:
+          return F("ZAccess DSM shunt");
+        case 435:
+          return F("USecond Person Access");
+        case 436:
+          return F("UIrregular Access");
+        case 441:
+          return F("UArmed STAY");
+        case 442:
+          return F("UKeyswitch Armed STAY");
+        case 443:
+          return F("UArmed with System Trouble Override");
+        case 450:
+          return F("UException O/C");
+        case 451:
+          return F("UEarly O/C");
+        case 452:
+          return F("ULate O/C");
+        case 453:
+          return F("UFailed to Open");
+        case 454:
+          return F("UFailed to Close");
+        case 455:
+          return F("UAutoarm Failed");
+        case 456:
+          return F("UPartial Arm");
+        case 457:
+          return F("UExit Error (user)");
+        case 458:
+          return F("UUser on Premises");
+        case 459:
+          return F("URecent Close");
+        case 461:
+          return F("ZWrong Code Entry");
+        case 462:
+          return F("ULegal Code Entry");
+        case 463:
+          return F("URearm after Alarm");
+        case 464:
+          return F("UAutoarm Time Extended");
+        case 465:
+          return F("ZPanic Alarm Reset");
+        case 466:
+          return F("UService On/Off Premises");
 
-      case 501:
-        return F("ZAccess reader disable");
-      case 520:
-        return F("ZSounder/Relay  Disable");
-      case 521:
-        return F("ZBell 1 disable");
-      case 522:
-        return F("ZBell 2 disable");
-      case 523:
-        return F("ZAlarm relay disable");
-      case 524:
-        return F("ZTrouble relay disable");
-      case 525:
-        return F("ZReversing relay disable");
-      case 526:
-        return F("ZNotification Appliance Ckt. # 3 disable");
-      case 527:
-        return F("ZNotification Appliance Ckt. # 4 disable");
-      case 531:
-        return F("ZModule Added");
-      case 532:
-        return F("ZModule Removed");
-      case 551:
-        return F("ZDialer disabled");
-      case 552:
-        return F("ZRadio transmitter disabled");
-      case 553:
-        return F("ZRemote  Upload/Download disabled");
-      case 570:
-        return F("ZZone/Sensor bypass");
-      case 571:
-        return F("ZFire bypass");
-      case 572:
-        return F("Z24 Hour zone bypass");
-      case 573:
-        return F("ZBurg. Bypass");
-      case 574:
-        return F("UGroup bypass");
-      case 575:
-        return F("ZSwinger bypass");
-      case 576:
-        return F("ZAccess zone shunt");
-      case 577:
-        return F("ZAccess point bypass");
-      case 578:
-        return F("ZVault Bypass");
-      case 579:
-        return F("ZVent Zone Bypass");
-      case 601:
-        return F("ZManual trigger test report");
-      case 602:
-        return F("ZPeriodic test report");
-      case 603:
-        return F("ZPeriodic RF transmission");
-      case 604:
-        return F("UFire test");
-      case 605:
-        return F("ZStatus report to follow");
-      case 606:
-        return F("ZListenin to follow");
-      case 607:
-        return F("UWalk test mode");
-      case 608:
-        return F("ZPeriodic test  System Trouble Present");
-      case 609:
-        return F("ZVideo Xmitter active");
-      case 611:
-        return F("ZPoint tested OK");
-      case 612:
-        return F("ZPoint not tested");
-      case 613:
-        return F("ZIntrusion Zone Walk Tested");
-      case 614:
-        return F("ZFire Zone Walk Tested");
-      case 615:
-        return F("ZPanic Zone Walk Tested");
-      case 616:
-        return F("ZService Request");
-      case 621:
-        return F("ZEvent Log reset");
-      case 622:
-        return F("ZEvent Log 50% full");
-      case 623:
-        return F("ZEvent Log 90% full");
-      case 624:
-        return F("ZEvent Log overflow");
-      case 625:
-        return F("UTime/Date reset");
-      case 626:
-        return F("ZTime/Date inaccurate");
-      case 627:
-        return F("ZProgram mode entry");
+        case 501:
+          return F("ZAccess reader disable");
+        case 520:
+          return F("ZSounder/Relay  Disable");
+        case 521:
+          return F("ZBell 1 disable");
+        case 522:
+          return F("ZBell 2 disable");
+        case 523:
+          return F("ZAlarm relay disable");
+        case 524:
+          return F("ZTrouble relay disable");
+        case 525:
+          return F("ZReversing relay disable");
+        case 526:
+          return F("ZNotification Appliance Ckt. # 3 disable");
+        case 527:
+          return F("ZNotification Appliance Ckt. # 4 disable");
+        case 531:
+          return F("ZModule Added");
+        case 532:
+          return F("ZModule Removed");
+        case 551:
+          return F("ZDialer disabled");
+        case 552:
+          return F("ZRadio transmitter disabled");
+        case 553:
+          return F("ZRemote  Upload/Download disabled");
+        case 570:
+          return F("ZZone/Sensor bypass");
+        case 571:
+          return F("ZFire bypass");
+        case 572:
+          return F("Z24 Hour zone bypass");
+        case 573:
+          return F("ZBurg. Bypass");
+        case 574:
+          return F("UGroup bypass");
+        case 575:
+          return F("ZSwinger bypass");
+        case 576:
+          return F("ZAccess zone shunt");
+        case 577:
+          return F("ZAccess point bypass");
+        case 578:
+          return F("ZVault Bypass");
+        case 579:
+          return F("ZVent Zone Bypass");
+        case 601:
+          return F("ZManual trigger test report");
+        case 602:
+          return F("ZPeriodic test report");
+        case 603:
+          return F("ZPeriodic RF transmission");
+        case 604:
+          return F("UFire test");
+        case 605:
+          return F("ZStatus report to follow");
+        case 606:
+          return F("ZListenin to follow");
+        case 607:
+          return F("UWalk test mode");
+        case 608:
+          return F("ZPeriodic test  System Trouble Present");
+        case 609:
+          return F("ZVideo Xmitter active");
+        case 611:
+          return F("ZPoint tested OK");
+        case 612:
+          return F("ZPoint not tested");
+        case 613:
+          return F("ZIntrusion Zone Walk Tested");
+        case 614:
+          return F("ZFire Zone Walk Tested");
+        case 615:
+          return F("ZPanic Zone Walk Tested");
+        case 616:
+          return F("ZService Request");
+        case 621:
+          return F("ZEvent Log reset");
+        case 622:
+          return F("ZEvent Log 50% full");
+        case 623:
+          return F("ZEvent Log 90% full");
+        case 624:
+          return F("ZEvent Log overflow");
+        case 625:
+          return F("UTime/Date reset");
+        case 626:
+          return F("ZTime/Date inaccurate");
+        case 627:
+          return F("ZProgram mode entry");
 
-      case 628:
-        return F("ZProgram mode exit");
-      case 629:
-        return F("Z32 Hour Event log marker");
-      case 630:
-        return F("ZSchedule change");
-      case 631:
-        return F("ZException schedule change");
-      case 632:
-        return F("ZAccess schedule change");
-      case 641:
-        return F("ZSenior Watch Trouble");
-      case 642:
-        return F("ULatchkey Supervision");
-      case 643:
-        return F("ZRestricted Door Opened");
-      case 645:
-        return F("ZHelp Arrived");
-      case 646:
-        return F("ZAddition Help Needed");
-      case 647:
-        return F("ZAddition Help Cancel");
-      case 651:
-        return F("ZReserved for Ademco Use");
-      case 652:
-        return F("UReserved for Ademco Use");
-      case 653:
-        return F("UReserved for Ademco Use");
-      case 654:
-        return F("ZSystem Inactivity");
-      case 655:
-        return F("UUser Code X modified by Installer");
-      case 703:
-        return F("ZAuxiliary #3");
-      case 704:
-        return F("ZInstaller Test");
-      case 750:
-        return F("ZUser Assigned");
-      case 751:
-        return F("ZUser Assigned");
-      case 752:
-        return F("ZUser Assigned");
-      case 753:
-        return F("ZUser Assigned");
-      case 754:
-        return F("ZUser Assigned");
-      case 755:
-        return F("ZUser Assigned");
-      case 756:
-        return F("ZUser Assigned");
-      case 757:
-        return F("ZUser Assigned");
-      case 758:
-        return F("ZUser Assigned");
-      case 759:
-        return F("ZUser Assigned");
-      case 760:
-        return F("ZUser Assigned");
-      case 761:
-        return F("ZUser Assigned");
-      case 762:
-        return F("ZUser Assigned");
-      case 763:
-        return F("ZUser Assigned");
-      case 764:
-        return F("ZUser Assigned");
-      case 765:
-        return F("ZUser Assigned");
-      case 766:
-        return F("ZUser Assigned");
-      case 767:
-        return F("ZUser Assigned");
-      case 768:
-        return F("ZUser Assigned");
-      case 769:
-        return F("ZUser Assigned");
-      case 770:
-        return F("ZUser Assigned");
-      case 771:
-        return F("ZUser Assigned");
-      case 772:
-        return F("ZUser Assigned");
-      case 773:
-        return F("ZUser Assigned");
-      case 774:
-        return F("ZUser Assigned");
-      case 775:
-        return F("ZUser Assigned");
-      case 776:
-        return F("ZUser Assigned");
-      case 777:
-        return F("ZUser Assigned");
-      case 778:
-        return F("ZUser Assigned");
-      case 779:
-        return F("ZUser Assigned");
-      case 780:
-        return F("ZUser Assigned");
-      case 781:
-        return F("ZUser Assigned");
-      case 782:
-        return F("ZUser Assigned");
-      case 783:
-        return F("ZUser Assigned");
-      case 784:
-        return F("ZUser Assigned");
-      case 785:
-        return F("ZUser Assigned");
-      case 786:
-        return F("ZUser Assigned");
-      case 787:
-        return F("ZUser Assigned");
-      case 788:
-        return F("ZUser Assigned");
-      case 789:
-        return F("ZUser Assigned");
+        case 628:
+          return F("ZProgram mode exit");
+        case 629:
+          return F("Z32 Hour Event log marker");
+        case 630:
+          return F("ZSchedule change");
+        case 631:
+          return F("ZException schedule change");
+        case 632:
+          return F("ZAccess schedule change");
+        case 641:
+          return F("ZSenior Watch Trouble");
+        case 642:
+          return F("ULatchkey Supervision");
+        case 643:
+          return F("ZRestricted Door Opened");
+        case 645:
+          return F("ZHelp Arrived");
+        case 646:
+          return F("ZAddition Help Needed");
+        case 647:
+          return F("ZAddition Help Cancel");
+        case 651:
+          return F("ZReserved for Ademco Use");
+        case 652:
+          return F("UReserved for Ademco Use");
+        case 653:
+          return F("UReserved for Ademco Use");
+        case 654:
+          return F("ZSystem Inactivity");
+        case 655:
+          return F("UUser Code X modified by Installer");
+        case 703:
+          return F("ZAuxiliary #3");
+        case 704:
+          return F("ZInstaller Test");
+        case 750:
+          return F("ZUser Assigned");
+        case 751:
+          return F("ZUser Assigned");
+        case 752:
+          return F("ZUser Assigned");
+        case 753:
+          return F("ZUser Assigned");
+        case 754:
+          return F("ZUser Assigned");
+        case 755:
+          return F("ZUser Assigned");
+        case 756:
+          return F("ZUser Assigned");
+        case 757:
+          return F("ZUser Assigned");
+        case 758:
+          return F("ZUser Assigned");
+        case 759:
+          return F("ZUser Assigned");
+        case 760:
+          return F("ZUser Assigned");
+        case 761:
+          return F("ZUser Assigned");
+        case 762:
+          return F("ZUser Assigned");
+        case 763:
+          return F("ZUser Assigned");
+        case 764:
+          return F("ZUser Assigned");
+        case 765:
+          return F("ZUser Assigned");
+        case 766:
+          return F("ZUser Assigned");
+        case 767:
+          return F("ZUser Assigned");
+        case 768:
+          return F("ZUser Assigned");
+        case 769:
+          return F("ZUser Assigned");
+        case 770:
+          return F("ZUser Assigned");
+        case 771:
+          return F("ZUser Assigned");
+        case 772:
+          return F("ZUser Assigned");
+        case 773:
+          return F("ZUser Assigned");
+        case 774:
+          return F("ZUser Assigned");
+        case 775:
+          return F("ZUser Assigned");
+        case 776:
+          return F("ZUser Assigned");
+        case 777:
+          return F("ZUser Assigned");
+        case 778:
+          return F("ZUser Assigned");
+        case 779:
+          return F("ZUser Assigned");
+        case 780:
+          return F("ZUser Assigned");
+        case 781:
+          return F("ZUser Assigned");
+        case 782:
+          return F("ZUser Assigned");
+        case 783:
+          return F("ZUser Assigned");
+        case 784:
+          return F("ZUser Assigned");
+        case 785:
+          return F("ZUser Assigned");
+        case 786:
+          return F("ZUser Assigned");
+        case 787:
+          return F("ZUser Assigned");
+        case 788:
+          return F("ZUser Assigned");
+        case 789:
+          return F("ZUser Assigned");
 
-      case 796:
-        return F("ZUnable to output signal (Derived Channel)");
-      case 798:
-        return F("ZSTU Controller down (Derived Channel)");
-      case 900:
-        return F("ZDownload Abort");
-      case 901:
-        return F("ZDownload Start/End");
-      case 902:
-        return F("ZDownload Interrupted");
-      case 903:
-        return F("ZDevice Flash Update Started/ Completed");
-      case 904:
-        return F("ZDevice Flash Update Failed");
-      case 910:
-        return F("ZAutoclose with Bypass");
-      case 911:
-        return F("ZBypass Closing");
-      case 912:
-        return F("ZFire Alarm Silence");
-      case 913:
-        return F("USupervisory Point test Start/End");
-      case 914:
-        return F("UHoldup test Start/End");
-      case 915:
-        return F("UBurg. Test Print Start/End");
-      case 916:
-        return F("USupervisory Test Print Start/End");
-      case 917:
-        return F("ZBurg. Diagnostics Start/End");
-      case 918:
-        return F("ZFire Diagnostics Start/End");
-      case 919:
-        return F("ZUntyped diagnostics");
-      case 920:
-        return F("UTrouble Closing (closed with burg. during exit)");
-      case 921:
-        return F("UAccess Denied Code Unknown");
-      case 922:
-        return F("ZSupervisory Point Alarm");
-      case 923:
-        return F("ZSupervisory Point Bypass");
-      case 924:
-        return F("ZSupervisory Point Trouble");
-      case 925:
-        return F("ZHoldup Point Bypass");
-      case 926:
-        return F("ZAC Failure for 4 hours");
-      case 927:
-        return F("ZOutput Trouble");
-      case 928:
-        return F("UUser code for event");
-      case 929:
-        return F("ULogoff");
-      case 954:
-        return F("ZCS Connection Failure");
-      case 961:
-        return F("ZRcvr Database Connection Fail/Restore");
-      case 962:
-        return F("ZLicense Expiration Notify");
-      case 999:
-        return F("Z1 and 1/3 Day No Read Log");
-      default:
-        return F("ZUnknown");
+        case 796:
+          return F("ZUnable to output signal (Derived Channel)");
+        case 798:
+          return F("ZSTU Controller down (Derived Channel)");
+        case 900:
+          return F("ZDownload Abort");
+        case 901:
+          return F("ZDownload Start/End");
+        case 902:
+          return F("ZDownload Interrupted");
+        case 903:
+          return F("ZDevice Flash Update Started/ Completed");
+        case 904:
+          return F("ZDevice Flash Update Failed");
+        case 910:
+          return F("ZAutoclose with Bypass");
+        case 911:
+          return F("ZBypass Closing");
+        case 912:
+          return F("ZFire Alarm Silence");
+        case 913:
+          return F("USupervisory Point test Start/End");
+        case 914:
+          return F("UHoldup test Start/End");
+        case 915:
+          return F("UBurg. Test Print Start/End");
+        case 916:
+          return F("USupervisory Test Print Start/End");
+        case 917:
+          return F("ZBurg. Diagnostics Start/End");
+        case 918:
+          return F("ZFire Diagnostics Start/End");
+        case 919:
+          return F("ZUntyped diagnostics");
+        case 920:
+          return F("UTrouble Closing (closed with burg. during exit)");
+        case 921:
+          return F("UAccess Denied Code Unknown");
+        case 922:
+          return F("ZSupervisory Point Alarm");
+        case 923:
+          return F("ZSupervisory Point Bypass");
+        case 924:
+          return F("ZSupervisory Point Trouble");
+        case 925:
+          return F("ZHoldup Point Bypass");
+        case 926:
+          return F("ZAC Failure for 4 hours");
+        case 927:
+          return F("ZOutput Trouble");
+        case 928:
+          return F("UUser code for event");
+        case 929:
+          return F("ULogoff");
+        case 954:
+          return F("ZCS Connection Failure");
+        case 961:
+          return F("ZRcvr Database Connection Fail/Restore");
+        case 962:
+          return F("ZLicense Expiration Notify");
+        case 999:
+          return F("Z1 and 1/3 Day No Read Log");
+        default:
+          return F("ZUnknown");
+        }
       }
-    }
 
 #if defined(AUTOPOPULATE)
 
- /*
-void  vistaECPHome::loadZone(int z,std::string &&name) {
-    std::string n=std::to_string(z);
-    std::string type_id="z" + n;
+      /*
+     void  vistaECPHome::loadZone(int z,std::string &&name) {
+         std::string n=std::to_string(z);
+         std::string type_id="z" + n;
 
 
-    auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
-    if (it != bMap.end()) return;
-  #if defined(TEMPLATE_ALARM)
-    template_alarm_::TemplateBinarySensor * ptr = new template_alarm_::TemplateBinarySensor();
-  #else
-    template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
-  #endif 
+         auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
+         if (it != bMap.end()) return;
+       #if defined(TEMPLATE_ALARM)
+         template_alarm_::TemplateBinarySensor * ptr = new template_alarm_::TemplateBinarySensor();
+       #else
+         template_::TemplateBinarySensor * ptr = new template_::TemplateBinarySensor();
+       #endif
 
-    zoneNameType *  nz = new zoneNameType();
-    nz->name = name;
-    nz->type_id=type_id;
-    nz->ptr=ptr;
-    autoZones.push_back(nz);
-    App.register_binary_sensor(ptr);
+         zoneNameType *  nz = new zoneNameType();
+         nz->name = name;
+         nz->type_id=type_id;
+         nz->ptr=ptr;
+         autoZones.push_back(nz);
+         App.register_binary_sensor(ptr);
 
-    ptr->set_name(nz->name.c_str());
-    ptr->set_object_id(nz->type_id.c_str());
+         ptr->set_name(nz->name.c_str());
+         ptr->set_object_id(nz->type_id.c_str());
 
-ESP_LOGD(TAG,"get name=%s,get object_id=%s",ptr->get_name().c_str(),ptr->get_object_id().c_str());
+     ESP_LOGD(TAG,"get name=%s,get object_id=%s",ptr->get_name().c_str(),ptr->get_object_id().c_str());
 
-   // ptr->set_device_class("window");
-    ptr->set_publish_initial_state(true);
-    ptr->set_disabled_by_default(false);
-#if defined(ESPHOME_MQTT)
-    mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
-    mqptr->set_component_source("mqtt");
-    App.register_component(mqptr);
-    mqptr->call();
-    nz->mqptr=mqptr;
-#endif
-  #if defined(TEMPLATE_ALARM)
-    ptr->set_component_source("template_alarm.binary_sensor");
-  #else
-    ptr->set_component_source("template.binary_sensor");
-  #endif
-    App.register_component(ptr);
-    ptr->setup();
-    ptr->call();
-    createZone(z);
-}
-    */
+        // ptr->set_device_class("window");
+         ptr->set_publish_initial_state(true);
+         ptr->set_disabled_by_default(false);
+     #if defined(ESPHOME_MQTT)
+         mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
+         mqptr->set_component_source("mqtt");
+         App.register_component(mqptr);
+         mqptr->call();
+         nz->mqptr=mqptr;
+     #endif
+       #if defined(TEMPLATE_ALARM)
+         ptr->set_component_source("template_alarm.binary_sensor");
+       #else
+         ptr->set_component_source("template.binary_sensor");
+       #endif
+         App.register_component(ptr);
+         ptr->setup();
+         ptr->call();
+         createZone(z);
+     }
+         */
 #endif
 
 #if !defined(ARDUINO_MQTT)
-  }
-} // namespaces
+    }
+  } // namespaces
 #endif

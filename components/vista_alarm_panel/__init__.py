@@ -92,23 +92,23 @@ relay='''[&](uint8_t addr,int channel,bool open) {
       alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
     }'''
 
-ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
-    {
-        cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
-        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-    },
-    key=CONF_ID,
+# ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
+#     {
+#         cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
+#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+#     },
+#     key=CONF_ID,
 
-)
+# )
 
-ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
-    {
-        cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
-        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-    },
-    key=CONF_ID,
+# ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
+#     {
+#         cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
+#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+#     },
+#     key=CONF_ID,
 
-)
+# )
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -150,8 +150,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
     cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
     cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
-    cv.Optional(CONF_BINARY_SENSORS): cv.ensure_list(ALARM_PANEL_BINARY_SENSOR_SCHEMA),
-    cv.Optional(CONF_TEXT_SENSORS): cv.ensure_list(ALARM_PANEL_TEXT_SENSOR_SCHEMA),    
+    # cv.Optional(CONF_BINARY_SENSORS): cv.ensure_list(ALARM_PANEL_BINARY_SENSOR_SCHEMA),
+    # cv.Optional(CONF_TEXT_SENSORS): cv.ensure_list(ALARM_PANEL_TEXT_SENSOR_SCHEMA),    
     }
 )
 
@@ -260,5 +260,7 @@ def real_clean_build():
     if os.path.isdir(build_dir):
         _LOGGER.info("Deleting %s", build_dir)
         shutil.rmtree(build_dir)
+
+        
             
     

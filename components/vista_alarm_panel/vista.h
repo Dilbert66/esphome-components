@@ -118,7 +118,7 @@ struct keyType
     uint8_t count;
     uint8_t seq;
 };
-const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0,. seq = 0};
+const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0, .seq = 0};
 
 struct cmdQueueItem
 {
@@ -159,7 +159,7 @@ public:
     bool dataReceived;
     void IRAM_ATTR rxHandleISR(), txHandleISR();
     bool areEqual(char *, char *, uint8_t);
-    bool keybusConnected,connected;
+    bool keybusConnected, connected;
     int toDec(int);
     void resetStatus();
     void initSerialHandlers(int, int, int);
@@ -251,5 +251,4 @@ private:
     volatile uint8_t retries;
     volatile uint8_t retryAddr;
     volatile bool sending;
-
 };

@@ -61,7 +61,7 @@ expanderType Vista::getNextFault()
   return zoneExpanders[currentFaultIdx];
 }
 
-expanderType  Vista::peekNextFault()
+expanderType Vista::peekNextFault()
 {
   expanderType currentFault = expanderType_INIT;
   if (inFaultIdx == outFaultIdx)
@@ -91,7 +91,7 @@ void Vista::readChars(int ct, char buf[], int *idx)
       x++;
     }
 #ifdef ESP32
- taskYIELD();
+    taskYIELD();
 #else
     yield();
 #endif
@@ -186,15 +186,15 @@ void Vista::onDisplay(char cbuf[], int *idx)
   statusFlags.night = ((cbuf[6] & BIT_MASK_BYTE1_NIGHT) > 0);
   statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
 
-  //if (statusFlags.systemFlag)
+  // if (statusFlags.systemFlag)
   //{
-    statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
-    //statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_UNKNOWN) > 0);
+  statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
+  // statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_UNKNOWN) > 0);
   //}
-  //else
+  // else
   //{
-    statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
-    statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
+  statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
+  statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
   //}
 
   statusFlags.inAlarm = ((cbuf[8] & BIT_MASK_BYTE3_IN_ALARM) > 0);
@@ -262,12 +262,15 @@ void Vista::pushCmdQueueItem()
   q.newCmd = newCmd;
   q.newExtCmd = newExtCmd;
 
-  if (newExtCmd) {
+  if (newExtCmd)
+  {
     for (uint8_t i = 0; i < OUTBUFSIZE; i++)
     {
       q.cbuf[i] = extcmd[i];
     }
-  } else {
+  }
+  else
+  {
     for (uint8_t i = 0; i < CMDBUFSIZE; i++)
     {
       q.cbuf[i] = cbuf[i];
@@ -503,8 +506,7 @@ void Vista::onExp(char cbuf[])
   if (type == 0xF1)
   {
 
-    
-     expanderType currentFault = peekNextFault(); // check next item. Don't pop it yet
+    expanderType currentFault = peekNextFault(); // check next item. Don't pop it yet
     if (currentFault.expansionAddr && expansionAddr == currentFault.expansionAddr)
     {
       getNextFault(); // pop it from the queue since we are processing it now
@@ -570,7 +572,7 @@ void Vista::write(const char key, uint8_t addr)
   if (!addr || addr > 23)
     return;
 
-  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || key=='|' || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
+  if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || key == '|' || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
   {
     keyType kt;
     kt.key = key;
@@ -726,9 +728,9 @@ void Vista::writeChars()
 
       kt = getChar();
       c = kt.key;
-      if (c=='|' && !kt.direct) //break sequence and send the previous immediately
+      if (c == '|' && !kt.direct) // break sequence and send the previous immediately
         break;
-      
+
       lastkpaddr = kt.kpaddr;
       lastseq = kt.seq;
       retryAddr = kt.kpaddr;
@@ -816,9 +818,9 @@ void IRAM_ATTR Vista::rxHandleISR()
     {
       markPulse = 2;
 
-     ackAddr = inFaultIdx==outFaultIdx?0:zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
+      ackAddr = inFaultIdx == outFaultIdx ? 0 : zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
 
-     if (ackAddr > 0 && ackAddr < 24)
+      if (ackAddr > 0 && ackAddr < 24)
       {
         vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
         b = addrToBitmask2(ackAddr);
@@ -830,10 +832,11 @@ void IRAM_ATTR Vista::rxHandleISR()
       }
       else if (outbufIdx != inbufIdx || retries)
       {
-        if (!retries && outbuf[outbufIdx].count > 4) { //after 5 failed retries to send, we remove this entry from the buffer
-          ackAddr=outbuf[outbufIdx].kpaddr;
+        if (!retries && outbuf[outbufIdx].count > 4)
+        { // after 5 failed retries to send, we remove this entry from the buffer
+          ackAddr = outbuf[outbufIdx].kpaddr;
           outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
-          while (outbufIdx != inbufIdx && outbuf[outbufIdx].kpaddr==ackAddr)
+          while (outbufIdx != inbufIdx && outbuf[outbufIdx].kpaddr == ackAddr)
             outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // skip any other entries with same address
         }
 
@@ -850,7 +853,6 @@ void IRAM_ATTR Vista::rxHandleISR()
           if (b)
             vistaSerial->write(b, false, 4800);
         }
-        
       }
       rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
     }
@@ -1139,7 +1141,7 @@ uint8_t Vista::getExtBytes()
       extbuf[extidx++] = x;
     markPulse = 0; // reset pulse flag to wait for next inter msg gap
 #ifdef ESP32
- taskYIELD();
+    taskYIELD();
 #else
     yield();
 #endif
@@ -1391,9 +1393,9 @@ bool Vista::handle()
         i++;
       }
 #ifdef ESP32
- taskYIELD();
+      taskYIELD();
 #else
-    yield();
+      yield();
 #endif
     }
     pushCmdQueueItem();
@@ -1429,7 +1431,7 @@ void Vista::stop()
   }
 #endif
   keybusConnected = false;
-  connected=false;
+  connected = false;
 }
 
 void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx, bool invertTx, bool invertMon, uint8_t inputRx, uint8_t inputMon)
@@ -1448,12 +1450,12 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   monitorPin = monitorTxPin;
   invertRead = invertRx;
 
-  // panel data rx interrupt - yellow line
-  #ifdef ESP32
+// panel data rx interrupt - yellow line
+#ifdef ESP32
   vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 60 * 10, inputRx);
-  #else 
+#else
   vistaSerial = new SoftwareSerial(rxPin, txPin, invertRx, invertTx, 2, 60 * 10, inputRx);
-  #endif
+#endif
   if (vistaSerial->isValidGPIOpin(rxPin))
   {
     vistaSerial->begin(4800, SWSERIAL_8E2);
@@ -1467,12 +1469,12 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     printf("Warning rx pin %d is invalid", rxPin);
   }
 #ifdef MONITORTX
-  // interrupt for capturing keypad/module data on green transmit line
-  #ifdef ESP32
+// interrupt for capturing keypad/module data on green transmit line
+#ifdef ESP32
   vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
-  #else
-    vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
-  #endif
+#else
+  vistaSerialMonitor = new SoftwareSerial(monitorPin, -1, invertMon, false, 2, OUTBUFSIZE * 10, inputMon);
+#endif
   if (vistaSerialMonitor->isValidGPIOpin(monitorPin))
   {
     vistaSerialMonitor->begin(4800, SWSERIAL_8E2);
@@ -1486,6 +1488,6 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     printf("Warning monitor rx pin %d is invalid", monitorPin);
   }
 #endif
-  keybusConnected = true; //legacy support
-  connected=true;
+  keybusConnected = true; // legacy support
+  connected = true;
 }

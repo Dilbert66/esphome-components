@@ -38,7 +38,7 @@
 #define DEFAULTPARTITION 1
 
 #define ASYNC_CORE 1
-//#define USETASK
+// #define USETASK
 
 // default pins to use for serial comms to the panel
 // The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.
@@ -54,19 +54,16 @@
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
-
-
-
 #if !defined(ARDUINO_MQTT)
 namespace esphome
 {
   namespace alarm_panel
   {
 
-extern Vista  vista;
+    extern Vista vista;
 #if defined(ESPHOME_MQTT)
     extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
-    extern const char *setalarmcommandtopic; 
+    extern const char *setalarmcommandtopic;
 #endif
 
 #endif
@@ -138,7 +135,6 @@ class vistaECPHome : public time::RealTimeClock
       std::function<void(std::string, uint8_t)> beepsCallback;
       std::function<void(std::string)> zoneExtendedStatusCallback;
       std::function<void(uint8_t, int, bool)> relayStatusChangeCallback;
-
 
       void onZoneStatusChange(std::function<void(int zone,
                                                  std::string msg)>
@@ -246,8 +242,8 @@ class vistaECPHome : public time::RealTimeClock
 
       std::vector<binary_sensor::BinarySensor *> bMap;
       std::vector<text_sensor::TextSensor *> tMap;
-      
-      void publishStatusChange(sysState led,bool open,uint8_t partition);
+
+      void publishStatusChange(sysState led, bool open, uint8_t partition);
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
@@ -259,7 +255,6 @@ class vistaECPHome : public time::RealTimeClock
       void stop();
 
     private:
-
       int TTL = 30000;
       uint8_t debug = 0;
       char keypadAddr1 = 0;
@@ -274,22 +269,22 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputRx = 0;
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
-      //bool activeAuiAddr=false;
+      // bool activeAuiAddr=false;
       bool sendAuiTime();
-      //bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
-      char auiSeq=8;
+      // bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
+      char auiSeq = 8;
       void processAuiQueue();
-      //int8_t dateReqStatus=0;
+      // int8_t dateReqStatus=0;
 
-      struct auiCmdType {
-        reqStates state=rsidle;
-        unsigned long time=0;
-        uint8_t partition=0;
-        uint8_t records=0;
-        uint8_t record=0;
-        bool pending=false;
+      struct auiCmdType
+      {
+        reqStates state = rsidle;
+        unsigned long time = 0;
+        uint8_t partition = 0;
+        uint8_t records = 0;
+        uint8_t record = 0;
+        bool pending = false;
       };
-
 
       const char *accessCode;
       const char *rfSerialLookup;
@@ -304,11 +299,12 @@ class vistaECPHome : public time::RealTimeClock
       std::string topic_prefix, topic;
 
 #if defined(AUTOPOPULATE)
-      struct zoneNameType {
-          std::string name;
-          uint8_t zone;
-          uint8_t zone_type;
-          uint8_t device_type;
+      struct zoneNameType
+      {
+        std::string name;
+        uint8_t zone;
+        uint8_t zone_type;
+        uint8_t device_type;
       };
 #endif
       struct zoneType
@@ -338,8 +334,7 @@ class vistaECPHome : public time::RealTimeClock
           .panic = 0,
           .trouble = 0,
           .lowbat = 0,
-          .active = 0
-          };
+          .active = 0};
 
       struct
       {
@@ -407,12 +402,12 @@ class vistaECPHome : public time::RealTimeClock
         bool refreshLights;
       };
 
-      void updateZoneState(zoneType *zt, int p,  bool state, unsigned long t);
+      void updateZoneState(zoneType *zt, int p, bool state, unsigned long t);
       char *parseAUIMessage(char *cmd);
-      void processZoneList( char *list);
+      void processZoneList(char *list);
       void sendZoneRequest();
       void loadZones();
-      void loadZone(int zone,std::string &&name,uint8_t zonetype,uint8_t devicetype);
+      void loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype);
       void getZoneCount();
       void getZoneRecord();
       void processZoneInfo(char *list);
@@ -424,15 +419,15 @@ class vistaECPHome : public time::RealTimeClock
       {
         vista.stop();
       }
-      bool connected() {
+      bool connected()
+      {
         return vista.connected;
       }
 
-      void setExpFault(int zone,bool fault) {
-         vista.setExpFault(zone,fault);
+      void setExpFault(int zone, bool fault)
+      {
+        vista.setExpFault(zone, fault);
       }
-
-
 
     private:
       std::string previousMsg,
@@ -459,12 +454,12 @@ class vistaECPHome : public time::RealTimeClock
       std::vector<zoneType> extZones{};
       std::queue<auiCmdType> auiQueue{};
 
-      #if defined(AUTOPOPULATE)
+#if defined(AUTOPOPULATE)
       std::vector<zoneNameType> autoZones{};
       void fetchPanelZones()
-      #endif
+#endif
 
-      zoneType nz;
+          zoneType nz;
 
       zoneType *getZone(uint16_t z);
       zoneType *createZone(uint16_t z);
@@ -481,8 +476,6 @@ class vistaECPHome : public time::RealTimeClock
 
 #endif
     public:
-
-
 #if defined(ARDUINO_MQTT)
       void begin()
       {
@@ -491,7 +484,7 @@ class vistaECPHome : public time::RealTimeClock
 #endif
 
         void set_panel_time();
-      //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
+        //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
         void alarm_disarm(std::string code, int32_t partition);
 
         void alarm_arm_home(int32_t partition);
@@ -534,8 +527,8 @@ class vistaECPHome : public time::RealTimeClock
 
         //  std::string getF7Lookup(char cbuf[]) ;
 
-      void updateDisplayLines(uint8_t partition);
-            
+        void updateDisplayLines(uint8_t partition);
+
       public:
         void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
 

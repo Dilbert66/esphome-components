@@ -25,7 +25,6 @@ Modified for 4800 8E2
 
 #include "ECPSoftwareSerial.h"
 
-#define USEMICROS
 
 SoftwareSerial::SoftwareSerial(
     int receivePin, int transmitPin, bool invertRx, bool invertTx, int bufSize, int isrBufSize, uint8_t inputRx)
@@ -84,14 +83,10 @@ bool SoftwareSerial::isValidGPIOpin(int pin)
 
 void SoftwareSerial::setBaud(int32_t baud)
 {
-/*
-There is a bug in the ESP32C3 (riscv core) that prevents ESP.getCycleCount from working correctly so we need to use micros() instead of ESP.getcpufreq and ESP.getcyclecount for accurate bit length calculations
-*/
-#if defined (USEMICROS)
+
     m_bitCycles = microsToTicks(1000000UL) / baud;
-#else
-    m_bitCycles = ESP.getCpuFreqMHz() * 1000000 / baud;
-#endif
+   //m_bitCycles = microsToTicks(APB_CLK_FREQ/64) / baud;
+
     if (baud == 4800) // we save 4800 bit cycles for call from ISR later
         m_4800_bitCycles = m_bitCycles;
 }
@@ -210,11 +205,9 @@ int SoftwareSerial::available()
     }
     if (!avail)
     {
-#if defined (USEMICROS)
+
         optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles);
-#else
-        optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles / ESP.getCpuFreqMHz());
-#endif
+
         rxBits();
         avail = m_inPos - m_outPos;
         if (avail < 0)
@@ -224,21 +217,14 @@ int SoftwareSerial::available()
     }
     return avail;
 }
-#if defined (USEMICROS)
-#define WAIT                            \
-    {                                   \
-        while (microsToTicks(micros()) - start < wait) \
-            ;                           \
-        wait += m_bitCycles;            \
+
+#define WAIT                           \
+    {                                  \
+        while (ticks() - start < wait) \
+            ;                          \
+        wait += m_bitCycles;           \
     }
-#else
-#define WAIT                                       \
-    {                                              \
-        while (ESP.getCycleCount() - start < wait) \
-            ;                                      \
-        wait += m_bitCycles;                       \
-    }
-#endif
+
 
 size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity, int32_t baud)
 {
@@ -248,11 +234,9 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity, int32_t baud)
     if (baud == 4800 && m_4800_bitCycles > 0)
         m_bitCycles = m_4800_bitCycles;
     else
-#if defined (USEMICROS)
         m_bitCycles = microsToTicks(1000000UL) / baud;
-#else
-        m_bitCycles = ESP.getCpuFreqMHz() * 1000000 / baud; // we use a precalculated value for 4800 baud rate when called from an ISR since getcpufreqmhz is not an isr friendly function. Only need 4800 for the isr call.
-#endif
+        //  m_bitCycles = microsToTicks(APB_CLK_FREQ/64) / baud;
+
 
     m_parity = parity;
     size_t r = write(b);
@@ -260,16 +244,7 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity, int32_t baud)
     m_bitCycles = origCycles;
     return r;
 }
-/*
-size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity)
-{
-    bool origParity = m_parity;
-    m_parity = parity;
-    size_t r = write(b);
-    m_parity = origParity;
-    return r;
-}
-*/
+
 size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
 {
     uint8_t parity = 0;
@@ -278,11 +253,9 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
     if (m_invert_tx)
         b = ~b;
     unsigned long wait = m_bitCycles;
-#if defined (USEMICROS)
-    unsigned long start = microsToTicks(micros());
-#else
-    unsigned long start = ESP.getCycleCount();
-#endif
+
+    uint32_t start = ticks();
+
     // Start bit;
     if (m_invert_tx)
         digitalWrite(m_txPin, HIGH);
@@ -404,13 +377,10 @@ void SoftwareSerial::rxBits()
     if (avail == 0 && m_rxCurBit < m_dataBits + 2 && m_isrInPos.load() == m_isrOutPos.load() && m_rxCurBit >= 0)
     {
         uint32_t expectedCycle = m_isrLastCycle.load() + (m_dataBits + 3 - m_rxCurBit) * m_bitCycles;
-#if defined (USEMICROS)
-        if (static_cast<int32_t>(microsToTicks(micros()) - expectedCycle) > m_bitCycles)
+
+        if (static_cast<int32_t>(ticks() - expectedCycle) > m_bitCycles)
         {
-#else
-        if (static_cast<int32_t>(ESP.getCycleCount() - expectedCycle) > m_bitCycles)
-        {
-#endif
+
             // Store inverted stop bit edge and cycle in the buffer unless we have an overflow
             // cycle's LSB is repurposed for the level bit
             int next = (m_isrInPos.load() + 1) % m_isrBufSize;
@@ -489,8 +459,8 @@ void SoftwareSerial::rxBits()
 
                         cycles -= m_bitCycles; // remove parity bit cycles
                         m_rxCurBit++;          // advance to stop bits
-                        // Serial.printf("got bits. bits=%d,Lastbit=%d,curbit=%d\n",bits,lastBit,m_rxCurBit);
-                        //  --bits;
+                                               // Serial.printf("got bits. bits=%d,Lastbit=%d,curbit=%d\n",bits,lastBit,m_rxCurBit);
+                                               //  --bits;
                     }
                 }
                 if (m_rxCurBit == m_dataBits - 1)
@@ -578,11 +548,9 @@ void SoftwareSerial::rxBits()
 
 void IRAM_ATTR SoftwareSerial::rxRead()
 {
-#if defined (USEMICROS)
-    uint32_t curCycle = microsToTicks(micros());
-#else
-    uint32_t curCycle = ESP.getCycleCount();
-#endif
+
+    uint32_t curCycle = ticks();
+
     bool level = digitalRead(m_rxPin);
 
     // Store inverted edge value & cycle in the buffer unless we have an overflow

@@ -33,6 +33,7 @@ Modified for 4800 8E2
 #include <atomic>
 
 #include "Arduino.h"
+#include "driver/timer.h"
 
 #if defined(ESP32) && not defined(IRAM_ATTR)
 #define IRAM_ATTR IRAM_ATTR
@@ -75,7 +76,7 @@ public:
     int peek();
     int read(bool processRxbits);
     int read();
-    //size_t write(uint8_t byte, bool parity);
+    // size_t write(uint8_t byte, bool parity);
     size_t write(uint8_t b, bool parity, int32_t baud);
     size_t write(uint8_t byte);
 
@@ -149,11 +150,29 @@ private:
     std::atomic<bool> m_isrOverflow;
     std::atomic<uint32_t> m_isrLastCycle;
     int m_rxCurBit; // 0 - 7: data bits. -1: start bit. 8: stop bit.
-    uint8_t m_rxCurByte = 0;    
-    uint32_t microsToTicks(uint32_t micros) {
+    uint8_t m_rxCurByte = 0;
+
+    static inline uint32_t microsToTicks(uint32_t micros) __attribute__((always_inline))
+    {
         return micros << 1;
     }
-    uint32_t ticksToMicros(uint32_t ticks) {
+    uint32_t ticksToMicros(uint32_t ticks)
+    {
         return ticks >> 1;
+    }
+
+    static inline uint32_t IRAM_ATTR ticks() __attribute__((always_inline))
+    {
+#if defined(ESP32)
+
+        return esp_timer_get_time()  << 1;
+    //    uint64_t t;
+    //    t=timer_group_get_counter_value_in_isr(TIMER_GROUP_0, TIMER_0);
+    //    return t << 1;
+
+#else
+        return micros() << 1;
+       
+#endif
     }
 };
