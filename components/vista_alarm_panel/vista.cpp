@@ -82,7 +82,7 @@ void Vista::readChars(int ct, char buf[], int *idx)
   int x = 0;
   int idxval = *idx;
   unsigned long timeout = millis();
-  while (x < ct && millis() - timeout < 50)
+  while (x < ct && millis() - timeout < 30)
   {
     if (vistaSerial->available())
     {
