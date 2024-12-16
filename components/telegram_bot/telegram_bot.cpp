@@ -8,54 +8,54 @@
 #include "ArduinoJson.h"
 #include <cstdlib>
 
-#ifdef USE_ARDUINO
-#include <StreamString.h>
-#else
-#define F(x) x
-#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
+// #ifdef USE_ARDUINO
+// #include <StreamString.h>
+// #else
+// #define F(x) x
+// #define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
-class String : public std::string
-{
-public:
-  String() : std::string() {}
-  String(const char *&p, size_t &s) : std::string(p, s) {}
+// class String : public std::string
+// {
+// public:
+//   String() : std::string() {}
+//   String(const char *&p, size_t &s) : std::string(p, s) {}
 
-  int indexOf(char ch, unsigned int fromIndex) const
-  {
-    if (fromIndex >= this->length())
-      return -1;
-    const char *temp = strchr(this->c_str() + fromIndex, ch);
-    if (temp == NULL)
-      return -1;
-    return temp - this->c_str();
-  }
+//   int indexOf(char ch, unsigned int fromIndex) const
+//   {
+//     if (fromIndex >= this->length())
+//       return -1;
+//     const char *temp = strchr(this->c_str() + fromIndex, ch);
+//     if (temp == NULL)
+//       return -1;
+//     return temp - this->c_str();
+//   }
 
-  String substring(unsigned int left, unsigned int right) const
-  {
-    if (left > right)
-    {
-      unsigned int temp = right;
-      right = left;
-      left = temp;
-    }
-    unsigned int len = this->length();
-    String out;
-    if (left >= len)
-      return out;
-    if (right > len)
-      right = len;
-    out.copy(((char *)this->c_str()) + left, right - left);
-    return out;
-  }
+//   String substring(unsigned int left, unsigned int right) const
+//   {
+//     if (left > right)
+//     {
+//       unsigned int temp = right;
+//       right = left;
+//       left = temp;
+//     }
+//     unsigned int len = this->length();
+//     String out;
+//     if (left >= len)
+//       return out;
+//     if (right > len)
+//       right = len;
+//     out.copy(((char *)this->c_str()) + left, right - left);
+//     return out;
+//   }
 
-  long toInt(void) const
-  {
-    if (this->c_str())
-      return atol(this->c_str());
-    return 0;
-  }
-};
-#endif
+//   long toInt(void) const
+//   {
+//     if (this->c_str())
+//       return atol(this->c_str());
+//     return 0;
+//   }
+// };
+// #endif
 
 namespace esphome
 {
@@ -270,12 +270,13 @@ namespace esphome
 
     void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data)
     {
-      int *i = &((struct c_res_s *)c->fn_data)->i;
+ 
       if (global_notify == NULL)
       {
         ESP_LOGE(TAG, "Global telegram pointer is null");
         return;
       }
+      int *i = &((struct c_res_s *)c->fn_data)->i;
       if (ev == MG_EV_OPEN)
       {
         global_notify->connected = true;
@@ -284,14 +285,13 @@ namespace esphome
       }
       else if (ev == MG_EV_POLL)
       {
-        if (mg_millis() > *(uint64_t *)&c->data[2] &&
-            (c->is_connecting || c->is_resolving))
+        if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2] )
         {
           mg_error(c, "Connect timeout");
         }
         if (c->data[0] == 'T')
         {
-          if ((!global_notify->enableBot_ || global_notify->messages.size()) && !c->is_draining && !global_notify->sending)
+          if (!global_notify->sending && !c->is_draining &&  (!global_notify->enableBot_ || global_notify->messages.size())  )
           {
             c->is_draining = 1; // close long poll so we can send
             // ESP_LOGD("test","Pending message closing poll connection from poll");
@@ -460,10 +460,11 @@ namespace esphome
 
     void WebNotify::loop()
     {
+      static bool firstrun=true;
 
-      if (network::is_connected())
+      if (network::is_connected()  )
       {
-        if (((millis() - retryDelay) > delayTime) && !connected && botId_.length() > 0 && (enableBot_ || (messages.size() && enableSend_)))
+        if (!connected && (enableBot_ || (messages.size() && enableSend_ && ((millis() - retryDelay) > delayTime) &&  botId_.length() > 0  )))
         {
           ESP_LOGD(TAG, "Connecting to telegram api");
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
@@ -472,10 +473,11 @@ namespace esphome
       static unsigned long checkTime = millis();
       if (millis() - checkTime > 20000)
       {
+        checkTime = millis();
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Free memory: %5d", (uint16_t)uxHighWaterMark);
-        checkTime = millis();
       }
+    
       mg_mgr_poll(&mgr, 0);
     }
 

@@ -170,6 +170,10 @@ async def to_code(config):
     cg.add_define("USE_WEBKEYPAD")
     cg.add_define("USE_WEBKEYPAD_PORT", config[CONF_PORT])
     cg.add_define("USE_WEBKEYPAD_VERSION", version)
+    # mongoose build flags. 
+    cg.add_build_flag("-DMG_ENABLE_POLL")
+    cg.add_build_flag("-DMG_IO_SIZE=512")
+    cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
     
     if lambda_config := config.get(CONF_SERVICE_LAMBDA):
         lambda_ = await cg.process_lambda(
@@ -241,13 +245,10 @@ async def to_code(config):
             
     src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     dst=CORE.relative_build_path("src/mongoose.h")
-    if os.path.isfile(src) and not os.path.isfile(dst):
+    if os.path.isfile(src):
         copy_file_if_changed(src,dst)
     src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
     dst=CORE.relative_build_path("src/mongoose.c")
-    if os.path.isfile(src) and not os.path.isfile(dst):
+    if os.path.isfile(src):
         copy_file_if_changed(src,dst)
   
-
-    #cg.add_library("rweather/CryptoLegacy", ">0.1.0")
-

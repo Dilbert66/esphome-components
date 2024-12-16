@@ -331,7 +331,6 @@ void WebServer::loop() {
   this->entities_iterator_.advance();
      
   if (firstrun_ && network::is_connected()) {
-    mg_mgr_init(&mgr);        // Initialise event manager
     char addr[50];
     sprintf(addr,"http://0.0.0.0:%d",port_);
     printf("\nStarting web server on %s:%d\n", network::get_use_address().c_str(),port_);
