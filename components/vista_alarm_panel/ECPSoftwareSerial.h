@@ -165,10 +165,11 @@ private:
     {
 #if defined(ESP32)
 
-        return esp_timer_get_time()  << 1;
+     //   return esp_timer_get_time()  << 1;
     //    uint64_t t;
     //    t=timer_group_get_counter_value_in_isr(TIMER_GROUP_0, TIMER_0);
     //    return t << 1;
+          return micros() << 1;
 
 #else
         return micros() << 1;
