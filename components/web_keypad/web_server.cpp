@@ -1689,16 +1689,16 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     bool final=false;
     if (ev == MG_EV_WRITE) {
 
-        if (c->send.len ==0 && c->send.size > 512) {
-                void *p = calloc(1,512);
+        if (c->send.len ==0 && c->send.size > 1024) {
+                void *p = calloc(1,1024);
                 if (p!= NULL) {
                     size_t * len= (size_t *) ev_data;                    
-                    //keep outbound queue size under 5k to minimize ram use.
-                  //  ESP_LOGD(TAG,"Send size=%d, len=%d, write size=%d, type=%02x",c->send.size,c->send.len,*len,c->data[0]);
+                    //keep outbound queue size under 1k to minimize ram use.
+                   // ESP_LOGD(TAG,"Send size=%d, len=%d, write size=%d, type=%02x",c->send.size,c->send.len,*len,c->data[0]);
                     memset(c->send.buf,0,c->send.size);
                     free(c->send.buf);
                     c->send.buf = (unsigned char *) p;
-                    c->send.size = 512;
+                    c->send.size = 1024;
                 }
         }
             
@@ -1922,7 +1922,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
         }
   } 
-       (void) ev_data;
+      
 }
 
 
