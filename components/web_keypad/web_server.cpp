@@ -1442,6 +1442,7 @@ void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect
            mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),type.c_str(),newdata.c_str());
        
         if (c->send.len > 15000 ) c->is_closing=1; //dead connection. kill it. 
+        continue;
 
    }       
 
@@ -1722,7 +1723,7 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     */
      ESP_LOGD(TAG,PSTR("New connection %d accepted"),c->id);
         ESP_LOGD(TAG,"Current Heap values: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));   
-    } if (ev == MG_EV_WS_MSG) {
+    } else if (ev == MG_EV_WS_MSG) {
         // Got websocket frame. Received data is wm->data. Echo it back!
             struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;
             DynamicJsonDocument doc(wm->data.len*1.5);

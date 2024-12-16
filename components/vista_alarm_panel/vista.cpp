@@ -1,6 +1,7 @@
 #include "vista.h"
 
 #include "Arduino.h"
+#include "esp_task_wdt.h"
 
 Vista *pointerToVistaClass;
 
@@ -81,7 +82,7 @@ void Vista::readChars(int ct, char buf[], int *idx)
   int x = 0;
   int idxval = *idx;
   unsigned long timeout = millis();
-  while (x < ct && millis() - timeout < 10)
+  while (x < ct && millis() - timeout < 50)
   {
     if (vistaSerial->available())
     {
@@ -1253,10 +1254,9 @@ bool Vista::handle()
 
       cbuf[gidx++] = x;
       readChars(F7_MESSAGE_LENGTH - 1, cbuf, &gidx);
-      int zidx = gidx;
-      readChars(3, cbuf, &zidx); // clear following zeros
+      readChars(3, cbuf, &gidx); // clear following zeros
       if (!validChksum(cbuf, 0, gidx))
-        cbuf[12] = 0x77;
+        cbuf[44] = 0x77;
       else
       {
         onDisplay(cbuf, &gidx);
