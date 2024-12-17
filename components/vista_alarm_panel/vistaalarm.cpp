@@ -648,7 +648,7 @@ void vistaECPHome::setup()
 
     void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes)
     {
-
+ESP_LOGD(TAG,"Cmd bytes=%s",hexbytes.c_str());
       std::string::iterator end_pos = std::remove(hexbytes.begin(), hexbytes.end(), ' ');
       hexbytes.erase(end_pos, hexbytes.end());
 
@@ -1244,10 +1244,8 @@ void vistaECPHome::setup()
       static unsigned long checkTime = millis();
       for (;;)
       {
-        if (!vista.handle())
-          vTaskDelay(4 / portTICK_PERIOD_MS);
-        else
-          vTaskDelay(2 / portTICK_PERIOD_MS);
+        vista.handle()
+        vTaskDelay(4 / portTICK_PERIOD_MS);
 #if not defined(ARDUINO_MQTT)
         if (millis() - checkTime > 30000)
         {

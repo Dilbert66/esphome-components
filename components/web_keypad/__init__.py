@@ -171,7 +171,7 @@ async def to_code(config):
     cg.add_define("USE_WEBKEYPAD_PORT", config[CONF_PORT])
     cg.add_define("USE_WEBKEYPAD_VERSION", version)
     # mongoose build flags. 
-    cg.add_build_flag("-DMG_ENABLE_POLL")
+   # cg.add_build_flag("-DMG_ENABLE_POLL")
     cg.add_build_flag("-DMG_IO_SIZE=512")
     cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
     

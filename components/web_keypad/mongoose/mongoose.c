@@ -7542,6 +7542,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
   }
   (void) skip_iotest;
 #elif MG_ENABLE_POLL
+
   nfds_t n = 0;
   for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next) n++;
   struct pollfd *fds = (struct pollfd *) alloca(n * sizeof(fds[0]));
@@ -7562,6 +7563,8 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
     }
   }
 
+
+
   // MG_INFO(("poll n=%d ms=%d", (int) n, ms));
   if (poll(fds, n, ms) < 0) {
 #if MG_ARCH == MG_ARCH_WIN32
@@ -7569,7 +7572,9 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
 #endif
     memset(fds, 0, n * sizeof(fds[0]));
   }
+
   n = 0;
+
   for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next) {
     if (skip_iotest(c)) {
       // Socket not valid, ignore
@@ -7586,6 +7591,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
       n++;
     }
   }
+
 #else
   struct timeval tv = {ms / 1000, (ms % 1000) * 1000}, tv_zero = {0, 0}, *tvp;
   struct mg_connection *c;
@@ -7607,6 +7613,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
     if (FD(c) > maxfd) maxfd = FD(c);
     if (c->is_closing) ms = 1;
   }
+
 
   if ((rc = select((int) maxfd + 1, &rset, &wset, &eset, tvp)) < 0) {
 #if MG_ARCH == MG_ARCH_WIN32

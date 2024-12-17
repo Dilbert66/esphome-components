@@ -291,7 +291,7 @@ async def to_code(config):
     cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
     #cg.add_build_flag("-DMG_TLS=MG_TLS_BUILTIN")
     cg.add_build_flag("-DMG_IO_SIZE=512")
-    cg.add_build_flag("-DMG_ENABLE_POLL")
+   # cg.add_build_flag("-DMG_ENABLE_POLL")
 
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
@@ -331,11 +331,12 @@ async def to_code(config):
 
     src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     dst=CORE.relative_build_path("src/mongoose.h")
-    if os.path.isfile(src):
+    if os.path.isfile(src) and not os.path.isfile(dst):
+    #if os.path.isfile(src):
         copy_file_if_changed(src,dst)
     src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
     dst=CORE.relative_build_path("src/mongoose.c")
-    #if os.path.isfile(src) and not os.path.isfile(dst):
-    if os.path.isfile(src):
+    if os.path.isfile(src) and not os.path.isfile(dst):
+    #if os.path.isfile(src):
         copy_file_if_changed(src,dst)
 
