@@ -1244,8 +1244,8 @@ ESP_LOGD(TAG,"Cmd bytes=%s",hexbytes.c_str());
       static unsigned long checkTime = millis();
       for (;;)
       {
-        vista.handle();
-        vTaskDelay(4 / portTICK_PERIOD_MS);
+        if (!vista.handle())  
+          vTaskDelay(4 / portTICK_PERIOD_MS);
 #if not defined(ARDUINO_MQTT)
         if (millis() - checkTime > 30000)
         {
