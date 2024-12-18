@@ -332,4 +332,9 @@ async def to_code(config):
     # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.c")
     # if os.path.isfile(src) and not os.path.isfile(dst):
     #      copy_file_if_changed(src,dst)
+    
+    #remove old version file
+    dst=CORE.relative_build_path("src/mongoose.c")
+    if os.path.isfile(dst):
+          os.remove(dst)
 

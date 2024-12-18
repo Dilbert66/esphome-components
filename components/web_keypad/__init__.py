@@ -237,11 +237,14 @@ async def to_code(config):
         if CORE.is_esp32:        
             cg.add_library("Update", None)     
             
+
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.h")
     # if os.path.isfile(src) and not os.path.isfile(dst):
     #     copy_file_if_changed(src,dst)
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
-    # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.c")
-    # if os.path.isfile(src) and not os.path.isfile(dst):
-    #      copy_file_if_changed(src,dst)
+    
+    #remove old version file
+    dst=CORE.relative_build_path("src/mongoose.c")
+    if os.path.isfile(dst):
+          os.remove(dst)
