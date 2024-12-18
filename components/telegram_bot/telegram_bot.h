@@ -5,7 +5,7 @@
 #include "esphome/core/automation.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
-#include "mongoose.h"
+#include "esphome/components/mg_lib/mongoose.h"
 #include <vector>
 #include <algorithm>
 #include <queue>

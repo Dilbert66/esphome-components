@@ -1414,7 +1414,6 @@ void WebServer::handle_alarm_control_panel_request(mg_connection *c, JsonObject 
 
 void WebServer::push(msgType mt, const char *data,uint32_t id,uint32_t reconnect) {
   struct mg_connection *c;
-  
   std::string type;
   switch (mt) {
       case PING: type="ping";break;
@@ -1688,7 +1687,6 @@ void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data) {
  
     bool final=false;
     if (ev == MG_EV_WRITE) {
-
         if (c->send.len ==0 && c->send.size > 1024) {
                 void *p = calloc(1,1024);
                 if (p!= NULL) {

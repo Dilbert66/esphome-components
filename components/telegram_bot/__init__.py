@@ -29,7 +29,7 @@ from esphome.components import (
 _LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ["network"]
-AUTO_LOAD = ["json"]
+AUTO_LOAD = ["json","mg_lib"]
 
 CONF_API_HOST="telegram_host"
 CONF_CHAT_ID="chat_id"
@@ -287,11 +287,6 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    # mongoose build flags
-    cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
-    #cg.add_build_flag("-DMG_TLS=MG_TLS_BUILTIN")
-    cg.add_build_flag("-DMG_IO_SIZE=512")
-   # cg.add_build_flag("-DMG_ENABLE_POLL")
 
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
@@ -329,14 +324,12 @@ async def to_code(config):
             trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback")
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
 
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
-    dst=CORE.relative_build_path("src/mongoose.h")
-    if os.path.isfile(src) and not os.path.isfile(dst):
-    #if os.path.isfile(src):
-        copy_file_if_changed(src,dst)
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
-    dst=CORE.relative_build_path("src/mongoose.c")
-    if os.path.isfile(src) and not os.path.isfile(dst):
-    #if os.path.isfile(src):
-        copy_file_if_changed(src,dst)
+    # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
+    # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.h")
+    # if os.path.isfile(src) and not os.path.isfile(dst):
+    #     copy_file_if_changed(src,dst)
+    # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
+    # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.c")
+    # if os.path.isfile(src) and not os.path.isfile(dst):
+    #      copy_file_if_changed(src,dst)
 

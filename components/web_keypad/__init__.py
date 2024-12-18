@@ -31,11 +31,9 @@ import logging
 from esphome.helpers import copy_file_if_changed
 from esphome.core import CORE, coroutine_with_priority
 
-# DEPENDENCIES = ["network","mg_lib"]
-# AUTO_LOAD = ["json","mg_lib"]
 _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ["network"]
-AUTO_LOAD = ["json"]
+AUTO_LOAD = ["json","mg_lib"]
 
 CONF_CONFIG ="config_local"
 CONF_KEYPAD_URL="config_url"
@@ -170,10 +168,6 @@ async def to_code(config):
     cg.add_define("USE_WEBKEYPAD")
     cg.add_define("USE_WEBKEYPAD_PORT", config[CONF_PORT])
     cg.add_define("USE_WEBKEYPAD_VERSION", version)
-    # mongoose build flags. 
-   # cg.add_build_flag("-DMG_ENABLE_POLL")
-    cg.add_build_flag("-DMG_IO_SIZE=512")
-    cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
     
     if lambda_config := config.get(CONF_SERVICE_LAMBDA):
         lambda_ = await cg.process_lambda(
@@ -243,12 +237,11 @@ async def to_code(config):
         if CORE.is_esp32:        
             cg.add_library("Update", None)     
             
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
-    dst=CORE.relative_build_path("src/mongoose.h")
-    if os.path.isfile(src):
-        copy_file_if_changed(src,dst)
-    src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
-    dst=CORE.relative_build_path("src/mongoose.c")
-    if os.path.isfile(src):
-        copy_file_if_changed(src,dst)
-  
+    # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
+    # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.h")
+    # if os.path.isfile(src) and not os.path.isfile(dst):
+    #     copy_file_if_changed(src,dst)
+    # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.c")
+    # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.c")
+    # if os.path.isfile(src) and not os.path.isfile(dst):
+    #      copy_file_if_changed(src,dst)
