@@ -78,23 +78,22 @@ void Vista::setNextFault(uint8_t idx)
 
 void Vista::readChars(int ct, char buf[], int *idx)
 {
-  char c;
+ 
   int x = 0;
   int idxval = *idx;
   unsigned long timeout = millis();
-  while (x < ct && millis() - timeout < 30)
+  while (x < ct && millis() - timeout < 20)
   {
     if (vistaSerial->available())
     {
       timeout = millis();
-      c = vistaSerial->read();
-      buf[idxval++] = c;
+       buf[idxval++] = vistaSerial->read();
       x++;
-    }
+    } 
 #ifdef ESP32
-    taskYIELD();
+    else vTaskDelay(5);
 #else
-    yield();
+    delayMicroseconds(4);
 #endif
   }
   *idx = idxval;
@@ -1256,7 +1255,7 @@ bool Vista::handle()
       readChars(F7_MESSAGE_LENGTH - 1, cbuf, &gidx);
       readChars(3, cbuf, &gidx); // clear following zeros
       if (!validChksum(cbuf, 0, gidx))
-        cbuf[44] = 0x77;
+        cbuf[12] = 0x77;
       else
       {
         onDisplay(cbuf, &gidx);

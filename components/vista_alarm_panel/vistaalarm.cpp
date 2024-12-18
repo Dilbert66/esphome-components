@@ -1496,7 +1496,7 @@ void vistaECPHome::update()
                 8 -	Loop 1
 
             */
-          }
+          } else 
 
           if (debug > 0 && vistaCmd.newCmd)
           {
@@ -1506,7 +1506,7 @@ void vistaECPHome::update()
               printPacket("CMD", vistaCmd.cbuf, 13);
           }
 
-          if (vistaCmd.cbuf[0] == 0xF2 && vistaCmd.newCmd && auiAddr)
+          if (vistaCmd.newCmd && auiAddr && vistaCmd.cbuf[0] == 0xF2 )
           {
             ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
             // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
@@ -1609,7 +1609,7 @@ void vistaECPHome::update()
             }
             return;
           }
-          else if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.newCmd)
+          else if (vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf7 )
           {
             getPartitionsFromMask();
 
@@ -1649,7 +1649,7 @@ void vistaECPHome::update()
           }
 
           // publishes lrr status messages
-          if ((vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58 && vistaCmd.newCmd) || firstRun)
+          if (( vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58) || firstRun)
           { // we show all lrr messages with type 58
 
             int c = vistaCmd.statusFlags.lrr.code;
@@ -1680,7 +1680,7 @@ void vistaECPHome::update()
           }
 
           // done other cmd processing.  Process f7 now
-          if (vistaCmd.cbuf[0] != 0xf7 || vistaCmd.cbuf[12] == 0x77)
+          if (!vistaCmd.newCmd || vistaCmd.cbuf[0] != 0xf7 || vistaCmd.cbuf[12] == 0x77)
             return;
 
           currentSystemState = sunavailable;
@@ -1708,7 +1708,7 @@ void vistaECPHome::update()
             updateSystemState = true;
           }
           // armed status lights
-          if (vistaCmd.cbuf[0] == 0xf7 && (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay))
+          if (vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay)
           {
             updateSystemState = true;
             if (vistaCmd.statusFlags.night)
@@ -1728,10 +1728,10 @@ void vistaECPHome::update()
               currentLightState.stay = true;
             }
             currentLightState.armed = true;
-          }
+          } 
           // zone fire status
           // int tz;
-          if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.fireZone)
+          if (!vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.fireZone)
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1741,9 +1741,9 @@ void vistaECPHome::update()
             fireStatus.state = true;
             getZone(vistaCmd.statusFlags.zone)->fire = true;
             // ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);
-          }
+          } 
           // zone alarm status
-          if (vistaCmd.cbuf[0] == 0xf7 && !vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.alarm)
+          if (vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.alarm)
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1761,9 +1761,9 @@ void vistaECPHome::update()
             alarmStatus.time = zt->time;
             alarmStatus.state = true;
             // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
-          }
+          } 
           // device check status
-          if (vistaCmd.cbuf[0] == 0xf7 && vistaCmd.statusFlags.check)
+          if (vistaCmd.statusFlags.check)
           {
             updateSystemState = true; // we also get system flags when a device has a check flag
             if (vistaCmd.cbuf[5] > 0x90)
@@ -1781,10 +1781,10 @@ void vistaECPHome::update()
             if (!zt->partition && zt->active)
               assignPartitionToZone(zt);
             zt->time = millis();
-          }
+          } 
           // zone fault status
           // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
-          if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
+          if (!(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1992,6 +1992,9 @@ void vistaECPHome::update()
               partitionStates[partition - 1].refreshLights = false;
             }
           }
+#if !defined(ESP32) or !defined(USETASK)
+            vista.handle();
+#endif
 
           std::string zoneStatusMsg = "";
           char s1[16];
@@ -1999,9 +2002,6 @@ void vistaECPHome::update()
           for (auto &x : extZones)
           {
 
-#if !defined(ESP32) or !defined(USETASK)
-            vista.handle();
-#endif
 
             if (!x.active || !x.partition)
               continue;
