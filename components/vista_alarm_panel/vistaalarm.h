@@ -7,13 +7,13 @@
 #include "esphome/core/helpers.h"
 #include "esphome/components/time/real_time_clock.h"
 
-#if defined(AUTOPOPULATE)
-#if defined(TEMPLATE_ALARM)
-#include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
-#else
-#include "esphome/components/template/binary_sensor/template_binary_sensor.h"
-#endif
-#endif
+// #if defined(AUTOPOPULATE)
+// #if defined(TEMPLATE_ALARM)
+// #include "esphome/components/template_alarm/binary_sensor/template_binary_sensor.h"
+// #else
+// #include "esphome/components/template/binary_sensor/template_binary_sensor.h"
+// #endif
+// #endif
 
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
@@ -456,7 +456,7 @@ class vistaECPHome : public time::RealTimeClock
 
 #if defined(AUTOPOPULATE)
       std::vector<zoneNameType> autoZones{};
-      void fetchPanelZones()
+      void fetchPanelZones();
 #endif
 
           zoneType nz;
