@@ -8,6 +8,16 @@
 #include "ArduinoJson.h"
 #include <cstdlib>
 
+
+// #define USETASK
+// #define ASYNC_CORE 1
+
+// #if defined(ESP32) && defined(USETASK)
+// #include <esp_chip_info.h>
+// #include <esp_task_wdt.h>
+// #endif
+
+
 // #ifdef USE_ARDUINO
 // #include <StreamString.h>
 // #else
@@ -61,7 +71,7 @@ namespace esphome
 {
   namespace web_notify
   {
-
+    uint64_t t1;
     static const char *const TAG = "telegram";
 
     WebNotify::WebNotify()
@@ -291,10 +301,10 @@ namespace esphome
         }
         if (c->data[0] == 'T')
         {
-          if (!global_notify->sending && !c->is_draining &&  (!global_notify->enableBot_ || global_notify->messages.size())  )
+          if (!global_notify->sending && !c->is_draining && !c->is_closing &&  (!global_notify->enableBot_ || global_notify->messages.size())  )
           {
             c->is_draining = 1; // close long poll so we can send
-            // ESP_LOGD("test","Pending message closing poll connection from poll");
+
           }
         }
       }
@@ -317,6 +327,7 @@ namespace esphome
         // MG_INFO(("got ev connect"));
         // Connected to server. Extract host name from URL
         struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
+    
         if (mg_url_is_ssl(global_notify->apiHost_.c_str()))
         {
           ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
@@ -325,6 +336,7 @@ namespace esphome
           if (c->tls == NULL)
             return;
         }
+
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
 
         if (global_notify->messages.size())
@@ -358,6 +370,7 @@ namespace esphome
           mg_printf(c, "Accept: application/json\r\n");
           mg_printf(c, "Cache-Control: no-cache\r\n\r\n");
           // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
+
         }
       }
       /*
@@ -421,12 +434,40 @@ namespace esphome
         }
         global_notify->sending = false;
         c->is_closing = 1; // Tell mongoose to close this connection
+
       }
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
+
       }
+
     }
+
+
+//     #if defined(ESP32) && defined(USETASK)
+
+//     void WebNotify::telegramTask(void *args)
+//     {
+
+//       static unsigned long checkTime = millis();
+//       for (;;)
+//       {
+//               mg_mgr_poll(&(global_notify->mgr), 1);
+
+//               vTaskDelay(4 / portTICK_PERIOD_MS);
+// #if not defined(ARDUINO_MQTT)
+//         if (millis() - checkTime > 30000)
+//         {
+//           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
+//           checkTime = millis();
+//         }
+// #endif
+//       }
+//       vTaskDelete(NULL);
+//     }
+// #endif
 
     void WebNotify::setup()
     {
@@ -456,6 +497,23 @@ namespace esphome
       // out.msg=msg;
       // out.type=mtSendMessage;
       // messages.push(out);
+
+// #if defined(ESP32) && defined(USETASK)
+//       esp_chip_info_t info;
+//       esp_chip_info(&info);
+//       ESP_LOGD(TAG, "Cores: %d,arduino core=%d", info.cores, CONFIG_ARDUINO_RUNNING_CORE);
+//       uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
+//       xTaskCreatePinnedToCore(
+//           this->telegramTask, // Function to implement the task
+//           "telegramTask",     // Name of the task
+//           3200,               // Stack size in words
+//           (void *)this,       // Task input parameter
+//           12,                 // Priority of the task
+//           &xHandle            // Task handle.
+//           ,
+//           core // Core where the task should run
+//       );
+// #endif      
     }
 
     void WebNotify::loop()
@@ -464,12 +522,14 @@ namespace esphome
 
       if (network::is_connected()  )
       {
-        if (!connected && (enableBot_ || (messages.size() && enableSend_ && ((millis() - retryDelay) > delayTime) &&  botId_.length() > 0  )))
+        if (!connected && ((enableBot_  &&  botId_.length() > 0) || (messages.size() && enableSend_) ) &&  ((millis() - retryDelay) > delayTime)    )
         {
           ESP_LOGD(TAG, "Connecting to telegram api");
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
+
         }
       }
+
       static unsigned long checkTime = millis();
       if (millis() - checkTime > 20000)
       {
@@ -477,7 +537,7 @@ namespace esphome
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Free memory: %5d", (uint16_t)uxHighWaterMark);
       }
-    
+  
       mg_mgr_poll(&mgr, 0);
     }
 
