@@ -12,7 +12,6 @@ from esphome.helpers import copy_file_if_changed, sanitize, snake_case
 from esphome.components import binary_sensor,text_sensor
     
 _LOGGER = logging.getLogger(__name__)
-
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('DSCkeybushome', cg.PollingComponent)
 
@@ -89,23 +88,23 @@ relay='''[&](uint8_t channel,bool open) {
     }'''
 
 
-ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
-    {
-        cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
-        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-    },
-    key=CONF_ID,
+# ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
+#     {
+#         cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
+#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+#     },
+#     key=CONF_ID,
 
-)
+# )
 
-ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
-    {
-        cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
-        cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-    },
-    key=CONF_ID,
+# ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
+#     {
+#         cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
+#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
+#     },
+#     key=CONF_ID,
 
-)
+# )
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -142,8 +141,8 @@ async def to_code(config):
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
-    if config[CONF_AUTOPOPULATE]:
-        cg.add_define("AUTOPOPULATE")
+    # if config[CONF_AUTOPOPULATE]:
+    #     cg.add_define("AUTOPOPULATE")
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
