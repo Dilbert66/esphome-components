@@ -20,6 +20,7 @@ namespace esphome
   namespace web_notify
   {
 
+
     enum msgtype
     {
       mtSendMessage,
@@ -188,6 +189,11 @@ namespace esphome
         msgtype type;
       };
 
+// #ifdef ESP32
+//       TaskHandle_t xHandle;
+//       static void telegramTask(void *args);
+// #endif
+
       struct c_res_s c_res;
 
       std::string apiHost_ = "https://api.telegram.org/";
@@ -202,7 +208,7 @@ namespace esphome
       bool sending = false;
       bool connected = false;
       unsigned long retryDelay = 0;
-      int delayTime = 30000; // ms
+      int delayTime = 15000; // ms
       std::queue<outMessage> messages;
       std::vector<std::string> allowed_chat_ids;
       bool isAllowed(std::string chat_id);

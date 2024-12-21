@@ -252,8 +252,11 @@ namespace esphome
                                     // pop last sent message from queue as it was successful
                                     global_notify->messages.pop();
                                   }
-                                  else
+                                  else 
+                                  {
                                     global_notify->retryDelay = millis();
+                                     ESP_LOGD(TAG, "Error response from server on last send: %s", payload);
+                                  }
                                 }
                                 else if (global_notify->sending)
                                 {
@@ -439,6 +442,7 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
+         ESP_LOGD(TAG, "MG_EV_ERROR server");
 
       }
 
@@ -518,16 +522,18 @@ namespace esphome
 
     void WebNotify::loop()
     {
-      static bool firstrun=true;
-
+      static bool firstRun=true;
+ 
       if (network::is_connected()  )
       {
-        if (!connected && ((enableBot_  &&  botId_.length() > 0) || (messages.size() && enableSend_) ) &&  ((millis() - retryDelay) > delayTime)    )
+        if (!connected && ((enableBot_  &&  botId_.length() > 0) || (messages.size() && enableSend_) ) &&  ((millis() - retryDelay) > delayTime || firstRun ) )
         {
-          ESP_LOGD(TAG, "Connecting to telegram api");
+          ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d",millis(),delayTime,retryDelay);
+          
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
-
+          firstRun=false;
         }
+
       }
 
       static unsigned long checkTime = millis();
