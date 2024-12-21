@@ -8,7 +8,6 @@
 #include "ArduinoJson.h"
 #include <cstdlib>
 
-
 // #define USETASK
 // #define ASYNC_CORE 1
 
@@ -17,55 +16,54 @@
 // #include <esp_task_wdt.h>
 // #endif
 
+#ifdef USE_ARDUINO
+#include <StreamString.h>
+#else
+#define F(x) x
+#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__) P
 
-// #ifdef USE_ARDUINO
-// #include <StreamString.h>
-// #else
-// #define F(x) x
-// #define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
+class String : public std::string
+{
+public:
+  String() : std::string() {}
+  String(const char *&p, size_t &s) : std::string(p, s) {}
 
-// class String : public std::string
-// {
-// public:
-//   String() : std::string() {}
-//   String(const char *&p, size_t &s) : std::string(p, s) {}
+  int indexOf(char ch, unsigned int fromIndex) const
+  {
+    if (fromIndex >= this->length())
+      return -1;
+    const char *temp = strchr(this->c_str() + fromIndex, ch);
+    if (temp == NULL)
+      return -1;
+    return temp - this->c_str();
+  }
 
-//   int indexOf(char ch, unsigned int fromIndex) const
-//   {
-//     if (fromIndex >= this->length())
-//       return -1;
-//     const char *temp = strchr(this->c_str() + fromIndex, ch);
-//     if (temp == NULL)
-//       return -1;
-//     return temp - this->c_str();
-//   }
+  String substring(unsigned int left, unsigned int right) const
+  {
+    if (left > right)
+    {
+      unsigned int temp = right;
+      right = left;
+      left = temp;
+    }
+    unsigned int len = this->length();
+    String out;
+    if (left >= len)
+      return out;
+    if (right > len)
+      right = len;
+    out.copy(((char *)this->c_str()) + left, right - left);
+    return out;
+  }
 
-//   String substring(unsigned int left, unsigned int right) const
-//   {
-//     if (left > right)
-//     {
-//       unsigned int temp = right;
-//       right = left;
-//       left = temp;
-//     }
-//     unsigned int len = this->length();
-//     String out;
-//     if (left >= len)
-//       return out;
-//     if (right > len)
-//       right = len;
-//     out.copy(((char *)this->c_str()) + left, right - left);
-//     return out;
-//   }
-
-//   long toInt(void) const
-//   {
-//     if (this->c_str())
-//       return atol(this->c_str());
-//     return 0;
-//   }
-// };
-// #endif
+  long toInt(void) const
+  {
+    if (this->c_str())
+      return atol(this->c_str());
+    return 0;
+  }
+};
+#endif
 
 namespace esphome
 {
@@ -277,13 +275,12 @@ namespace esphome
                                     ESP_LOGD(TAG, "Error response from server: %s", payload);
                                   }
                                 }
-                                return true;
-                              });
+                                return true; });
     }
 
     void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data)
     {
- 
+
       if (global_notify == NULL)
       {
         ESP_LOGE(TAG, "Global telegram pointer is null");
@@ -298,16 +295,15 @@ namespace esphome
       }
       else if (ev == MG_EV_POLL)
       {
-        if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2] )
+        if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2])
         {
           mg_error(c, "Connect timeout");
         }
         if (c->data[0] == 'T')
         {
-          if (!global_notify->sending && !c->is_draining && !c->is_closing &&  (!global_notify->enableBot_ || global_notify->messages.size())  )
+          if (!global_notify->sending && !c->is_draining && !c->is_closing && (!global_notify->enableBot_ || global_notify->messages.size()))
           {
             c->is_draining = 1; // close long poll so we can send
-
           }
         }
       }
@@ -330,11 +326,11 @@ namespace esphome
         // MG_INFO(("got ev connect"));
         // Connected to server. Extract host name from URL
         struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
-    
+
         if (mg_url_is_ssl(global_notify->apiHost_.c_str()))
         {
           ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
-          struct mg_tls_opts opts = {.ca = MG_NULL_STR, .cert = MG_NULL_STR, .key = MG_NULL_STR, .name = host};
+          struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
           if (c->tls == NULL)
             return;
@@ -359,7 +355,7 @@ namespace esphome
             mg_printf(c, "/deleteMessage HTTP/1.1\r\n");
           else
             mg_printf(c, "/sendMessage HTTP/1.1\r\n");
-          mg_printf(c, "Host: %.*s\r\n", host.len, host.ptr);
+          mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Content-Type: application/json\r\n");
           mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
           // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
@@ -369,11 +365,10 @@ namespace esphome
           global_notify->sending = false;
           mg_printf(c, "GET /bot%s", global_notify->botId_.c_str());
           mg_printf(c, "/getUpdates?limit=1&timeout=120&offset=%d HTTP/1.1\r\n", global_notify->lastMsgReceived);
-          mg_printf(c, "Host: %.*s\r\n", host.len, host.ptr);
+          mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Accept: application/json\r\n");
           mg_printf(c, "Cache-Control: no-cache\r\n\r\n");
           // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
-
         }
       }
       /*
@@ -397,7 +392,7 @@ namespace esphome
               mg_printf(c,"/deleteMessage HTTP/1.1\r\n");
           else
               mg_printf(c,"/sendMessage HTTP/1.1\r\n");
-          mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
+          mg_printf(c,"Host: %.*s\r\n",host.len,host.buf);
           mg_printf(c,"Content-Type: application/json\r\n");
           mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
           // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
@@ -405,7 +400,7 @@ namespace esphome
           global_notify->sending=false;
           mg_printf(c,"GET /bot%s",global_notify->botId_.c_str());
           mg_printf(c,"/getUpdates?limit=1&timeout=120&offset=%d HTTP/1.1\r\n",global_notify->lastMsgReceived);
-          mg_printf(c,"Host: %.*s\r\n",host.len,host.ptr);
+          mg_printf(c,"Host: %.*s\r\n",host.len,host.buf);
           mg_printf(c,"Accept: application/json\r\n");
           mg_printf(c,"Cache-Control: no-cache\r\n\r\n");
           // ESP_LOGD("test","sent post data lastmessage=%d",global_notify->lastMsgReceived);
@@ -416,9 +411,9 @@ namespace esphome
 
         // Response is received. Print it
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-        // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.ptr);
+        // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
-        String payload = String(hm->body.ptr, hm->body.len);
+        String payload = String(hm->body.buf, hm->body.len);
         // printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!global_notify->processMessage(payload.c_str()))
         {
@@ -437,41 +432,37 @@ namespace esphome
         }
         global_notify->sending = false;
         c->is_closing = 1; // Tell mongoose to close this connection
-
       }
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
-         ESP_LOGD(TAG, "MG_EV_ERROR server");
-
+        ESP_LOGD(TAG, "MG_EV_ERROR server");
       }
-
     }
 
+    //     #if defined(ESP32) && defined(USETASK)
 
-//     #if defined(ESP32) && defined(USETASK)
+    //     void WebNotify::telegramTask(void *args)
+    //     {
 
-//     void WebNotify::telegramTask(void *args)
-//     {
+    //       static unsigned long checkTime = millis();
+    //       for (;;)
+    //       {
+    //               mg_mgr_poll(&(global_notify->mgr), 1);
 
-//       static unsigned long checkTime = millis();
-//       for (;;)
-//       {
-//               mg_mgr_poll(&(global_notify->mgr), 1);
-
-//               vTaskDelay(4 / portTICK_PERIOD_MS);
-// #if not defined(ARDUINO_MQTT)
-//         if (millis() - checkTime > 30000)
-//         {
-//           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-//           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
-//           checkTime = millis();
-//         }
-// #endif
-//       }
-//       vTaskDelete(NULL);
-//     }
-// #endif
+    //               vTaskDelay(4 / portTICK_PERIOD_MS);
+    // #if not defined(ARDUINO_MQTT)
+    //         if (millis() - checkTime > 30000)
+    //         {
+    //           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+    //           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
+    //           checkTime = millis();
+    //         }
+    // #endif
+    //       }
+    //       vTaskDelete(NULL);
+    //     }
+    // #endif
 
     void WebNotify::setup()
     {
@@ -502,38 +493,37 @@ namespace esphome
       // out.type=mtSendMessage;
       // messages.push(out);
 
-// #if defined(ESP32) && defined(USETASK)
-//       esp_chip_info_t info;
-//       esp_chip_info(&info);
-//       ESP_LOGD(TAG, "Cores: %d,arduino core=%d", info.cores, CONFIG_ARDUINO_RUNNING_CORE);
-//       uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
-//       xTaskCreatePinnedToCore(
-//           this->telegramTask, // Function to implement the task
-//           "telegramTask",     // Name of the task
-//           3200,               // Stack size in words
-//           (void *)this,       // Task input parameter
-//           12,                 // Priority of the task
-//           &xHandle            // Task handle.
-//           ,
-//           core // Core where the task should run
-//       );
-// #endif      
+      // #if defined(ESP32) && defined(USETASK)
+      //       esp_chip_info_t info;
+      //       esp_chip_info(&info);
+      //       ESP_LOGD(TAG, "Cores: %d,arduino core=%d", info.cores, CONFIG_ARDUINO_RUNNING_CORE);
+      //       uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
+      //       xTaskCreatePinnedToCore(
+      //           this->telegramTask, // Function to implement the task
+      //           "telegramTask",     // Name of the task
+      //           3200,               // Stack size in words
+      //           (void *)this,       // Task input parameter
+      //           12,                 // Priority of the task
+      //           &xHandle            // Task handle.
+      //           ,
+      //           core // Core where the task should run
+      //       );
+      // #endif
     }
 
     void WebNotify::loop()
     {
-      static bool firstRun=true;
- 
-      if (network::is_connected()  )
-      {
-        if (!connected && ((enableBot_  &&  botId_.length() > 0) || (messages.size() && enableSend_) ) &&  ((millis() - retryDelay) > delayTime || firstRun ) )
-        {
-          ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d",millis(),delayTime,retryDelay);
-          
-          mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
-          firstRun=false;
-        }
+      static bool firstRun = true;
 
+      if (network::is_connected())
+      {
+        if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime || firstRun))
+        {
+          ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d", millis(), delayTime, retryDelay);
+
+          mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
+          firstRun = false;
+        }
       }
 
       static unsigned long checkTime = millis();
@@ -543,7 +533,7 @@ namespace esphome
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Free memory: %5d", (uint16_t)uxHighWaterMark);
       }
-  
+
       mg_mgr_poll(&mgr, 0);
     }
 

@@ -20,7 +20,6 @@ namespace esphome
   namespace web_notify
   {
 
-
     enum msgtype
     {
       mtSendMessage,
@@ -105,7 +104,6 @@ namespace esphome
         publish(out);
       };
 
-
       void publish(const std::string &chat_id, const std::string &message, bool force)
       {
         SendData out;
@@ -189,10 +187,10 @@ namespace esphome
         msgtype type;
       };
 
-// #ifdef ESP32
-//       TaskHandle_t xHandle;
-//       static void telegramTask(void *args);
-// #endif
+      // #ifdef ESP32
+      //       TaskHandle_t xHandle;
+      //       static void telegramTask(void *args);
+      // #endif
 
       struct c_res_s c_res;
 
@@ -428,8 +426,7 @@ namespace esphome
                                         if (cmd.find("," + s + ",") != std::string::npos)
                                           this->trigger(x);
                                         if (cmd.find(",*,") != std::string::npos)
-                                          this->trigger(x);
-                                      });
+                                          this->trigger(x); });
       };
     };
 
