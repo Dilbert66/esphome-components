@@ -1370,7 +1370,7 @@ struct mg_fs mg_fs_posix = {p_stat,  p_list, p_open,   p_close,  p_read,
 #line 1 "src/http.c"
 #endif
 
-//dilbert66 defined as static in header
+
 int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   int diff = 0;
   if (len > 0) do {
@@ -1716,6 +1716,8 @@ static void mg_http_vprintf_chunk(struct mg_connection *c, const char *fmt,
                                   va_list *ap) {
   size_t len = c->send.len;
   mg_send(c, "        \r\n", 10);
+  //dilbert66
+  c->send.c=c;
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
   if (c->send.len >= len + 10) {
     mg_snprintf((char *) c->send.buf + len, 9, "%08lx", c->send.len - len - 10);
@@ -1818,6 +1820,8 @@ void mg_http_reply(struct mg_connection *c, int code, const char *headers,
             mg_http_status_code_str(code), headers == NULL ? "" : headers);
   len = c->send.len;
   va_start(ap, fmt);
+  //dilbert66
+  c->send.c=c;
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, &ap);
   va_end(ap);
   if (c->send.len > 16) {
@@ -3831,6 +3835,8 @@ struct mg_connection *mg_mqtt_listen(struct mg_mgr *mgr, const char *url,
 
 size_t mg_vprintf(struct mg_connection *c, const char *fmt, va_list *ap) {
   size_t old = c->send.len;
+  //dilbert66
+  c->send.c=c;
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
   return c->send.len - old;
 }
@@ -17094,6 +17100,8 @@ struct ws_msg {
 size_t mg_ws_vprintf(struct mg_connection *c, int op, const char *fmt,
                      va_list *ap) {
   size_t len = c->send.len;
+  //dilbert66
+  c->send.c=c;
   size_t n = mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
   mg_ws_wrap(c, c->send.len - len, op);
   return n;
@@ -17126,6 +17134,8 @@ static void ws_handshake(struct mg_connection *c, const struct mg_str *wskey,
              "Connection: Upgrade\r\n"
              "Sec-WebSocket-Accept: %s\r\n",
              b64_sha);
+  //dilbert66
+  c->send.c=c;
   if (fmt != NULL) mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
   if (wsproto != NULL) {
     mg_printf(c, "Sec-WebSocket-Protocol: %.*s\r\n", (int) wsproto->len,
@@ -17328,6 +17338,8 @@ struct mg_connection *mg_ws_connect(struct mg_mgr *mgr, const char *url,
     if (fmt != NULL) {
       va_list ap;
       va_start(ap, fmt);
+      //dilbert66
+      c->send.c=c;
       mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, &ap);
       va_end(ap);
     }

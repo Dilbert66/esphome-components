@@ -295,6 +295,7 @@ namespace esphome
       }
       else if (ev == MG_EV_POLL)
       {
+
         if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2])
         {
           mg_error(c, "Connect timeout");
@@ -305,6 +306,10 @@ namespace esphome
           {
             c->is_draining = 1; // close long poll so we can send
           }
+        }
+        if (c->send.c == NULL) {
+          c->send.c=c;
+          c->recv.c=c;
         }
       }
       else if (ev == MG_EV_CLOSE)
