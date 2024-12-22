@@ -289,6 +289,8 @@ namespace esphome
       int *i = &((struct c_res_s *)c->fn_data)->i;
       if (ev == MG_EV_OPEN)
       {
+        c->send.c=c;
+        c->recv.c=c;
         global_notify->connected = true;
         // Connection created. Store connect expiration time in c->data
         *(uint64_t *)&c->data[2] = mg_millis() + global_notify->timeout_ms;
@@ -307,10 +309,7 @@ namespace esphome
             c->is_draining = 1; // close long poll so we can send
           }
         }
-        if (c->send.c == NULL) {
-          c->send.c=c;
-          c->recv.c=c;
-        }
+
       }
       else if (ev == MG_EV_CLOSE)
       {
@@ -320,6 +319,8 @@ namespace esphome
       }
       else if (ev == MG_EV_CONNECT)
       {
+        c->send.c=c;
+        c->recv.c=c;
         if (c->data[0] == 'T')
         {
           c->is_closing = 1; // close long poll if opened so we can send
