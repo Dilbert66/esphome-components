@@ -1,11 +1,10 @@
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 #include "vistaalarm.h"
 
-//#include "driver/timer.h"
+// #include "driver/timer.h"
 
 // #define TIMER_DIVIDER         64  //  Hardware timer clock divider
 // #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to seconds
-
 
 // static void tg_timer_init(timer_group_t group, timer_idx_t timer)
 // {
@@ -24,7 +23,6 @@
 //        Also, if auto_reload is set, this value will be automatically reload on alarm */
 //     timer_set_counter_value(group, timer, 0);
 
- 
 //     timer_start(group, timer);
 // }
 
@@ -469,9 +467,9 @@ void vistaECPHome::setup()
 {
 #endif
       ESP_LOGD(TAG, "Start setup: Free heap: %04X (%d)", ESP.getFreeHeap(), ESP.getFreeHeap());
-     //tg_timer_init(TIMER_GROUP_0, TIMER_0);
-      // use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
-      //  the system to not miss a response window on commands.
+      // tg_timer_init(TIMER_GROUP_0, TIMER_0);
+      //  use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
+      //   the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
 
       bMap = App.get_binary_sensors();
@@ -648,7 +646,7 @@ void vistaECPHome::setup()
 
     void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes)
     {
-ESP_LOGD(TAG,"Cmd bytes=%s",hexbytes.c_str());
+      ESP_LOGD(TAG, "Cmd bytes=%s", hexbytes.c_str());
       std::string::iterator end_pos = std::remove(hexbytes.begin(), hexbytes.end(), ' ');
       hexbytes.erase(end_pos, hexbytes.end());
 
@@ -1241,19 +1239,38 @@ ESP_LOGD(TAG,"Cmd bytes=%s",hexbytes.c_str());
     {
 
       // vistaECPHome *_this = (vistaECPHome *)args;
-      static unsigned long checkTime = millis();
+      unsigned long checkTime = millis();
+      unsigned long dataTime = millis();
+      bool dataTimeout = false;
+
       for (;;)
       {
-        if (!vista.handle())  
+
+        if (!vista.handle())
+        {
           vTaskDelay(4 / portTICK_PERIOD_MS);
-#if not defined(ARDUINO_MQTT)
+        }
+        else
+        {
+          dataTime = millis();
+          vista.connected = true;
+        }
+
+        if (millis() - dataTime > 15000)
+        {
+          dataTime = millis();
+          ESP_LOGE(TAG, "Data timeout. Is the panel connected?");
+          vista.connected = false;
+        }
+
         if (millis() - checkTime > 30000)
         {
+          checkTime = millis();
+#if not defined(ARDUINO_MQTT)
           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
-          checkTime = millis();
-        }
 #endif
+        }
       }
       vTaskDelete(NULL);
     }
@@ -1300,7 +1317,6 @@ void vistaECPHome::update()
         //   ESP_LOGD("test","Micros = %d, millis=%d,t=%d",micros(),millis(),t);
         // }
 
-
         processAuiQueue();
 
 #if defined(ESPHOME_MQTT)
@@ -1313,11 +1329,28 @@ void vistaECPHome::update()
         // if data to be sent, we ensure we process it quickly to avoid delays with the F6 cmd
 
 #if !defined(ESP32) or !defined(USETASK)
-        vista.handle();
-        static unsigned long sendWaitTime = millis();
-        while (!firstRun && vista.keybusConnected && vista.sendPending() && vista.cmdAvail())
+        static unsigned long dataTime = millis();
+        if (vista.handle())
         {
-          vista.handle();
+          dataTime = millis();
+          vista.connected = true;
+        }
+
+        if (millis() - dataTime > 15000)
+        {
+          dataTime = millis();
+          ESP_LOGE(TAG, "Data timeout. Is the panel connected?");
+          vista.connected = false;
+        }
+
+        static unsigned long sendWaitTime = millis();
+        while (!firstRun && vista.connected && vista.sendPending() && vista.cmdAvail())
+        {
+          if (vista.handle())
+          {
+            dataTime = millis();
+            vista.connected = true;
+          }
           if (millis() - sendWaitTime > 10)
             break;
         }
@@ -1496,9 +1529,10 @@ void vistaECPHome::update()
                 8 -	Loop 1
 
             */
-          } else 
+          }
+          else
 
-          if (debug > 0 && vistaCmd.newCmd)
+              if (debug > 0 && vistaCmd.newCmd)
           {
             if (vistaCmd.cbuf[0] == 0xF2)
               printPacket("CMD", vistaCmd.cbuf, vistaCmd.cbuf[1] + 2);
@@ -1506,7 +1540,7 @@ void vistaECPHome::update()
               printPacket("CMD", vistaCmd.cbuf, 13);
           }
 
-          if (vistaCmd.newCmd && auiAddr && vistaCmd.cbuf[0] == 0xF2 )
+          if (vistaCmd.newCmd && auiAddr && vistaCmd.cbuf[0] == 0xF2)
           {
             ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
             // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
@@ -1609,7 +1643,7 @@ void vistaECPHome::update()
             }
             return;
           }
-          else if (vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf7 )
+          else if (vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf7)
           {
             getPartitionsFromMask();
 
@@ -1649,7 +1683,7 @@ void vistaECPHome::update()
           }
 
           // publishes lrr status messages
-          if (( vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58) || firstRun)
+          if ((vistaCmd.newCmd && vistaCmd.cbuf[0] == 0xf9 && vistaCmd.cbuf[3] == 0x58) || firstRun)
           { // we show all lrr messages with type 58
 
             int c = vistaCmd.statusFlags.lrr.code;
@@ -1728,7 +1762,7 @@ void vistaECPHome::update()
               currentLightState.stay = true;
             }
             currentLightState.armed = true;
-          } 
+          }
           // zone fire status
           // int tz;
           if (!vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.fireZone)
@@ -1741,7 +1775,7 @@ void vistaECPHome::update()
             fireStatus.state = true;
             getZone(vistaCmd.statusFlags.zone)->fire = true;
             // ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);
-          } 
+          }
           // zone alarm status
           if (vistaCmd.statusFlags.systemFlag && vistaCmd.statusFlags.alarm)
           {
@@ -1761,7 +1795,7 @@ void vistaECPHome::update()
             alarmStatus.time = zt->time;
             alarmStatus.state = true;
             // ESP_LOGD("test","alarm found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->alarm );
-          } 
+          }
           // device check status
           if (vistaCmd.statusFlags.check)
           {
@@ -1781,7 +1815,7 @@ void vistaECPHome::update()
             if (!zt->partition && zt->active)
               assignPartitionToZone(zt);
             zt->time = millis();
-          } 
+          }
           // zone fault status
           // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
           if (!(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
@@ -1993,7 +2027,11 @@ void vistaECPHome::update()
             }
           }
 #if !defined(ESP32) or !defined(USETASK)
-            vista.handle();
+          if (vista.handle())
+          {
+            dataTime = millis();
+            vista.connected = true;
+          }
 #endif
 
           std::string zoneStatusMsg = "";
@@ -2001,7 +2039,6 @@ void vistaECPHome::update()
           // clears restored zones after timeout
           for (auto &x : extZones)
           {
-
 
             if (!x.active || !x.partition)
               continue;
@@ -2111,7 +2148,11 @@ void vistaECPHome::update()
         }
 
 #if !defined(ESP32) or !defined(USETASK)
-        vista.handle();
+        if (vista.handle())
+        {
+          dataTime = millis();
+          vista.connected = true;
+        }
 #endif
       }
 

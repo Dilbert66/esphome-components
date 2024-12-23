@@ -421,6 +421,7 @@ class vistaECPHome : public time::RealTimeClock
       }
       bool connected()
       {
+        vista.keybusConnected=vista.connected;
         return vista.connected;
       }
 

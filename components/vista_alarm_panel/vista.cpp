@@ -1487,6 +1487,4 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
     printf("Warning monitor rx pin %d is invalid", monitorPin);
   }
 #endif
-  keybusConnected = true; // legacy support
-  connected = true;
 }
