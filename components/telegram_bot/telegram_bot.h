@@ -41,6 +41,7 @@ namespace esphome
       std::string message_id;
       std::string callback_id;
       bool is_first_cmd;
+      std::string to;
     };
 
     struct SendData
@@ -149,6 +150,8 @@ namespace esphome
       }
 
       void set_bot_id(std::string &&bot_id) { botId_ = bot_id; }
+      void set_bot_name(std::string &&bot_name) { botName_ = bot_name; }
+
       void set_chat_id(std::string &&chat_id)
       {
         telegramUserId_ = chat_id;
@@ -163,6 +166,7 @@ namespace esphome
       void set_send_enable(bool enable) { enableSend_ = enable; }
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
+      std::string get_bot_name() { return botName_;}
       using on_message_callback_t = void(RemoteData &x);
 
       CallbackManager<on_message_callback_t> on_message_;
@@ -198,6 +202,7 @@ namespace esphome
       const uint64_t timeout_ms = 1500; // Connect timeout in milliseconds
       int lastMsgReceived = 0;
       std::string botId_ = "";
+      std::string botName_="";
 
       uint8_t inMsgIdx, outMsgIdx;
       const uint8_t msgQueueSize = 10;
@@ -404,6 +409,9 @@ namespace esphome
                                       {
                                         std::string s = x.cmd;
                                         // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
+                                        if (x.to !="" &&  x.to != global_notify->get_bot_name())
+                                          return;
+
                                         if (type == "callback")
                                         {
                                           if (!x.is_callback)
@@ -422,6 +430,7 @@ namespace esphome
                                             return;
                                           s = x.text;
                                         }
+                                        
 
                                         if (cmd.find("," + s + ",") != std::string::npos)
                                           this->trigger(x);

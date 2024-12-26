@@ -138,10 +138,25 @@ namespace esphome
     {
       if (x.text[0] != '/')
         return;
-      x.cmd = x.text.substr(0, x.text.find(" "));
-      x.args = x.text.erase(0, x.text.find(" ") + 1);
-      if (x.cmd == x.args)
-        x.args = ""; // if no args set to empty
+      size_t n=x.text.find("@");
+      size_t n1=x.text.find(" ");
+      if (n != std::string::npos) {
+        x.cmd=x.text.substr(0,n);
+        if (n1 != std::string::npos) 
+          x.to=x.text.substr(n+1,n1-x.cmd.length()-1);
+        else
+          x.to=x.text.substr(n+1);
+      } else {
+        x.cmd=x.text.substr(0,n1);
+        x.to="";
+      }
+      if (n1 != std::string::npos)
+        x.args = x.text.erase(0, n1 + 1);
+      else
+        x.args="";
+
+      ESP_LOGD(TAG," parse args: cmd=%s,to=%s,args=%s",x.cmd.c_str(),x.to.c_str(),x.args.c_str());
+
     }
 
     bool WebNotify::processMessage(const char *payload)

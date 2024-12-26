@@ -34,6 +34,7 @@ AUTO_LOAD = ["json","mg_lib"]
 CONF_API_HOST="telegram_host"
 CONF_CHAT_ID="chat_id"
 CONF_BOT_ID="bot_id"
+CONF_BOT_NAME="bot_name"
 CONF_ENABLEBOT="bot_enable"
 CONF_ENABLESEND="send_enable"
 CONF_ALLOWED_IDS="allowed_chat_ids"
@@ -83,6 +84,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ENABLEBOT,default=False): cv.boolean,
             cv.Optional(CONF_ENABLESEND,default=True): cv.boolean,
             cv.Optional(CONF_ALLOWED_IDS):cv.ensure_list(cv.string_strict),
+            cv.Optional(CONF_BOT_NAME,default=""):cv.string_strict,
 
             cv.Optional(CONF_ON_MESSAGE): automation.validate_automation(
                 {
@@ -272,16 +274,16 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
     cg.add(var.set_message_id(template_))
     if CONF_PARSE_MODE in config:
         template_ = await cg.templatable(config[CONF_PARSE_MODE], args, cg.std_string)
-        cg.add(var.set_parse_mode(template_));
+        cg.add(var.set_parse_mode(template_))
     if CONF_INLINE_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_INLINE_KEYBOARD], args, cg.std_string)
-        cg.add(var.set_inline_keyboard(template_));
+        cg.add(var.set_inline_keyboard(template_))
     if CONF_TITLE in config:
         template_ = await cg.templatable(config[CONF_TITLE], args, cg.std_string)
-        cg.add(var.set_title(template_));
+        cg.add(var.set_title(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_));
+        cg.add(var.set_disable_web_preview(template_))
     return var
 
 
@@ -294,11 +296,12 @@ async def to_code(config):
         for anid in config[CONF_ALLOWED_IDS]:
             cg.add(var.add_chatid(anid))
     if CONF_API_HOST in config and config[CONF_API_HOST]:
-        cg.add(var.set_api_host(config[CONF_API_HOST]));
+        cg.add(var.set_api_host(config[CONF_API_HOST]))
     if CONF_ENABLEBOT in config and config[CONF_ENABLEBOT]:
-        cg.add(var.set_bot_enable(config[CONF_ENABLEBOT]));
+        cg.add(var.set_bot_enable(config[CONF_ENABLEBOT]))
     if CONF_ENABLESEND in config and config[CONF_ENABLESEND]:
-        cg.add(var.set_send_enable(config[CONF_ENABLESEND]));
+        cg.add(var.set_send_enable(config[CONF_ENABLESEND]))
+    cg.add(var.set_bot_name(config[CONF_BOT_NAME]))
     
     if CONF_CHAT_ID in config and config[CONF_CHAT_ID]:
         if (cg.is_template(config[CONF_CHAT_ID])):
