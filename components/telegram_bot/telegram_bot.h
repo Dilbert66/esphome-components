@@ -26,7 +26,8 @@ namespace esphome
       mtEditMessageText,
       mtAnswerCallbackQuery,
       mtEditMessageReplyMarkup,
-      mtDeleteMessage
+      mtDeleteMessage,
+      mtGetMe
     };
 
     struct RemoteData
@@ -90,6 +91,12 @@ namespace esphome
         publish(out);
       }
 
+      void getMe() {
+        SendData out;
+        out.type=mtGetMe;
+        publish(out);
+      }
+
       void publish(const std::string &chat_id, const std::string &message, const std::string &reply_markup = "", const std::string &parse_mode = "html", bool disable_notification = false, bool disable_web_page_preview = false, bool resize_keyboard = false, bool one_time_keyboard = false)
       {
         SendData out;
@@ -150,7 +157,7 @@ namespace esphome
       }
 
       void set_bot_id(std::string &&bot_id) { botId_ = bot_id; }
-      void set_bot_name(std::string &&bot_name) { botName_ = bot_name; }
+      void set_bot_name(std::string bot_name) { botName_ = bot_name; }
 
       void set_chat_id(std::string &&chat_id)
       {

@@ -143,9 +143,9 @@ namespace esphome
       if (n != std::string::npos) {
         x.cmd=x.text.substr(0,n);
         if (n1 != std::string::npos) 
-          x.to=x.text.substr(n+1,n1-x.cmd.length()-1);
+          x.to=x.text.substr(n,n1-x.cmd.length());
         else
-          x.to=x.text.substr(n+1);
+          x.to=x.text.substr(n);
       } else {
         x.cmd=x.text.substr(0,n1);
         x.to="";
@@ -158,7 +158,9 @@ namespace esphome
       ESP_LOGD(TAG," parse args: cmd=%s,to=%s,args=%s",x.cmd.c_str(),x.to.c_str(),x.args.c_str());
 
     }
-
+/*{"ok":true,"result":{"id":2136726661,"is_bot":true,"first_name":"@VistaBot","username":"VistaKeypadbot",
+"can_join_groups":false,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}}
+*/
     bool WebNotify::processMessage(const char *payload)
     {
 
@@ -270,7 +272,15 @@ namespace esphome
                                     global_notify->retryDelay = millis();
                                      ESP_LOGD(TAG, "Error response from server on last send: %s", payload);
                                   }
-                                }
+                                } 
+                                else if (root["result"]["is_bot"]) {
+                                  if (root["result"]["first_name"]) {
+                                    std::string botname=root["result"]["first_name"];
+                                    global_notify->set_bot_name(botname);
+                                    ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
+                                  }
+                                  global_notify->messages.pop();
+                                } 
                                 else if (global_notify->sending)
                                 {
                                   // message response. Pop the message anyhow so we don't loop.
@@ -374,6 +384,8 @@ namespace esphome
             mg_printf(c, "/editMessageReplyMarkup HTTP/1.1\r\n");
           else if (outmsg.type == mtDeleteMessage)
             mg_printf(c, "/deleteMessage HTTP/1.1\r\n");
+          else if (outmsg.type==mtGetMe)
+            mg_printf(c,"/getMe HTTP/1.1\r\n");
           else
             mg_printf(c, "/sendMessage HTTP/1.1\r\n");
           mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
@@ -530,6 +542,7 @@ namespace esphome
       //           core // Core where the task should run
       //       );
       // #endif
+
     }
 
     void WebNotify::loop()
@@ -543,6 +556,11 @@ namespace esphome
           ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d", millis(), delayTime, retryDelay);
 
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
+          if (botName_=="") {
+            outMessage out;
+            out.type=mtGetMe;
+            messages.push(out);
+          }
           firstRun = false;
         }
       }
