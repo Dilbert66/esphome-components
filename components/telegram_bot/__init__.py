@@ -135,34 +135,34 @@ async def telegram_publish_action_to_code(config, action_id, template_arg, args)
     cg.add(var.set_message(template_))
     if CONF_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_KEYBOARD], args, cg.std_string)
-        cg.add(var.set_keyboard(template_));
+        cg.add(var.set_keyboard(template_))
     if CONF_INLINE_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_INLINE_KEYBOARD], args, cg.std_string)
-        cg.add(var.set_inline_keyboard(template_));
+        cg.add(var.set_inline_keyboard(template_))
     if CONF_MARKUP in config:
         template_ = await cg.templatable(config[CONF_MARKUP], args, cg.std_string)
-        cg.add(var.set_reply_markup(template_));
+        cg.add(var.set_reply_markup(template_))
     if CONF_PARSE_MODE in config:
         template_ = await cg.templatable(config[CONF_PARSE_MODE], args, cg.std_string)
-        cg.add(var.set_parse_mode(template_));
+        cg.add(var.set_parse_mode(template_))
     if CONF_TITLE in config:
         template_ = await cg.templatable(config[CONF_TITLE], args, cg.std_string)
-        cg.add(var.set_title(template_));
+        cg.add(var.set_title(template_))
     if CONF_DISABLE_NOTIFICATION in config:
         template_ = await cg.templatable(config[CONF_DISABLE_NOTIFICATION], args, cg.bool_)
-        cg.add(var.set_disable_notification(template_));
+        cg.add(var.set_disable_notification(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_));
+        cg.add(var.set_disable_web_preview(template_))
     if CONF_RESIZE_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_RESIZE_KEYBOARD], args, cg.bool_)
-        cg.add(var.set_resize_keyboard(template_));
+        cg.add(var.set_resize_keyboard(template_))
     if CONF_ONE_TIME_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_ONE_TIME_KEYBOARD], args, cg.bool_)
-        cg.add(var.set_one_time_keyboard(template_));
+        cg.add(var.set_one_time_keyboard(template_))
     if CONF_FORCE in config:
         template_ = await cg.templatable(config[CONF_FORCE], args, cg.bool_)
-        cg.add(var.set_force(template_));
+        cg.add(var.set_force(template_))
     return var
 
 
@@ -188,7 +188,7 @@ async def telegram_answer_callback_action_to_code(config, action_id, template_ar
     cg.add(var.set_callback_id(template_))
     if CONF_SHOW_ALERT in config:
         template_ = await cg.templatable(config[CONF_SHOW_ALERT], args, cg.bool_)
-        cg.add(var.set_show_alert(template_));
+        cg.add(var.set_show_alert(template_))
 
     return var
 
@@ -238,10 +238,10 @@ async def telegram_edit_reply_markup_action_to_code(config, action_id, template_
     cg.add(var.set_message_id(template_))
     if CONF_INLINE_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_INLINE_KEYBOARD], args, cg.std_string)
-        cg.add(var.set_inline_keyboard(template_));
+        cg.add(var.set_inline_keyboard(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_));
+        cg.add(var.set_disable_web_preview(template_))
     return var
 
 
@@ -308,13 +308,13 @@ async def to_code(config):
             template_ = await cg.process_lambda(config[CONF_CHAT_ID], "", return_type=cg.std_string)
             cg.add(var.set_chat_id_f(template_))
         else:
-            cg.add(var.set_chat_id(config[CONF_CHAT_ID]));
+            cg.add(var.set_chat_id(config[CONF_CHAT_ID]))
     if CONF_BOT_ID in config and config[CONF_BOT_ID]:
         if (cg.is_template(config[CONF_BOT_ID])):
             template_ = await cg.process_lambda(config[CONF_BOT_ID], "", return_type=cg.std_string)
             cg.add(var.set_bot_id_f(template_))
         else:
-            cg.add(var.set_bot_id(config[CONF_BOT_ID]));
+            cg.add(var.set_bot_id(config[CONF_BOT_ID]))
 
     for conf in config.get(CONF_ON_MESSAGE, []):
         if CONF_CMD in conf:
