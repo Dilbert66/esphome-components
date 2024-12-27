@@ -119,6 +119,7 @@ namespace esphome
       void answerCallbackQuery(const std::string &message, const std::string &callback_id, bool show_alert = false, bool force = false)
       {
         SendData out;
+        out.text = message;
         out.message_id = callback_id;
         out.show_alert = show_alert;
         out.type = mtAnswerCallbackQuery;
