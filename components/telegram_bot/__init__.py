@@ -153,7 +153,7 @@ async def telegram_publish_action_to_code(config, action_id, template_arg, args)
         cg.add(var.set_disable_notification(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_))
+        cg.add(var.set_disable_web_page_preview(template_))
     if CONF_RESIZE_KEYBOARD in config:
         template_ = await cg.templatable(config[CONF_RESIZE_KEYBOARD], args, cg.bool_)
         cg.add(var.set_resize_keyboard(template_))
@@ -241,7 +241,7 @@ async def telegram_edit_reply_markup_action_to_code(config, action_id, template_
         cg.add(var.set_inline_keyboard(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_))
+        cg.add(var.set_disable_web_page_preview(template_))
     return var
 
 
@@ -283,7 +283,7 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
         cg.add(var.set_title(template_))
     if CONF_DISABLE_WEB_PREVIEW in config:
         template_ = await cg.templatable(config[CONF_DISABLE_WEB_PREVIEW], args, cg.bool_)
-        cg.add(var.set_disable_web_preview(template_))
+        cg.add(var.set_disable_web_page_preview(template_))
     return var
 
 

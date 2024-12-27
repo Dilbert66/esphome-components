@@ -91,12 +91,6 @@ namespace esphome
         publish(out);
       }
 
-      void getMe() {
-        SendData out;
-        out.type=mtGetMe;
-        publish(out);
-      }
-
       void publish(const std::string &chat_id, const std::string &message, const std::string &reply_markup = "", const std::string &parse_mode = "html", bool disable_notification = false, bool disable_web_page_preview = false, bool resize_keyboard = false, bool one_time_keyboard = false)
       {
         SendData out;

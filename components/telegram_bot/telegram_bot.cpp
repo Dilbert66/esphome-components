@@ -553,7 +553,7 @@ namespace esphome
       {
         if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime || firstRun))
         {
-          ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d", millis(), delayTime, retryDelay);
+         // ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d", millis(), delayTime, retryDelay);
 
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
           if (botName_=="") {
