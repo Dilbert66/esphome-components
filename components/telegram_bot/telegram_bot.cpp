@@ -275,10 +275,11 @@ namespace esphome
                                   else 
                                   {
                                     global_notify->retryDelay = millis();
-                                     ESP_LOGD(TAG, "Error response from server on last send: %s", payload);
+                                     ESP_LOGE(TAG, "Error response from server on last send: %s", payload);
                                   }
                                 } 
-                                else if (root["result"]["is_bot"]) {
+                                else if (root["result"]["is_bot"]) 
+                                {
                                   if (root["result"]["first_name"]) {
                                     std::string botname=root["result"]["first_name"];
                                     //std::string botusername=root["result"]["username"];
@@ -286,10 +287,25 @@ namespace esphome
                                     std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
                                   }
-                                  global_notify->messages.pop();
+                                  bool ok = root["ok"];
+                                  if (ok)
+                                  {
+                                    // pop last sent message from queue as it was successful
+                                    global_notify->messages.pop();
+                                  }
+                                  else 
+                                  {
+                                    global_notify->retryDelay = millis();
+                                     ESP_LOGE(TAG, "Error response from server on bot request: %s", payload);
+                                  }
                                 } 
                                 else if (global_notify->sending)
                                 {
+                                  bool ok = root["ok"];
+                                  if (!ok)
+                                  {
+                                    ESP_LOGE(TAG, "Error response from server: %s", payload);
+                                  }
                                   // message response. Pop the message anyhow so we don't loop.
                                   global_notify->messages.pop();
                                 }
@@ -304,7 +320,7 @@ namespace esphome
                                   if (!ok)
                                   {
                                     global_notify->retryDelay = millis();
-                                    ESP_LOGD(TAG, "Error response from server: %s", payload);
+                                    ESP_LOGE(TAG, "Error response from server: %s", payload);
                                   }
                                 }
                                 return true; });
@@ -454,7 +470,7 @@ namespace esphome
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
         String payload = String(hm->body.buf, hm->body.len);
-        // printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
+         //printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!global_notify->processMessage(payload.c_str()))
         {
           printf_P("%s", F("\nMessage parsing failed, skipped.\n"));
