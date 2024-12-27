@@ -114,8 +114,13 @@ namespace esphome
       root["one_time_keyboard"]=out.one_time_keyboard;
     if (out.text.length()>0)
       root["text"] = out.text.c_str();
+    if(out.url.length() > 0)
+      root["url"]=out.url;
+    if (out.cache_time)
+      root["cache_time"]=out.cache_time;
     if(out.selective)
       root["selective"]=out.selective; });
+
 
       outMessage omsg;
       omsg.msg = outmsg;
@@ -276,7 +281,9 @@ namespace esphome
                                 else if (root["result"]["is_bot"]) {
                                   if (root["result"]["first_name"]) {
                                     std::string botname=root["result"]["first_name"];
+                                    //std::string botusername=root["result"]["username"];
                                     global_notify->set_bot_name(botname);
+                                    std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
                                   }
                                   global_notify->messages.pop();
@@ -391,7 +398,7 @@ namespace esphome
           mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Content-Type: application/json\r\n");
           mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
-          // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+           //printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
         }
         else if (global_notify->enableBot_)
         {

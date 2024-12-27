@@ -63,6 +63,8 @@ namespace esphome
       bool show_alert = false;
       bool selective = false;
       bool force = false;
+      int cache_time;
+      std::string url;
     };
 
     struct c_res_s
@@ -116,12 +118,14 @@ namespace esphome
         publish(out);
       }
 
-      void answerCallbackQuery(const std::string &message, const std::string &callback_id, bool show_alert = false, bool force = false)
+      void answerCallbackQuery(const std::string &message, const std::string &callback_id, bool show_alert = false, std::string url = "", int cache_time = 0, bool force = false)
       {
         SendData out;
         out.text = message;
         out.message_id = callback_id;
         out.show_alert = show_alert;
+        out.url = url;
+        out.cache_time = cache_time;
         out.type = mtAnswerCallbackQuery;
         out.force = force;
         publish(out);
@@ -168,7 +172,7 @@ namespace esphome
       void set_send_enable(bool enable) { enableSend_ = enable; }
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
-      std::string get_bot_name() { return botName_;}
+      std::string get_bot_name() { return botName_; }
       using on_message_callback_t = void(RemoteData &x);
 
       CallbackManager<on_message_callback_t> on_message_;
@@ -204,7 +208,7 @@ namespace esphome
       const uint64_t timeout_ms = 1500; // Connect timeout in milliseconds
       int lastMsgReceived = 0;
       std::string botId_ = "";
-      std::string botName_="";
+      std::string botName_ = "";
 
       uint8_t inMsgIdx, outMsgIdx;
       const uint8_t msgQueueSize = 10;
@@ -294,6 +298,8 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, message)
       TEMPLATABLE_VALUE(std::string, callback_id)
       TEMPLATABLE_VALUE(bool, show_alert)
+      TEMPLATABLE_VALUE(std::string, url)
+      TEMPLATABLE_VALUE(int, cache_time)
 
       void play(Ts... x) override
       {
@@ -302,6 +308,8 @@ namespace esphome
         if (this->show_alert_.value(x...))
           y.show_alert = this->show_alert_.value(x...);
         y.text = this->message_.value(x...);
+        y.url = this->url_.value(x...);
+        y.cache_time = this->cache_time_.value(x...);
         y.type = mtAnswerCallbackQuery;
         this->parent_->publish(y);
       }
@@ -405,13 +413,28 @@ namespace esphome
     class TelegramMessageTrigger : public Trigger<RemoteData>
     {
     public:
+      bool stringsEqual(std::string str1, std::string str2)
+      {
+        if (str1.length() != str2.length())
+          return false;
+
+        for (int i = 0; i < str1.length(); ++i)
+        {
+          if (tolower(str1[i]) != tolower(str2[i]))
+            return false;
+        }
+
+        return true;
+      }
+
       explicit TelegramMessageTrigger(const std::string &cmd, const std::string &type)
       {
         global_notify->set_on_message([cmd, type, this](RemoteData &x)
                                       {
                                         std::string s = x.cmd;
                                         // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
-                                        if (x.to !="" &&  x.to != global_notify->get_bot_name())
+
+                                        if (x.to !="" && !stringsEqual(x.to,global_notify->get_bot_name()) )
                                           return;
 
                                         if (type == "callback")

@@ -57,6 +57,8 @@ CONF_MESSAGE_ID="message_id"
 CONF_TITLE="title"
 CONF_SELECTIVE="selective"
 CONF_FORCE="force"
+CONF_URL="url"
+CONF_CACHE_TIME="cache_time"
 
 
 web_notify_ns = cg.esphome_ns.namespace("web_notify")
@@ -171,7 +173,9 @@ TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.use_id(WebNotify),
         cv.Required(CONF_MESSAGE): cv.templatable(cv.string),
         cv.Required(CONF_CALLBACK_ID): cv.templatable(cv.string),
-        cv.Optional(CONF_SHOW_ALERT): cv.templatable(cv.boolean),
+        cv.Optional(CONF_SHOW_ALERT,default=False): cv.templatable(cv.boolean),
+        cv.Optional(CONF_URL,default=""):cv.templatable(cv.string),
+        cv.Optional(CONF_CACHE_TIME,default=0):cv.templatable(cv.int_)
     }
 )
 
@@ -189,6 +193,12 @@ async def telegram_answer_callback_action_to_code(config, action_id, template_ar
     if CONF_SHOW_ALERT in config:
         template_ = await cg.templatable(config[CONF_SHOW_ALERT], args, cg.bool_)
         cg.add(var.set_show_alert(template_))
+    if CONF_URL in config:
+        template_ = await cg.templatable(config[CONF_URL], args, cg.std_string)
+        cg.add(var.set_url(template_))
+    if CONF_CACHE_TIME in config:
+        template_ = await cg.templatable(config[CONF_CACHE_TIME], args, cg.int32)
+        cg.add(var.set_cache_time(template_))
 
     return var
 
