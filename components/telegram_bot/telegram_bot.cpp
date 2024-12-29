@@ -281,8 +281,8 @@ namespace esphome
                                 else if (root["result"]["is_bot"]) 
                                 {
                                   if (root["result"]["first_name"]) {
-                                    std::string botname=root["result"]["first_name"];
-                                    //std::string botusername=root["result"]["username"];
+                                    //std::string botname=root["result"]["first_name"];
+                                    std::string botname=root["result"]["username"];
                                     global_notify->set_bot_name(botname);
                                     std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
