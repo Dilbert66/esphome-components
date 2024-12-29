@@ -148,9 +148,9 @@ namespace esphome
       if (n != std::string::npos) {
         x.cmd=x.text.substr(0,n);
         if (n1 != std::string::npos) 
-          x.to=x.text.substr(n,n1-x.cmd.length());
+          x.to=x.text.substr(n+1,n1-x.cmd.length()-1);
         else
-          x.to=x.text.substr(n);
+          x.to=x.text.substr(n+1);
       } else {
         x.cmd=x.text.substr(0,n1);
         x.to="";
