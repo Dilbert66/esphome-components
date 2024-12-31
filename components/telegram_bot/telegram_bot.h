@@ -87,6 +87,7 @@ namespace esphome
       void publish(const std::string &message, bool force = false)
       {
         SendData out;
+        out.chat_id=this->telegramUserId_;
         out.parse_mode = "html";
         out.text = message;
         out.force = force;
@@ -127,6 +128,7 @@ namespace esphome
         out.url = url;
         out.cache_time = cache_time;
         out.type = mtAnswerCallbackQuery;
+        out.chat_id=this->telegramUserId_;
         out.force = force;
         publish(out);
       }
