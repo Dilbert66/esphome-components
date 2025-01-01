@@ -1,7 +1,9 @@
 #include "vista.h"
 
 #include "Arduino.h"
-#include "esp_task_wdt.h"
+
+//#include "esp_task_wdt.h"
+
 
 Vista *pointerToVistaClass;
 
@@ -362,7 +364,7 @@ void Vista::onLrr(char cbuf[], int *idx)
 
   if (lrrSupervisor)
   {
-    delayMicroseconds(500);
+   // delayMicroseconds(500);
     vistaSerial->setBaud(4800);
     for (int x = 0; x < lcbuflen; x++)
     {
@@ -553,7 +555,7 @@ void Vista::onExp(char cbuf[])
   }
 
   uint32_t chksum = 0;
-  delayMicroseconds(500);
+  //delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   for (int x = 0; x < lcbuflen; x++)
   {
@@ -788,7 +790,7 @@ void Vista::writeChars()
       tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);
     tmpOutBuf[1] = sz + 1;
   }
-  delayMicroseconds(500);
+  //delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   vistaSerial->write(tmpOutBuf[0]);
   vistaSerial->write(tmpOutBuf[1]);
