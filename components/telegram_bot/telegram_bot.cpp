@@ -281,11 +281,9 @@ namespace esphome
                                 } 
                                 else if (root["result"]["is_bot"]) 
                                 {
-                                  if (root["result"]["first_name"]) {
-                                    //std::string botname=root["result"]["first_name"];
+                                  if (root["result"]["username"]) {
                                     std::string botname=root["result"]["username"];
                                     global_notify->set_bot_name(botname);
-                                    std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
                                     global_notify->messages.pop();
                                     global_notify->botRequest_=false;
@@ -300,14 +298,13 @@ namespace esphome
                                     global_notify->retryDelay = millis();
                                     ESP_LOGE(TAG, "Error response from server: %s", payload);
                                     outMessage om=global_notify->messages.front();
+                                    global_notify->messages.pop();
                                     if (om.type==mtGetMe) {
                                       global_notify->botRequest_=false;
                                       ESP_LOGD(TAG,"removed pending bot name request");
                                     } else
                                       ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
                                   }
-                                  // message response. Pop the message anyhow so we don't loop.
-                                  global_notify->messages.pop();
                                 }
                                 else if (root["result"][0]["update_id"])
                                 {
