@@ -121,7 +121,6 @@ namespace esphome
     if(out.selective)
       root["selective"]=out.selective; });
 
-
       outMessage omsg;
       omsg.msg = outmsg;
       omsg.type = out.type;
@@ -143,29 +142,31 @@ namespace esphome
     {
       if (x.text[0] != '/')
         return;
-      size_t n=x.text.find("@");
-      size_t n1=x.text.find(" ");
-      if (n != std::string::npos) {
-        x.cmd=x.text.substr(0,n);
-        if (n1 != std::string::npos) 
-          x.to=x.text.substr(n+1,n1-x.cmd.length()-1);
+      size_t n = x.text.find("@");
+      size_t n1 = x.text.find(" ");
+      if (n != std::string::npos)
+      {
+        x.cmd = x.text.substr(0, n);
+        if (n1 != std::string::npos)
+          x.to = x.text.substr(n + 1, n1 - x.cmd.length() - 1);
         else
-          x.to=x.text.substr(n+1);
-      } else {
-        x.cmd=x.text.substr(0,n1);
-        x.to="";
+          x.to = x.text.substr(n + 1);
+      }
+      else
+      {
+        x.cmd = x.text.substr(0, n1);
+        x.to = "";
       }
       if (n1 != std::string::npos)
         x.args = x.text.erase(0, n1 + 1);
       else
-        x.args="";
+        x.args = "";
 
-      ESP_LOGD(TAG," parse args: cmd=%s,to=%s,args=%s",x.cmd.c_str(),x.to.c_str(),x.args.c_str());
-
+      ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
     }
-/*{"ok":true,"result":{"id":2136726661,"is_bot":true,"first_name":"@VistaBot","username":"VistaKeypadbot",
-"can_join_groups":false,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}}
-*/
+    /*{"ok":true,"result":{"id":2136726661,"is_bot":true,"first_name":"@VistaBot","username":"VistaKeypadbot",
+    "can_join_groups":false,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}}
+    */
     bool WebNotify::processMessage(const char *payload)
     {
 
@@ -287,6 +288,7 @@ namespace esphome
                                     std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
                                     global_notify->messages.pop();
+                                    global_notify->botRequest_=false;
                                   }
 
                                 } 
@@ -297,14 +299,14 @@ namespace esphome
                                   {
                                     global_notify->retryDelay = millis();
                                     ESP_LOGE(TAG, "Error response from server: %s", payload);
+                                    outMessage om=global_notify->messages.front();
+                                    if (om.type==mtGetMe) {
+                                      global_notify->botRequest_=false;
+                                      ESP_LOGD(TAG,"removed pending bot name request");
+                                    } else
+                                      ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
                                   }
                                   // message response. Pop the message anyhow so we don't loop.
-                                  outMessage om=global_notify->messages.front();
-                                  if (om.type==mtGetMe) {
-                                    global_notify->botRequest_=false;
-                                    ESP_LOGD(TAG,"removed pending bot name request");
-                                  } else
-                                    ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
                                   global_notify->messages.pop();
                                 }
                                 else if (root["result"][0]["update_id"])
@@ -335,8 +337,8 @@ namespace esphome
       int *i = &((struct c_res_s *)c->fn_data)->i;
       if (ev == MG_EV_OPEN)
       {
-        c->send.c=c;
-        c->recv.c=c;
+        c->send.c = c;
+        c->recv.c = c;
         global_notify->connected = true;
         // Connection created. Store connect expiration time in c->data
         *(uint64_t *)&c->data[2] = mg_millis() + global_notify->timeout_ms;
@@ -355,7 +357,6 @@ namespace esphome
             c->is_draining = 1; // close long poll so we can send
           }
         }
-
       }
       else if (ev == MG_EV_CLOSE)
       {
@@ -365,8 +366,8 @@ namespace esphome
       }
       else if (ev == MG_EV_CONNECT)
       {
-        c->send.c=c;
-        c->recv.c=c;
+        c->send.c = c;
+        c->recv.c = c;
         if (c->data[0] == 'T')
         {
           c->is_closing = 1; // close long poll if opened so we can send
@@ -405,14 +406,14 @@ namespace esphome
             mg_printf(c, "/editMessageReplyMarkup HTTP/1.1\r\n");
           else if (outmsg.type == mtDeleteMessage)
             mg_printf(c, "/deleteMessage HTTP/1.1\r\n");
-          else if (outmsg.type==mtGetMe)
-            mg_printf(c,"/getMe HTTP/1.1\r\n");
+          else if (outmsg.type == mtGetMe)
+            mg_printf(c, "/getMe HTTP/1.1\r\n");
           else
             mg_printf(c, "/sendMessage HTTP/1.1\r\n");
           mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Content-Type: application/json\r\n");
           mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
-           //printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+          // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
         }
         else if (global_notify->enableBot_)
         {
@@ -468,7 +469,7 @@ namespace esphome
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
         String payload = String(hm->body.buf, hm->body.len);
-         //printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
+        // printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!global_notify->processMessage(payload.c_str()))
         {
           printf_P("%s", F("\nMessage parsing failed, skipped.\n"));
@@ -490,7 +491,7 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
-        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %s seconds.",global_notify->retryDelay);
+        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %s seconds.", global_notify->retryDelay);
       }
     }
 
@@ -563,7 +564,6 @@ namespace esphome
       //           core // Core where the task should run
       //       );
       // #endif
-
     }
 
     void WebNotify::loop()
@@ -577,15 +577,15 @@ namespace esphome
           ESP_LOGD(TAG, "Connecting to telegram...");
 
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
-          if (botName_=="" && !botRequest_) {
+          if (botName_ == "" && !botRequest_)
+          {
             outMessage out;
-            out.type=mtGetMe;
+            out.type = mtGetMe;
             messages.push(out);
-            botRequest_=true;
+            botRequest_ = true;
           }
-          firstRun=false;
+          firstRun = false;
         }
-
       }
 
       static unsigned long checkTime = millis();
