@@ -286,27 +286,25 @@ namespace esphome
                                     global_notify->set_bot_name(botname);
                                     std::string botusername=root["result"]["username"];
                                     ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
-                                  }
-                                  bool ok = root["ok"];
-                                  if (ok)
-                                  {
-                                    // pop last sent message from queue as it was successful
                                     global_notify->messages.pop();
                                   }
-                                  else 
-                                  {
-                                    global_notify->retryDelay = millis();
-                                     ESP_LOGE(TAG, "Error response from server on bot request: %s", payload);
-                                  }
+
                                 } 
                                 else if (global_notify->sending)
                                 {
                                   bool ok = root["ok"];
                                   if (!ok)
                                   {
+                                    global_notify->retryDelay = millis();
                                     ESP_LOGE(TAG, "Error response from server: %s", payload);
                                   }
                                   // message response. Pop the message anyhow so we don't loop.
+                                  outMessage om=global_notify->messages.front();
+                                  if (om.type==mtGetMe) {
+                                    global_notify->botRequest_=false;
+                                    ESP_LOGD(TAG,"removed pending bot name request");
+                                  } else
+                                    ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
                                   global_notify->messages.pop();
                                 }
                                 else if (root["result"][0]["update_id"])
@@ -492,7 +490,7 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
-        ESP_LOGD(TAG, "MG_EV_ERROR server");
+        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %s seconds.",global_notify->retryDelay);
       }
     }
 
@@ -576,16 +574,18 @@ namespace esphome
       {
         if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime || firstRun))
         {
-         // ESP_LOGD(TAG, "Connecting to telegram api %d, %d,%d", millis(), delayTime, retryDelay);
+          ESP_LOGD(TAG, "Connecting to telegram...");
 
           mg_http_connect(&mgr, apiHost_.c_str(), notify_fn, &c_res); // Create client connection
-          if (botName_=="") {
+          if (botName_=="" && !botRequest_) {
             outMessage out;
             out.type=mtGetMe;
             messages.push(out);
+            botRequest_=true;
           }
-          firstRun = false;
+          firstRun=false;
         }
+
       }
 
       static unsigned long checkTime = millis();

@@ -184,7 +184,8 @@ namespace esphome
         this->on_message_.add(std::move(callback));
       }
 
-      std::string telegramUserId_ = "";
+      std::string telegramUserId_{};
+      bool botRequest_{};
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
