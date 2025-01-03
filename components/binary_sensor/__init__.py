@@ -61,6 +61,7 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 from esphome.util import Registry
+from esphome.cpp_helpers import setup_entity
 
 CODEOWNERS = ["@esphome/core"]
 DEVICE_CLASSES = [
@@ -488,19 +489,15 @@ def binary_sensor_schema(
 
     return BINARY_SENSOR_SCHEMA.extend(schema)
 
-async def setup_entity(var, config):
-    """Set up generic properties of an Entity"""
-    cg.add(var.set_name(config[CONF_NAME]))
 
+async def setup_binary_sensor_core_(var, config):
+    await setup_entity(var, config)
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
     else:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))    
-
-async def setup_binary_sensor_core_(var, config):
-    await setup_entity(var, config)
 
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))
