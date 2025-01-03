@@ -2,12 +2,14 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import mqtt, web_server
+from esphome.helpers import sanitize, snake_case
 from esphome.const import (
     CONF_DEVICE_CLASS,
     CONF_ENTITY_CATEGORY,
     CONF_FILTERS,
     CONF_ICON,
     CONF_ID,
+    CONF_NAME,
     CONF_ON_VALUE,
     CONF_ON_RAW_VALUE,
     CONF_TRIGGER_ID,
@@ -22,8 +24,8 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 from esphome.cpp_generator import MockObjClass
-from esphome.cpp_helpers import setup_entity
 from esphome.util import Registry
+from esphome.cpp_helpers import setup_entity
 
 DEVICE_CLASSES = [
     DEVICE_CLASS_DATE,
@@ -32,7 +34,7 @@ DEVICE_CLASSES = [
 ]
 
 CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
+ALARM_PTR="alarm_panel::alarmPanelPtr"
 
 IS_PLATFORM_COMPONENT = True
 
@@ -145,7 +147,6 @@ TEXT_SENSOR_SCHEMA = (
                 }
             ),
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,     
-            cv.Optional(CONF_PARTITION, default=0): cv.int_,  
             cv.Optional(CONF_ON_RAW_VALUE): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
@@ -195,16 +196,16 @@ async def build_filters(config):
     return await cg.build_registry_list(FILTER_REGISTRY, config)
 
 
+
 async def setup_text_sensor_core_(var, config):
     await setup_entity(var, config)
-    
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_type_id(config.get(CONF_TYPE_ID))) 
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_type_id(config[CONF_ID].id))
-    if config.get(CONF_PARTITION):
-        cg.add(var.set_partition(config.get(CONF_PARTITION)))    
-        
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
+    else:
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))
+    
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))
 
