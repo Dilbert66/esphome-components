@@ -1,10 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.cpp_generator import MockObjClass
+from esphome.cpp_helpers import setup_entity
 from esphome import automation, core
 from esphome.automation import Condition, maybe_simple_id
 from esphome.components import mqtt, web_server
-from esphome.helpers import sanitize, snake_case
 from esphome.const import (
     CONF_DELAY,
     CONF_DEVICE_CLASS,
@@ -25,7 +25,6 @@ from esphome.const import (
     CONF_PUBLISH_INITIAL_STATE,
     CONF_STATE,
     CONF_TIMING,
-    CONF_NAME,
     CONF_TRIGGER_ID,
     CONF_MQTT_ID,
     CONF_WEB_SERVER_ID,
@@ -61,7 +60,6 @@ from esphome.const import (
 )
 from esphome.core import CORE, coroutine_with_priority
 from esphome.util import Registry
-from esphome.cpp_helpers import setup_entity
 
 CODEOWNERS = ["@esphome/core"]
 DEVICE_CLASSES = [
@@ -105,7 +103,7 @@ DEFAULT_DELAY = "1s"
 DEFAULT_TIME_OFF = "100ms"
 DEFAULT_TIME_ON = "900ms"
 CONF_TYPE_ID = "id_code"
-ALARM_PTR="alarm_panel::alarmPanelPtr"
+CONF_PARTITION="partition"
 
 
 binary_sensor_ns = cg.esphome_ns.namespace("binary_sensor")
@@ -400,6 +398,7 @@ BINARY_SENSOR_SCHEMA = (
                 mqtt.MQTTBinarySensorComponent
             ),
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
+            cv.Optional(CONF_PARTITION, default=0):cv.int_,      
             cv.Optional(CONF_PUBLISH_INITIAL_STATE): cv.boolean,
             cv.Optional(CONF_DEVICE_CLASS): validate_device_class,
             cv.Optional(CONF_FILTERS): validate_filters,
@@ -492,17 +491,17 @@ def binary_sensor_schema(
 
 async def setup_binary_sensor_core_(var, config):
     await setup_entity(var, config)
-    if config.get(CONF_TYPE_ID):
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
-    elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-    else:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_NAME]))))    
 
     if (device_class := config.get(CONF_DEVICE_CLASS)) is not None:
         cg.add(var.set_device_class(device_class))
         
         
+    if config.get(CONF_TYPE_ID):
+        cg.add(var.set_type_id(config.get(CONF_TYPE_ID)))  
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_type_id(config[CONF_ID].id))
+    if config.get(CONF_PARTITION):
+        cg.add(var.set_partition(config.get(CONF_PARTITION)))          
     if publish_initial_state := config.get(CONF_PUBLISH_INITIAL_STATE):
         cg.add(var.set_publish_initial_state(publish_initial_state))
     if not config.get(CONF_PUBLISH_INITIAL_STATE):
