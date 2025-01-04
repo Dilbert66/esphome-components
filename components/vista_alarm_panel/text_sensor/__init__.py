@@ -69,7 +69,7 @@ async def to_code(config):
 
 
 @automation.register_action(
-    "text_sensor.alarm.publish",
+    "text_sensor.template.publish",
     TextSensorPublishAction,
     cv.Schema(
         {

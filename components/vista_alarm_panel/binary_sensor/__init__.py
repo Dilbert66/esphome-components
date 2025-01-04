@@ -82,7 +82,7 @@ async def to_code(config):
 
 
 @automation.register_action(
-    "binary_sensor.alarm.publish",
+    "binary_sensor.template.publish",
     binary_sensor.BinarySensorPublishAction,
     cv.Schema(
         {
