@@ -500,7 +500,7 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
-        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %d seconds.", global_notify->retryDelay);
+        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %d seconds.", global_notify->delayTime/1000);
       }
     }
 
