@@ -22,6 +22,8 @@
 #define F(x) x
 #define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__) P
 
+
+
 class String : public std::string
 {
 public:
@@ -389,8 +391,10 @@ namespace esphome
           ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
           struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
-          if (c->tls == NULL)
+          if (c->tls == NULL) {
+            global_notify->retryDelay = millis();
             return;
+          }
         }
 
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
@@ -473,9 +477,10 @@ namespace esphome
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
         String payload = String(hm->body.buf, hm->body.len);
-        // printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
-        if (!global_notify->processMessage(payload.c_str()))
+       //  printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
+        if (!payload.length() || !global_notify->processMessage(payload.c_str()))
         {
+          global_notify->retryDelay = millis();
           printf_P("%s", F("\nMessage parsing failed, skipped.\n"));
           int update_id_first_digit = 0;
           int update_id_last_digit = 0;
@@ -495,7 +500,7 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay = millis();
-        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %s seconds.", global_notify->retryDelay);
+        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %d seconds.", global_notify->retryDelay);
       }
     }
 
@@ -525,6 +530,7 @@ namespace esphome
 
     void WebNotify::setup()
     {
+
       ESP_LOGCONFIG(TAG, "Setting up web client...");
 
       if (this->chat_id_f_.has_value())
@@ -572,11 +578,11 @@ namespace esphome
 
     void WebNotify::loop()
     {
-      static bool firstRun = true;
+      //static bool firstRun = true;
 
       if (network::is_connected())
       {
-        if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime || firstRun))
+        if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime ))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
 
@@ -588,7 +594,7 @@ namespace esphome
             messages.push(out);
             botRequest_ = true;
           }
-          firstRun = false;
+         // firstRun = false;
         }
       }
 
@@ -597,7 +603,7 @@ namespace esphome
       {
         checkTime = millis();
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-        ESP_LOGD(TAG, "Free memory: %5d", (uint16_t)uxHighWaterMark);
+        ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
 
       mg_mgr_poll(&mgr, 0);
