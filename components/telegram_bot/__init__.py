@@ -59,6 +59,7 @@ CONF_SELECTIVE="selective"
 CONF_FORCE="force"
 CONF_URL="url"
 CONF_CACHE_TIME="cache_time"
+CONF_SKIP_FIRST="skip_first"
 
 
 web_notify_ns = cg.esphome_ns.namespace("web_notify")
@@ -87,7 +88,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ENABLESEND,default=True): cv.boolean,
             cv.Optional(CONF_ALLOWED_IDS):cv.ensure_list(cv.string_strict),
             cv.Optional(CONF_BOT_NAME,default=""):cv.string_strict,
-
+            cv.Optional(CONF_SKIP_FIRST,default=False):cv.boolean,
             cv.Optional(CONF_ON_MESSAGE): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(TelegramMessageTrigger),
@@ -312,6 +313,7 @@ async def to_code(config):
     if CONF_ENABLESEND in config and config[CONF_ENABLESEND]:
         cg.add(var.set_send_enable(config[CONF_ENABLESEND]))
     cg.add(var.set_bot_name(config[CONF_BOT_NAME]))
+    cg.add(var.set_skip_first(config[CONF_SKIP_FIRST]))
     
     if CONF_CHAT_ID in config and config[CONF_CHAT_ID]:
         if (cg.is_template(config[CONF_CHAT_ID])):

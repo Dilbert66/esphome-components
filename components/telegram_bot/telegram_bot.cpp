@@ -164,9 +164,7 @@ namespace esphome
 
       ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
     }
-    /*{"ok":true,"result":{"id":2136726661,"is_bot":true,"first_name":"@VistaBot","username":"VistaKeypadbot",
-    "can_join_groups":false,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}}
-    */
+
     bool WebNotify::processMessage(const char *payload)
     {
 
@@ -176,11 +174,13 @@ namespace esphome
                                 {
 
                                   int update_id = root["result"][0]["update_id"];
-
+                                  // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
+                                  if (global_notify->skipFirst_ && global_notify->lastMsgReceived == 0) {
+                                     std::string to=root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
+                                     global_notify->publish(to,"First cmd to bot ignored after restart",1);
+                                     global_notify->lastMsgReceived = update_id;
+                                  }
                                   update_id = update_id + 1;
-                                  // we ignore the first message on initial start to avoid a reboot loop
-                                  // if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
-
                                   if (global_notify->lastMsgReceived != update_id)
                                   {
 
@@ -201,7 +201,7 @@ namespace esphome
                                     x.args = "";
                                     if (!global_notify->isAllowed(x.chat_id))
                                     {
-                                      MG_INFO(("Chat id %s not allowed to send to bot", x.chat_id.c_str()));
+                                      ESP_LOGE(TAG,"Chat id %s not allowed to send to bot", x.chat_id.c_str());
                                       return true;
                                     }
                                     global_notify->parseArgs(x);
@@ -233,8 +233,13 @@ namespace esphome
                                 {
                                   int update_id = root["result"][0]["update_id"];
                                   update_id = update_id + 1;
-                                  // we ignore the first message on initial start to avoid a reboot loop
-                                  //  if (global_notify->lastMsgReceived == 0)  global_notify->lastMsgReceived = update_id;
+                                  // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
+                 
+                                  if (global_notify->skipFirst_ && global_notify->lastMsgReceived == 0) {
+                                     std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
+                                     global_notify->publish(to,"First cmd to bot ignored after restart",1);
+                                  }
+                                  
 
                                   if (global_notify->lastMsgReceived != update_id)
                                   {
@@ -246,7 +251,6 @@ namespace esphome
                                       x.is_first_cmd = false;
                                     global_notify->lastMsgReceived = update_id;
                                     x.sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
-
                                     x.text = root["result"][0]["message"]["text"].as<std::string>();
                                     x.chat_id = root["result"][0]["message"]["chat"]["id"].as<std::string>();
                                     x.date = root["result"][0]["message"]["date"].as<std::string>();
@@ -256,7 +260,7 @@ namespace esphome
                                     x.args = "";
                                     if (!global_notify->isAllowed(x.chat_id))
                                     {
-                                      MG_INFO(("Chat id %s not allowed to send to bot", x.chat_id.c_str()));
+                                      ESP_LOGE("Chat id %s not allowed to send to bot", x.chat_id.c_str());
                                       return true;
                                     }
                                     global_notify->parseArgs(x);
@@ -265,9 +269,12 @@ namespace esphome
                                 }
                                 else if (root["result"]["message_id"])
                                 {
-
                                   bool ok = root["ok"];
-                                  std::string id = root["result"]["message_id"];
+                                  // if (root["result"]["from"]["is_bot"]) {
+                                  //   std::string botname=root["result"]["from"]["username"];
+                                  //   global_notify->set_bot_name(botname);
+                                  //   ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
+                                  // }
                                   if (ok)
                                   {
                                     // pop last sent message from queue as it was successful

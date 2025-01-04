@@ -109,7 +109,7 @@ namespace esphome
         publish(out);
       };
 
-      void publish(const std::string &chat_id, const std::string &message, bool force)
+      void publish(const std::string &chat_id, const std::string &message, bool force=false)
       {
         SendData out;
         out.chat_id = chat_id;
@@ -172,9 +172,11 @@ namespace esphome
       void set_api_host(std::string &&api_host) { apiHost_ = "https://" + std::move(api_host); }
       void set_bot_enable(bool enable) { enableBot_ = enable; }
       void set_send_enable(bool enable) { enableSend_ = enable; }
+      void set_skip_first(bool skip) {skipFirst_= skip;}
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
       std::string get_bot_name() { return botName_; }
+      
       using on_message_callback_t = void(RemoteData &x);
 
       CallbackManager<on_message_callback_t> on_message_;
@@ -185,14 +187,17 @@ namespace esphome
       }
 
       std::string telegramUserId_{};
-      bool botRequest_{};
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
 
     private:
+
       struct mg_mgr mgr;
       static void notify_fn(struct mg_connection *c, int ev, void *ev_data);
+
+      bool botRequest_{};
+      bool skipFirst_{};
 
       struct outMessage
       {
