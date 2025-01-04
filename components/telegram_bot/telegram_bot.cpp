@@ -578,11 +578,11 @@ namespace esphome
 
     void WebNotify::loop()
     {
-      //static bool firstRun = true;
+      static bool firstRun = true;
 
       if (network::is_connected())
       {
-        if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime ))
+        if (!connected && ((enableBot_ && botId_.length() > 0) || (messages.size() && enableSend_)) && ((millis() - retryDelay) > delayTime  || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
 
@@ -594,7 +594,7 @@ namespace esphome
             messages.push(out);
             botRequest_ = true;
           }
-         // firstRun = false;
+          firstRun = false;
         }
       }
 
