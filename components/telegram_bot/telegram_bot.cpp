@@ -481,7 +481,7 @@ namespace esphome
         if (!payload.length() || !global_notify->processMessage(payload.c_str()))
         {
           global_notify->retryDelay = millis();
-          printf_P("%s", F("\nMessage parsing failed, skipped.\n"));
+          ESP_LOGE(TAG,"Message parsing failed, skipped.");
           int update_id_first_digit = 0;
           int update_id_last_digit = 0;
           for (int a = 0; a < 3; a++)
