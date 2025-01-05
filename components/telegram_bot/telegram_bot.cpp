@@ -20,7 +20,7 @@
 #include <StreamString.h>
 #else
 #define F(x) x
-#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__) P
+#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
 
 
@@ -28,7 +28,7 @@ class String : public std::string
 {
 public:
   String() : std::string() {}
-  String(const char *&p, size_t &s) : std::string(p, s) {}
+  String(const char *p, size_t &s) : std::string(p, s) {}
 
   int indexOf(char ch, unsigned int fromIndex) const
   {
@@ -527,6 +527,8 @@ namespace esphome
     //       vTaskDelete(NULL);
     //     }
     // #endif
+
+ 
 
     void WebNotify::setup()
     {

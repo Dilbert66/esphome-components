@@ -67,13 +67,13 @@ namespace esphome
       std::string url;
     };
 
+
     struct c_res_s
     {
       int i = 0;
       struct mg_connection *c;
     };
-    // #undef CONFIG_ARDUINO_LOOP_STACK_SIZE
-    // #define CONFIG_ARDUINO_LOOP_STACK_SIZE     (16*1024)
+
     class WebNotify : public Controller, public Component
     {
     public:

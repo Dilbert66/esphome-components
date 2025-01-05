@@ -302,8 +302,10 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-    cg.add_global(cg.RawStatement(stack))
+    if CORE.using_arduino:
+        stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement(stack))
+    #if CORE.using_esp_idf:
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:
