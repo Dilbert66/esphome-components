@@ -300,7 +300,8 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    #cg.add(cg.RawStatement("SET_LOOP_TASK_STACK_SIZE(32 * 1024);"))
+
+    cg.add_global(cg.RawStatement("SET_LOOP_TASK_STACK_SIZE(16 * 1024);"))
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:
