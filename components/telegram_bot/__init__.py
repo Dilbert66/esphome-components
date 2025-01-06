@@ -93,7 +93,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ALLOWED_IDS):cv.ensure_list(cv.string_strict),
             cv.Optional(CONF_BOT_NAME,default=""):cv.string_strict,
             cv.Optional(CONF_SKIP_FIRST,default=False):cv.boolean,
-            cv.Optional(CONF_STACK_SIZE,default=16):cv.int_,
+            cv.Optional(CONF_STACK_SIZE):cv.int_,
             cv.Optional(CONF_ON_MESSAGE): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(TelegramMessageTrigger),
@@ -306,10 +306,16 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 @coroutine_with_priority(40.0)
 async def to_code(config):
     if CORE.using_arduino:
-        stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+        if CONF_STACK_SIZE in config and CONF_STACK_SIZE:
+            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
         cg.add_global(cg.RawStatement(stack))
     if CORE.using_esp_idf: 
-        CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = config[CONF_STACK_SIZE] * 1024
+        if CONF_STACK_SIZE in config and CONF_STACK_SIZE:
+            stack=config[CONF_STACK_SIZE]
+        else:
+            stack=6
+        CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:
