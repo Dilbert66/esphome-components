@@ -307,11 +307,11 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 async def to_code(config):
     if CORE.using_arduino:
         stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and CONF_STACK_SIZE:
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
         cg.add_global(cg.RawStatement(stack))
     if CORE.using_esp_idf: 
-        if CONF_STACK_SIZE in config and CONF_STACK_SIZE:
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack=config[CONF_STACK_SIZE]
         else:
             stack=6
