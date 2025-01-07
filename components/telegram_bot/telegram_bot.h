@@ -85,6 +85,17 @@ namespace esphome
       void dump_config() override;
       void publish(SendData &out);
 
+      void publish(const std::string &chat_id, const std::string &message, bool force)
+      {
+        SendData out;
+        out.chat_id = chat_id;
+        out.parse_mode = "html";
+        out.text = message;
+        out.force = force;
+        out.type = mtSendMessage;
+        publish(out);
+      }
+      
       void publish(const std::string &message, bool force = false)
       {
         SendData out;
@@ -92,6 +103,7 @@ namespace esphome
         out.parse_mode = "html";
         out.text = message;
         out.force = force;
+        out.type = mtSendMessage;
         publish(out);
       }
 
@@ -110,15 +122,7 @@ namespace esphome
         publish(out);
       };
 
-      void publish(const std::string &chat_id, const std::string &message, bool force=false)
-      {
-        SendData out;
-        out.chat_id = chat_id;
-        out.parse_mode = "html";
-        out.text = message;
-        out.force = force;
-        publish(out);
-      }
+
 
       void answerCallbackQuery(const std::string &message, const std::string &callback_id, bool show_alert = false, std::string url = "", int cache_time = 0, bool force = false)
       {

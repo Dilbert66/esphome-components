@@ -311,10 +311,9 @@ async def to_code(config):
             stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
         cg.add_global(cg.RawStatement(stack))
     if CORE.using_esp_idf: 
+        stack=6
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack=config[CONF_STACK_SIZE]
-        else:
-            stack=6
         CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
