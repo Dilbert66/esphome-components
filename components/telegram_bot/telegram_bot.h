@@ -218,7 +218,7 @@ namespace esphome
       struct c_res_s c_res;
 
       std::string apiHost_ = "https://api.telegram.org/";
-      const uint64_t timeout_ms = 15000; // Connect timeout in milliseconds
+      //const uint32_t timeout_ms = 15000; // Connect timeout in milliseconds
       int lastMsgReceived = 0;
       std::string botId_ = "";
       std::string botName_ = "";
