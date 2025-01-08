@@ -347,7 +347,7 @@ namespace esphome
         c->recv.c = c;
         global_notify->connected = true;
         // Connection created. Store connect expiration time in c->data
-       // *(uint64_t *)&c->data[2] = mg_millis() + global_notify->timeout_ms;
+        *(uint64_t *)&c->data[2] = mg_millis() + global_notify->timeout_ms;
       }
       else if (ev == MG_EV_POLL)
       {
@@ -355,6 +355,7 @@ namespace esphome
          if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2])
          {
            mg_error(c, "Connect timeout");
+           
          }
         if (c->data[0] == 'T')
         {
