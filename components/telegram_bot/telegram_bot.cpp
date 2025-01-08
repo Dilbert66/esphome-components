@@ -499,8 +499,9 @@ namespace esphome
       }
       else if (ev == MG_EV_ERROR)
       {
+        char * buf=(char *) ev_data;
         global_notify->retryDelay = millis();
-        ESP_LOGE(TAG, "MG_EV_ERROR occured. Retrying in %d seconds.", global_notify->delayTime/1000);
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.",c->id,c->fd,buf, global_notify->delayTime/1000);
       }
     }
 
