@@ -31,7 +31,9 @@
 
 #ifdef USE_ARDUINO
 #include <StreamString.h>
+#if not defined(ESP8266)
 #include <Update.h>
+#endif
 #endif
 
 namespace esphome
@@ -261,8 +263,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
                                 root["partitions"] = this->partitions_;
                                 root["keypad"] = this->show_keypad_;
                                 root["crypt"] = this->crypt_;
-                                root["cid"] = cid;
-                              });
+                                root["cid"] = cid; });
     }
 
     const std::string WebServer::escape_json(const char *input)
@@ -312,7 +313,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     void WebServer::setup()
     {
-      ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
+      // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
       this->setup_controller(this->include_internal_);
 
       mg_mgr_init(&mgr);
@@ -623,8 +624,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       return json::build_json([obj, value, start_config](JsonObject root)
                               {
                                 set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
-                                root["id_code"] = obj->get_object_id();
-                              });
+                                root["id_code"] = obj->get_object_id(); });
     }
 
     void WebServer::handle_binary_sensor_request(mg_connection *c, JsonObject doc)
@@ -1876,7 +1876,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
       if (ehm != hash)
       {
-        ESP_LOGD(TAG, PSTR("ehm [%s] does not match hash [%s]"), ehm.c_str(), hash.c_str());
+        ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
         return "";
       }
       int encrypted_length = base64_decode(std::string(data), data_decoded, strlen(data));
@@ -1917,7 +1917,9 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       else if (ev == MG_EV_CLOSE)
       {
         ESP_LOGD(TAG, "Connection %d closed", c->id);
+#if defined(ESP32)
         ESP_LOGD(TAG, "Current Heap values: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+#endif
         // srv->sessionTokens.erase(c);
       }
       else if (ev == MG_EV_ACCEPT)
@@ -1935,8 +1937,10 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
         mg_tls_init(c, &opts);
     */
-        ESP_LOGD(TAG, PSTR("New connection %d accepted"), c->id);
+        ESP_LOGD(TAG, "New connection %d accepted", c->id);
+#if defined(ESP32)
         ESP_LOGD(TAG, "Current Heap values: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+#endif
       }
       else if (ev == MG_EV_WS_MSG)
       {
@@ -2149,6 +2153,11 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
           c->send.c = c;
           srv->handleWebRequest(c, hm);
         }
+      }
+      else if (ev == MG_EV_ERROR)
+      {
+        char *buf = (char *)ev_data;
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s.", c->id, c->fd, buf);
       }
     }
 
@@ -2377,7 +2386,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       this->push(OTA, ebuf.c_str());
 #endif
     }
-
+#if defined(ESP32)
     bool WebServer::handleUpload(size_t bodylen, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
     {
       char buf[100];
@@ -2458,6 +2467,6 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 #endif
       return true;
     }
-
+#endif
   } // namespace web_server
 } // namespace esphome
