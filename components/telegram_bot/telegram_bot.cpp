@@ -8,9 +8,8 @@
 #include "ArduinoJson.h"
 #include <cstdlib>
 
-// #define USETASK
-// #define ASYNC_CORE 1
-
+//#define USETASK
+//#define ASYNC_CORE 1
 // #if defined(ESP32) && defined(USETASK)
 // #include <esp_chip_info.h>
 // #include <esp_task_wdt.h>
@@ -389,7 +388,7 @@ namespace esphome
 
         if (mg_url_is_ssl(global_notify->apiHost_.c_str()))
         {
-          ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+          ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
           struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
           if (c->tls == NULL) {
@@ -397,8 +396,7 @@ namespace esphome
             return;
           }
         }
-
-        ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+        ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
 
         if (global_notify->messages.size())
         {
@@ -500,9 +498,8 @@ namespace esphome
       }
       else if (ev == MG_EV_ERROR)
       {
-        char * buf=(char *) ev_data;
         global_notify->retryDelay = millis();
-        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.",c->id,c->fd,buf, global_notify->delayTime/1000);
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.",c->id,c->fd,(char *) ev_data, global_notify->delayTime/1000);
       }
     }
 
@@ -570,7 +567,7 @@ namespace esphome
       //       xTaskCreatePinnedToCore(
       //           this->telegramTask, // Function to implement the task
       //           "telegramTask",     // Name of the task
-      //           3200,               // Stack size in words
+      //           16000,               // Stack size
       //           (void *)this,       // Task input parameter
       //           12,                 // Priority of the task
       //           &xHandle            // Task handle.
@@ -609,8 +606,9 @@ namespace esphome
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
-
+//#if !defined(USETASK)
       mg_mgr_poll(&mgr, 0);
+//#endif
     }
 
     void WebNotify::dump_config()

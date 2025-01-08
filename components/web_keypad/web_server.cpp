@@ -2156,8 +2156,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       }
       else if (ev == MG_EV_ERROR)
       {
-        char *buf = (char *)ev_data;
-        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s.", c->id, c->fd, buf);
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s.", c->id, c->fd, (char *) ev_data);
       }
     }
 
