@@ -1256,7 +1256,7 @@ void vistaECPHome::setup()
           vista.connected = true;
         }
 
-        if (millis() - dataTime > 15000)
+        if (millis() - dataTime > 60000)
         {
           dataTime = millis();
           ESP_LOGE(TAG, "Data timeout. Is the panel connected?");
