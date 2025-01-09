@@ -431,7 +431,8 @@ void mg_error(struct mg_connection *c, const char *fmt, ...) {
   va_start(ap, fmt);
   mg_vsnprintf(buf, sizeof(buf), fmt, &ap);
   va_end(ap);
-  MG_ERROR(("%lu %ld %s", c->id, c->fd, buf));
+  //Dilbert66 removed as it duplicates messages on calling program
+  //MG_ERROR(("%lu %ld %s", c->id, c->fd, buf));
   c->is_closing = 1;             // Set is_closing before sending MG_EV_CALL
   mg_call(c, MG_EV_ERROR, buf);  // Let user handler override it
 }
@@ -2564,7 +2565,9 @@ int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
     } else {
       ok = 0;
       //dilbert66
+      #if defined(ESP32)
       MG_ERROR(("OOM resize error: %lld->%lld, maxfree:%5d",(uint64_t) io->size,(uint64_t) new_size, heap_caps_get_largest_free_block(8)));    
+      #endif
       //MG_ERROR(("%lld->%lld", (uint64_t) io->size, (uint64_t) new_size));
     }
   }
@@ -4480,6 +4483,7 @@ static void rx_arp(struct mg_tcpip_if *ifp, struct pkt *pkt) {
     }
   }
 }
+
 
 static void rx_icmp(struct mg_tcpip_if *ifp, struct pkt *pkt) {
   // MG_DEBUG(("ICMP %d", (int) len));
@@ -7830,8 +7834,14 @@ struct mg_connection *mg_sntp_connect(struct mg_mgr *mgr, const char *url,
 #endif
 
 union usa {
+  //dilbert66
+  #ifdef ESP8266x
+  struct mg_sockaddr sa;
+  struct mg_sockaddr_in sin;
+  #else
   struct sockaddr sa;
   struct sockaddr_in sin;
+  #endif
 #if MG_ENABLE_IPV6
   struct sockaddr_in6 sin6;
 #endif
@@ -17023,6 +17033,11 @@ bool mg_path_is_sane(const struct mg_str path) {
 }
 
 #if MG_ENABLE_CUSTOM_MILLIS
+//dilbert66
+extern const unsigned long millis();
+uint64_t mg_millis(void) {
+  return millis();
+}
 #else
 uint64_t mg_millis(void) {
 #if MG_ARCH == MG_ARCH_WIN32
