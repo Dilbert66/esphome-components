@@ -168,18 +168,20 @@ namespace esphome
       void set_chat_id(std::string &&chat_id)
       {
         telegramUserId_ = chat_id;
-        if (telegramUserId_ != "" && std::find(allowed_chat_ids.begin(), allowed_chat_ids.end(), telegramUserId_) == allowed_chat_ids.end())
-          allowed_chat_ids.push_back(telegramUserId_);
+        if (telegramUserId_ != "" && std::find(allowed_chat_ids_.begin(), allowed_chat_ids_.end(), telegramUserId_) == allowed_chat_ids_.end())
+          allowed_chat_ids_.push_back(telegramUserId_);
       }
       std::string get_chat_id() { return telegramUserId_; }
       std::string get_bot_id() { return botId_; }
-      void add_chatid(std::string &&chat_id) { allowed_chat_ids.push_back(std::move(chat_id)); }
+      void add_chatid(std::string &&chat_id) { allowed_chat_ids_.push_back(std::move(chat_id)); }
       void set_api_host(std::string &&api_host) { apiHost_ = "https://" + std::move(api_host); }
       void set_bot_enable(bool enable) { enableBot_ = enable; }
       void set_send_enable(bool enable) { enableSend_ = enable; }
       void set_skip_first(bool skip) {skipFirst_= skip;}
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
+      bool get_connect_error() { return connectError_;}
+
       std::string get_bot_name() { return botName_; }
       
       using on_message_callback_t = void(RemoteData &x);
@@ -198,7 +200,7 @@ namespace esphome
 
     private:
 
-      struct mg_mgr mgr;
+      struct mg_mgr mgr_;
       static void notify_fn(struct mg_connection *c, int ev, void *ev_data);
 
       bool botRequest_{};
@@ -215,24 +217,23 @@ namespace esphome
       //       static void telegramTask(void *args);
       // #endif
 
-      struct c_res_s c_res;
+      struct c_res_s c_res_;
 
       std::string apiHost_ = "https://api.telegram.org/";
       //const uint32_t timeout_ms = 15000; // Connect timeout in milliseconds
-      int lastMsgReceived = 0;
+      int lastMsgReceived_ = 0;
       std::string botId_ = "";
       std::string botName_ = "";
 
-      uint8_t inMsgIdx, outMsgIdx;
-      const uint8_t msgQueueSize = 10;
       bool enableBot_ = false;
       bool enableSend_ = true;
-      bool sending = false;
-      bool connected = false;
-      unsigned long retryDelay = 0;
-      int delayTime = 15000; // ms
-      std::queue<outMessage> messages;
-      std::vector<std::string> allowed_chat_ids;
+      bool sending_ = false;
+      bool connected_ = false;
+      bool connectError_=false;
+      unsigned long retryDelay_ = 0;
+      int delayTime_ = 15000; // ms
+      std::queue<outMessage> messages_;
+      std::vector<std::string> allowed_chat_ids_;
       bool isAllowed(std::string chat_id);
       void parseArgs(RemoteData &x);
       bool processMessage(const char *payload);

@@ -359,7 +359,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       {
         char addr[50];
         sprintf(addr, "http://0.0.0.0:%d", port_);
-        printf("\nStarting web server on %s:%d\n", network::get_use_address().c_str(), port_);
+        ESP_LOGD(TAG,"Starting web server on %s:%d", network::get_use_address().c_str(), port_);
         if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL)
         {
           printf("Cannot listen on address..");
