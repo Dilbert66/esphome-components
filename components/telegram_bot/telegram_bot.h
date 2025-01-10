@@ -27,7 +27,8 @@ namespace esphome
       mtAnswerCallbackQuery,
       mtEditMessageReplyMarkup,
       mtDeleteMessage,
-      mtGetMe
+      mtGetMe,
+      mtSwitch
     };
 
     struct RemoteData
@@ -65,6 +66,7 @@ namespace esphome
       bool force = false;
       int cache_time;
       std::string url;
+      void *f{};
     };
 
 
@@ -121,6 +123,23 @@ namespace esphome
         out.type = mtSendMessage;
         publish(out);
       };
+
+      void turnon_switch(void *f) {
+        SendData out;
+        out.type=mtSwitch;
+        out.f=f;
+        out.selective=true;
+        publish(out);
+      }
+
+      void turnoff_switch(void *f) {
+        SendData out;
+        out.type=mtSwitch;
+        out.f=f;
+        out.selective=false;
+        publish(out);
+      }
+      
 
 
 
@@ -181,6 +200,7 @@ namespace esphome
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
       bool get_connect_error() { return connectError_;}
+      uint8_t get_queue_size() { return messages_.size();}
 
       std::string get_bot_name() { return botName_; }
       
@@ -209,6 +229,8 @@ namespace esphome
       struct outMessage
       {
         std::string msg;
+        void *f;
+        bool state;
         msgtype type;
       };
 

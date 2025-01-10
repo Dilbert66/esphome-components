@@ -6,22 +6,21 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include "ArduinoJson.h"
+#include "esphome/components/switch/switch.h"
 #include <cstdlib>
 
-//#define USETASK
-//#define ASYNC_CORE 1
-// #if defined(ESP32) && defined(USETASK)
-// #include <esp_chip_info.h>
-// #include <esp_task_wdt.h>
-// #endif
+// #define USETASK
+// #define ASYNC_CORE 1
+//  #if defined(ESP32) && defined(USETASK)
+//  #include <esp_chip_info.h>
+//  #include <esp_task_wdt.h>
+//  #endif
 
 #ifdef USE_ARDUINO
 #include <StreamString.h>
 #else
 #define F(x) x
 #define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
-
-
 
 class String : public std::string
 {
@@ -125,6 +124,8 @@ namespace esphome
       outMessage omsg;
       omsg.msg = outmsg;
       omsg.type = out.type;
+      omsg.f=out.f;
+      omsg.state=out.selective;
       messages_.push(omsg);
     }
 
@@ -354,7 +355,7 @@ namespace esphome
         //  if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2])
         //  {
         //    mg_error(c, "Connect timeout");
-           
+
         //  }
         if (c->data[0] == 'T')
         {
@@ -381,7 +382,6 @@ namespace esphome
           return;
         }
 
-
         // MG_INFO(("got ev connect"));
         // Connected to server. Extract host name from URL
         struct mg_str host = mg_url_host(global_notify->apiHost_.c_str());
@@ -391,14 +391,15 @@ namespace esphome
           ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
           struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
-          if (c->tls == NULL) {
-            mg_error(c,"TLS init error");
+          if (c->tls == NULL)
+          {
+            mg_error(c, "TLS init error");
             return;
           }
         }
         c->data[0] = 'T';
         global_notify->connected_ = true;
-        global_notify->connectError_=false;
+        global_notify->connectError_ = false;
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
 
         if (global_notify->messages_.size())
@@ -407,23 +408,34 @@ namespace esphome
 
           outMessage outmsg = global_notify->messages_.front();
 
-          mg_printf(c, "POST /bot%s", global_notify->botId_.c_str());
-          if (outmsg.type == mtEditMessageText)
-            mg_printf(c, "/editMessageText HTTP/1.1\r\n");
-          else if (outmsg.type == mtAnswerCallbackQuery)
-            mg_printf(c, "/answerCallbackQuery HTTP/1.1\r\n");
-          else if (outmsg.type == mtEditMessageReplyMarkup)
-            mg_printf(c, "/editMessageReplyMarkup HTTP/1.1\r\n");
-          else if (outmsg.type == mtDeleteMessage)
-            mg_printf(c, "/deleteMessage HTTP/1.1\r\n");
-          else if (outmsg.type == mtGetMe)
-            mg_printf(c, "/getMe HTTP/1.1\r\n");
+          if (outmsg.type == mtSwitch)
+          {
+            global_notify->messages_.pop();
+            if (outmsg.state)
+              static_cast<switch_::Switch*>(outmsg.f)->turn_on();
+            else
+              static_cast<switch_::Switch*>(outmsg.f)->turn_off();
+          }
           else
-            mg_printf(c, "/sendMessage HTTP/1.1\r\n");
-          mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
-          mg_printf(c, "Content-Type: application/json\r\n");
-          mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
-          // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+          {
+            mg_printf(c, "POST /bot%s", global_notify->botId_.c_str());
+            if (outmsg.type == mtEditMessageText)
+              mg_printf(c, "/editMessageText HTTP/1.1\r\n");
+            else if (outmsg.type == mtAnswerCallbackQuery)
+              mg_printf(c, "/answerCallbackQuery HTTP/1.1\r\n");
+            else if (outmsg.type == mtEditMessageReplyMarkup)
+              mg_printf(c, "/editMessageReplyMarkup HTTP/1.1\r\n");
+            else if (outmsg.type == mtDeleteMessage)
+              mg_printf(c, "/deleteMessage HTTP/1.1\r\n");
+            else if (outmsg.type == mtGetMe)
+              mg_printf(c, "/getMe HTTP/1.1\r\n");
+            else
+              mg_printf(c, "/sendMessage HTTP/1.1\r\n");
+            mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
+            mg_printf(c, "Content-Type: application/json\r\n");
+            mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
+            // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+          }
         }
         else if (global_notify->enableBot_)
         {
@@ -479,11 +491,11 @@ namespace esphome
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
         String payload = String(hm->body.buf, hm->body.len);
-       //  printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
+        //  printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!payload.length() || !global_notify->processMessage(payload.c_str()))
         {
           global_notify->retryDelay_ = millis();
-          ESP_LOGE(TAG,"Message parsing failed, skipped.");
+          ESP_LOGE(TAG, "Message parsing failed, skipped.");
           int update_id_first_digit = 0;
           int update_id_last_digit = 0;
           for (int a = 0; a < 3; a++)
@@ -502,8 +514,8 @@ namespace esphome
       else if (ev == MG_EV_ERROR)
       {
         global_notify->retryDelay_ = millis();
-        global_notify->connectError_=true;
-        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.",c->id,c->fd,(char *) ev_data, global_notify->delayTime_/1000);
+        global_notify->connectError_ = true;
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.", c->id, c->fd, (char *)ev_data, global_notify->delayTime_ / 1000);
       }
     }
 
@@ -530,8 +542,6 @@ namespace esphome
     //       vTaskDelete(NULL);
     //     }
     // #endif
-
- 
 
     void WebNotify::setup()
     {
@@ -587,7 +597,7 @@ namespace esphome
 
       if (network::is_connected())
       {
-        if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_  || firstRun))
+        if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_ || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
 
@@ -610,9 +620,9 @@ namespace esphome
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
-//#if !defined(USETASK)
+      // #if !defined(USETASK)
       mg_mgr_poll(&mgr_, 0);
-//#endif
+      // #endif
     }
 
     void WebNotify::dump_config()
