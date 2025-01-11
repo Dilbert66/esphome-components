@@ -66,7 +66,6 @@ namespace esphome
       bool force = false;
       int cache_time;
       std::string url;
-      void *f{};
     };
 
 
@@ -124,20 +123,16 @@ namespace esphome
         publish(out);
       };
 
-      void turnon_switch(void *f) {
-        SendData out;
+      void turnon_switch(void *f,bool state=true) {
+        outMessage out;
         out.type=mtSwitch;
         out.f=f;
-        out.selective=true;
-        publish(out);
+        out.state=state;
+        messages_.push(out);
       }
 
       void turnoff_switch(void *f) {
-        SendData out;
-        out.type=mtSwitch;
-        out.f=f;
-        out.selective=false;
-        publish(out);
+        turnon_switch(f,false);
       }
       
 

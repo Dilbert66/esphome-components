@@ -124,8 +124,6 @@ namespace esphome
       outMessage omsg;
       omsg.msg = outmsg;
       omsg.type = out.type;
-      omsg.f=out.f;
-      omsg.state=out.selective;
       messages_.push(omsg);
     }
 
