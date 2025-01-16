@@ -249,6 +249,8 @@ namespace esphome
       bool connectError_=false;
       unsigned long retryDelay_ = 0;
       int delayTime_ = 15000; // ms
+      uint8_t pollTimeout_=120; //seconds
+      unsigned long connectStart_;
       std::queue<outMessage> messages_;
       std::vector<std::string> allowed_chat_ids_;
       bool isAllowed(std::string chat_id);

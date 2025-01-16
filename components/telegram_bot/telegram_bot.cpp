@@ -357,10 +357,11 @@ namespace esphome
         //  }
         if (c->data[0] == 'T')
         {
-          if (!global_notify->sending_ && !c->is_draining && !c->is_closing && (!global_notify->enableBot_ || global_notify->messages_.size()))
+          if (!global_notify->sending_ && !c->is_draining && !c->is_closing &&( (!global_notify->enableBot_ || global_notify->messages_.size())) || ( (millis() -  global_notify->connectStart_) > (global_notify->pollTimeout_*1000) ))
           {
             c->is_draining = 1; // close long poll so we can send
-          }
+          } 
+ 
         }
       }
       else if (ev == MG_EV_CLOSE)
@@ -398,6 +399,7 @@ namespace esphome
         c->data[0] = 'T';
         global_notify->connected_ = true;
         global_notify->connectError_ = false;
+        global_notify->connectStart_=millis();
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
 
         if (global_notify->messages_.size())
@@ -439,7 +441,7 @@ namespace esphome
         {
           global_notify->sending_ = false;
           mg_printf(c, "GET /bot%s", global_notify->botId_.c_str());
-          mg_printf(c, "/getUpdates?limit=1&timeout=120&offset=%d HTTP/1.1\r\n", global_notify->lastMsgReceived_);
+          mg_printf(c, "/getUpdates?limit=1&timeout=%d&offset=%d HTTP/1.1\r\n", global_notify->pollTimeout_,global_notify->lastMsgReceived_);
           mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Accept: application/json\r\n");
           mg_printf(c, "Cache-Control: no-cache\r\n\r\n");
@@ -592,13 +594,11 @@ namespace esphome
     void WebNotify::loop()
     {
       static bool firstRun = true;
-
       if (network::is_connected())
       {
         if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_ || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
-
           mg_http_connect(&mgr_, apiHost_.c_str(), notify_fn, &c_res_); // Create client connection
           if (botName_ == "" && !botRequest_)
           {
