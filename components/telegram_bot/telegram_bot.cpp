@@ -350,18 +350,21 @@ namespace esphome
       else if (ev == MG_EV_POLL)
       {
 
-        //  if ((c->is_connecting || c->is_resolving) && mg_millis() > *(uint64_t *)&c->data[2])
-        //  {
-        //    mg_error(c, "Connect timeout");
-
-        //  }
         if (c->data[0] == 'T')
         {
-          if (!global_notify->sending_ && !c->is_draining && !c->is_closing &&( (!global_notify->enableBot_ || global_notify->messages_.size())) || ( (millis() -  global_notify->connectStart_) > (global_notify->pollTimeout_*1000) ))
+
+          if (!global_notify->sending_ && !c->is_draining && !c->is_closing)
           {
-            c->is_draining = 1; // close long poll so we can send
-          } 
- 
+            if (millis() > *(uint64_t *)&c->data[2])
+            {
+              ESP_LOGE(TAG, "Long poll timeout. Retrying...");
+              c->is_closing=1;
+            }
+            else if ((!global_notify->enableBot_ || global_notify->messages_.size()))
+            {
+              c->is_draining = 1; // close long poll so we can send
+            }
+          }
         }
       }
       else if (ev == MG_EV_CLOSE)
@@ -399,7 +402,8 @@ namespace esphome
         c->data[0] = 'T';
         global_notify->connected_ = true;
         global_notify->connectError_ = false;
-        global_notify->connectStart_=millis();
+        *(uint64_t *)&c->data[2] = millis() + (global_notify->pollTimeout_ * 1000); // set  long poll timeout
+
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
 
         if (global_notify->messages_.size())
@@ -412,9 +416,9 @@ namespace esphome
           {
             global_notify->messages_.pop();
             if (outmsg.state)
-              static_cast<switch_::Switch*>(outmsg.f)->turn_on();
+              static_cast<switch_::Switch *>(outmsg.f)->turn_on();
             else
-              static_cast<switch_::Switch*>(outmsg.f)->turn_off();
+              static_cast<switch_::Switch *>(outmsg.f)->turn_off();
           }
           else
           {
@@ -441,7 +445,7 @@ namespace esphome
         {
           global_notify->sending_ = false;
           mg_printf(c, "GET /bot%s", global_notify->botId_.c_str());
-          mg_printf(c, "/getUpdates?limit=1&timeout=%d&offset=%d HTTP/1.1\r\n", global_notify->pollTimeout_,global_notify->lastMsgReceived_);
+          mg_printf(c, "/getUpdates?limit=1&timeout=%d&offset=%d HTTP/1.1\r\n", global_notify->pollTimeout_, global_notify->lastMsgReceived_);
           mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
           mg_printf(c, "Accept: application/json\r\n");
           mg_printf(c, "Cache-Control: no-cache\r\n\r\n");
