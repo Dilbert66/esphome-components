@@ -40,7 +40,6 @@
 #define BIT_MASK_BYTE3_IN_ALARM 0x01
 
 #define F7_MESSAGE_LENGTH 45
-#define F8_MESSAGE_LENGTH 7
 #define N98_MESSAGE_LENGTH 6
 
 #define MAX_MODULES 9
@@ -95,8 +94,7 @@ struct statusFlagType
     {
         int code;
         uint8_t qual;
-        int zone;
-        uint8_t user;
+        int data;
         uint8_t partition;
     } lrr;
 };

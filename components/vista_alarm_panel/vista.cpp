@@ -2,8 +2,7 @@
 
 #include "Arduino.h"
 
-//#include "esp_task_wdt.h"
-
+// #include "esp_task_wdt.h"
 
 Vista *pointerToVistaClass;
 
@@ -80,7 +79,7 @@ void Vista::setNextFault(uint8_t idx)
 
 void Vista::readChars(int ct, char buf[], int *idx)
 {
- 
+
   int x = 0;
   int idxval = *idx;
   unsigned long timeout = millis();
@@ -89,11 +88,12 @@ void Vista::readChars(int ct, char buf[], int *idx)
     if (vistaSerial->available())
     {
       timeout = millis();
-       buf[idxval++] = vistaSerial->read();
+      buf[idxval++] = vistaSerial->read();
       x++;
-    } 
+    }
 #ifdef ESP32
-    else vTaskDelay(5);
+    else
+      vTaskDelay(5);
 #else
     delayMicroseconds(4);
 #endif
@@ -309,9 +309,7 @@ void Vista::onLrr(char cbuf[], int *idx)
   // 0x52 means respond with only cycle message
   // 0x48 means same thing
   //, i think 0x52 and and 0x48 are the same
-  if (type == (char)0x52 || type == (char)0x48
-
-  )
+  if (type == (char)0x52 || type == (char)0x48)
   {
     lcbuf[0] = (char)cbuf[1];
     lcbuflen++;
@@ -323,8 +321,7 @@ void Vista::onLrr(char cbuf[], int *idx)
     c = toDec(c); // convert to decimal representation for correct code display
     statusFlags.lrr.qual = (uint8_t)(0xf0 & cbuf[8]) >> 4;
     statusFlags.lrr.code = c;
-    statusFlags.lrr.zone = toDec(((uint8_t)cbuf[12] >> 4) | ((uint8_t)cbuf[11] << 4));
-    statusFlags.lrr.user = statusFlags.lrr.zone;
+    statusFlags.lrr.data = toDec(((uint8_t)cbuf[12] >> 4) | ((uint8_t)cbuf[11] << 4));
     statusFlags.lrr.partition = (uint8_t)cbuf[10];
 
     lcbuf[0] = (char)(cbuf[1]);
@@ -364,7 +361,7 @@ void Vista::onLrr(char cbuf[], int *idx)
 
   if (lrrSupervisor)
   {
-   // delayMicroseconds(500);
+    // delayMicroseconds(500);
     vistaSerial->setBaud(4800);
     for (int x = 0; x < lcbuflen; x++)
     {
@@ -555,7 +552,7 @@ void Vista::onExp(char cbuf[])
   }
 
   uint32_t chksum = 0;
-  //delayMicroseconds(500);
+  // delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   for (int x = 0; x < lcbuflen; x++)
   {
@@ -790,7 +787,7 @@ void Vista::writeChars()
       tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);
     tmpOutBuf[1] = sz + 1;
   }
-  //delayMicroseconds(500);
+  // delayMicroseconds(500);
   vistaSerial->setBaud(4800);
   vistaSerial->write(tmpOutBuf[0]);
   vistaSerial->write(tmpOutBuf[1]);
@@ -1318,7 +1315,7 @@ bool Vista::handle()
       vistaSerial->setBaud(4800);
       gidx = 0;
       cbuf[gidx++] = x;
-      readChars(1, cbuf, &gidx);
+      readChars(1, cbuf, &gidx); // len
       readChars(cbuf[1], cbuf, &gidx);
       if (!validChksum(cbuf, 0, gidx))
         cbuf[12] = 0x77;
@@ -1328,19 +1325,21 @@ bool Vista::handle()
       pushCmdQueueItem();
       return 1;
     }
-    /*
-        //unknown
-        if (x == 0xF8) {
-          vistaSerial -> setBaud(4800);
-          newCmd = true;
-          gidx = 0;
-          cbuf[gidx++] = x;
-          readChars(F8_MESSAGE_LENGTH - 1, cbuf, & gidx);
-          if (!validChksum(cbuf, 0, gidx))
-            cbuf[12] = 0x77;
-          return 1;
-        }
-        */
+    // // unknown
+    if (x == 0xF8)
+    {
+      vistaSerial->setBaud(4800);
+      gidx = 0;
+      cbuf[gidx++] = x;                // cmd byte
+      readChars(1, cbuf, &gidx);       // header byte
+      readChars(1, cbuf, &gidx);       // len byte
+      readChars(cbuf[2], cbuf, &gidx); // read len bytes
+      if (!validChksum(cbuf, 0, gidx))
+        cbuf[12] = 0x77;
+      newCmd = true;
+      pushCmdQueueItem();
+      return 1;
+    }
     // unknown
     if (x == 0xF0)
     {

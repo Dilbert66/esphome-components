@@ -248,6 +248,22 @@ namespace esphome
       return &extZones.back();
     }
 
+    std::string vistaECPHome::getZoneName(uint16_t zone, bool append)
+    {
+
+      std::string c = "z" + std::to_string(zone);
+      auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
+                             { return bs->get_object_id() == c; });
+      if (it != bMap.end())
+      {
+        if (append)
+          return std::string((*it)->get_name()).append(" (").append(std::to_string(zone)).append(")");
+        else
+          return (*it)->get_name();
+      }
+      return std::to_string(zone);
+    }
+
     vistaECPHome::zoneType *vistaECPHome::getZone(uint16_t z)
     {
 
@@ -1688,25 +1704,28 @@ void vistaECPHome::update()
 
             int c = vistaCmd.statusFlags.lrr.code;
             int q = vistaCmd.statusFlags.lrr.qual;
-            int z = vistaCmd.statusFlags.lrr.zone;
+            int z = vistaCmd.statusFlags.lrr.data; //can be zone or user
+            int p = vistaCmd.statusFlags.lrr.partition;
 
             std::string qual;
-            char msg[50];
+            char msg[100];
             if (c < 400)
-              qual = (q == 3) ? PSTR(" Cleared") : "";
+              qual = (q == 3) ? PSTR(" is Cleared") : "";
             else if (c == 570)
-              qual = (q == 1) ? PSTR(" Active") : " Cleared";
+              qual = (q == 1) ? PSTR(" is Active") : " is Cleared";
             else
-              qual = (q == 1) ? PSTR(" Restored") : "";
+              qual = (q == 1) ? PSTR(" is Restored") : "";
             if (c)
             {
               String lrrString = String(statusText(c));
+              std::string zn = std::to_string(z);
+              std::string uf = PSTR("by user");
+              if (lrrString[0] == 'Z') {
+                uf = PSTR("on zone");
+                zn=getZoneName(z);
+              }
 
-              std::string uf = PSTR("user");
-              if (lrrString[0] == 'Z')
-                uf = PSTR("zone");
-
-              sprintf(msg, "%d: %s %s %d%s", c, &lrrString[1], uf.c_str(), z, qual.c_str());
+              snprintf(msg,100, "CID_%d%03d: %s %s %s%s, Partition %d", q,c, &lrrString[1], uf.c_str(), zn.c_str(), qual.c_str(),p);
 
               lrrMsgChangeCallback(msg);
               refreshLrrTime = millis();
