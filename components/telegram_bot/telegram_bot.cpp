@@ -613,6 +613,7 @@ namespace esphome
           }
           firstRun = false;
         }
+
       }
 
       static unsigned long checkTime = millis();
@@ -622,8 +623,10 @@ namespace esphome
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
+      taskYIELD();
       // #if !defined(USETASK)
       mg_mgr_poll(&mgr_, 0);
+
       // #endif
     }
 
