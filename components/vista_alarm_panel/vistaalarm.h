@@ -463,6 +463,7 @@ class vistaECPHome : public time::RealTimeClock
           zoneType nz;
 
       zoneType *getZone(uint16_t z);
+      std::string getZoneName(uint16_t zone, bool append=false);
       zoneType *createZone(uint16_t z);
 
       serialType getRfSerialLookup(char *serialCode);
