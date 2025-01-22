@@ -1265,13 +1265,14 @@ void vistaECPHome::setup()
         if (!vista.handle())
         {
           vTaskDelay(4 / portTICK_PERIOD_MS);
+
         }
         else
         {
           dataTime = millis();
           vista.connected = true;
         }
-
+        taskYIELD();
         if (millis() - dataTime > 60000)
         {
           dataTime = millis();
@@ -1358,7 +1359,7 @@ void vistaECPHome::update()
           ESP_LOGE(TAG, "Data timeout. Is the panel connected?");
           vista.connected = false;
         }
-
+        taskYIELD();
         static unsigned long sendWaitTime = millis();
         while (!firstRun && vista.connected && vista.sendPending() && vista.cmdAvail())
         {
