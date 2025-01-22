@@ -402,6 +402,8 @@ namespace esphome
         c->data[0] = 'T';
         global_notify->connected_ = true;
         global_notify->connectError_ = false;
+        global_notify->connectErrorMessage_= "Connected";
+
         *(uint64_t *)&c->data[2] = millis() + (global_notify->pollTimeout_ * 1000); // set  long poll timeout
 
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
@@ -519,6 +521,7 @@ namespace esphome
       {
         global_notify->retryDelay_ = millis();
         global_notify->connectError_ = true;
+        global_notify->connectErrorMessage_= std::string((char *)ev_data);
         ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.", c->id, c->fd, (char *)ev_data, global_notify->delayTime_ / 1000);
       }
     }

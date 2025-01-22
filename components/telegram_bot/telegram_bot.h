@@ -195,6 +195,8 @@ namespace esphome
       bool get_bot_status() { return enableBot_; }
       bool get_send_status() { return enableSend_; }
       bool get_connect_error() { return connectError_;}
+      std::string get_connect_error_message() { return connectErrorMessage_; }
+      
       uint8_t get_queue_size() { return messages_.size();}
 
       std::string get_bot_name() { return botName_; }
@@ -237,7 +239,6 @@ namespace esphome
       struct c_res_s c_res_;
 
       std::string apiHost_ = "https://api.telegram.org/";
-      //const uint32_t timeout_ms = 15000; // Connect timeout in milliseconds
       int lastMsgReceived_ = 0;
       std::string botId_ = "";
       std::string botName_ = "";
@@ -246,6 +247,7 @@ namespace esphome
       bool enableSend_ = true;
       bool sending_ = false;
       bool connected_ = false;
+      std::string connectErrorMessage_{};
       bool connectError_=false;
       unsigned long retryDelay_ = 0;
       int delayTime_ = 15000; // ms
