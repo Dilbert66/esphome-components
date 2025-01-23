@@ -24,6 +24,7 @@ Modified for 4800 8E2
 
 #pragma once
 
+
 #include <inttypes.h>
 
 #include <Stream.h>
@@ -33,7 +34,7 @@ Modified for 4800 8E2
 #include <atomic>
 
 #include "Arduino.h"
-#include "driver/timer.h"
+//#include "driver/timer.h"
 
 #if defined(ESP32) && not defined(IRAM_ATTR)
 #define IRAM_ATTR IRAM_ATTR
@@ -177,3 +178,4 @@ private:
 #endif
     }
 };
+
