@@ -188,16 +188,12 @@ void Vista::onDisplay(char cbuf[], int *idx)
   statusFlags.night = ((cbuf[6] & BIT_MASK_BYTE1_NIGHT) > 0);
   statusFlags.armedStay = ((cbuf[7] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
 
-  // if (statusFlags.systemFlag)
-  //{
-  statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
+   statusFlags.lowBattery = ((cbuf[7] & BIT_MASK_BYTE2_LOW_BAT) > 0);
   // statusFlags.acLoss = ((cbuf[7] & BIT_MASK_BYTE2_UNKNOWN) > 0);
-  //}
-  // else
-  //{
+
   statusFlags.check = ((cbuf[7] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
-  statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
-  //}
+  statusFlags.fireZone = ((cbuf[7] & BIT_MASK_BYTE2_ZONE_FIRE) > 0);
+ 
 
   statusFlags.inAlarm = ((cbuf[8] & BIT_MASK_BYTE3_IN_ALARM) > 0);
   statusFlags.acPower = ((cbuf[8] & BIT_MASK_BYTE3_AC_POWER) > 0);
