@@ -321,6 +321,7 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t trouble : 1;
         uint8_t lowbat : 1;
         uint8_t active : 1;
+        uint8_t rflowbat : 1;
       };
       zoneType zonetype_INIT = {
           .zone = 0,

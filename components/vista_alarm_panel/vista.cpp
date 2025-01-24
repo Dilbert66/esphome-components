@@ -777,7 +777,7 @@ void Vista::writeChars()
       }
       tmpOutBuf[tmpIdx++] = c;
     }
-    if (kt.seq)
+    if (kt.seq > 0)
       tmpOutBuf[0] = kt.seq;
     else
       tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);

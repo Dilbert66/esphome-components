@@ -180,12 +180,14 @@ namespace esphome
     {
       if (zoneStatusChangeCallback != NULL)
       {
-        std::string msg, zs1;
+        std::string msg, zs1, lb;
         zs1 = zt->check ? "T" : zt->open ? "O"
                                          : "C";
         msg = zt->bypass ? "B" : zt->alarm ? "A"
                                            : "";
-        zoneStatusChangeCallback(zt->zone, msg.append(zs1).c_str());
+        lb = zt->lowbat || zt->rflowbat ? "L" : "";
+        msg.append(zs1).append(lb);
+        zoneStatusChangeCallback(zt->zone, msg.c_str());
       }
 
       if (zoneStatusChangeBinaryCallback != NULL)
@@ -1526,7 +1528,7 @@ void vistaECPHome::update()
                 {
                   zt->time = millis();
                   zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
-                  zt->lowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
+                  zt->rflowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
                   zoneStatusUpdate(zt);
                 }
               }
@@ -1892,7 +1894,7 @@ void vistaECPHome::update()
             currentLightState.ac = false;
           }
 
-          if (vistaCmd.statusFlags.lowBattery)
+          if (vistaCmd.statusFlags.lowBattery && (vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.check))
           {
             currentLightState.bat = true;
             lowBatteryTime = millis();
@@ -2140,7 +2142,7 @@ void vistaECPHome::update()
                 sprintf(s1, "CK:%d", x.zone);
               zoneStatusMsg.append(s1);
             }
-            if (x.lowbat)
+            if (x.lowbat || x.rflowbat)
             { // low rf battery
               if (zoneStatusMsg != "")
                 sprintf(s1, ",LB:%d", x.zone);
