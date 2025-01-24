@@ -2071,7 +2071,7 @@ void vistaECPHome::update()
             if (!x.active || !x.partition)
               continue;
 
-            if (x.open && partitionStates[x.partition - 1].previousLightState.ready)
+            if (!x.bypass && x.open && partitionStates[x.partition - 1].previousLightState.ready)
             {
               x.open = false;
               x.check = false;
