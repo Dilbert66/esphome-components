@@ -1358,7 +1358,7 @@ void vistaECPHome::update()
           ESP_LOGE(TAG, "Data timeout. Is the panel connected?");
           vista.connected = false;
         }
-        taskYIELD();
+
         static unsigned long sendWaitTime = millis();
         while (!firstRun && vista.connected && vista.sendPending() && vista.cmdAvail())
         {
@@ -1799,7 +1799,7 @@ void vistaECPHome::update()
             // ESP_LOGD("test","fire found for zone %d,status=%d",vistaCmd.statusFlags.zone,fireStatus.state);
           }
           // zone alarm status
-          if (!vistaCmd.statusFlags.systemFlag  && !vistaCmd.statusFlags.check && vistaCmd.statusFlags.alarm)
+          if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && vistaCmd.statusFlags.alarm)
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1847,7 +1847,7 @@ void vistaECPHome::update()
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
 
             zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-            if (vistaCmd.statusFlags.lowBattery) 
+            if (vistaCmd.statusFlags.lowBattery)
             {
               zt->lowbat = vistaCmd.statusFlags.lowBattery;
             }
@@ -1865,7 +1865,7 @@ void vistaECPHome::update()
             zt->time = millis();
           }
           // zone bypass status
-          //if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
+          // if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
           if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && vistaCmd.statusFlags.bypass && !vistaCmd.statusFlags.alarm)
           {
             if (vistaCmd.cbuf[5] > 0x90)
