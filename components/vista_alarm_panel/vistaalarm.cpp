@@ -760,7 +760,7 @@ void vistaECPHome::setup()
       char buf[5];
       char buf1[20];
       ms.Target((char *)p.c_str());
-      char res = ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+      char res = ms.Match("[%a]+%s+([%d]+)%s*(.*)");
       if (res == REGEXP_MATCHED)
       {
         ms.GetCapture(buf, 0);
@@ -773,14 +773,16 @@ void vistaECPHome::setup()
 
     int vistaECPHome::getZoneFromPrompt(char *p1)
     {
+      ESP_LOGD(TAG, "in get zone from prompt");
       if (vistaCmd.cbuf[0] != 0xf7)
       {
         return 0;
       }
+      ESP_LOGD(TAG, "startring lookup");
       MatchState ms;
       char buf[5];
       ms.Target(p1);
-      char res = ms.Match("[%a]+%s+([%d]+)%s+(.*?)%s*$");
+      char res = ms.Match("[%a]+%s+([%d]+)%s*(.*)");
       if (res == REGEXP_MATCHED)
       {
         ms.GetCapture(buf, 0);
@@ -995,7 +997,7 @@ void vistaECPHome::setup()
       auiCmd.time = millis();
       auiCmd.pending = true;
       // dateReqStatus=0;
-      sprintf(&bytes[8], "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute, rtc.second, rtc.day_of_week - 1);
+      snprintf(&bytes[8], 14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute, rtc.second, rtc.day_of_week - 1);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes) - 1);
       return true;
     }
@@ -1391,33 +1393,37 @@ void vistaECPHome::update()
 #endif
 
           // rf testing code
-          /*
-          static unsigned long testtime=millis();
-          static char t1=0;
-          if (!vistaCmd.newExtCmd && millis() - testtime > 10000) {
-              //FB 04 04 E9 58 80 00 00 00 00 00 00 00
-              //0399512 b0
-              vistaCmd.newExtCmd=true;
-              vistaCmd.cbuf[0]=0xfb;
-              vistaCmd.cbuf[1]=4;
-              vistaCmd.cbuf[2]=4;
-              vistaCmd.cbuf[3]=0xe9;
-              vistaCmd.cbuf[4]=0x58;
-              vistaCmd.cbuf[5]=0x80;
 
-              if (t1==1) {
-                  t1=2;
-                  vistaCmd.cbuf[5]=0;
-              } else
-              if (t1==2) {
-                  t1=0;
-                  vistaCmd.cbuf[5]=0xb2;
-              } else
-              if (t1==0) t1=1;
+          static unsigned long testtime = millis();
+          static char t1 = 0;
+          if (!vistaCmd.newExtCmd && millis() - testtime > 35000)
+          {
+            // FB 04 09 9A C4 80 00 00 00 00 00 00 00
+            // 0629444,80 (loop 1)
+            vistaCmd.newExtCmd = true;
+            vistaCmd.cbuf[0] = 0xfb;
+            vistaCmd.cbuf[1] = 4;
+            vistaCmd.cbuf[2] = 9;
+            vistaCmd.cbuf[3] = 0x9a;
+            vistaCmd.cbuf[4] = 0xc4;
+            vistaCmd.cbuf[5] = 0x80;
 
-              testtime=millis();
+            if (t1 == 1)
+            {
+              t1 = 2;
+              vistaCmd.cbuf[5] = 0x80;
+            }
+            else if (t1 == 2)
+            {
+              t1 = 0;
+              vistaCmd.cbuf[5] = 0x82;
+            }
+            else if (t1 == 0)
+              t1 = 1;
+
+            testtime = millis();
           }
-         */
+
           if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0)
           {
             if (vistaCmd.cbuf[0] == 0xF7)
@@ -1506,6 +1512,7 @@ void vistaECPHome::update()
               char rf_serial_char[14];
               char rf_serial_char_out[20];
               // FB 04 06 18 98 B0 00 00 00 00 00 00
+              // FB 04 09 9A C4 80 00 00 00 00 00 00 00
               uint32_t device_serial = (vistaCmd.cbuf[2] << 16) + (vistaCmd.cbuf[3] << 8) + vistaCmd.cbuf[4];
               // vistaCmd.cbuf[5] is loop and battery is bit 1
 
@@ -1529,6 +1536,7 @@ void vistaECPHome::update()
                   zt->time = millis();
                   zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
                   zt->rflowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
+                  ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
                   zoneStatusUpdate(zt);
                 }
               }
@@ -1562,7 +1570,8 @@ void vistaECPHome::update()
 
           if (vistaCmd.newCmd && auiAddr && vistaCmd.cbuf[0] == 0xF2)
           {
-            ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
+            if (auiCmd.pending != rsidle)
+              ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
             // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
             //  activeAuiAddr=true;
             if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
@@ -1591,16 +1600,20 @@ void vistaECPHome::update()
                 }
                 //   }
                 // else
-                if (l > 4 && m[0] == 2)
-                {
-                  // we have an exit delay
-                  // exitDelay=m[5] for partition partitionRequest
-                }
+                // if (l > 4 && m[0] == 2)
+                // {
+                //   // we have an exit delay
+                //   // exitDelay=m[5] for partition partitionRequest
+                // }
               }
             }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd && auiCmd.state != rsidle)
             { // response data from request
               char *m = parseAUIMessage(vistaCmd.cbuf);
+              if (m == NULL)
+              {
+                return;
+              }
               auiCmd.time = millis();
               ESP_LOGD(TAG, "success message from %d", auiCmd.state);
               auiCmd.pending = false;
@@ -1641,7 +1654,7 @@ void vistaECPHome::update()
      */
 #endif
             }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd))
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd) && auiCmd.state != rsidle)
             {
               char *m = parseAUIMessage(vistaCmd.cbuf);
               auiCmd.time = millis();
@@ -1827,6 +1840,7 @@ void vistaECPHome::update()
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
             zoneType *zt = getZone(vistaCmd.statusFlags.zone);
+            ESP_LOGD("test", "check found for zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
             if (!zt->check && zt->active)
             {
               zt->check = true;
@@ -1834,7 +1848,7 @@ void vistaECPHome::update()
               zt->alarm = false;
               currentLightState.trouble = true;
               zoneStatusUpdate(zt);
-              // ESP_LOGD("test","check found for zone %d,status=%d",vistaCmd.statusFlags.zone,zt->check );
+              ESP_LOGD("test", "updating check zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
             }
             if (!zt->partition && zt->active)
               assignPartitionToZone(zt);
