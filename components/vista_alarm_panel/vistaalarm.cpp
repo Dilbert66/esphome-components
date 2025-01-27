@@ -1394,35 +1394,35 @@ void vistaECPHome::update()
 
           // rf testing code
 
-          static unsigned long testtime = millis();
-          static char t1 = 0;
-          if (!vistaCmd.newExtCmd && millis() - testtime > 35000)
-          {
-            // FB 04 09 9A C4 80 00 00 00 00 00 00 00
-            // 0629444,80 (loop 1)
-            vistaCmd.newExtCmd = true;
-            vistaCmd.cbuf[0] = 0xfb;
-            vistaCmd.cbuf[1] = 4;
-            vistaCmd.cbuf[2] = 9;
-            vistaCmd.cbuf[3] = 0x9a;
-            vistaCmd.cbuf[4] = 0xc4;
-            vistaCmd.cbuf[5] = 0x80;
+          // static unsigned long testtime = millis();
+          // static char t1 = 0;
+          // if (!vistaCmd.newExtCmd && millis() - testtime > 35000)
+          // {
+          //   // FB 04 09 9A C4 80 00 00 00 00 00 00 00
+          //   // 0629444,80 (loop 1)
+          //   vistaCmd.newExtCmd = true;
+          //   vistaCmd.cbuf[0] = 0xfb;
+          //   vistaCmd.cbuf[1] = 4;
+          //   vistaCmd.cbuf[2] = 9;
+          //   vistaCmd.cbuf[3] = 0x9a;
+          //   vistaCmd.cbuf[4] = 0xc4;
+          //   vistaCmd.cbuf[5] = 0x80;
 
-            if (t1 == 1)
-            {
-              t1 = 2;
-              vistaCmd.cbuf[5] = 0x80;
-            }
-            else if (t1 == 2)
-            {
-              t1 = 0;
-              vistaCmd.cbuf[5] = 0x82;
-            }
-            else if (t1 == 0)
-              t1 = 1;
+          //   if (t1 == 1)
+          //   {
+          //     t1 = 2;
+          //     vistaCmd.cbuf[5] = 0x80;
+          //   }
+          //   else if (t1 == 2)
+          //   {
+          //     t1 = 0;
+          //     vistaCmd.cbuf[5] = 0x82;
+          //   }
+          //   else if (t1 == 0)
+          //     t1 = 1;
 
-            testtime = millis();
-          }
+          //   testtime = millis();
+          // }
 
           if (!vistaCmd.newExtCmd && !vistaCmd.newCmd && debug > 0)
           {
