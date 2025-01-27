@@ -1013,7 +1013,7 @@ void vistaECPHome::setup()
       bytes[12] = auiCmd.state == rsopenzones ? 0x32 : 0x35;
       auiCmd.pending = true;
       auiCmd.time = millis();
-      ESP_LOGD(TAG, "Sending zone status request %d, header %02X", auiCmd.state, bytes[1]);
+      ESP_LOGD(TAG, "Sending zone status request %d, header %02X, address %d", auiCmd.state, bytes[1],auiAddr);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
