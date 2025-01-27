@@ -1013,7 +1013,7 @@ void vistaECPHome::setup()
       bytes[12] = auiCmd.state == rsopenzones ? 0x32 : 0x35;
       auiCmd.pending = true;
       auiCmd.time = millis();
-      ESP_LOGD(TAG, "Sending zone status request %d, header %02X, address %d", auiCmd.state, bytes[1], auiAddr);
+      ESP_LOGD(TAG, "Sending zone status request %d, header %02X, auiAddr %d", auiCmd.state, bytes[1], auiAddr);
       vista.writeDirect(bytes, auiAddr, sizeof(bytes));
     }
 
@@ -1131,17 +1131,27 @@ void vistaECPHome::setup()
       }
       if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
       {
-        char s[] = {0xfe, 0xfe, 0xfe, 0xfe, 0xec, 0};
+        char s[] = {0xfe, 0xfe, 0xfe, 0xfe, 0};
         f = strstr(c, s);
         if (f)
-          return f + strlen(s);
+        {
+          f = f + strlen(s);
+          if (*f == 0xec)
+            f++;
+          return f;
+        }
       }
       else if (auiCmd.state == rszoneinfo)
       {
-        char s[] = {0xfe, 0xfe, 0xfe, 0xec, 0};
+        char s[] = {0xfe, 0xfe, 0xfe, 0};
         f = strstr(c, s);
         if (f)
-          return f + strlen(s);
+        {
+          f = f + strlen(s);
+          if (*f == 0xec)
+            f++;
+          return f;
+        }
       }
       else if (auiCmd.state == rszonecount)
       {
@@ -1570,112 +1580,109 @@ void vistaECPHome::update()
 
           if (vistaCmd.newCmd && auiAddr && vistaCmd.cbuf[0] == 0xF2)
           {
-            if (auiCmd.pending != rsidle)
+            if (auiCmd.state != rsidle)
               ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
             // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
             //  activeAuiAddr=true;
             if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
             { // partition update broadcast
               char *m = parseAUIMessage(vistaCmd.cbuf);
-              if (m != NULL)
+              if (m == NULL)
+                return;
+
+              size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
+              // ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
+              // if (m[0] & 1)
+              // {
+              if (auiCmd.state == rsidle)
               {
-                size_t l = &vistaCmd.cbuf[1] + vistaCmd.cbuf[1] - m;
-                // ESP_LOGD(TAG, "m length = %d,byte=%02X", l, m[0]);
-                // if (m[0] & 1)
-                // {
-                if (auiCmd.state == rsidle)
-                {
-                  auiCmd.state = rsopenzones;
-                  auiCmd.partition = vistaCmd.cbuf[13];
-                  auiCmd.pending = false;
-                  sendZoneRequest();
-                }
-                else if (auiCmd.state != rsopenzones && auiCmd.state != rsbypasszones)
-                {
-                  auiCmdType c;
-                  c.state = rsopenzones;
-                  c.partition = vistaCmd.cbuf[13];
-                  if (auiQueue.size() < 5)
-                    auiQueue.push(c);
-                }
-                //   }
-                // else
-                // if (l > 4 && m[0] == 2)
-                // {
-                //   // we have an exit delay
-                //   // exitDelay=m[5] for partition partitionRequest
-                // }
+                auiCmd.state = rsopenzones;
+                auiCmd.partition = vistaCmd.cbuf[13];
+                auiCmd.pending = false;
+                sendZoneRequest();
+              }
+              else if (auiCmd.state != rsopenzones && auiCmd.state != rsbypasszones)
+              {
+                auiCmdType c;
+                c.state = rsopenzones;
+                c.partition = vistaCmd.cbuf[13];
+                if (auiQueue.size() < 5)
+                  auiQueue.push(c);
+              }
+              //   }
+              // else
+              if (l > 4 && m[0] == 2)
+              {
+                // we have an exit delay
+                // exitDelay=m[5] for partition partitionRequest
               }
             }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd && auiCmd.state != rsidle)
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
             { // response data from request
               char *m = parseAUIMessage(vistaCmd.cbuf);
-              if (m != NULL)
+              if (m == NULL)
+                return;
+              auiCmd.time = millis();
+              ESP_LOGD(TAG, "success message from %d", auiCmd.state);
+              auiCmd.pending = false;
+              if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
               {
+                processZoneList(m);
 
-                auiCmd.time = millis();
-                ESP_LOGD(TAG, "success message from %d", auiCmd.state);
-                auiCmd.pending = false;
-                if (auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones)
+                if (auiCmd.state == rsopenzones)
                 {
-                  processZoneList(m);
-
-                  if (auiCmd.state == rsopenzones)
-                  {
-                    auiCmd.state = rsbypasszones;
-                    sendZoneRequest();
-                  }
-                  else
-                    auiCmd.state = rsidle;
-                }
-                else if (auiCmd.state == rsdate)
-                {
-                  auiCmd.state = rsidle;
-                }
-#if defined(AUTOPOPULATE)
-                /*
-                   else if (auiCmd.state == rszonecount) {
-                      if (m!= NULL)
-                       auiCmd.records=std::stoi(m);
-                       if (auiCmd.records > 0) {
-                         auiCmd.state=rszoneinfo;
-                         auiCmd.record=1;
-                       } else
-                         auiCmd.state=rsidle;
-                   } else if (auiCmd.state == rszoneinfo) {
-                     if (m!= NULL) {
-                      processZoneInfo(m);
-                      auiCmd.record++;
-                      if (auiCmd.record > auiCmd.records)
-                       auiCmd.state=rsidle;
-                     }
-                   }
-       */
-#endif
-              }
-            }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd) && auiCmd.state != rsidle)
-            {
-              char *m = parseAUIMessage(vistaCmd.cbuf);
-              if (m != NULL)
-              {
-                auiCmd.time = millis();
-                auiCmd.pending = false;
-                ESP_LOGD(TAG, "failure message from %d", auiCmd.state);
-                if (auiCmd.state == rszoneinfo)
-                {
-                  auiCmd.record++;
-                  if (auiCmd.record > auiCmd.records)
-                    auiCmd.state = rsidle;
-                }
-                else if (auiCmd.state == rsdate)
-                {
-                  // dateReqStatus=-1;
-                  auiCmd.state = rsidle;
+                  auiCmd.state = rsbypasszones;
+                  sendZoneRequest();
                 }
                 else
                   auiCmd.state = rsidle;
               }
+              else if (auiCmd.state == rsdate)
+              {
+                auiCmd.state = rsidle;
+              }
+#if defined(AUTOPOPULATE)
+              /*
+                 else if (auiCmd.state == rszonecount) {
+                    if (m!= NULL)
+                     auiCmd.records=std::stoi(m);
+                     if (auiCmd.records > 0) {
+                       auiCmd.state=rszoneinfo;
+                       auiCmd.record=1;
+                     } else
+                       auiCmd.state=rsidle;
+                 } else if (auiCmd.state == rszoneinfo) {
+                   if (m!= NULL) {
+                    processZoneInfo(m);
+                    auiCmd.record++;
+                    if (auiCmd.record > auiCmd.records)
+                     auiCmd.state=rsidle;
+                   }
+                 }
+     */
+#endif
+            }
+            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd))
+            {
+              char *m = parseAUIMessage(vistaCmd.cbuf);
+              if (m == NULL)
+                return;
+              auiCmd.time = millis();
+              auiCmd.pending = false;
+              ESP_LOGD(TAG, "failure message from %d", auiCmd.state);
+              if (auiCmd.state == rszoneinfo)
+              {
+                auiCmd.record++;
+                if (auiCmd.record > auiCmd.records)
+                  auiCmd.state = rsidle;
+              }
+              else if (auiCmd.state == rsdate)
+              {
+                // dateReqStatus=-1;
+                auiCmd.state = rsidle;
+              }
+              else
+                auiCmd.state = rsidle;
             }
             return;
           }
