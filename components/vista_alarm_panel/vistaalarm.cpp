@@ -309,19 +309,25 @@ namespace esphome
           {
             rf.zone = toInt(token3, 10);
             uint8_t loop = toInt(token2, 10);
+            /*
+        // bit 5 - Loop 3 (0=Closed, 1=Open)
+        // bit 6 - Loop 2 (0=Closed, 1=Open)
+        // bit 7 - Loop 4 (0=Closed, 1=Open)
+        // bit 8 - Loop 1 (0=Closed, 1=Open)
+        */
             switch (loop)
             {
             case 1:
               rf.mask = 0x80;
               break;
             case 2:
-              rf.mask = 0x40;
-              break;
-            case 3:
               rf.mask = 0x20;
               break;
-            case 4:
+            case 3:
               rf.mask = 0x10;
+              break;
+            case 4:
+              rf.mask = 0x40;
               break;
             default:
               rf.mask = 0x80;
@@ -1539,14 +1545,14 @@ void vistaECPHome::update()
 #endif
               }
               if (z && !(vistaCmd.cbuf[5] & 4) && !(vistaCmd.cbuf[5] & 1))
-              { // ignore heartbeat
+              { 
                 zoneType *zt = getZone(z);
                 if (zt->active)
                 {
                   zt->time = millis();
                   zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
                   zt->rflowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
-                  ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
+                  //ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
                   zoneStatusUpdate(zt);
                 }
               }
