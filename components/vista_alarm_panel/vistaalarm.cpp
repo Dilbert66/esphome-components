@@ -1873,7 +1873,7 @@ void vistaECPHome::update()
           // zone fault status
           // ESP_LOGD("test","armed status/system,stay,away flag is: %d , %d, %d , %d",vistaCmd.statusFlags.armed,vistaCmd.statusFlags.systemFlag,vistaCmd.statusFlags.armedStay,vistaCmd.statusFlags.armedAway);
           // if (!(vistaCmd.cbuf[7] > 0 || vistaCmd.statusFlags.beeps == 1 || vistaCmd.statusFlags.beeps == 4) && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
-          if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && !vistaCmd.statusFlags.bypass && !vistaCmd.statusFlags.alarm)
+          if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && !vistaCmd.statusFlags.bypass && !vistaCmd.statusFlags.alarm && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
@@ -1898,7 +1898,7 @@ void vistaECPHome::update()
           }
           // zone bypass status
           // if (vistaCmd.cbuf[0] == 0xf7 && !(vistaCmd.statusFlags.systemFlag || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.fire || vistaCmd.statusFlags.check || vistaCmd.statusFlags.alarm || vistaCmd.statusFlags.night || vistaCmd.statusFlags.instant) && vistaCmd.statusFlags.bypass && vistaCmd.statusFlags.beeps == 1)
-          if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && vistaCmd.statusFlags.bypass && !vistaCmd.statusFlags.alarm)
+          if (!vistaCmd.statusFlags.systemFlag && !vistaCmd.statusFlags.check && vistaCmd.statusFlags.bypass && !vistaCmd.statusFlags.alarm && !(vistaCmd.statusFlags.instant || vistaCmd.statusFlags.armedAway || vistaCmd.statusFlags.armedStay || vistaCmd.statusFlags.night))
           {
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
