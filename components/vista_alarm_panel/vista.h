@@ -35,7 +35,7 @@
 //F7 00 00 03 10 17 00 - 00 2A - 02 00 00 41 // alarm zone 17 , cleared, disarmed
 //F7 00 00 03 10 EA 00 - 00 2A - 02 00 00 45 // exit alarm
 //F7 00 00 03 10 EA 00 - 00 2A - 02 00 00 45 //alarm cancelled
-
+//F7 00 00 07 10 12 00 - 80 08 - 02 00 00 41  //armed stay countdown
 #define BIT_MASK_BYTE2_ARMED_HOME 0x80
 #define BIT_MASK_BYTE2_LOW_BAT 0x40
 #define BIT_MASK_BYTE2_ZONE_FIRE 0x20

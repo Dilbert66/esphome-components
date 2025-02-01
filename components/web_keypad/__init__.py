@@ -24,6 +24,7 @@ from esphome.const import (
     PLATFORM_ESP8266,
     PLATFORM_BK72XX,
     PLATFORM_RTL87XX,
+    CONF_NAME,
 )
 import os
 import pathlib
@@ -45,9 +46,17 @@ CONF_CERTIFICATE_KEY="certificate_key"
 CONF_ENCRYPTION="encryption"
 CONF_JSLOCAL="js_local"
 
+
+CONF_SORTING_GROUP_ID = "sorting_group_id"
+CONF_SORTING_GROUPS = "sorting_groups"
+CONF_SORTING_WEIGHT = "sorting_weight"
+CONF_WEB_KEYPAD_ID="web_keypad_id"
+CONF_WEB_KEYPAD="web_keypad"
+
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
 WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
 
+sorting_groups = {}
 
 def default_url(config):
     config = config.copy()
@@ -58,8 +67,47 @@ def default_url(config):
             config[CONF_CSS_URL] = ""
         if not (CONF_JS_URL in config):
             config[CONF_JS_URL] = "https://dilbert66.github.io/js_files/www.js"
+    if config[CONF_VERSION] == 3:
+        if not (CONF_JSLOCAL in config):
+            config[CONF_JSLOCAL]=""
+        if not (CONF_CSS_URL in config):
+            config[CONF_CSS_URL] = ""
+        if not (CONF_JS_URL in config):
+            config[CONF_JS_URL] = "https://dilbert66.github.io/js_files/www_v3.js"   
     return config
 
+
+def validate_sorting_groups(config):
+    if CONF_SORTING_GROUPS in config and config[CONF_VERSION] != 3:
+        raise cv.Invalid(
+            f"'{CONF_SORTING_GROUPS}' is only supported in 'web_server' version 3"
+        )
+    return config
+
+
+sorting_group = {
+    cv.Required(CONF_ID): cv.declare_id(cg.int_),
+    cv.Required(CONF_NAME): cv.string,
+    cv.Optional(CONF_SORTING_WEIGHT): cv.float_,
+}
+
+# WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
+#     {
+#         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
+#             {
+#                 cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+#                 cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+#                     cv.requires_component("web_keypad"),
+#                     cv.float_,
+#                 ),
+#                 cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+#                     cv.requires_component("web_keypad"),
+#                     cv.use_id(cg.int_),
+#                 ),
+#             }
+#         )
+#     }
+# )
 
 
 CONFIG_SCHEMA = cv.All(
@@ -67,7 +115,7 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(WebKeypad),
             cv.Optional(CONF_PORT, default=80): cv.port,
-            cv.Optional(CONF_VERSION, default=2): cv.one_of(2, int=True),
+            cv.Optional(CONF_VERSION, default=2): cv.one_of(2,3, int=True),
             cv.Optional(CONF_CSS_URL): cv.string,
             cv.Optional(CONF_CSS_INCLUDE): cv.file_,
             cv.Optional(CONF_JS_URL): cv.string,
@@ -107,12 +155,38 @@ CONFIG_SCHEMA = cv.All(
             ): cv.boolean,
             cv.Optional(CONF_LOG, default=False): cv.boolean,
             cv.Optional(CONF_LOCAL, default=True): cv.boolean,
+            cv.Optional(CONF_SORTING_GROUPS): cv.ensure_list(sorting_group),
         }
     ).extend(cv.COMPONENT_SCHEMA),
-    cv.only_on([PLATFORM_ESP32]),
+    #cv.only_on([PLATFORM_ESP32]),
     default_url,
+    validate_sorting_groups,
 
 )
+
+def add_sorting_groups(web_server_var, config):
+    for group in config:
+        sorting_groups[group[CONF_ID]] = group[CONF_NAME]
+        group_sorting_weight = group.get(CONF_SORTING_WEIGHT, 50)
+        cg.add(
+            web_server_var.add_sorting_group(
+                hash(group[CONF_ID]), group[CONF_NAME], group_sorting_weight
+            )
+        )
+
+
+# async def add_entity_config(entity, config):
+#     web_keypad = await cg.get_variable(config[CONF_WEB_KEYPAD_ID])
+#     sorting_weight = config.get(CONF_SORTING_WEIGHT, 50)
+#     sorting_group_hash = hash(config.get(CONF_SORTING_GROUP_ID))
+
+#     cg.add(
+#         web_keypad.add_entity_config(
+#             entity,
+#             sorting_weight,
+#             sorting_group_hash,
+#         )
+#     )
 
 
 def build_index_html(config) -> str:
@@ -174,7 +248,7 @@ async def to_code(config):
             lambda_config, [(cg.std_string, "keys"),(cg.uint8, "partition")], return_type=None
         )
         cg.add(var.set_service_lambda(lambda_))    
-    if version == 2:
+    if version >= 2:
         # Don't compress the index HTML as the data sizes are almost the same.
         add_resource_as_progmem("INDEX_HTML", build_index_html(config), compress=False)
     else:
@@ -237,6 +311,8 @@ async def to_code(config):
         if CORE.is_esp32:        
             cg.add_library("Update", None)     
             
+    if (sorting_group_config := config.get(CONF_SORTING_GROUPS)) is not None:
+        add_sorting_groups(var, sorting_group_config)
 
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
     # dst=CORE.relative_build_path("src/esphome/components/mg_lib/mongoose.h")

@@ -192,7 +192,7 @@ async def to_code(config):
     cg.add(var.onTroubleMsgStatus(cg.RawExpression(troublemsg)))    
     cg.add(var.onRelayChannelChange(cg.RawExpression(relay)))      
     await cg.register_component(var, config)
-
+   
     # for sensor in config.get(CONF_BINARY_SENSORS, []):
     #     bs = await cg.get_variable(sensor[CONF_ID])
     #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:

@@ -15,6 +15,9 @@ _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('vistaECPHome', cg.PollingComponent)
 
+web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
 CONF_MAXPARTITIONS="maxpartitions"
@@ -54,7 +57,6 @@ CONF_AUTOPOPULATE="autopopulate"
 CONF_USEASYNC="use_async_polling"
 CONF_TYPE_ID="code"
 
-
 systemstatus= '''[&](std::string statusCode,uint8_t partition) {
       alarm_panel::alarmPanelPtr->publishTextState("ss_",partition,&statusCode); 
     }'''
@@ -91,24 +93,6 @@ relay='''[&](uint8_t addr,int channel,bool open) {
       std::string sensor = "r"+std::to_string(addr) + std::to_string(channel);
       alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
     }'''
-
-# ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
-#     {
-#         cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
-#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-#     },
-#     key=CONF_ID,
-
-# )
-
-# ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
-#     {
-#         cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
-#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-#     },
-#     key=CONF_ID,
-
-# )
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -150,8 +134,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
     cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
     cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
-    # cv.Optional(CONF_BINARY_SENSORS): cv.ensure_list(ALARM_PANEL_BINARY_SENSOR_SCHEMA),
-    # cv.Optional(CONF_TEXT_SENSORS): cv.ensure_list(ALARM_PANEL_TEXT_SENSOR_SCHEMA),    
+  
     }
 )
 
@@ -236,24 +219,7 @@ async def to_code(config):
     cg.add(var.onZoneStatusChange(cg.RawExpression(zonestatus)))
     cg.add(var.onRelayStatusChange(cg.RawExpression(relay)))      
     await cg.register_component(var, config)
-
-    # for sensor in config.get(CONF_BINARY_SENSORS, []):
-    #     bs = await cg.get_variable(sensor[CONF_ID])
-    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
-    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
-    #     elif sensor[CONF_ID].is_manual:
-    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
-    #     cg.add(bs.set_disabled_by_default(False))
-    #     cg.add(bs.set_publish_initial_state(True))
-
-    # for sensor in config.get(CONF_TEXT_SENSORS, []):
-    #     ts = await cg.get_variable(sensor[CONF_ID])
-    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
-    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
-    #     elif sensor[CONF_ID].is_manual:
-    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
-    #     cg.add(ts.set_disabled_by_default(False))   
-    
+ 
 def real_clean_build():
     import shutil
     build_dir = CORE.relative_build_path("")

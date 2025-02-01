@@ -203,51 +203,54 @@ namespace esphome
     void vistaECPHome::loadZones()
     {
 
-      int z;
-      MatchState ms;
-      char buf[20];
-      char res;
       for (auto obj : bMap)
       {
-        ms.Target((char *)obj->get_object_id().c_str());
-        res = ms.Match("^[zZ](%d+)$");
-        if (res == REGEXP_MATCHED)
-        {
-          ms.GetCapture(buf, 0);
-          z = toInt(buf, 10);
-          createZone(z);
-        }
+        createZoneFromId(obj->get_object_id().c_str());
+
       }
 
       for (auto obj : tMap)
       {
-        ms.Target((char *)obj->get_object_id().c_str());
-        res = ms.Match("^[zZ](%d+)$");
-        if (res == REGEXP_MATCHED)
-        {
-          ms.GetCapture(buf, 0);
-          z = toInt(buf, 10);
-          createZone(z);
-        }
+        createZoneFromId(obj->get_object_id().c_str());
+
       }
     }
 #endif
 
-    vistaECPHome::zoneType *vistaECPHome::createZone(uint16_t z)
+    void vistaECPHome::createZoneFromId(const char * zid, uint8_t p)
+    {
+      MatchState ms;
+      char buf[20];
+      char res;
+      ms.Target((char*)zid);
+      res = ms.Match("^[zZ](%d+)$");
+      if (res == REGEXP_MATCHED)
+      {
+        ms.GetCapture(buf, 0);
+        int z = toInt(buf, 10);
+        createZone(z, p);
+      }
+    }
+
+    void vistaECPHome::createZone(uint16_t z, uint8_t p)
     {
 
-      zoneType n = zonetype_INIT;
+      zoneType *zt = getZone(z);
+      if (zt->zone == z)
+        return;
 
+      zoneType n;
       n.zone = z;
       n.active = true;
+      n.partition = p;
+
       extZones.push_back(n);
-      ESP_LOGD(TAG, "added zone %d", z);
+      ESP_LOGD(TAG, "added zone %d", extZones.back().zone);
       if (zoneStatusChangeCallback != NULL)
-        ;
-      zoneStatusChangeCallback(z, "C");
+        zoneStatusChangeCallback(z, "C");
       if (zoneStatusChangeBinaryCallback != NULL)
         zoneStatusChangeBinaryCallback(z, false);
-      return &extZones.back();
+
     }
 
     std::string vistaECPHome::getZoneName(uint16_t zone, bool append)
@@ -1545,14 +1548,14 @@ void vistaECPHome::update()
 #endif
               }
               if (z && !(vistaCmd.cbuf[5] & 4) && !(vistaCmd.cbuf[5] & 1))
-              { 
+              {
                 zoneType *zt = getZone(z);
                 if (zt->active)
                 {
                   zt->time = millis();
                   zt->open = vistaCmd.cbuf[5] & rf.mask ? true : false;
                   zt->rflowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
-                  //ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
+                  // ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
                   zoneStatusUpdate(zt);
                 }
               }

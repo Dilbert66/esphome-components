@@ -53,30 +53,6 @@ namespace esphome
     static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
 
-#if USE_WEBKEYPAD_VERSION == 1
-/*
-void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &klass, const std::string &action,
-               const std::function<void(AsyncResponseStream &stream, EntityBase *obj)> &action_func = nullptr) {
-  stream->print("<tr class=\"");
-  stream->print(klass.c_str());
-  if (obj->is_internal())
-    stream->print(" internal");
-  stream->print("\" id=\"");
-  stream->print(klass.c_str());
-  stream->print("-");
-  stream->print(obj->get_object_id().c_str());
-  stream->print("\"><td>");
-  stream->print(obj->get_name().c_str());
-  stream->print("</td><td></td><td>");
-  stream->print(action.c_str());
-  if (action_func) {
-    action_func(*stream, obj);
-  }
-  stream->print("</td>");
-  stream->print("</tr>");
-}
-*/
-#endif
     void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl, JsonObject doc)
     {
       int ct = 0;
@@ -209,7 +185,8 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
           {
             if (credentials_.crypt)
             {
-              if (!c->data[1])
+              ESP_LOGD(TAG, "data 1 = %d", c->data[1]);
+              if (c->data[1])
               {
                 mg_http_reply(c, 404, "", "");
                 return;
@@ -217,6 +194,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
               else
                 data = encrypt(data).c_str();
             }
+            //  ESP_LOGD(TAG,"sending %s",data);
             mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", data);
           }
         }
@@ -233,11 +211,6 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 #endif
       webServerPtr = this;
     }
-
-#if USE_WEBKEYPAD_VERSION == 1
-    void WebServer::set_css_url(const char *css_url) { this->css_url_ = css_url; }
-    void WebServer::set_js_url(const char *js_url) { this->js_url_ = js_url; }
-#endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
     void WebServer::set_css_include(const char *css_include) { this->css_include_ = css_include; }
@@ -329,6 +302,14 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       }
 #endif
 
+      // for (auto &group : this->sorting_groups_) {
+      //   client->send(json::build_json([group](JsonObject root) {
+      //                  root["name"] = group.second.name;
+      //                  root["sorting_weight"] = group.second.weight;
+      //                }).c_str(),
+      //                "sorting_group");
+      // }
+
       this->set_interval(10000, [this]()
                          { this->push(PING, "", millis(), 30000); });
     }
@@ -359,7 +340,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       {
         char addr[50];
         sprintf(addr, "http://0.0.0.0:%d", port_);
-        ESP_LOGD(TAG,"Starting web server on %s:%d", network::get_use_address().c_str(), port_);
+        ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address().c_str(), port_);
         if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL)
         {
           printf("Cannot listen on address..");
@@ -376,7 +357,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     }
     float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
-#if USE_WEBKEYPAD_VERSION == 2
+#if USE_WEBKEYPAD_VERSION >= 2
     void WebServer::handle_index_request(struct mg_connection *c)
     {
 
@@ -415,26 +396,32 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
       const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
       mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
-      mg_send(c, buf, ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
+      for (int s=0;s<ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;s=s+1024) { //we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
+        mg_send(c,&buf[s],1024);
+        mg_mgr_poll(&mgr, 0);
+      }
       c->is_resp = 0;
     }
 #endif
 
-#define set_json_id(root, obj, sensor, start_config) \
-  (root)["id"] = sensor;                             \
-  if (((start_config) == DETAIL_ALL))                \
-    (root)["name"] = (obj)->get_name();
+#define set_json_id(root, obj, sensor, start_config)                      \
+  (root)["id"] = sensor;                                                  \
+  if (((start_config) == DETAIL_ALL))                                     \
+  {                                                                       \
+    (root)["name"] = (obj)->get_name();                                   \
+    (root)["icon"] = (obj)->get_icon();                                   \
+    (root)["entity_category"] = (obj)->get_entity_category();             \
+    if ((obj)->is_disabled_by_default())                                  \
+      (root)["is_disabled_by_default"] = (obj)->is_disabled_by_default(); \
+  }
 
 #define set_json_value(root, obj, sensor, value, start_config) \
-  set_json_id((root), (obj), sensor, start_config)(root)["value"] = value;
-
-#define set_json_state_value(root, obj, sensor, state, value, start_config) \
-  set_json_value(root, obj, sensor, value, start_config)(root)["state"] = state;
+  set_json_id((root), (obj), sensor, start_config);            \
+  (root)["value"] = value;
 
 #define set_json_icon_state_value(root, obj, sensor, state, value, start_config) \
-  set_json_value(root, obj, sensor, value, start_config)(root)["state"] = state; \
-  if (((start_config) == DETAIL_ALL))                                            \
-    (root)["icon"] = (obj)->get_icon();
+  set_json_value(root, obj, sensor, value, start_config);                        \
+  (root)["state"] = state;
 
 #ifdef USE_SENSOR
     void WebServer::on_sensor_update(sensor::Sensor *obj, float state)
@@ -447,9 +434,19 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     {
       for (sensor::Sensor *obj : App.get_sensors())
       {
+        ESP_LOGD(TAG, "in handle sensor request");
         if (obj->get_object_id() != doc["oid"])
           continue;
-        std::string data = this->sensor_json(obj, obj->state, DETAIL_STATE);
+        auto detail = DETAIL_STATE;
+        if (doc.containsKey("detail"))
+        {
+          if (doc["detail"] == "all")
+          {
+            detail = DETAIL_ALL;
+          }
+        }
+        std::string data = this->sensor_json(obj, obj->state, detail);
+        ESP_LOGD(TAG, " sensor detail=%d,data=%s", detail, data.c_str());
         // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n", "%s", data.c_str());
         ws_reply(c, data.c_str(), true);
         return;
@@ -459,7 +456,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     std::string WebServer::sensor_json(sensor::Sensor *obj, float value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
     std::string state;
     if (std::isnan(value)) {
@@ -469,7 +466,19 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       if (!obj->get_unit_of_measurement().empty())
         state += " " + obj->get_unit_of_measurement();
     }
-    set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config); });
+    //set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config); });
+
+    set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config);
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
+      if (!obj->get_unit_of_measurement().empty())
+        root["uom"] = obj->get_unit_of_measurement();
+    } });
     }
 #endif
 
@@ -494,14 +503,18 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       {
         if (obj->get_object_id() != doc["oid"])
           continue;
-        std::string data = this->text_sensor_json(obj, obj->state, DETAIL_STATE);
+        auto detail = DETAIL_STATE;
+        if (doc.containsKey("detail"))
+        {
+          if (doc["detail"] == "all")
+          {
+            detail = DETAIL_ALL;
+          }
+        }
+        std::string data = this->text_sensor_json(obj, obj->state, detail);
+
         // request->send(200, "application/json", data.c_str());
         // mg_http_reply(c, 200, "Content-Type: application/jsonAccess-Control-Allow-Origin: *\r\n\r\n", "%s", data.c_str());
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
-        // std::string id =obj->get_type_id();
-// if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
-// data=encrypt(data.c_str());
-#endif
         ws_reply(c, data.c_str(), true);
         return;
       }
@@ -511,10 +524,21 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std::string &value,
                                             JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-    set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
-  root["id_code"]=obj->get_object_id(); });
+   // set_json_icon_state_value(root, obj, "text_sensor-" +  obj->get_object_id(), value, value, start_config);
+  //root["id_code"]=obj->get_object_id(); });
+      set_json_icon_state_value(root, obj, "text_sensor-" + obj->get_object_id(), value, value, start_config);
+    root["id_code"] = obj->get_object_id();
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+
+        }
+      }
+    } });
     }
 
 #endif
@@ -525,13 +549,24 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       // this->events_.send(this->switch_json(obj, state, DETAIL_STATE).c_str(), "state");
       this->push(STATE, this->switch_json(obj, state, DETAIL_STATE).c_str());
     }
+
     std::string WebServer::switch_json(switch_::Switch *obj, bool value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-    set_json_icon_state_value(root, obj, "switch-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+    // set_json_icon_state_value(root, obj, "switch-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+    // if (start_config == DETAIL_ALL) {
+    //   root["assumed_state"] = obj->assumed_state();
+    // } });
+        set_json_icon_state_value(root, obj, "switch-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
     if (start_config == DETAIL_ALL) {
       root["assumed_state"] = obj->assumed_state();
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
     } });
     }
     void WebServer::handle_switch_request(mg_connection *c, JsonObject doc)
@@ -545,7 +580,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["action"] == "get")
         {
-          std::string data = this->switch_json(obj, obj->state, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->switch_json(obj, obj->state, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -584,8 +627,22 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     std::string WebServer::button_json(button::Button *obj, JsonDetail start_config)
     {
       return json::build_json(
-          [obj, start_config](JsonObject root)
-          { set_json_id(root, obj, "button-" + obj->get_object_id(), start_config); });
+          [this, obj, start_config](JsonObject root)
+          {
+            // set_json_id(root, obj, "button-" + obj->get_object_id(), start_config); });
+            set_json_id(root, obj, "button-" + obj->get_object_id(), start_config);
+            if (start_config == DETAIL_ALL)
+            {
+              if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end())
+              {
+                root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+                if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end())
+                {
+                  root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+                }
+              }
+            }
+          });
     }
 
     void WebServer::handle_button_request(mg_connection *c, JsonObject doc)
@@ -595,8 +652,21 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       {
         if (obj->get_object_id() != doc["oid"])
           continue;
-
-        if (doc["method"] == "POST" && doc["action"] == "press")
+        if (doc["method"] == "GET" && doc["method"] == "")
+        {
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->button_json(obj, detail);
+          // request->send(200, "application/json", data.c_str());
+          ws_reply(c, data.c_str(), true);
+        }
+        else if (doc["method"] == "POST" && doc["action"] == "press")
         {
           this->schedule_([obj]()
                           { obj->press(); });
@@ -621,10 +691,22 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-                                set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
-                                root["id_code"] = obj->get_object_id(); });
+                         //       set_json_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+                            //    root["id_code"] = obj->get_object_id(); });
+    set_json_icon_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value,
+                              start_config);
+    root["id_code"] = obj->get_object_id();
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+
+        }
+      }
+    } });
     }
 
     void WebServer::handle_binary_sensor_request(mg_connection *c, JsonObject doc)
@@ -633,7 +715,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       {
         if (obj->get_object_id() != doc["oid"])
           continue;
-        std::string data = this->binary_sensor_json(obj, obj->state, DETAIL_STATE);
+        auto detail = DETAIL_STATE;
+        if (doc.containsKey("detail"))
+        {
+          if (doc["detail"] == "all")
+          {
+            detail = DETAIL_ALL;
+          }
+        }
+        std::string data = this->binary_sensor_json(obj, obj->state, detail);
         // request->send(200, "application/json", data.c_str());
         // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
         ws_reply(c, data.c_str(), true);
@@ -652,16 +742,34 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     std::string WebServer::fan_json(fan::Fan *obj, JsonDetail start_config)
     {
 
-      return json::build_json([obj, start_config](JsonObject root)
+      return json::build_json([this, obj, start_config](JsonObject root)
                               {
-    set_json_state_value(root, obj, "fan-" + obj->get_object_id(), obj->state ? "ON" : "OFF", obj->state, start_config);
+    // set_json_state_value(root, obj, "fan-" + obj->get_object_id(), obj->state ? "ON" : "OFF", obj->state, start_config);
+    // const auto traits = obj->get_traits();
+    // if (traits.supports_speed()) {
+    //   root["speed_level"] = obj->speed;
+    //   root["speed_count"] = traits.supported_speed_count();
+    // }
+    // if (obj->get_traits().supports_oscillation())
+    //   root["oscillation"] = obj->oscillating; });
+        set_json_icon_state_value(root, obj, "fan-" + obj->get_object_id(), obj->state ? "ON" : "OFF", obj->state,
+                              start_config);
     const auto traits = obj->get_traits();
     if (traits.supports_speed()) {
       root["speed_level"] = obj->speed;
       root["speed_count"] = traits.supported_speed_count();
     }
     if (obj->get_traits().supports_oscillation())
-      root["oscillation"] = obj->oscillating; });
+      root["oscillation"] = obj->oscillating;
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+
+        }
+      }
+    } });
     }
     void WebServer::handle_fan_request(mg_connection *c, JsonObject doc)
     {
@@ -675,7 +783,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->fan_json(obj, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->fan_json(obj, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -763,7 +879,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->light_json(obj, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->light_json(obj, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -908,9 +1032,20 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     }
     std::string WebServer::light_json(light::LightState *obj, JsonDetail start_config)
     {
-      return json::build_json([obj, start_config](JsonObject root)
+      return json::build_json([this, obj, start_config](JsonObject root)
                               {
-    set_json_id(root, obj, "light-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "light-" + obj->get_object_id(), start_config);
+    // root["state"] = obj->remote_values.is_on() ? "ON" : "OFF";
+
+    // light::LightJSONSchema::dump_json(*obj, root);
+    // if (start_config == DETAIL_ALL) {
+    //   JsonArray opt = root.createNestedArray("effects");
+    //   opt.add("None");
+    //   for (auto const &option : obj->get_effects()) {
+    //     opt.add(option->get_name());
+    //   }
+    // } });
+        set_json_id(root, obj, "light-" + obj->get_object_id(), start_config);
     root["state"] = obj->remote_values.is_on() ? "ON" : "OFF";
 
     light::LightJSONSchema::dump_json(*obj, root);
@@ -919,6 +1054,12 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       opt.add("None");
       for (auto const &option : obj->get_effects()) {
         opt.add(option->get_name());
+      }
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
       }
     } });
     }
@@ -942,7 +1083,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->cover_json(obj, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->cover_json(obj, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -1017,14 +1166,30 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     }
     std::string WebServer::cover_json(cover::Cover *obj, JsonDetail start_config)
     {
-      return json::build_json([obj, start_config](JsonObject root)
+      return json::build_json([this, obj, start_config](JsonObject root)
                               {
-    set_json_state_value(root, obj, "cover-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
-                         obj->position, start_config);
+    // set_json_state_value(root, obj, "cover-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
+    //                      obj->position, start_config);
+    // root["current_operation"] = cover::cover_operation_to_str(obj->current_operation);
+
+    // if (obj->get_traits().get_supports_tilt())
+    //   root["tilt"] = obj->tilt; });
+      set_json_icon_state_value(root, obj, "cover-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
+                              obj->position, start_config);
     root["current_operation"] = cover::cover_operation_to_str(obj->current_operation);
 
+    if (obj->get_traits().get_supports_position())
+      root["position"] = obj->position;
     if (obj->get_traits().get_supports_tilt())
-      root["tilt"] = obj->tilt; });
+      root["tilt"] = obj->tilt;
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
+    } });
     }
 #endif
 
@@ -1046,7 +1211,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->number_json(obj, obj->state, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->number_json(obj, obj->state, detail);
           ws_reply(c, data.c_str(), true);
           return;
         }
@@ -1077,20 +1250,48 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     std::string WebServer::number_json(number::Number *obj, float value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-    set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
+    // if (start_config == DETAIL_ALL) {
+    //   root["min_value"] = obj->traits.get_min_value();
+    //   root["max_value"] = obj->traits.get_max_value();
+    //   root["step"] = obj->traits.get_step();
+    //   root["mode"] = (int) obj->traits.get_mode();
+    // }
+    // if (std::isnan(value)) {
+    //   root["value"] = "\"NaN\"";
+    //   root["state"] = "NA";
+    // } else {
+    //   root["value"] = value;
+    //   std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
+    //   if (!obj->traits.get_unit_of_measurement().empty())
+    //     state += " " + obj->traits.get_unit_of_measurement();
+    //   root["state"] = state;
+    // } });
+       set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
     if (start_config == DETAIL_ALL) {
-      root["min_value"] = obj->traits.get_min_value();
-      root["max_value"] = obj->traits.get_max_value();
-      root["step"] = obj->traits.get_step();
+      root["min_value"] =
+          value_accuracy_to_string(obj->traits.get_min_value(), step_to_accuracy_decimals(obj->traits.get_step()));
+      root["max_value"] =
+          value_accuracy_to_string(obj->traits.get_max_value(), step_to_accuracy_decimals(obj->traits.get_step()));
+      root["step"] =
+          value_accuracy_to_string(obj->traits.get_step(), step_to_accuracy_decimals(obj->traits.get_step()));
       root["mode"] = (int) obj->traits.get_mode();
+      if (!obj->traits.get_unit_of_measurement().empty())
+        root["uom"] = obj->traits.get_unit_of_measurement();
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
     }
     if (std::isnan(value)) {
       root["value"] = "\"NaN\"";
       root["state"] = "NA";
     } else {
-      root["value"] = value;
+      root["value"] = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
       std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
       if (!obj->traits.get_unit_of_measurement().empty())
         state += " " + obj->traits.get_unit_of_measurement();
@@ -1116,7 +1317,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
         if (doc["method"] == "GET")
         {
-          std::string data = this->text_json(obj, obj->state, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->text_json(obj, obj->state, detail);
           ws_reply(c, data.c_str(), true);
           return;
         }
@@ -1141,12 +1350,22 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     std::string WebServer::text_json(text::Text *obj, const std::string &value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-    set_json_id(root, obj, "text-" + obj->get_object_id(), start_config);
-    if (start_config == DETAIL_ALL) {
-      root["mode"] = (int) obj->traits.get_mode();
-    }
+    // set_json_id(root, obj, "text-" + obj->get_object_id(), start_config);
+    // if (start_config == DETAIL_ALL) {
+    //   root["mode"] = (int) obj->traits.get_mode();
+    // }
+    // root["min_length"] = obj->traits.get_min_length();
+    // root["max_length"] = obj->traits.get_max_length();
+    // root["pattern"] = obj->traits.get_pattern();
+    // if (obj->traits.get_mode() == text::TextMode::TEXT_MODE_PASSWORD) {
+    //   root["state"] = "********";
+    // } else {
+    //   root["state"] = value;
+    // }
+    // root["value"] = value; });
+        set_json_id(root, obj, "text-" + obj->get_object_id(), start_config);
     root["min_length"] = obj->traits.get_min_length();
     root["max_length"] = obj->traits.get_max_length();
     root["pattern"] = obj->traits.get_pattern();
@@ -1155,7 +1374,16 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     } else {
       root["state"] = value;
     }
-    root["value"] = value; });
+    root["value"] = value;
+    if (start_config == DETAIL_ALL) {
+      root["mode"] = (int) obj->traits.get_mode();
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
+    } });
     }
 #endif
 
@@ -1185,8 +1413,8 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
           if (cl->id == ul)
           {
             cl->data[1] = 1;
-            entities_iterator_.begin(include_internal_);
             ESP_LOGD(TAG, "Set auth conn %d as 1", cl->id);
+            entities_iterator_.begin(this->include_internal_);
             break;
           }
         }
@@ -1269,9 +1497,6 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         if (doc["method"] == "GET")
         {
           auto detail = DETAIL_STATE;
-          //  auto *param = request->getParam("detail");
-          //   char buf[100];
-          // if (mg_http_get_var(&hm->body,"detail",buf,sizeof(buf)) > 0) {
           if (doc.containsKey("detail"))
           {
             if (doc["detail"] == "all")
@@ -1313,13 +1538,26 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     }
     std::string WebServer::select_json(select::Select *obj, const std::string &value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-    set_json_state_value(root, obj, "select-" + obj->get_object_id(), value, value, start_config);
+    // set_json_state_value(root, obj, "select-" + obj->get_object_id(), value, value, start_config);
+    // if (start_config == DETAIL_ALL) {
+    //   JsonArray opt = root.createNestedArray("option");
+    //   for (auto &option : obj->traits.get_options()) {
+    //     opt.add(option);
+    //   }
+    // } });
+        set_json_icon_state_value(root, obj, "select-" + obj->get_object_id(), value, value, start_config);
     if (start_config == DETAIL_ALL) {
       JsonArray opt = root.createNestedArray("option");
       for (auto &option : obj->traits.get_options()) {
         opt.add(option);
+      }
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
       }
     } });
     }
@@ -1347,7 +1585,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->climate_json(obj, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->climate_json(obj, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -1412,14 +1658,96 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
     std::string WebServer::climate_json(climate::Climate *obj, JsonDetail start_config)
     {
-      return json::build_json([obj, start_config](JsonObject root)
+      return json::build_json([this, obj, start_config](JsonObject root)
                               {
-    set_json_id(root, obj, "climate-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "climate-" + obj->get_object_id(), start_config);
+    // const auto traits = obj->get_traits();
+    // int8_t target_accuracy = traits.get_target_temperature_accuracy_decimals();
+    // int8_t current_accuracy = traits.get_current_temperature_accuracy_decimals();
+    // char buf[16];
+
+
+    // if (start_config == DETAIL_ALL) {
+    //   JsonArray opt = root.createNestedArray("modes");
+    //   for (climate::ClimateMode m : traits.get_supported_modes())
+    //     opt.add(PSTR_LOCAL(climate::climate_mode_to_string(m)));
+    //   if (!traits.get_supported_custom_fan_modes().empty()) {
+    //     JsonArray opt = root.createNestedArray("fan_modes");
+    //     for (climate::ClimateFanMode m : traits.get_supported_fan_modes())
+    //       opt.add(PSTR_LOCAL(climate::climate_fan_mode_to_string(m)));
+    //   }
+
+    //   if (!traits.get_supported_custom_fan_modes().empty()) {
+    //     JsonArray opt = root.createNestedArray("custom_fan_modes");
+    //     for (auto const &custom_fan_mode : traits.get_supported_custom_fan_modes())
+    //       opt.add(custom_fan_mode);
+    //   }
+    //   if (traits.get_supports_swing_modes()) {
+    //     JsonArray opt = root.createNestedArray("swing_modes");
+    //     for (auto swing_mode : traits.get_supported_swing_modes())
+    //       opt.add(PSTR_LOCAL(climate::climate_swing_mode_to_string(swing_mode)));
+    //   }
+    //   if (traits.get_supports_presets() && obj->preset.has_value()) {
+    //     JsonArray opt = root.createNestedArray("presets");
+    //     for (climate::ClimatePreset m : traits.get_supported_presets())
+    //       opt.add(PSTR_LOCAL(climate::climate_preset_to_string(m)));
+    //   }
+    //   if (!traits.get_supported_custom_presets().empty() && obj->custom_preset.has_value()) {
+    //     JsonArray opt = root.createNestedArray("custom_presets");
+    //     for (auto const &custom_preset : traits.get_supported_custom_presets())
+    //       opt.add(custom_preset);
+    //   }
+    // }
+
+    // bool has_state = false;
+    // root["mode"] = PSTR_LOCAL(climate_mode_to_string(obj->mode));
+    // root["max_temp"] = value_accuracy_to_string(traits.get_visual_max_temperature(), target_accuracy);
+    // root["min_temp"] = value_accuracy_to_string(traits.get_visual_min_temperature(), target_accuracy);
+    // root["step"] = traits.get_visual_target_temperature_step();
+    // if (traits.get_supports_action()) {
+    //   root["action"] = PSTR_LOCAL(climate_action_to_string(obj->action));
+    //   root["state"] = root["action"];
+    //   has_state = true;
+    // }
+    // if (traits.get_supports_fan_modes() && obj->fan_mode.has_value()) {
+    //   root["fan_mode"] = PSTR_LOCAL(climate_fan_mode_to_string(obj->fan_mode.value()));
+    // }
+    // if (!traits.get_supported_custom_fan_modes().empty() && obj->custom_fan_mode.has_value()) {
+    //   root["custom_fan_mode"] = obj->custom_fan_mode.value().c_str();
+    // }
+    // if (traits.get_supports_presets() && obj->preset.has_value()) {
+    //   root["preset"] = PSTR_LOCAL(climate_preset_to_string(obj->preset.value()));
+    // }
+    // if (!traits.get_supported_custom_presets().empty() && obj->custom_preset.has_value()) {
+    //   root["custom_preset"] = obj->custom_preset.value().c_str();
+    // }
+    // if (traits.get_supports_swing_modes()) {
+    //   root["swing_mode"] = PSTR_LOCAL(climate_swing_mode_to_string(obj->swing_mode));
+    // }
+    // if (traits.get_supports_current_temperature()) {
+    //   if (!std::isnan(obj->current_temperature)) {
+    //     root["current_temperature"] = value_accuracy_to_string(obj->current_temperature, current_accuracy);
+    //   } else {
+    //     root["current_temperature"] = "NA";
+    //   }
+    // }
+    // if (traits.get_supports_two_point_target_temperature()) {
+    //   root["target_temperature_low"] = value_accuracy_to_string(obj->target_temperature_low, target_accuracy);
+    //   root["target_temperature_high"] = value_accuracy_to_string(obj->target_temperature_high, target_accuracy);
+    //   if (!has_state) {
+    //     root["state"] = value_accuracy_to_string((obj->target_temperature_high + obj->target_temperature_low) / 2.0f,
+    //                                              target_accuracy);
+    //   }
+    // } else {
+    //   root["target_temperature"] = value_accuracy_to_string(obj->target_temperature, target_accuracy);
+    //   if (!has_state)
+    //     root["state"] = root["target_temperature"];
+    // } });
+     set_json_id(root, obj, "climate-" + obj->get_object_id(), start_config);
     const auto traits = obj->get_traits();
     int8_t target_accuracy = traits.get_target_temperature_accuracy_decimals();
     int8_t current_accuracy = traits.get_current_temperature_accuracy_decimals();
     char buf[16];
-
 
     if (start_config == DETAIL_ALL) {
       JsonArray opt = root.createNestedArray("modes");
@@ -1450,6 +1778,12 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         JsonArray opt = root.createNestedArray("custom_presets");
         for (auto const &custom_preset : traits.get_supported_custom_presets())
           opt.add(custom_preset);
+      }
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
       }
     }
 
@@ -1508,9 +1842,20 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
     }
     std::string WebServer::lock_json(lock::Lock *obj, lock::LockState value, JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
-                              { set_json_icon_state_value(root, obj, "lock-" + obj->get_object_id(), lock::lock_state_to_string(value), value,
-                                                          start_config); });
+      return json::build_json([this, obj, value, start_config](JsonObject root)
+                              {
+                                //  set_json_icon_state_value(root, obj, "lock-" + obj->get_object_id(), lock::lock_state_to_string(value), value,
+                                //                           start_config); });
+                                    set_json_icon_state_value(root, obj, "lock-" + obj->get_object_id(), lock::lock_state_to_string(value), value,
+                              start_config);
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
+    } });
     }
     void WebServer::handle_lock_request(mg_connection *c, JsonObject doc)
     {
@@ -1524,7 +1869,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->lock_json(obj, obj->state, DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->lock_json(obj, obj->state, detail);
           // request->send(200, "application/json", data.c_str());
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -1568,11 +1921,23 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
                                                     alarm_control_panel::AlarmControlPanelState value,
                                                     JsonDetail start_config)
     {
-      return json::build_json([obj, value, start_config](JsonObject root)
+      return json::build_json([this, obj, value, start_config](JsonObject root)
                               {
-     char buf[16];
+
+    //  char buf[16];
+    // set_json_icon_state_value(root, obj, "alarm-control-panel-" + obj->get_object_id(),
+    //                           PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config); });
+        char buf[16];
     set_json_icon_state_value(root, obj, "alarm-control-panel-" + obj->get_object_id(),
-                              PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config); });
+                              PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config);
+    if (start_config == DETAIL_ALL) {
+      if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
+        root["sorting_weight"] = this->sorting_entitys_[obj].weight;
+        if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
+          root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
+        }
+      }
+    } });
     }
     void WebServer::handle_alarm_control_panel_request(mg_connection *c, JsonObject doc)
     {
@@ -1585,7 +1950,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
         // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
-          std::string data = this->alarm_control_panel_json(obj, obj->get_state(), DETAIL_STATE);
+          auto detail = DETAIL_STATE;
+          if (doc.containsKey("detail"))
+          {
+            if (doc["detail"] == "all")
+            {
+              detail = DETAIL_ALL;
+            }
+          }
+          std::string data = this->alarm_control_panel_json(obj, obj->get_state(), detail);
           // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
           // request->send(200, "application/json", data.c_str());
           ws_reply(c, data.c_str(), true);
@@ -1623,6 +1996,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       }
 
       std::string newdata;
+
       if (credentials_.crypt && strlen(data) > 0)
         newdata = encrypt(data);
       else
@@ -1630,8 +2004,9 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
       for (c = mgr.conns; c != NULL; c = c->next)
       {
+
         if (credentials_.crypt && !c->data[1])
-          continue; // not authenticated with encryped response
+          continue; // not authenticated with encrypted response
 
         if (c->data[0] == 'E')
         {
@@ -2120,6 +2495,14 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
               enc = srv->_json_keypad_config;
             mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
           }
+          //             for (auto &group :srv->sorting_groups_) {
+          //     enc=json::build_json([group](JsonObject root) {
+          //          root["name"] = group.second.name;
+          //          root["sorting_weight"] = group.second.weight;
+          //        });
+          //       if (crypt) enc=srv->encrypt(enc.c_str());
+          //       mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),"sorting_group",enc.c_str());
+          // }
 
           srv->entities_iterator_.begin(srv->include_internal_);
         }
@@ -2131,17 +2514,34 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
           mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
           c->send.c = c;
           std::string enc;
-          if (srv->get_credentials()->crypt)
-            enc = srv->encrypt(srv->get_config_json(c->id).c_str());
-          else
-            enc = srv->get_config_json(c->id);
+          bool crypt = srv->get_credentials()->crypt;
+          // if (crypt)
+          //   enc = srv->encrypt(srv->get_config_json(c->id).c_str());
+          // else
+          enc = srv->get_config_json(c->id);
+          if (crypt)
+            enc = srv->encrypt(enc.c_str());
           mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
+
+          for (auto &group : srv->sorting_groups_)
+          {
+            enc = json::build_json([group](JsonObject root)
+                                   {
+                     root["name"] = group.second.name;
+                     root["sorting_weight"] = group.second.weight; });
+            if (crypt)
+              enc = srv->encrypt(enc.c_str());
+            mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
+          }
+
           if (strlen(srv->_json_keypad_config) > 0)
           {
-            if (srv->get_credentials()->crypt)
-              enc = srv->encrypt(srv->_json_keypad_config);
-            else
-              enc = srv->_json_keypad_config;
+            // if (srv->get_credentials()->crypt)
+            //   enc = srv->encrypt(srv->_json_keypad_config);
+            // else
+            enc = srv->_json_keypad_config;
+            if (crypt)
+              enc = srv->encrypt(enc.c_str());
             mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
           }
           srv->entities_iterator_.begin(srv->include_internal_);
@@ -2156,7 +2556,7 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
       }
       else if (ev == MG_EV_ERROR)
       {
-        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s.", c->id, c->fd, (char *) ev_data);
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s.", c->id, c->fd, (char *)ev_data);
       }
     }
 
@@ -2360,6 +2760,15 @@ void write_row(AsyncResponseStream *stream, EntityBase *obj, const std::string &
 
       // mg_http_reply(c,404,"","");
       ws_reply(c, "", false);
+    }
+    void WebServer::add_entity_config(EntityBase *entity, float weight, uint64_t group)
+    {
+      this->sorting_entitys_[entity] = SortingComponents{weight, group};
+    }
+
+    void WebServer::add_sorting_group(uint64_t group_id, const std::string &group_name, float weight)
+    {
+      this->sorting_groups_[group_id] = SortingGroup{group_name, weight};
     }
 
     void WebServer::schedule_(std::function<void()> &&f)

@@ -161,19 +161,6 @@ namespace esphome
         troubleFetch = false;
     }
 
-    DSCkeybushome::zoneType *DSCkeybushome::createZone(byte z)
-    {
-
-      zoneType n = zonetype_INIT;
-
-      n.zone = z;
-      n.enabled = true;
-
-      ESP_LOGD(TAG, "adding zone %d", z);
-      zoneStatus.push_back(n);
-      return &zoneStatus.back();
-    }
-
     DSCkeybushome::zoneType *DSCkeybushome::getZone(byte z)
     {
       // zone=0 to maxZones-1
@@ -1551,7 +1538,6 @@ void DSCkeybushome::update()
       Serial.printf("Keybus buffer overflow\n");
 #endif
           dsc.bufferOverflow = false;
-
         }
         static unsigned long errorTime = millis();
         // Checks if the interface is connected to the Keybus
@@ -1564,15 +1550,17 @@ void DSCkeybushome::update()
           }
           else
           {
-            if (millis() - errorTime > 15000) {
-              errorTime=millis();
+            if (millis() - errorTime > 15000)
+            {
+              errorTime = millis();
               ESP_LOGE(TAG, "Panel keybus connect timeout! Is the panel connected?");
               systemStatusChangeCallback(String(FPSTR(STATUS_OFFLINE)).c_str());
               return;
             }
           }
         }
-        if (!dsc.panelData[0]) return; //not valid data
+        if (!dsc.panelData[0])
+          return; // not valid data
 
         static uint8_t delayedStart = 1;
         static unsigned long startWait = millis();
@@ -4692,35 +4680,96 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
-      int z;
-      MatchState ms;
-      char buf[20];
-      char res;
       for (auto obj : bMap)
       {
-        ms.Target((char *)obj->get_object_id().c_str());
-        res = ms.Match("^[zZ](%d+)$");
-        if (res == REGEXP_MATCHED)
-        {
-          ms.GetCapture(buf, 0);
-          z = toInt(buf, 10);
-          createZone(z);
-        }
+        createZoneFromId(obj->get_object_id().c_str());
       }
 
       for (auto obj : tMap)
       {
-        ms.Target((char *)obj->get_object_id().c_str());
-        res = ms.Match("^[zZ](%d+)$");
-        if (res == REGEXP_MATCHED)
-        {
-          ms.GetCapture(buf, 0);
-          z = toInt(buf, 10);
-          createZone(z);
-        }
+        createZoneFromId(obj->get_object_id().c_str());
       }
     }
 #endif
+
+    void DSCkeybushome::createZoneFromId(const char *zid, uint8_t p)
+    {
+      MatchState ms;
+      char buf[20];
+      char res;
+      ms.Target((char *)zid);
+      res = ms.Match("^[zZ](%d+)$");
+      if (res == REGEXP_MATCHED)
+      {
+        ms.GetCapture(buf, 0);
+        int z = toInt(buf, 10);
+        createZone(z, p);
+      }
+    }
+
+    //     DSCkeybushome::zoneType *DSCkeybushome::createZone(byte z)
+    // {
+
+    //   zoneType n = zonetype_INIT;
+
+    //   n.zone = z;
+    //   n.enabled = true;
+
+    //   ESP_LOGD(TAG, "adding zone %d", z);
+    //   zoneStatus.push_back(n);
+    //   return &zoneStatus.back();
+    // }
+
+    void DSCkeybushome::createZone(uint16_t z, uint8_t p)
+    {
+
+      if (!z) return;
+      zoneType *zt = getZone(z-1);
+      if (zt->zone == z)
+        return;
+      zoneType n;
+      n.zone = z;
+      n.enabled = true;
+      n.partition = p;
+
+      zoneStatus.push_back(n);
+      ESP_LOGD(TAG, "added zone %d",  zoneStatus.back().zone);
+      if (zoneStatusChangeCallback != NULL)
+        zoneStatusChangeCallback(z, false);
+
+    }
+
+    // void DSCkeybushome::loadZones()
+    // {
+
+    //   int z;
+    //   MatchState ms;
+    //   char buf[20];
+    //   char res;
+    //   for (auto obj : bMap)
+    //   {
+    //     ms.Target((char *)obj->get_object_id().c_str());
+    //     res = ms.Match("^[zZ](%d+)$");
+    //     if (res == REGEXP_MATCHED)
+    //     {
+    //       ms.GetCapture(buf, 0);
+    //       z = toInt(buf, 10);
+    //       createZone(z);
+    //     }
+    //   }
+
+    //   for (auto obj : tMap)
+    //   {
+    //     ms.Target((char *)obj->get_object_id().c_str());
+    //     res = ms.Match("^[zZ](%d+)$");
+    //     if (res == REGEXP_MATCHED)
+    //     {
+    //       ms.GetCapture(buf, 0);
+    //       z = toInt(buf, 10);
+    //       createZone(z);
+    //     }
+    //   }
+    // }
 
     const __FlashStringHelper *DSCkeybushome::statusText(uint8_t statusCode)
     {

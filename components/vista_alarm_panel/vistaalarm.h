@@ -430,6 +430,7 @@ class vistaECPHome : public time::RealTimeClock
       {
         vista.setExpFault(zone, fault);
       }
+     void createZoneFromId(const char * zid,uint8_t p=0);
 
     private:
       std::string previousMsg,
@@ -451,6 +452,7 @@ class vistaECPHome : public time::RealTimeClock
       TaskHandle_t xHandle;
       static void cmdQueueTask(void *args);
 #endif
+     void createZone(uint16_t z,uint8_t p=0);
 
       auiCmdType auiCmd;
       std::vector<zoneType> extZones{};
@@ -465,7 +467,7 @@ class vistaECPHome : public time::RealTimeClock
 
       zoneType *getZone(uint16_t z);
       std::string getZoneName(uint16_t zone, bool append=false);
-      zoneType *createZone(uint16_t z);
+
 
       serialType getRfSerialLookup(char *serialCode);
 

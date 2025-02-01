@@ -16,7 +16,7 @@
 #endif
 
 
-#if USE_WEBKEYPAD_VERSION == 2
+#if USE_WEBKEYPAD_VERSION >= 2
 extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE;
 #endif
@@ -56,6 +56,16 @@ enum msgType {
   OTA
 };
 
+struct SortingComponents {
+  float weight;
+  uint64_t group_id;
+};
+
+struct SortingGroup {
+  std::string name;
+  float weight;
+};
+
 struct Credentials {
   std::string username="";
   std::string password="";
@@ -80,21 +90,6 @@ class WebServer : public Controller, public Component {
  public:
   WebServer();
 
-#if USE_WEBKEYPAD_VERSION == 1
-  /** Set the URL to the CSS <link> that's sent to each client. Defaults to
-   * https://esphome.io/_static/webserver-v1.min.css
-   *
-   * @param css_url The url to the web server stylesheet.
-   */
-  void set_css_url(const char *css_url);
-
-  /** Set the URL to the script that's embedded in the index page. Defaults to
-   * https://esphome.io/_static/webserver-v1.min.js
-   *
-   * @param js_url The url to the web server script.
-   */
-  void set_js_url(const char *js_url);
-#endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   /** Set local path to the script that's embedded in the index page. Defaults to
@@ -367,6 +362,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *p);
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
 void parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
+void add_entity_config(EntityBase *entity, float weight, uint64_t group);
+void add_sorting_group(uint64_t group_id, const std::string &group_name, float weight);
 
  protected:
  
@@ -380,10 +377,7 @@ static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
   const char * _json_keypad_config;
-#if USE_WEBKEYPAD_VERSION == 1
-  const char *css_url_{nullptr};
-  const char *js_url_{nullptr};
-#endif
+
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   const char *css_include_{nullptr};
 #endif
@@ -402,6 +396,8 @@ static void webPollTask(void * args);
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;
 #endif
+  std::map<EntityBase *, SortingComponents> sorting_entitys_;
+  std::map<uint64_t, SortingGroup> sorting_groups_;
 };
 
 }  // namespace web_server
