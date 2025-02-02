@@ -1746,19 +1746,19 @@ void vistaECPHome::update()
             std::string qual;
             char msg[100];
             if (c < 400)
-              qual = (q == 3) ? PSTR(" is Cleared") : "";
+              qual = (q == 3) ? " is Cleared" : " ";
             else if (c == 570)
-              qual = (q == 1) ? PSTR(" is Active") : " is Cleared";
+              qual = (q == 1) ? " is Active" : " is Cleared";
             else
-              qual = (q == 1) ? PSTR(" is Restored") : "";
+              qual = (q == 1) ? " is Restored" : " ";
             if (c)
             {
               String lrrString = String(statusText(c));
               std::string zn = std::to_string(z);
-              std::string uf = PSTR("by user");
+              std::string uf = "by user";
               if (lrrString[0] == 'Z')
               {
-                uf = PSTR("on zone");
+                uf = "on zone";
                 zn = getZoneName(z);
               }
 
