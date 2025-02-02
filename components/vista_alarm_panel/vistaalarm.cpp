@@ -1859,7 +1859,7 @@ void vistaECPHome::update()
             if (vistaCmd.cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd.statusFlags.prompt1);
             zoneType *zt = getZone(vistaCmd.statusFlags.zone);
-            ESP_LOGD("test", "check found for zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
+            //ESP_LOGD("test", "check found for zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
             if (!zt->check && zt->active)
             {
               zt->check = true;
@@ -1867,7 +1867,7 @@ void vistaECPHome::update()
               zt->alarm = false;
               currentLightState.trouble = true;
               zoneStatusUpdate(zt);
-              ESP_LOGD("test", "updating check zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
+             // ESP_LOGD("test", "updating check zone %d,status=%d", vistaCmd.statusFlags.zone, zt->check);
             }
             if (!zt->partition && zt->active)
               assignPartitionToZone(zt);
