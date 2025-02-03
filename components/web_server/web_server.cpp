@@ -2811,43 +2811,13 @@ namespace esphome
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
         if (mg_match(hm->uri, mg_str("/update/*"), NULL))
         {
-          if (srv->get_credentials()->password != "" && !srv->get_credentials()->crypt)
+
+          if (srv->get_credentials()->password != "")
           {
             if (!mg_http_check_digest_auth(hm, "webkeypad", srv->get_credentials()))
             {
               mg_send_digest_auth_request(c, "webkeypad");
-            }
-          }
-          else if (srv->get_credentials()->crypt && srv->get_credentials()->password != "")
-          {
-            mg_str *hdr = mg_http_get_header(hm, "Authorization");
-            if (hdr == NULL)
-            {
-              mg_http_reply(c, 403,"","");
-              c->is_draining=1;
               return;
-            }
-            else
-            {
-              std::string buf = std::string(hdr->buf, hdr->len);
-
-              DynamicJsonDocument doc(hdr->len * 1.5);
-              DeserializationError err = deserializeJson(doc, buf.c_str());
-              if (!err && doc.containsKey("iv") && srv->get_credentials()->crypt)
-              {
-                buf = srv->decrypt(doc);
-                if (buf != "authorized")
-                {
-                  mg_http_reply(c, 403, "", "");
-                  c->is_draining=1;
-                  return;
-                }
-              }
-              else {
-                mg_http_reply(c, 403, "","");
-                c->is_draining=1;
-                return;
-              }
             }
           }
 
