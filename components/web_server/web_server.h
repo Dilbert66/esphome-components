@@ -74,6 +74,12 @@ struct Credentials {
   bool crypt=false;
 };
 
+struct upload_state {
+  size_t expected;  // POST data length, bytes
+  size_t received;  // Already received bytes
+  String fn;
+};
+
 #define SALT "77992288"
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 

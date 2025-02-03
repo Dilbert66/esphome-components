@@ -185,7 +185,6 @@ namespace esphome
           {
             if (credentials_.crypt)
             {
-              ESP_LOGD(TAG, "data 1 = %d", c->data[1]);
               if (c->data[1])
               {
                 mg_http_reply(c, 404, "", "");
@@ -288,7 +287,6 @@ namespace esphome
     {
       // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
       this->setup_controller(this->include_internal_);
-
       mg_mgr_init(&mgr);
 #ifdef USE_LOGGER
       if (logger::global_logger != nullptr && this->expose_log_)
@@ -357,7 +355,6 @@ namespace esphome
     }
     float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
-
     void WebServer::handle_index_request(struct mg_connection *c)
     {
 
@@ -366,7 +363,6 @@ namespace esphome
       mg_send(c, buf, ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
       c->is_resp = 0;
     }
-
 
 #ifdef USE_WEBKEYPAD_PRIVATE_NETWORK_ACCESS
     void WebServer::handle_pna_cors_request(struct mg_connection *c)
@@ -396,8 +392,9 @@ namespace esphome
 
       const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
       mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
-      for (int s=0;s<ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;s=s+1024) { //we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-        mg_send(c,&buf[s],1024);
+      for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s = s + 1024)
+      { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
+        mg_send(c, &buf[s], 1024);
         mg_mgr_poll(&mgr, 0);
       }
       c->is_resp = 0;
@@ -1303,6 +1300,7 @@ namespace esphome
       // this->events_.send(this->date_json(obj, DETAIL_STATE).c_str(), "state");
       this->push(STATE, this->date_json(obj, DETAIL_STATE).c_str());
     }
+
     void WebServer::handle_date_request(mg_connection *c, JsonObject doc)
     {
       for (auto *obj : App.get_dates())
@@ -2530,8 +2528,6 @@ namespace esphome
       {
         if (obj->get_object_id() != doc["oid"])
           continue;
-        // if (request->method() == HTTP_GET) {
-        // if (mg_vcasecmp(&hm->method, "GET") == 0) {
         if (doc["method"] == "GET")
         {
           auto detail = DETAIL_STATE;
@@ -2543,13 +2539,10 @@ namespace esphome
             }
           }
           std::string data = this->alarm_control_panel_json(obj, obj->get_state(), detail);
-          // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
-          // request->send(200, "application/json", data.c_str());
           ws_reply(c, data.c_str(), true);
           return;
         }
       }
-      // request->send(404);
       ws_reply(c, "", false);
     }
 #endif
@@ -2620,48 +2613,6 @@ namespace esphome
       }
     }
 
-    size_t mg_getMultipart(struct mg_str body, size_t ofs,
-                           struct mg_http_part *part)
-    {
-      struct mg_str cd = mg_str_n("Content-Disposition", 19);
-      const char *s = body.buf;
-      size_t b = ofs, h1, h2, b1, b2, max = body.len;
-
-      // Init part params
-      if (part != NULL)
-        part->name = part->filename = part->body = mg_str_n(0, 0);
-
-      while ((b + 2) < max && s[b] != '\r' && s[b + 1] != '\n')
-        b++;
-      if (b <= ofs || (b + 2) >= max || (s[0] != '-' && s[1] != '-'))
-        return 0;
-      //  MG_INFO(("B: %lu %lu [%.*s]", ofs, b - ofs, (int) (b - ofs), s));
-
-      // Skip headers
-      h1 = h2 = b + 2;
-      for (;;)
-      {
-        while (h2 + 2 < max && s[h2] != '\r' && s[h2 + 1] != '\n')
-          h2++;
-        if (h2 == h1)
-          break;
-        if (h2 + 2 >= max)
-          return 0;
-        //  MG_INFO(("Header: [%.*s]", (int) (h2 - h1), &s[h1]));
-        if (part != NULL && h1 + cd.len + 2 < h2 && s[h1 + cd.len] == ':' &&
-            mg_ncasecmp(&s[h1], cd.buf, cd.len) == 0)
-        {
-          struct mg_str v = mg_str_n(&s[h1 + cd.len + 2], h2 - (h1 + cd.len + 2));
-          part->name = mg_http_get_header_var(v, mg_str_n("name", 4));
-          part->filename = mg_http_get_header_var(v, mg_str_n("filename", 8));
-        }
-        h1 = h2 = h2 + 2;
-      }
-      b1 = b2 = h2 + 2;
-      // MG_INFO(("B2: %lu [%.*s]",b1,  10, &s[b2]));
-
-      return b2;
-    }
     /*
     static const char *s_tls_cert =
         "-----BEGIN CERTIFICATE-----\n"
@@ -2741,7 +2692,7 @@ namespace esphome
     static int mg_http_check_digest_auth(struct mg_http_message *hm,
                                          const char *auth_domain, Credentials *creds)
     {
-      struct mg_str *hdr;
+      mg_str *hdr;
       char expected_response[33];
       mg_str username, cnonce, response, uri, qop, nc, nonce;
       /* Parse "Authorization:" header, fail fast on parse error */
@@ -2848,12 +2799,98 @@ namespace esphome
       return out;
     }
 
-    char WebServer::matchBuf[MATCH_BUF_SIZE];
-    uint8_t WebServer::matchIndex = 0;
+    static void handle_uploads(struct mg_connection *c, int ev, void *ev_data)
+    {
+      struct upload_state *us = (struct upload_state *)c->data;
+      WebServer *srv = static_cast<WebServer *>(webServerPtr);
+      // Catch /update requests early, without buffering whole body
+      // When we receive MG_EV_HTTP_HDRS event, that means we've received all
+      // HTTP headers but not necessarily full HTTP body
+      if (ev == MG_EV_HTTP_HDRS)
+      {
+        struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+        if (mg_match(hm->uri, mg_str("/update/*"), NULL))
+        {
+          if (srv->get_credentials()->password != "" && !srv->get_credentials()->crypt)
+          {
+            if (!mg_http_check_digest_auth(hm, "webkeypad", srv->get_credentials()))
+            {
+              mg_send_digest_auth_request(c, "webkeypad");
+            }
+          }
+          else if (srv->get_credentials()->crypt && srv->get_credentials()->password != "")
+          {
+            mg_str *hdr = mg_http_get_header(hm, "Authorization");
+            if (hdr == NULL)
+            {
+              mg_http_reply(c, 403,"","");
+              c->is_draining=1;
+              return;
+            }
+            else
+            {
+              std::string buf = std::string(hdr->buf, hdr->len);
+
+              DynamicJsonDocument doc(hdr->len * 1.5);
+              DeserializationError err = deserializeJson(doc, buf.c_str());
+              if (!err && doc.containsKey("iv") && srv->get_credentials()->crypt)
+              {
+                buf = srv->decrypt(doc);
+                if (buf != "authorized")
+                {
+                  mg_http_reply(c, 403, "", "");
+                  c->is_draining=1;
+                  return;
+                }
+              }
+              else {
+                mg_http_reply(c, 403, "","");
+                c->is_draining=1;
+                return;
+              }
+            }
+          }
+
+          char path[100];
+          mg_snprintf(path, sizeof(path), "%.*s", hm->uri.len - 8,
+                      hm->uri.buf + 8);
+          MG_INFO(("Performing OTA update..."));
+          us->fn = path;
+          us->expected = hm->body.len;             // Store number of bytes we expect
+          mg_iobuf_del(&c->recv, 0, hm->head.len); // Delete HTTP headers
+          c->pfn = NULL;                           // Silence HTTP protocol handler, we'll use MG_EV_READ
+        }
+      }
+      // Catch uploaded file data for both MG_EV_READ and MG_EV_HTTP_HDRS
+      if (us->expected > 0 && c->recv.len > 0)
+      {
+        // MG_INFO(("Expected bytes: %d, got: %d, received: %d",us->expected,c->recv.len,us->received));
+        if ((us->received + c->recv.len) >= us->expected)
+        {
+          // Uploaded everything. Send response back
+          MG_INFO(("OTA uploaded %lu bytes from file %s", us->received + c->recv.len, us->fn.c_str()));
+          mg_http_reply(c, 200, NULL, "%lu ok\n", us->received);
+          srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, true);
+          memset(us, 0, sizeof(*us)); // Cleanup upload state
+          c->is_draining = 1;         // Close connection when response gets sent
+        }
+        else
+        {
+          srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, false);
+          us->received += c->recv.len;
+        }
+
+        c->recv.len = 0; // Delete received data
+      }
+    }
+
+    // char WebServer::matchBuf[MATCH_BUF_SIZE];
+    // uint8_t WebServer::matchIndex = 0;
 
     void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data)
     {
       WebServer *srv = static_cast<WebServer *>(webServerPtr);
+      handle_uploads(c, ev, ev_data);
 
       bool final = false;
       if (ev == MG_EV_WRITE)
@@ -2927,125 +2964,7 @@ namespace esphome
           srv->handleRequest(c, obj);
         }
       }
-      else if (ev == MG_EV_READ && !c->is_websocket && c->data[0] != 'E')
-      {
-        /*
-      struct mg_http_message *hm = (struct mg_http_message *) ev_data;
-     // Parse the incoming data ourselves. If we can parse the request,
-     // store two size_t variables in the c->data: expected len and recv len.
-     //handling ota upload in blocks
-
-     size_t *data = (size_t *) c->data;
-     if (data[0]  ) {  // Already parsed, simply print received data
-      if (data[2] >= c->recv.len) {
-          data[0]=0;
-          c->recv.len = 0;
-           srv->push(OTA,"OTA update failed... Please try again.");
-           mg_http_reply(c, 200, "Content-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\n\r\n", "FAIL\r");
-          return;
-      }
-      size_t ml=strlen(matchBuf);
-      char *b = (char *) c->recv.buf + data[2];
-      size_t bl = c->recv.len - data[2];
-
-
-      size_t x=0;
-      for (x;x<bl;x++) {
-          bool firstLoop=1;
-          for (size_t y=matchIndex;y<ml;y++) {
-
-            if ((y+x)>= bl)
-                break;
-
-            if (b[y+x] ==  matchBuf[y]) {
-               matchIndex++;
-            } else {
-                if (x==0 && matchIndex>0 && firstLoop) {
-                    srv->handleUpload(data[0],"upload.bin",data[1],(uint8_t*)matchBuf,matchIndex,final);
-                    data[1]+=matchIndex;
-                    MG_INFO(("***** save partial matched data bindex=%lu, index=%lu -  [%.*s]",matchIndex,data[1],matchIndex,matchBuf));
-                 }
-                matchIndex=0;
-                break;
-            }
-            firstLoop=false;
-          }
-          if (matchIndex) break;
-      }
-
-       if (matchIndex==ml && ml > 0) {
-              matchIndex=0;
-              final=true;
-         MG_INFO(("**********Final  bytes %lu, final=%d, data0=%lu, total=%lu, data1=%lu",x,final,data[0],x+data[1],data[1]));
-         }
-
-       data[2]=0;
-       c->recv.len = 0;  // And cleanup the receive buffer. Streaming!
-       bool res=true;
-
-        res=srv->handleUpload(data[0],"upload.bin",data[1],(uint8_t*)b,x,final);
-
-       if (!res) {
-         data[0]=0;
-         mg_http_reply(c, 200, "Content-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\n\r\n", "FAIL\r");
-         return;
-       }
-       data[1] += x;
-
-       if (final || data[1] >= data[0]) {
-         data[0]=0;
-         data[1]=0;
-         mg_http_reply(c, 200, "Content-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\n\r\n", "OK\r");
-         return;
-       }
-
-     } else {
-       struct mg_http_message hm;
-       int n = mg_http_parse((char *) c->recv.buf, c->recv.len, &hm);
-       if (n < 0) mg_error(c, "Bad response");
-       if (n > 0) {
-         if (mg_match(hm->uri, mg_str("/update"),NULL)) {
-
-           struct mg_str *ct = mg_http_get_header(&hm, "Content-Type");
-           struct mg_str boundary = mg_str("");
-           if (ct != NULL) {
-             boundary = mg_http_get_header_var(*ct, mg_str("boundary"));
-             MG_INFO(("before boundary check"));
-             if (boundary.buf != NULL && boundary.len > 0) {
-              matchBuf[0]=13;
-              matchBuf[1]=10;
-              matchBuf[2]='-';
-              matchBuf[3]='-';
-              memcpy(matchBuf+4,(char*) boundary.buf, boundary.len);
-              //matchBuf[boundary.len+4]='-';
-             // matchBuf[boundary.len+5]='-';
-              matchBuf[boundary.len+4]=0;
-              MG_INFO(("datasize=%lu,len=%lu,boundary=[%.*s],sizeofdata=%lu,st=%lu",MG_DATA_SIZE,strlen(matchBuf),strlen(matchBuf),matchBuf,sizeof(c->data),sizeof(c->data[0])));
-              matchIndex=0;
-             } else
-                 return;
-          } else
-             return;
-           struct mg_http_part part;
-           size_t ofs = 0;
-           ofs=mg_getMultipart(hm.body, ofs, &part);
-           if (ofs > 0  && part.filename.len) {
-          MG_INFO(("Chunk name: [%.*s] filename: [%.*s] length: %lu bytes,ofs=%lu",
-                  (int) part.name.len, part.name.buf, (int) part.filename.len,
-                  part.filename.buf, (unsigned long) hm.body.len,ofs));
-
-           data[0] = hm.body.len  - ofs -  (strlen(matchBuf)+4);//total len + 2 boundary headers including terminating --\r\n
-           data[1] = 0;//byte counter
-           data[2] = n + ofs; //initial offset
-           MG_INFO(("Got chunk len %lu,data0=%lu,data1=%lu,data2=%lu", 0,data[0],data[1],data[2]));
-           }
-
-         }
-       }
-     }
-  */
-      }
-      else if (ev == MG_EV_HTTP_MSG)
+      if (ev == MG_EV_HTTP_MSG && c->data[0] != 'U')
       {
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 
@@ -3066,27 +2985,28 @@ namespace esphome
           c->data[0] = 'W';
           c->send.c = c;
           std::string enc;
-          if (srv->get_credentials()->crypt)
-            enc = srv->encrypt(srv->get_config_json(c->id).c_str());
-          else
-            enc = srv->get_config_json(c->id);
+          bool crypt = srv->get_credentials()->crypt;
+          enc = srv->get_config_json(c->id);
+          if (crypt)
+            enc = srv->encrypt(enc.c_str());
           mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type", "app_config", "data", enc.c_str());
           if (strlen(srv->_json_keypad_config) > 0)
           {
-            if (srv->get_credentials()->crypt)
-              enc = srv->encrypt(srv->_json_keypad_config);
-            else
-              enc = srv->_json_keypad_config;
+            enc = srv->_json_keypad_config;
+            if (crypt)
+              enc = srv->encrypt(enc.c_str());
             mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
           }
-          //             for (auto &group :srv->sorting_groups_) {
-          //     enc=json::build_json([group](JsonObject root) {
-          //          root["name"] = group.second.name;
-          //          root["sorting_weight"] = group.second.weight;
-          //        });
-          //       if (crypt) enc=srv->encrypt(enc.c_str());
-          //       mg_printf(c,PSTR("event: %s\r\ndata: %s\r\n\r\n"),"sorting_group",enc.c_str());
-          // }
+          for (auto &group : srv->sorting_groups_)
+          {
+            enc = json::build_json([group](JsonObject root)
+                                   {
+                   root["name"] = group.second.name;
+                   root["sorting_weight"] = group.second.weight; });
+            if (crypt)
+              enc = srv->encrypt(enc.c_str());
+            mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
+          }
 
           srv->entities_iterator_.begin(srv->include_internal_);
         }
@@ -3099,9 +3019,6 @@ namespace esphome
           c->send.c = c;
           std::string enc;
           bool crypt = srv->get_credentials()->crypt;
-          // if (crypt)
-          //   enc = srv->encrypt(srv->get_config_json(c->id).c_str());
-          // else
           enc = srv->get_config_json(c->id);
           if (crypt)
             enc = srv->encrypt(enc.c_str());
@@ -3120,9 +3037,6 @@ namespace esphome
 
           if (strlen(srv->_json_keypad_config) > 0)
           {
-            // if (srv->get_credentials()->crypt)
-            //   enc = srv->encrypt(srv->_json_keypad_config);
-            // else
             enc = srv->_json_keypad_config;
             if (crypt)
               enc = srv->encrypt(enc.c_str());
@@ -3134,8 +3048,11 @@ namespace esphome
         }
         else
         {
-          c->send.c = c;
-          srv->handleWebRequest(c, hm);
+          if (!mg_match(hm->uri, mg_str("/update/*"), NULL))
+          {
+            c->send.c = c;
+            srv->handleWebRequest(c, hm);
+          }
         }
       }
       else if (ev == MG_EV_ERROR)
@@ -3194,9 +3111,7 @@ namespace esphome
 
         std::string buf = std::string(hm->body.buf, hm->body.len);
         DeserializationError err = deserializeJson(doc, buf.c_str());
-        int e = 1;
-
-        if (!err && obj.containsKey("iv") && credentials_.password != "")
+        if (!err && doc.containsKey("iv") && credentials_.password != "")
         {
           buf = decrypt(doc);
           if (buf != "")
@@ -3204,7 +3119,7 @@ namespace esphome
         }
       }
 
-      if (!obj.containsKey("domain"))
+      if (!doc.containsKey("domain"))
       {
         parseUrl(hm, obj);
       }
@@ -3445,6 +3360,12 @@ namespace esphome
           Update.abort();
           return false;
         }
+#if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
+        if (alarm_panel::alarmPanelPtr != NULL)
+        {
+          alarm_panel::alarmPanelPtr->stop();
+        }
+#endif
         success = Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH);
 
         if (!success)
@@ -3461,6 +3382,7 @@ namespace esphome
       }
 
       success = Update.write(data, len) == len;
+
       if (!success)
       {
         report_ota_error();
@@ -3494,7 +3416,7 @@ namespace esphome
         {
           ESP_LOGI(TAG, "OTA update successful!");
           this->push(OTA, "OTA Update successful. Press F5 to reload this page.");
-          this->set_timeout(1000, []()
+          this->set_timeout(2000, []()
                             { App.safe_reboot(); });
           return true;
         }

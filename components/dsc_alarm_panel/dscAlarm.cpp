@@ -26,6 +26,9 @@ namespace esphome
 #if defined(ESPHOME_MQTT)
     std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
+void DSCkeybushome::stop() {
+    disconnectKeybus();
+}
 
 #if !defined(ARDUINO_MQTT)
     void DSCkeybushome::publishPanelStatus(panelStatus ps, bool open, uint8_t partition)

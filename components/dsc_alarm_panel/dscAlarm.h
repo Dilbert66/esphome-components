@@ -346,6 +346,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void set_trouble_fetch_cmd(const char *cmd);
       void createZone(uint16_t z,uint8_t p=0);
       void createZoneFromId(const char * zid,uint8_t p=0);
+      void stop();
 
     private:
       std::vector<binary_sensor::BinarySensor *> bMap;
