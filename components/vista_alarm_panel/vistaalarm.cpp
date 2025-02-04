@@ -782,12 +782,10 @@ void vistaECPHome::setup()
 
     int vistaECPHome::getZoneFromPrompt(char *p1)
     {
-      ESP_LOGD(TAG, "in get zone from prompt");
       if (vistaCmd.cbuf[0] != 0xf7)
       {
         return 0;
       }
-      ESP_LOGD(TAG, "startring lookup");
       MatchState ms;
       char buf[5];
       ms.Target(p1);

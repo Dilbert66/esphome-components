@@ -176,7 +176,7 @@ class WebServer : public Controller, public Component {
   Credentials * get_credentials() { return &credentials_;}
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
   const std::string encrypt(const char * message);
-  const std::string decrypt(DynamicJsonDocument&  doc);
+  const std::string decrypt(JsonObject doc,uint8_t* e);
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -460,8 +460,13 @@ static void webPollTask(void * args);
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;
 #endif
+  struct c_data {
+    std::string token;
+    int lastseq;
+  };
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
+  std::map<unsigned long,c_data> tokens_;
 };
 
 }  // namespace web_server
