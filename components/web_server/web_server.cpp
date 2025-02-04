@@ -2774,36 +2774,37 @@ namespace esphome
             unsigned long cid = 0;
 
             std::string token = "";
-            const char *seq = "";
-            int s = 0;
-            //right now we don't force a seq/cid field in the encrypted packet.  
+            const char *seqstr = "";
+            int seq = 0;
+            int *lastseq=NULL;
+            // right now we don't force a seq/cid field in the encrypted packet.
             if (doc.containsKey("seq"))
             {
-                seq = doc["seq"];
-                s = (unsigned long)doc["seq"];
+                seqstr = doc["seq"];
+                seq = (unsigned long)doc["seq"];
             }
-            if (doc.containsKey("cid"))  
+            if (doc.containsKey("cid"))
             {
-            //ensure packet is associated with an active session token and the sequence is newer to prevent replay attacks
+                // ensure packet is associated with an active session token and the sequence is newer to prevent replay attacks
                 cid = (unsigned long)doc["cid"];
                 if (cid > 0)
                 {
                     auto it = tokens_.find(cid);
                     if (it != tokens_.end())
-                        token = std::string(it->second.token);
-                    if (s > 0)
                     {
-                        // MG_INFO(("Seq=%d,lastseq=%d,cid=%d",s,it->second.lastseq,cid));
-                        if (s <= it->second.lastseq)
+                        token = std::string(it->second.token);
+                        lastseq = &it->second.lastseq;
+                        if (seq > 0 && seq <= *lastseq)
                         {
                             *err = 1;
                             return "";
                         }
-                        else
-                            it->second.lastseq = s;
                     }
-                    // if (token != "")
-                    //     ESP_LOGD(TAG, "token cid: %d, token: [%s]", cid, token.c_str());
+                    else
+                    {
+                        *err = 1;
+                        return "";
+                    }
                 }
                 else
                 {
@@ -2823,9 +2824,9 @@ namespace esphome
             {
                 hmac.doUpdate(token.c_str(), token.length());
             }
-            if (seq != "")
+            if (seqstr != "")
             {
-                hmac.doUpdate(seq, strlen(seq));
+                hmac.doUpdate(seqstr, strlen(seqstr));
             }
 
             hmac.doUpdate(data, strlen(data));
@@ -2839,6 +2840,9 @@ namespace esphome
                 *err = 1;
                 return "";
             }
+            if (seq > 0 && lastseq != NULL)
+                *lastseq = seq;
+
             int encrypted_length = base64_decode(std::string(data), data_decoded, strlen(data));
             base64_decode(std::string(iv), iv_decoded, strlen(iv));
             AES aes(key, iv_decoded, AES::AES_MODE_256, AES::CIPHER_DECRYPT);
