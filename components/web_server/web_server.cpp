@@ -2776,7 +2776,7 @@ namespace esphome
             std::string token = "";
             const char *seqstr = "";
             int seq = 0;
-            int *lastseq=NULL;
+            int *lastseq = NULL;
             // right now we don't force a seq/cid field in the encrypted packet.
             if (doc.containsKey("seq"))
             {
@@ -2871,6 +2871,8 @@ namespace esphome
                         if (!mg_http_check_digest_auth(hm, "webkeypad", srv->get_credentials()))
                         {
                             mg_send_digest_auth_request(c, "webkeypad");
+                            c->is_draining = 1;
+                            c->recv.len = 0;
                             return;
                         }
                     }
@@ -2996,6 +2998,9 @@ namespace esphome
                     if (!mg_http_check_digest_auth(hm, "webkeypad", srv->get_credentials()))
                     {
                         mg_send_digest_auth_request(c, "webkeypad");
+                        c->is_draining = 1;
+                        c->recv.len = 0;
+                        return;
                     }
                 }
 
