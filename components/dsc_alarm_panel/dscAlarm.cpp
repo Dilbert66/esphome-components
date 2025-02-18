@@ -3488,6 +3488,7 @@ void DSCkeybushome::update()
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
         zoneAlarmCallback(zonestr, partition);
+        dsc.statusChanged=true;
       }
 
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
@@ -3500,6 +3501,7 @@ void DSCkeybushome::update()
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
+        dsc.statusChanged=true;
       }
 
       if (dsc.panelData[panelByte] >= 0x56 && dsc.panelData[panelByte] <= 0x75)
@@ -3512,6 +3514,7 @@ void DSCkeybushome::update()
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
+        dsc.statusChanged=true;
       }
 
       if (dsc.panelData[panelByte] >= 0x76 && dsc.panelData[panelByte] <= 0x95)
@@ -3524,6 +3527,7 @@ void DSCkeybushome::update()
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
+        dsc.statusChanged=true;
       }
 
       if (dsc.panelData[panelByte] >= 0x99 && dsc.panelData[panelByte] <= 0xBD)
@@ -3671,7 +3675,6 @@ void DSCkeybushome::update()
         lcdLine2 = zonestr.c_str();
         decoded = true;
         dsc.statusChanged = true;
-        eventstr = lcdLine1.c_str();
       }
 
       if (dsc.panelData[panelByte] >= 0x4C && dsc.panelData[panelByte] <= 0x6B)
@@ -4174,6 +4177,7 @@ void DSCkeybushome::update()
         decoded = true;
         eventstr = lcdLine1.c_str();
         zoneAlarmCallback(zonestr, partition);
+        dsc.statusChanged=true;
       }
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
@@ -4196,6 +4200,7 @@ void DSCkeybushome::update()
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
+        dsc.statusChanged=true;
       }
       else if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
@@ -4207,6 +4212,7 @@ void DSCkeybushome::update()
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
+        dsc.statusChanged=true;
       }
 
       if (!decoded)
