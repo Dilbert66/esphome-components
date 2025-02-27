@@ -195,6 +195,13 @@ void DSCkeybushome::setup()
         Serial.begin(115200);
 #if !defined(ARDUINO_MQTT)
       loadZones();
+#else
+      // create default zones
+      if (zoneStatus.empty()) {
+        for (uint16_t z = 1; z <= maxZonesDefault; z++) {
+          createZone(z, defaultPartition);
+        }
+      }
 #endif
 
 #if defined(ESPHOME_MQTT)
@@ -263,6 +270,9 @@ void DSCkeybushome::setup()
       troubleMsgStatusCallback("No messages");
       eventInfoCallback("ESP module start");
       zoneMsgStatusCallback("No messages");
+
+      // Publish all zone statuses immediately after setup
+      publishAllZoneStatuses();
     }
 
     std::string DSCkeybushome::getUserName(int usercode, bool append, bool returncode)
@@ -4746,6 +4756,33 @@ void DSCkeybushome::update()
       if (zoneStatusChangeCallback != NULL)
         zoneStatusChangeCallback(z, false);
 
+    }
+
+    void DSCkeybushome::publishAllZoneStatuses() {
+      if (!dsc.keybusConnected) {
+        #if !defined(ARDUINO_MQTT)
+            ESP_LOGW(TAG, "Keybus not connected, skipping initial zone status publish");
+        #else
+            Serial.println("Keybus not connected, skipping initial zone status publish");
+        #endif
+            return;
+      }
+
+      for (size_t i = 0; i < zoneStatus.size(); i++) {
+        uint8_t zone = zoneStatus[i].zone;
+        bool isOpen = zoneStatus[i].open;
+        std::string zoneId = "z" + std::to_string(zone);
+    
+    #if !defined(ARDUINO_MQTT)
+        // For ESPHome non-MQTT setup, use publishBinaryState
+        publishBinaryState(zoneId, zoneStatus[i].partition, isOpen);
+    #else
+        // For Arduino MQTT setup, directly invoke the callback if available
+        if (zoneStatusChangeCallback) {
+          zoneStatusChangeCallback(zone, isOpen);
+        }
+    #endif
+      }
     }
 
     // void DSCkeybushome::loadZones()
