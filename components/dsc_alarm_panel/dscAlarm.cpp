@@ -26,12 +26,13 @@ namespace esphome
 #if defined(ESPHOME_MQTT)
     std::function<void(const std::string &, JsonObject)> mqtt_callback;
 #endif
-void DSCkeybushome::stop() {
-    disconnectKeybus();
-}
+    void DSCkeybushome::stop()
+    {
+      disconnectKeybus();
+    }
 
 #if !defined(ARDUINO_MQTT)
-    void DSCkeybushome::publishPanelStatus(panelStatus ps, bool open, uint8_t partition)
+    void DSCkeybushome::publishPanelState(panelStatus ps, bool open, uint8_t partition)
     {
 
       std::string sensor = "NIL";
@@ -58,12 +59,12 @@ void DSCkeybushome::stop() {
       publishBinaryState(sensor, partition, open);
     }
 
-    void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t partition, bool open)
+    void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bool open)
     {
       std::string id = idstr;
-      if (partition)
+      if (num)
       {
-        id += std::to_string(partition);
+        id += std::to_string(num);
       }
       auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
                              { return bs->get_object_id() == id; });
@@ -72,12 +73,12 @@ void DSCkeybushome::stop() {
         (*it)->publish_state(open);
     }
 
-    void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t partition, std::string *text)
+    void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
     {
       std::string id = idstr;
-      if (partition)
+      if (num)
       {
-        id += std::to_string(partition);
+        id += std::to_string(num);
       }
       auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                              { return ts->get_object_id() == id; });
@@ -225,7 +226,7 @@ void DSCkeybushome::setup()
 #endif
 
       firstrun = true;
-      systemStatusChangeCallback(String(FPSTR(STATUS_OFFLINE)).c_str());
+      publishSystemStatus(String(FPSTR(STATUS_OFFLINE)).c_str());
       forceDisconnect = false;
 #ifdef MODULESUPERVISION
       dsc.enableModuleSupervision = 1;
@@ -247,22 +248,22 @@ void DSCkeybushome::setup()
       {
         partitionStatus[p].editIdx = 0;
         partitionStatus[p].digits = 0;
-        beepsCallback("0", p + 1);
-        partitionMsgChangeCallback("No messages", p + 1);
-        partitionStatusChangeCallback("No messages", p + 1);
-        line1DisplayCallback("ESP Module Start", p + 1);
-        line2DisplayCallback(" ", p + 1);
-        userArmingDisarmingCallback(" ", p + 1);
-        zoneAlarmCallback(" ", p + 1);
+        publishBeeps("0", p + 1);
+        publishPartitionMsg("No messages", p + 1);
+        publishPartitionStatus("No messages", p + 1);
+        publishLine1("ESP Module Start", p + 1);
+        publishLine2(" ", p + 1);
+        publishUserArmingDisarming(" ", p + 1);
+        publishZoneAlarm(" ", p + 1);
       }
       for (int x = 0; x < dscZones; x++)
         programZones[x] = 0;
 
       system1 = 0;
       system0 = 0;
-      troubleMsgStatusCallback("No messages");
-      eventInfoCallback("ESP module start");
-      zoneMsgStatusCallback("No messages");
+      publishTroubleMsgStatus("No messages");
+      publishEventInfo("ESP module start");
+      publishZoneMsgStatus("No messages");
     }
 
     std::string DSCkeybushome::getUserName(int usercode, bool append, bool returncode)
@@ -367,8 +368,8 @@ void DSCkeybushome::setup()
 
       if (partitionStatus[partition - 1].locked)
       {
-        line1DisplayCallback(String(F("System")).c_str(), partition);
-        line2DisplayCallback(String(F("not available")).c_str(), partition);
+        publishLine1(String(F("System")).c_str(), partition);
+        publishLine2(String(F("not available")).c_str(), partition);
         return;
       }
       /*
@@ -514,7 +515,7 @@ void DSCkeybushome::setup()
           if (*currentSelection == 8)
             *currentSelection -= 1; // skip empty item
           if (*currentSelection < mmsize)
-            line2DisplayCallback(String(FPSTR(mainMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(mainMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '>')
         {
@@ -522,7 +523,7 @@ void DSCkeybushome::setup()
           if (*currentSelection == 8)
             *currentSelection += 1;
           if (*currentSelection < mmsize)
-            line2DisplayCallback(String(FPSTR(mainMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(mainMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '*' && *currentSelection > 0)
         {
@@ -553,13 +554,13 @@ void DSCkeybushome::setup()
         {
           *currentSelection = getNextOption(*currentSelection);
           if (*currentSelection < tmsize)
-            line2DisplayCallback(String(FPSTR(troubleMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(troubleMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '<')
         {
           *currentSelection = getPreviousOption(*currentSelection);
           if (*currentSelection < tmsize)
-            line2DisplayCallback(String(FPSTR(troubleMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(troubleMenu[*currentSelection])).c_str(), partition);
         }
         else
         {
@@ -581,13 +582,13 @@ void DSCkeybushome::setup()
         {
           *currentSelection = getNextOption(*currentSelection);
           if (*currentSelection < smsize)
-            line2DisplayCallback(String(FPSTR(serviceMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(serviceMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '<')
         {
           *currentSelection = getPreviousOption(*currentSelection);
           if (*currentSelection < smsize)
-            line2DisplayCallback(String(FPSTR(serviceMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(serviceMenu[*currentSelection])).c_str(), partition);
         }
         else
         {
@@ -601,13 +602,13 @@ void DSCkeybushome::setup()
         {
           *currentSelection = *currentSelection >= umsize ? (umsize - 1) : (*currentSelection > 0 ? *currentSelection - 1 : (umsize - 1));
           if (*currentSelection < umsize)
-            line2DisplayCallback(String(FPSTR(userMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(userMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '>')
         {
           *currentSelection = *currentSelection >= (umsize - 1) ? 0 : *currentSelection + 1;
           if (*currentSelection < umsize)
-            line2DisplayCallback(String(FPSTR(userMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(userMenu[*currentSelection])).c_str(), partition);
         }
         else if (key == '*' && *currentSelection > 0)
         {
@@ -747,14 +748,14 @@ void DSCkeybushome::setup()
         {
           *currentSelection = *currentSelection >= omsize ? (omsize - 1) : (*currentSelection > 0 ? *currentSelection - 1 : (omsize - 1));
           if (*currentSelection < omsize)
-            line2DisplayCallback(String(FPSTR(outputMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(outputMenu[*currentSelection])).c_str(), partition);
           dsc.write(key, partition);
         }
         else if (key == '>')
         {
           *currentSelection = *currentSelection >= (omsize - 1) ? 0 : *currentSelection + 1;
           if (*currentSelection < omsize)
-            line2DisplayCallback(String(FPSTR(outputMenu[*currentSelection])).c_str(), partition);
+            publishLine2(String(FPSTR(outputMenu[*currentSelection])).c_str(), partition);
           dsc.write(key, partition);
         }
         else if (key == '*' && *currentSelection > 0)
@@ -1218,7 +1219,7 @@ void DSCkeybushome::setup()
           getZone(zone)->alarm = false;
         }
       }
-      zoneAlarmCallback(" ", partition);
+      publishZoneAlarm(" ", partition);
     }
 
     void DSCkeybushome::clearZoneBypass(byte partition)
@@ -1495,13 +1496,13 @@ void DSCkeybushome::update()
         {
           if (dsc.disabled[partition - 1])
             continue;
-          beepsCallback("0", partition);
+          publishBeeps("0", partition);
         }
         beepTime = millis();
       }
       /*
       if (millis() - eventTime > 30000) {
-        eventInfoCallback("");
+        publishEventInfo("");
         eventTime = millis();
       }
       */
@@ -1549,7 +1550,7 @@ void DSCkeybushome::update()
           dsc.keybusChanged = false; // Resets the Keybus data status flag
           if (dsc.keybusConnected)
           {
-            systemStatusChangeCallback(String(FPSTR(STATUS_ONLINE)).c_str());
+            publishSystemStatus(String(FPSTR(STATUS_ONLINE)).c_str());
           }
           else
           {
@@ -1557,7 +1558,7 @@ void DSCkeybushome::update()
             {
               errorTime = millis();
               ESP_LOGE(TAG, "Panel keybus connect timeout! Is the panel connected?");
-              systemStatusChangeCallback(String(FPSTR(STATUS_OFFLINE)).c_str());
+              publishSystemStatus(String(FPSTR(STATUS_OFFLINE)).c_str());
               return;
             }
           }
@@ -1622,10 +1623,10 @@ void DSCkeybushome::update()
         {
           if (firstrun)
           {
-            beepsCallback("0", partition + 1);
+            publishBeeps("0", partition + 1);
             partitionStatus[partition].chime = 0;
             for (int x = 1; x <= maxRelays; x++)
-              relayChannelChangeCallback(x, false);
+              publishRelayStatus(x, false);
           }
           if (dsc.disabled[partition])
             continue;
@@ -1637,11 +1638,11 @@ void DSCkeybushome::update()
           dsc.powerChanged = false;
           if (dsc.powerTrouble)
           {
-            panelStatusChangeCallback(acStatus, false, 0); // no ac
+            publishPanelStatus(acStatus, false, 0); // no ac
           }
           else
           {
-            panelStatusChangeCallback(acStatus, true, 0);
+            publishPanelStatus(acStatus, true, 0);
           }
         }
 
@@ -1650,11 +1651,11 @@ void DSCkeybushome::update()
           dsc.batteryChanged = false;
           if (dsc.batteryTrouble)
           {
-            panelStatusChangeCallback(batStatus, true, 0);
+            publishPanelStatus(batStatus, true, 0);
           }
           else
           {
-            panelStatusChangeCallback(batStatus, false, 0);
+            publishPanelStatus(batStatus, false, 0);
           }
         }
 
@@ -1676,11 +1677,11 @@ void DSCkeybushome::update()
           dsc.troubleChanged = false; // Resets the trouble status flag
           if (dsc.trouble)
           {
-            panelStatusChangeCallback(trStatus, true, 0); // Trouble alarm tripped
+            publishPanelStatus(trStatus, true, 0); // Trouble alarm tripped
           }
           else
           {
-            panelStatusChangeCallback(trStatus, false, 0); // Trouble alarm restored
+            publishPanelStatus(trStatus, false, 0); // Trouble alarm restored
           }
           if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
           {
@@ -1702,7 +1703,7 @@ void DSCkeybushome::update()
             lastStatus[partition] = dsc.status[partition];
             char msg[50];
             sprintf(msg, PSTR("%02d %s"), dsc.status[partition], String(statusText(dsc.status[partition])).c_str());
-            partitionMsgChangeCallback(msg, partition + 1);
+            publishPartitionMsg(msg, partition + 1);
           }
 
           // Publishes alarm status
@@ -1725,7 +1726,7 @@ void DSCkeybushome::update()
             if (dsc.armed[partition] && !dsc.alarm[partition])
             {
               clearZoneAlarms(partition + 1);
-              panelStatusChangeCallback(armStatus, true, partition + 1);
+              publishPanelStatus(armStatus, true, partition + 1);
             }
             else if (!dsc.exitDelay[partition] && !dsc.alarm[partition])
             {
@@ -1733,7 +1734,7 @@ void DSCkeybushome::update()
               {
                 clearZoneBypass(partition + 1);
               }
-              panelStatusChangeCallback(armStatus, false, partition + 1);
+              publishPanelStatus(armStatus, false, partition + 1);
             }
           }
           // Publishes exit delay status
@@ -1750,15 +1751,15 @@ void DSCkeybushome::update()
             dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
             if (dsc.ready[partition] && !dsc.exitDelay[partition])
             {
-              panelStatusChangeCallback(rdyStatus, true, partition + 1);
+              publishPanelStatus(rdyStatus, true, partition + 1);
             }
             else if (!dsc.exitDelay[partition])
             {
               if (!dsc.armed[partition])
               {
-                panelStatusChangeCallback(armStatus, false, partition + 1);
+                publishPanelStatus(armStatus, false, partition + 1);
               }
-              panelStatusChangeCallback(rdyStatus, false, partition + 1);
+              publishPanelStatus(rdyStatus, false, partition + 1);
             }
           }
 
@@ -1768,22 +1769,22 @@ void DSCkeybushome::update()
             dsc.fireChanged[partition] = false; // Resets the fire status flag
             if (dsc.fire[partition])
             {
-              fireStatusChangeCallback(true, partition + 1); // Fire alarm tripped
+              publishFireStatus(true, partition + 1); // Fire alarm tripped
             }
             else
             {
-              fireStatusChangeCallback(false, partition + 1); // Fire alarm restored
+              publishFireStatus(false, partition + 1); // Fire alarm restored
             }
           }
           if (forceRefresh)
           {
-            panelStatusChangeCallback(chimeStatus, partitionStatus[partition].chime, partition + 1);
+            publishPanelStatus(chimeStatus, partitionStatus[partition].chime, partition + 1);
           }
 
           const char *status = getPartitionStatus(partition);
           if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus || forceRefresh))
           {
-            partitionStatusChangeCallback(String(FPSTR(status)).c_str(), partition + 1);
+            publishPartitionStatus(String(FPSTR(status)).c_str(), partition + 1);
           }
 
           partitionStatus[partition].lastPartitionStatus = status;
@@ -1811,12 +1812,12 @@ void DSCkeybushome::update()
                 if (bitRead(dsc.openZones[zoneGroup], zoneBit))
                 {
                   getZone(zone)->open = true;
-                  zoneStatusChangeCallback(zone + 1, true);
+                  publishZoneStatus(zone + 1, true);
                 }
                 else
                 {
                   getZone(zone)->open = false;
-                  zoneStatusChangeCallback(zone + 1, false);
+                  publishZoneStatus(zone + 1, false);
                 }
               }
             }
@@ -1877,7 +1878,7 @@ void DSCkeybushome::update()
         // zoneStatusMsg = "Pending";
 
         if (zoneStatusMsg != previousZoneStatusMsg || forceRefresh)
-          zoneMsgStatusCallback(zoneStatusMsg);
+          publishZoneMsgStatus(zoneStatusMsg);
 
         previousZoneStatusMsg = zoneStatusMsg;
 
@@ -1898,7 +1899,7 @@ void DSCkeybushome::update()
             if (system1Changed)
             {
               dsc.batteryTrouble = true;
-              panelStatusChangeCallback(batStatus, true, 0);
+              publishPanelStatus(batStatus, true, 0);
             }
           }
           else
@@ -1906,7 +1907,7 @@ void DSCkeybushome::update()
             if (system1Changed)
             {
               dsc.batteryTrouble = false;
-              panelStatusChangeCallback(batStatus, false, 0);
+              publishPanelStatus(batStatus, false, 0);
             }
           }
 
@@ -1972,7 +1973,7 @@ void DSCkeybushome::update()
           {
             system0Msg.append(String(PSTR("TIME ")).c_str());
           }
-          troubleMsgStatusCallback(system0Msg.append(system1Msg));
+          publishTroubleMsgStatus(system0Msg.append(system1Msg));
         }
         system0Changed = false;
         system1Changed = false;
@@ -2228,13 +2229,13 @@ void DSCkeybushome::update()
         lcdLine1 = F("Door");
         lcdLine2 = F("chime enabled");
         partitionStatus[partition].chime = true;
-        panelStatusChangeCallback(chimeStatus, true, partition + 1);
+        publishPanelStatus(chimeStatus, true, partition + 1);
         break;
       case 0xA4:
         lcdLine1 = F("Door");
         lcdLine2 = F("chime disabled  ");
         partitionStatus[partition].chime = false;
-        panelStatusChangeCallback(chimeStatus, false, partition + 1);
+        publishPanelStatus(chimeStatus, false, partition + 1);
         break;
       case 0xA5:
         lcdLine1 = F("Enter");
@@ -2757,9 +2758,9 @@ void DSCkeybushome::update()
       } // if skip
 
       if (lcdLine1 != "")
-        line1DisplayCallback(lcdLine1.c_str(), partition + 1);
+        publishLine1(lcdLine1.c_str(), partition + 1);
       if (lcdLine2 != "")
-        line2DisplayCallback(lcdLine2.c_str(), partition + 1);
+        publishLine2(lcdLine2.c_str(), partition + 1);
 
       partitionStatus[partition].lastStatus = dsc.status[partition];
     }
@@ -2869,10 +2870,10 @@ void DSCkeybushome::update()
           switch (dsc.panelData[8])
           {
           case 0xAE:
-            line2DisplayCallback(String(F("Walk test end")).c_str(), activePartition);
+            publishLine2(String(F("Walk test end")).c_str(), activePartition);
             break;
           case 0xAF:
-            line2DisplayCallback(String(F("Walk test beging")).c_str(), activePartition);
+            publishLine2(String(F("Walk test beging")).c_str(), activePartition);
             break;
           };
         processEventBufferEC(true);
@@ -2921,7 +2922,7 @@ void DSCkeybushome::update()
       {
         if (dsc.disabled[partition] || partitionStatus[partition].locked)
           continue;
-        beepsCallback(s, partition + 1);
+        publishBeeps(s, partition + 1);
         if (beeps == 2 && partitionStatus[partition].digits)
         {
           dsc.setLCDReceive(partitionStatus[partition].digits, partition);
@@ -2989,7 +2990,7 @@ void DSCkeybushome::update()
             relayStatus[rchan] = false;
           }
           if (previousRelayStatus[rchan] != relayStatus[rchan])
-            relayChannelChangeCallback(rchan + 1, relayStatus[rchan]);
+            publishRelayStatus(rchan + 1, relayStatus[rchan]);
           previousRelayStatus[rchan] = relayStatus[rchan];
         }
       }
@@ -3112,7 +3113,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg = eventInfo;
       else
-        line1DisplayCallback(eventInfo, activePartition);
+        publishLine1(eventInfo, activePartition);
 
       switch (dsc.panelData[5] & 0x03)
       {
@@ -3139,7 +3140,7 @@ void DSCkeybushome::update()
         else
           eventStatusMsg.append(String(FPSTR(", Partition status is ")).c_str()).append(getPartitionStatus(partition - 1));
 #endif
-        eventInfoCallback(eventStatusMsg);
+        publishEventInfo(eventStatusMsg);
         eventTime = millis();
         eventTime = millis();
       }
@@ -3254,7 +3255,7 @@ void DSCkeybushome::update()
       if (showEvent)
         eventStatusMsg = eventInfo;
       else
-        line1DisplayCallback(eventInfo, activePartition);
+        publishLine1(eventInfo, activePartition);
 
       switch (dsc.panelData[7])
       {
@@ -3303,7 +3304,7 @@ void DSCkeybushome::update()
           eventStatusMsg.append(String(FPSTR(", Partition status is ")).c_str()).append(getPartitionStatus(partition - 1));
 #endif
 
-        eventInfoCallback(eventStatusMsg);
+        publishEventInfo(eventStatusMsg);
         eventTime = millis();
       }
 #endif
@@ -3384,7 +3385,7 @@ void DSCkeybushome::update()
       case 0xBF:
         lcdLine1 = F("Armed");
         lcdLine2 = F("Special");
-        userArmingDisarmingCallback("<quick arm>", partition);
+        publishUserArmingDisarming("<quick arm>", partition);
         break;
         // 0xC0 - 0xE4: Disarmed: Access_codes 1-34, 40-42
       case 0xE5:
@@ -3487,8 +3488,8 @@ void DSCkeybushome::update()
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
-        zoneAlarmCallback(zonestr, partition);
-        dsc.statusChanged=true;
+        publishZoneAlarm(zonestr, partition);
+        dsc.statusChanged = true;
       }
 
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
@@ -3501,33 +3502,33 @@ void DSCkeybushome::update()
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
-        dsc.statusChanged=true;
+        dsc.statusChanged = true;
       }
 
       if (dsc.panelData[panelByte] >= 0x56 && dsc.panelData[panelByte] <= 0x75)
       {
         lcdLine1 = F("Zone tamper ON");
         byte zone = dsc.panelData[panelByte] - 0x55;
-        if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->tamper = true;
+        // if (zone > 0 && zone < maxZones)
+        //   getZone(zone - 1)->tamper = true;
         decoded = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
-        dsc.statusChanged=true;
+        dsc.statusChanged = true;
       }
 
       if (dsc.panelData[panelByte] >= 0x76 && dsc.panelData[panelByte] <= 0x95)
       {
         lcdLine1 = F("Zone tamper OFF");
         byte zone = dsc.panelData[panelByte] - 0x75;
-        if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->tamper = false;
+        // if (zone > 0 && zone < maxZones)
+        //   getZone(zone - 1)->tamper = false;
         decoded = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         eventstr = lcdLine1.c_str();
-        dsc.statusChanged=true;
+        dsc.statusChanged = true;
       }
 
       if (dsc.panelData[panelByte] >= 0x99 && dsc.panelData[panelByte] <= 0xBD)
@@ -3540,7 +3541,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        userArmingDisarmingCallback(userstr, partition);
+        publishUserArmingDisarming(userstr, partition);
       }
 
       if (dsc.panelData[panelByte] >= 0xC0 && dsc.panelData[panelByte] <= 0xE4)
@@ -3553,7 +3554,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        userArmingDisarmingCallback(userstr, partition);
+        publishUserArmingDisarming(userstr, partition);
       }
 
       if (!decoded)
@@ -3577,7 +3578,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus1(byte panelByte, byte partition, bool showEvent)
@@ -3746,7 +3747,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus2(byte panelByte, byte partition, bool showEvent)
@@ -3960,7 +3961,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus3(byte panelByte, byte partition, bool showEvent)
@@ -4136,7 +4137,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus4(byte panelByte, byte partition, bool showEvent)
@@ -4176,8 +4177,8 @@ void DSCkeybushome::update()
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        zoneAlarmCallback(zonestr, partition);
-        dsc.statusChanged=true;
+        publishZoneAlarm(zonestr, partition);
+        dsc.statusChanged = true;
       }
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
@@ -4194,25 +4195,25 @@ void DSCkeybushome::update()
       {
         lcdLine1 = F("Zone tamper on");
         byte zone = dsc.panelData[panelByte] - 31;
-        if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->tamper = true;
+        // if (zone > 0 && zone < maxZones)
+        // getZone(zone - 1)->tamper = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        dsc.statusChanged=true;
+        dsc.statusChanged = true;
       }
       else if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
         lcdLine1 = F("Tamper zone off");
         byte zone = dsc.panelData[panelByte] - 63;
-        if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->tamper = false;
+        //   if (zone > 0 && zone < maxZones)
+        // getZone(zone - 1)->tamper = false;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        dsc.statusChanged=true;
+        dsc.statusChanged = true;
       }
 
       if (!decoded)
@@ -4236,7 +4237,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus5(byte panelByte, byte partition, bool showEvent)
@@ -4256,7 +4257,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        userArmingDisarmingCallback(userstr, partition);
+        publishUserArmingDisarming(userstr, partition);
       }
 
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x73)
@@ -4269,7 +4270,7 @@ void DSCkeybushome::update()
         lcdLine2 = userstr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
-        userArmingDisarmingCallback(userstr, partition);
+        publishUserArmingDisarming(userstr, partition);
       }
 
       if (!decoded)
@@ -4293,7 +4294,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus14(byte panelByte, byte partition, bool showEvent)
@@ -4400,7 +4401,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
     long int DSCkeybushome::toInt(std::string s, int base)
     {
@@ -4461,7 +4462,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus17(byte panelByte, byte partition, bool showEvent)
@@ -4553,7 +4554,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus18(byte panelByte, byte partition, bool showEvent)
@@ -4621,7 +4622,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::printPanelStatus1B(byte panelByte, byte partition, bool showEvent)
@@ -4663,7 +4664,7 @@ void DSCkeybushome::update()
 #endif
       }
       else
-        line2DisplayCallback((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
+        publishLine2((lcdLine1 + " " + lcdLine2).c_str(), activePartition);
     }
 
     void DSCkeybushome::toLower(std::string *s)
@@ -4732,8 +4733,9 @@ void DSCkeybushome::update()
     void DSCkeybushome::createZone(uint16_t z, uint8_t p)
     {
 
-      if (!z) return;
-      zoneType *zt = getZone(z-1);
+      if (!z)
+        return;
+      zoneType *zt = getZone(z - 1);
       if (zt->zone == z)
         return;
       zoneType n;
@@ -4742,10 +4744,8 @@ void DSCkeybushome::update()
       n.partition = p;
 
       zoneStatus.push_back(n);
-      ESP_LOGD(TAG, "added zone %d",  zoneStatus.back().zone);
-      if (zoneStatusChangeCallback != NULL)
-        zoneStatusChangeCallback(z, false);
-
+      ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
+      publishZoneStatus(z, false);
     }
 
     // void DSCkeybushome::loadZones()

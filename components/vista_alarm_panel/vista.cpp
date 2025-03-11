@@ -253,7 +253,7 @@ bool Vista::cmdAvail()
     return true;
 }
 
-void Vista::pushCmdQueueItem()
+void Vista::pushCmdQueueItem(size_t extlen)
 {
   struct cmdQueueItem q;
   q.statusFlags = statusFlags;
@@ -262,10 +262,14 @@ void Vista::pushCmdQueueItem()
 
   if (newExtCmd)
   {
-    for (uint8_t i = 0; i < OUTBUFSIZE; i++)
+    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
     {
       q.cbuf[i] = extcmd[i];
     }
+    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
+    {
+      q.extbuf[i] = extbuf[i];
+    } 
   }
   else
   {
@@ -375,7 +379,7 @@ void Vista::setExpFault(int zone, bool fault)
   // expander address 10 - zones: 33 - 40
   // expander address 11 - zones: 41 - 48
   uint8_t idx = 0;
-  expansionAddr = 0;
+  char expansionAddr = 0;
   for (uint8_t i = 0; i < MAX_MODULES; i++)
   {
     switch (zoneExpanders[i].expansionAddr)
@@ -427,13 +431,10 @@ void Vista::setExpFault(int zone, bool fault)
     return;
   expFaultBits = zoneExpanders[idx].expFaultBits;
 
-  int z = zone % 8;                      // convert zone to range of 1 - 7,0 (last zone is 0)
+  int z = zone & 0x07;                      // convert zone to range of 1 - 7,0 (last zone is 0)
   expFault = z << 5 | (fault ? 0x8 : 0); // 0 = terminated(eol resistor), 0x08=open, 0x10 = closed (shorted)  - convert to bitfield for F1 response
-  if (z > 0)
-    z--;
-  else
-    z = 7;                                                                                   // now convert to 0 - 7 for F7 poll response
-  expFaultBits = (fault ? expFaultBits | (0x80 >> z) : expFaultBits & ((0x80 >> z) ^ 0xFF)); // setup bit fields for return response with fault values for each zone
+  z = (zone - 1 ) & 0x07; // now convert to 0 - 7 for F7 poll response
+  expFaultBits = fault ? expFaultBits | (0x80 >> z) : expFaultBits ^ (0x80 >> z ); // setup bit fields for return response with fault values for each zone
   expanderType lastFault = peekNextFault();
   if (lastFault.expansionAddr != expansionAddr || lastFault.expFault != expFault || lastFault.expFaultBits != expFaultBits)
   {
@@ -459,7 +460,7 @@ void Vista::onExp(char cbuf[])
   char seq = cbuf[3];
   char lcbuf[4];
   sending = true;
-
+  char expansionAddr=0;
   int idx;
 
   if (cbuf[2] & 1)
@@ -965,7 +966,7 @@ bool Vista::decodePacket()
         if (!channel)
           channel = 8;
         channel = ((extcmd[1] - 7) * 8) + 8 + channel; // calculate zone
-        extcmd[4] = (extbuf[3] >> 3 & 3) ? 1 : 0;      // fault
+        extcmd[4] = ((extbuf[3] >> 3) & 3) ? 1 : 0;      // fault
       }
       else
       {
@@ -1129,7 +1130,8 @@ uint8_t Vista::getExtBytes()
 
   if (!vistaSerialMonitor)
     return 0;
-
+  if (extidx == 0)
+    memset(extbuf, 0, OUTBUFSIZE); // clear buffer mem
   while (vistaSerialMonitor->available())
   {
     x = vistaSerialMonitor->read();
@@ -1149,7 +1151,7 @@ uint8_t Vista::getExtBytes()
     if (decodePacket())
       ret = extidx + 2;
     extidx = 0;
-    memset(extbuf, 0, OUTBUFSIZE); // clear buffer mem
+   
   }
 
   return ret;
@@ -1169,7 +1171,7 @@ bool Vista::handle()
 
     if (x)
     {
-      pushCmdQueueItem();
+      pushCmdQueueItem(x);
       return true;
     }
   }
@@ -1200,7 +1202,7 @@ bool Vista::handle()
         retryAddr = 0;
         cbuf[0] = 0x78; // for flagging an expect byte found ok
         cbuf[1] = x;
-        pushCmdQueueItem();
+        pushCmdQueueItem(2);
         return 1; // 1 for logging. 0 for normal
       }
       else
@@ -1238,7 +1240,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 7);
 #endif
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
 
@@ -1257,7 +1259,7 @@ bool Vista::handle()
         onDisplay(cbuf, &gidx);
         newCmd = true; // new valid cmd, process it
       }
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1; // return 1 to log packet
     }
 
@@ -1281,7 +1283,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
 #endif
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
     // key ack
@@ -1302,7 +1304,7 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 7);
 
 #endif
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
 
@@ -1319,7 +1321,7 @@ bool Vista::handle()
       else
         onAUI(cbuf, &gidx);
       newCmd = true;
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
     // // unknown
@@ -1334,7 +1336,7 @@ bool Vista::handle()
       if (!validChksum(cbuf, 0, gidx))
         cbuf[12] = 0x77;
       newCmd = true;
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
     // unknown
@@ -1349,7 +1351,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 2);
 #endif
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
 
@@ -1367,7 +1369,7 @@ bool Vista::handle()
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
 #endif
-      pushCmdQueueItem();
+      pushCmdQueueItem(gidx);
       return 1;
     }
 
@@ -1395,7 +1397,7 @@ bool Vista::handle()
       yield();
 #endif
     }
-    pushCmdQueueItem();
+    pushCmdQueueItem(gidx);
     return 1;
   }
 

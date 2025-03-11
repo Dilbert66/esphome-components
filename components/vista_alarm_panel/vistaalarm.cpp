@@ -1456,10 +1456,15 @@ void vistaECPHome::update()
           {
             if (debug > 0)
             {
-              if (vistaCmd.cbuf[0] == 0xF6)
+              if (vistaCmd.cbuf[0] == 0xF6) {
                 printPacket("EXT", vistaCmd.cbuf, vistaCmd.cbuf[3] + 4);
-              else
+                if (debug > 2)
+                   printPacket("RAW",vistaCmd.extbuf,vistaCmd.cbuf[3] + 2);
+              } else {
                 printPacket("EXT", vistaCmd.cbuf, 13);
+                if (debug > 2)
+                  printPacket("RAW",vistaCmd.extbuf,13);
+              }
               // format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
             }
             if (vistaCmd.cbuf[0] == 0xFA)
@@ -1467,7 +1472,7 @@ void vistaECPHome::update()
               int z = vistaCmd.cbuf[3];
               if (vistaCmd.cbuf[2] == 0xf1 && z > 0 && z <= maxZones)
               { // we have a zone status (zone expander address range)
-                ESP_LOGD(TAG, "fa status update to zone");
+                if (debug > 2) ESP_LOGD(TAG, "FA status update to zone");
                 zoneType *zt = getZone(z);
 
                 if (zt->active)

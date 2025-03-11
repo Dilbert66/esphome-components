@@ -136,6 +136,7 @@ const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0
 struct cmdQueueItem
 {
     char cbuf[CMDBUFSIZE];
+    char extbuf[CMDBUFSIZE];
     bool newCmd;
     bool newExtCmd;
     struct statusFlagType statusFlags;
@@ -179,7 +180,6 @@ public:
     char *cbuf, *extbuf, *extcmd;
 
     bool lrrSupervisor;
-    char expansionAddr;
     void setExpFault(int, bool);
     bool newExtCmd, newCmd;
     bool filterOwnTx;
@@ -230,7 +230,7 @@ private:
     bool decodePacket();
     uint8_t getExtBytes();
     volatile bool is2400;
-    void pushCmdQueueItem();
+    void pushCmdQueueItem(size_t extlen=0);
     bool invertRead;
 
     char IRAM_ATTR addrToBitmask1(char addr)
