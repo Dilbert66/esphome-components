@@ -1,15 +1,11 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID,CONF_BINARY_SENSORS,CONF_TEXT_SENSORS
+from esphome.const import CONF_ID
 #from esphome.components import mqtt
 from esphome.core import CORE
 import os
 import logging
 import pathlib
-from esphome.components.esp32 import get_esp32_variant
-from esphome.components.esp32.const import ( VARIANT_ESP32C3 )
-from esphome.helpers import copy_file_if_changed, sanitize, snake_case
-from esphome.components import binary_sensor,text_sensor
     
 _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
@@ -37,74 +33,6 @@ CONF_EVENTFORMAT="event_format"
 CONF_TYPE_ID="code"
 
 
-systemstatus= '''[&](std::string statusCode) {
-      alarm_panel::alarmPanelPtr->publishTextState("ss",0,&statusCode); 
-    }'''
-partitionstatus= '''[&](std::string statusCode,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ps_",partition,&statusCode); 
-      alarm_panel::alarmPanelPtr->publishBinaryState("al_",partition,(statusCode.compare("triggered")==0));        
-    }'''    
-partitionmsg= '''[&](std::string msg,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("msg_",partition,&msg); 
-    }'''    
-panelstatus= '''[&](alarm_panel::panelStatus ps,bool open,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishPanelStatus(ps,open,partition);
-    }'''      
-line1 ='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ln1_",partition,&msg);
-    }'''
-line2='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ln2_",partition,&msg);
-    }'''
-beeps='''[&](std::string  beeps,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("bp_",partition,&beeps); 
-    }'''
-zonealarm='''[&](std::string zone,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("za_",partition,&zone); 
-    }'''
-userarmingdisarming='''[&](std::string user,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("user_",partition,&user); 
-    }'''
-zonemsg='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("zs",0,&msg);  
-    }'''
-troublemsg='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("tr_msg",0,&msg);  
-    }'''    
-eventinfo='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("evt",0,&msg);  
-    }''' 
-    
-firestatus='''[&]( bool open,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishBinaryState("fa_",partition,open);    
-    }'''
-zonebinary='''[&](int zone, bool open) {
-      std::string sensor = "z" + std::to_string(zone) ;
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);    
-    }'''
-relay='''[&](uint8_t channel,bool open) {
-      std::string sensor = "r"+ std::to_string(channel);
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
-    }'''
-
-
-# ALARM_PANEL_BINARY_SENSOR_SCHEMA = cv.maybe_simple_value(
-#     {
-#         cv.Required(CONF_ID): cv.use_id(binary_sensor.BinarySensor),
-#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-#     },
-#     key=CONF_ID,
-
-# )
-
-# ALARM_PANEL_TEXT_SENSOR_SCHEMA = cv.maybe_simple_value(
-#     {
-#         cv.Required(CONF_ID): cv.use_id(text_sensor.TextSensor),
-#         cv.Optional(CONF_TYPE_ID): cv.string_strict,  
-#     },
-#     key=CONF_ID,
-
-# )
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -129,8 +57,6 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
     cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),    
-    # cv.Optional(CONF_BINARY_SENSORS): cv.ensure_list(ALARM_PANEL_BINARY_SENSOR_SCHEMA),
-    # cv.Optional(CONF_TEXT_SENSORS): cv.ensure_list(ALARM_PANEL_TEXT_SENSOR_SCHEMA),
     }
 )
 
@@ -141,8 +67,6 @@ async def to_code(config):
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
-    # if config[CONF_AUTOPOPULATE]:
-    #     cg.add_define("AUTOPOPULATE")
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
@@ -176,40 +100,9 @@ async def to_code(config):
     if CONF_EXPANDER2 in config:
         cg.add(var.set_expanderAddr(2,config[CONF_EXPANDER2]));
        
-    cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))  
-    cg.add(var.onPartitionStatusChange(cg.RawExpression(partitionstatus)))  
-    cg.add(var.onPartitionMsgChange(cg.RawExpression(partitionmsg)))  
-    cg.add(var.onPanelStatusChange(cg.RawExpression(panelstatus)))  
-    cg.add(var.onLine1Display(cg.RawExpression(line1))) 
-    cg.add(var.onLine2Display(cg.RawExpression(line2)))    
-    cg.add(var.onBeeps(cg.RawExpression(beeps))) 
-    cg.add(var.onZoneAlarm(cg.RawExpression(zonealarm)))  
-    cg.add(var.onUserArmingDisarming(cg.RawExpression(userarmingdisarming)))      
-    cg.add(var.onZoneMsgStatus(cg.RawExpression(zonemsg)))   
-    cg.add(var.onEventInfo(cg.RawExpression(eventinfo)))    
-    cg.add(var.onZoneStatusChange(cg.RawExpression(zonebinary)))    
-    cg.add(var.onFireStatusChange(cg.RawExpression(firestatus)))   
-    cg.add(var.onTroubleMsgStatus(cg.RawExpression(troublemsg)))    
-    cg.add(var.onRelayChannelChange(cg.RawExpression(relay)))      
+  
     await cg.register_component(var, config)
    
-    # for sensor in config.get(CONF_BINARY_SENSORS, []):
-    #     bs = await cg.get_variable(sensor[CONF_ID])
-    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
-    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
-    #     elif sensor[CONF_ID].is_manual:
-    #         cg.add(bs.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
-    #     cg.add(bs.set_disabled_by_default(False))
-    #     cg.add(bs.set_publish_initial_state(True))
-
-    # for sensor in config.get(CONF_TEXT_SENSORS, []):
-    #     ts = await cg.get_variable(sensor[CONF_ID])
-    #     if CONF_TYPE_ID in sensor and sensor[CONF_TYPE_ID]:
-    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_TYPE_ID]))))
-    #     elif sensor[CONF_ID].is_manual:
-    #         cg.add(ts.set_object_id(sanitize(snake_case(sensor[CONF_ID].id))))
-    #     cg.add(ts.set_disabled_by_default(False))
-
 
     
 def real_clean_build():

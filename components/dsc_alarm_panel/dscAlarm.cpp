@@ -31,7 +31,6 @@ namespace esphome
       disconnectKeybus();
     }
 
-#if !defined(ARDUINO_MQTT)
     void DSCkeybushome::publishPanelState(panelStatus ps, bool open, uint8_t partition)
     {
 
@@ -59,33 +58,45 @@ namespace esphome
       publishBinaryState(sensor, partition, open);
     }
 
-    void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bool open)
+#if defined(ARDUINO_MQTT)
+    void DSCkeybushome::publishBinaryState(const std::string *idstr, uint8_t num, bool open)
     {
-      std::string id = idstr;
-      if (num)
-      {
-        id += std::to_string(num);
-      }
-      auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
-                             { return bs->get_object_id() == id; });
-
-      if (it != bMap.end() && (*it)->state != open)
-        (*it)->publish_state(open);
+      if (binarySensorCallback != NULL)
+        binarySensorCallback(idstr, num, open);
     }
 
-    void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
+    void DSCkeybushome::publishTextState(const std::string *idstr, uint8_t num, std::string *text)
     {
-      std::string id = idstr;
-      if (num)
-      {
-        id += std::to_string(num);
-      }
-      auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
-                             { return ts->get_object_id() == id; });
-      if (it != tMap.end() && (*it)->state != *text)
-        (*it)->publish_state(*text);
+      if (textSensorCallback != NULL)
+        textSensorCallback(idstr, num, text);
     }
+#else
+void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bool open)
+{
+  std::string id = idstr;
+  if (num)
+  {
+    id += std::to_string(num);
+  }
+  auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
+                         { return bs->get_object_id() == id; });
 
+  if (it != bMap.end() && (*it)->state != open)
+    (*it)->publish_state(open);
+}
+
+void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
+{
+  std::string id = idstr;
+  if (num)
+  {
+    id += std::to_string(num);
+  }
+  auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
+                         { return ts->get_object_id() == id; });
+  if (it != tMap.end() && (*it)->state != *text)
+    (*it)->publish_state(*text);
+}
 #endif
 
     DSCkeybushome::DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin, bool invertWrite)
@@ -1809,16 +1820,17 @@ void DSCkeybushome::update()
                 zone = zoneBit + (zoneGroup * 8);
                 if (zone >= maxZones)
                   continue;
+                zoneType * zt = getZone(zone);
                 if (bitRead(dsc.openZones[zoneGroup], zoneBit))
                 {
-                  getZone(zone)->open = true;
-                  publishZoneStatus(zone + 1, true);
+
+                  zt->open = true;
                 }
                 else
                 {
-                  getZone(zone)->open = false;
-                  publishZoneStatus(zone + 1, false);
+                  zt->open = false;
                 }
+                publishZoneStatus(zt);
               }
             }
           }
@@ -4690,18 +4702,40 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
-      for (auto obj : bMap)
+      for (binary_sensor::BinarySensor* obj : bMap)
       {
-        createZoneFromId(obj->get_object_id().c_str());
-      }
-
-      for (auto obj : tMap)
-      {
-        createZoneFromId(obj->get_object_id().c_str());
+        createZoneFromId(obj);
       }
     }
-#endif
 
+    void DSCkeybushome::createZoneFromId(binary_sensor::BinarySensor *obj, uint8_t p)
+    {
+      MatchState ms;
+      char buf[20];
+      char res;
+      ms.Target((char *)obj->get_object_id().c_str());
+      res = ms.Match("^[zZ](%d+)$");
+      if (res == REGEXP_MATCHED)
+      {
+        ms.GetCapture(buf, 0);
+        int z = toInt(buf, 10);
+        if (!z)
+          return;
+        zoneType *zt = getZone(z - 1);
+        if (zt->zone == z)
+          return;
+        zoneType n=zonetype_INIT;
+        n.zone = z;
+        n.binary_sensor = obj;
+        n.enabled = true;
+        n.partition = p;
+        zoneStatus.push_back(n);
+        ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
+        publishZoneStatus(&n);
+      }
+    }
+
+#else
     void DSCkeybushome::createZoneFromId(const char *zid, uint8_t p)
     {
       MatchState ms;
@@ -4717,19 +4751,6 @@ void DSCkeybushome::update()
       }
     }
 
-    //     DSCkeybushome::zoneType *DSCkeybushome::createZone(byte z)
-    // {
-
-    //   zoneType n = zonetype_INIT;
-
-    //   n.zone = z;
-    //   n.enabled = true;
-
-    //   ESP_LOGD(TAG, "adding zone %d", z);
-    //   zoneStatus.push_back(n);
-    //   return &zoneStatus.back();
-    // }
-
     void DSCkeybushome::createZone(uint16_t z, uint8_t p)
     {
 
@@ -4738,47 +4759,16 @@ void DSCkeybushome::update()
       zoneType *zt = getZone(z - 1);
       if (zt->zone == z)
         return;
-      zoneType n;
+      zoneType n=zonetype_INIT;
       n.zone = z;
       n.enabled = true;
       n.partition = p;
 
       zoneStatus.push_back(n);
       ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
-      publishZoneStatus(z, false);
+      publishZoneStatus(&n);
     }
-
-    // void DSCkeybushome::loadZones()
-    // {
-
-    //   int z;
-    //   MatchState ms;
-    //   char buf[20];
-    //   char res;
-    //   for (auto obj : bMap)
-    //   {
-    //     ms.Target((char *)obj->get_object_id().c_str());
-    //     res = ms.Match("^[zZ](%d+)$");
-    //     if (res == REGEXP_MATCHED)
-    //     {
-    //       ms.GetCapture(buf, 0);
-    //       z = toInt(buf, 10);
-    //       createZone(z);
-    //     }
-    //   }
-
-    //   for (auto obj : tMap)
-    //   {
-    //     ms.Target((char *)obj->get_object_id().c_str());
-    //     res = ms.Match("^[zZ](%d+)$");
-    //     if (res == REGEXP_MATCHED)
-    //     {
-    //       ms.GetCapture(buf, 0);
-    //       z = toInt(buf, 10);
-    //       createZone(z);
-    //     }
-    //   }
-    // }
+#endif
 
     const __FlashStringHelper *DSCkeybushome::statusText(uint8_t statusCode)
     {

@@ -244,236 +244,105 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       DSCkeybushome(byte dscClockPin, byte dscReadPin, byte dscWritePin, bool setInvertWrite = true);
 
 #if defined(ARDUINO_MQTT)
-      std::function<void(uint8_t, bool)> zoneStatusChangeCallback;
-      std::function<void(std::string)> systemStatusChangeCallback;
-      std::function<void(panelStatus, bool, int)> panelStatusChangeCallback;
-      std::function<void(bool, int)> fireStatusChangeCallback;
-      std::function<void(std::string, int)> partitionStatusChangeCallback;
-      std::function<void(std::string, int)> partitionMsgChangeCallback;
-      std::function<void(std::string)> zoneMsgStatusCallback;
-      std::function<void(std::string)> troubleMsgStatusCallback;
-      std::function<void(uint8_t, bool)> relayChannelChangeCallback;
-      std::function<void(std::string, int)> line1Callback;
-      std::function<void(std::string, int)> line2Callback;
-      std::function<void(std::string)> eventInfoCallback;
-      std::function<void(std::string, int)> lightsCallback;
-      std::function<void(std::string, int)> beepsCallback;
-      std::function<void(std::string, int)> zoneAlarmCallback;
-      std::function<void(std::string, int)> userArmingDisarmingCallback;
+      std::function<void(const std::string &, uint8_t, std::string *)> textSensorCallback;
+      std::function<void(const std::string &, uint8_t, bool)> binarySensorCallback;
+      void setBinarySensorCallback(std::function<void(const std::string &cstr, uint8_t partition, bool open)> callback)
+      {
+        binarySensorCallback = callback;
+      }
+      void setTextSensorCallback(std::function<void(const std::string &cstr, uint8_t partition, std::string *text)> callback)
+      {
+        textSensorCallback = callback;
+      }
+#endif
 
-      void onZoneStatusChange(std::function<void(uint8_t zone, bool isOpen)> callback)
+
+struct zoneType
+{
+  binary_sensor::BinarySensor* binary_sensor;
+  byte partition;
+  byte zone;
+  byte tamper : 1;
+  byte batteryLow : 1;
+  byte open : 1;
+  byte alarm : 1;
+  byte enabled : 1;
+  byte bypassed : 1;
+};
+
+      void publishZoneStatus(zoneType * zt)
       {
-        zoneStatusChangeCallback = callback;
-      }
-      void onSystemStatusChange(std::function<void(std::string status)> callback)
-      {
-        systemStatusChangeCallback = callback;
-      }
-      void onFireStatusChange(std::function<void(bool isOpen, int partition)> callback)
-      {
-        fireStatusChangeCallback = callback;
-      }
-      void onPanelStatusChange(std::function<void(panelStatus ts, bool isOpen, int partition)> callback)
-      {
-        panelStatusChangeCallback = callback;
-      }
-      void onPartitionStatusChange(std::function<void(std::string status, int partition)> callback)
-      {
-        partitionStatusChangeCallback = callback;
-      }
-      void onPartitionMsgChange(std::function<void(std::string msg, uint8_t partition)> callback)
-      {
-        partitionMsgChangeCallback = callback;
-      }
-      void onZoneMsgStatus(std::function<void(std::string msg)> callback)
-      {
-        zoneMsgStatusCallback = callback;
-      }
-      void onTroubleMsgStatus(std::function<void(std::string msg)> callback)
-      {
-        troubleMsgStatusCallback = callback;
-      }
-      void onRelayChannelChange(std::function<void(uint8_t channel, bool state)> callback)
-      {
-        relayChannelChangeCallback = callback;
+      if (zt==NULL)
+        return;
+#if defined(ARDUINO_MQTT)
+        publishBinaryState("z", zt->zone, zt->open);
+#else
+    if (zt->binary_sensor != NULL)
+      zt->binary_sensor->publish_state(zt->open);
+#endif
       }
 
-      void onLine1Display(std::function<void(std::string msg, int partition)> callback)
+      void publishSystemStatus(std::string statuscode)
       {
-        line1DisplayCallback = callback;
-      }
-      void onLine2Display(std::function<void(std::string msg, int partition)> callback)
-      {
-        line2DisplayCallback = callback;
-      }
-      void onEventInfo(std::function<void(std::string msg)> callback)
-      {
-        eventInfoCallback = callback;
-      }
-      void onLights(std::function<void(std::string msg, int partition)> callback)
-      {
-        lightsCallback = callback;
-      }
-      void onBeeps(std::function<void(std::string beep, int partition)> callback)
-      {
-        beepsCallback = callback;
-      }
-      void onZoneAlarm(std::function<void(std::string zone, int partition)> callback)
-      {
-        zoneAlarmCallback = callback;
-      }
-      void onUserArmingDisarming(std::function<void(std::string user, int partition)> callback)
-      {
-        userArmingDisarmingCallback = callback;
-      }
-
-      void publishZoneStatus(int zone, bool open)
-      {
-        if (zoneStatusChangeCallback != NULL)
-          zoneStatusChangeCallback(zone, open);
-      }
-      void publishSystemStatus(const std::string statuscode)
-      {
-        if (systemStatusChangeCallback != NULL)
-          systemStatusChangeCallback(statuscode);
+        publishTextState("ss", 0, &statuscode);
       }
       void publishPartitionStatus(std::string statuscode, uint8_t partition)
       {
-        if (partitionStatusChangeCallback != NULL)
-          partitionStatusChangeCallback(statuscode, partition);
+        publishTextState("ps_", partition, &statuscode);
+        publishBinaryState("al_", partition, (statuscode.compare("triggered") == 0));
       }
       void publishPartitionMsg(std::string msg, uint8_t partition)
       {
-        if (partitionMsgChangeCallback != NULL)
-          partitionMsgChangeCallback(msg, partition);
+        publishTextState("msg_", partition, &msg);
       }
       void publishPanelStatus(panelStatus ps, bool open, uint8_t partition)
       {
-        if (panelStatusChangeCallback != NULL)
-          panelStatusChangeCallback(ps, open, partition);
+        publishPanelState(ps, open, partition);
       }
-      void publishLine1(const std::string msg, uint8_t partition)
+
+      void publishLine1(std::string msg, uint8_t partition)
       {
-        if (line1Callback != NULL)
-          line1Callback(msg, partition);
+        publishTextState("ln1_", partition, &msg);
       }
-      void publishLine2(const std::string msg, uint8_t partition)
+      void publishLine2(std::string msg, uint8_t partition)
       {
-        if (line2Callback != NULL)
-          line2Callback(msg, partition);
+        publishTextState("ln2_", partition, &msg);
       }
-      void publishBeeps(const std::string beeps, uint8_t partition)
+
+      void publishBeeps(std::string beeps, uint8_t partition)
       {
-        if (beepsCallback != NULL)
-          beepsCallback(beeps, partition);
+        publishTextState("bp_", partition, &beeps);
       }
       void publishZoneAlarm(std::string zone, uint8_t partition)
       {
-        if (zoneAlarmCallback != NULL)
-          zoneAlarmCallback(zone, partition);
+        publishTextState("za_", partition, &zone);
       }
       void publishUserArmingDisarming(std::string user, uint8_t partition)
       {
-        if (userArmingDisarmingCallback != NULL)
-          userArmingDisarmingCallback(user, partition);
+        publishTextState("user_", partition, &user);
       }
 
       void publishZoneMsgStatus(std::string msg)
       {
-        if (zoneMsgStatusCallback != NULL)
-          zoneMsgStatusCallback(msg);
+        publishTextState("zs", 0, &msg);
       }
       void publishTroubleMsgStatus(std::string msg)
       {
-        if (troubleMsgStatusCallback != NULL)
-          troubleMsgStatusCallback(msg);
+        publishTextState("tr_msg", 0, &msg);
       }
       void publishEventInfo(std::string msg)
       {
-        if (eventInfoCallback != NULL)
-          eventInfoCallback(msg);
+        publishTextState("evt", 0, &msg);
       }
 
       void publishFireStatus(bool open, uint8_t partition)
       {
-        if (fireStatusChangeCallback != NULL)
-          fireStatusChangeCallback(open, partition);
+        publishBinaryState("fa_", partition, open);
       }
       void publishRelayStatus(int channel, bool open)
       {
-        if (relayChannelChangeCallback != NULL)
-          relayChannelChangeCallback(channel, open);
+        publishBinaryState("r", channel, open);
       }
-
-#else
-
-  void publishZoneStatus(int zone, bool open)
-  {
-    publishBinaryState("z", zone, open);
-  }
-
-  void publishSystemStatus(std::string statuscode)
-  {
-    publishTextState("ss", 0, &statuscode);
-  }
-  void publishPartitionStatus(std::string statuscode, uint8_t partition)
-  {
-    publishTextState("ps_", partition, &statuscode);
-    publishBinaryState("al_", partition, (statuscode.compare("triggered") == 0));
-  }
-  void publishPartitionMsg(std::string msg, uint8_t partition)
-  {
-    publishTextState("msg_", partition, &msg);
-  }
-  void publishPanelStatus(panelStatus ps, bool open, uint8_t partition)
-  {
-    publishPanelState(ps, open, partition);
-  }
-
-  void publishLine1(std::string msg, uint8_t partition)
-  {
-    publishTextState("ln1_", partition, &msg);
-  }
-  void publishLine2(std::string msg, uint8_t partition)
-  {
-    publishTextState("ln2_", partition, &msg);
-  }
-
-  void publishBeeps(std::string beeps, uint8_t partition)
-  {
-    publishTextState("bp_", partition, &beeps);
-  }
-  void publishZoneAlarm(std::string zone, uint8_t partition)
-  {
-    publishTextState("za_", partition, &zone);
-  }
-  void publishUserArmingDisarming(std::string user, uint8_t partition)
-  {
-    publishTextState("user_", partition, &user);
-  }
-
-  void publishZoneMsgStatus(std::string msg)
-  {
-    publishTextState("zs", 0, &msg);
-  }
-  void publishTroubleMsgStatus(std::string msg)
-  {
-    publishTextState("tr_msg", 0, &msg);
-  }
-  void publishEventInfo(std::string msg)
-  {
-    publishTextState("evt", 0, &msg);
-  }
-
-  void publishFireStatus(bool open, uint8_t partition)
-  {
-    publishBinaryState("fa_", partition, open);
-  }
-  void publishRelayStatus(int channel, bool open)
-  {
-    publishBinaryState("r", channel, open);
-  }
-#endif
 
       void set_panel_time();
 
@@ -493,7 +362,11 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void set_trouble_fetch(bool fetch);
       void set_trouble_fetch_cmd(const char *cmd);
       void createZone(uint16_t z, uint8_t p = 0);
-      void createZoneFromId(const char *zid, uint8_t p = 0);
+      void createZoneFromId(const char *zid, uint8_t p = 0){}
+      #if !defined(ARDUINO_MQTT)
+      void createZoneFromId(binary_sensor::BinarySensor* obj, uint8_t p = 0);
+      void createZoneFromId(text_sensor::TextSensor * obj, uint8_t p = 0);
+      #endif
       void stop();
 
     private:
@@ -547,19 +420,10 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
         byte chime : 1;
       };
 
-      struct zoneType
-      {
-        byte partition;
-        byte zone;
-        byte tamper : 1;
-        byte batteryLow : 1;
-        byte open : 1;
-        byte alarm : 1;
-        byte enabled : 1;
-        byte bypassed : 1;
-      };
+
 
       zoneType zonetype_INIT = {
+          .binary_sensor = NULL,
           .partition = 0,
           .zone = 0,
           .tamper = false,
@@ -621,7 +485,8 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void alarm_trigger_fire();
 
       void alarm_trigger_panic();
-
+      
+     
     private:
       void loadZones();
       // void loadZone(int z);
