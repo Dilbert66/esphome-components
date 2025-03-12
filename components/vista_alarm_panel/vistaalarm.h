@@ -123,72 +123,6 @@ class vistaECPHome : public time::RealTimeClock
     public:
       vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN, int maxzones = MAX_ZONES, int maxpartitions = MAX_PARTITIONS, bool invertrx = true, bool inverttx = true, bool invertmon = true, uint8_t inputrx = INPUT, uint8_t inputmon = INPUT);
 
-      std::function<void(int, std::string)> zoneStatusChangeCallback;
-      std::function<void(int, bool)> zoneStatusChangeBinaryCallback;
-      std::function<void(std::string, uint8_t)> systemStatusChangeCallback;
-      std::function<void(sysState, bool, uint8_t)> statusChangeCallback;
-      std::function<void(std::string, uint8_t)> systemMsgChangeCallback;
-      std::function<void(std::string)> lrrMsgChangeCallback;
-      std::function<void(std::string)> rfMsgChangeCallback;
-      std::function<void(std::string, uint8_t)> line1DisplayCallback;
-      std::function<void(std::string, uint8_t)> line2DisplayCallback;
-      std::function<void(std::string, uint8_t)> beepsCallback;
-      std::function<void(std::string)> zoneExtendedStatusCallback;
-      std::function<void(uint8_t, int, bool)> relayStatusChangeCallback;
-
-      void onZoneStatusChange(std::function<void(int zone,
-                                                 std::string msg)>
-                                  callback)
-      {
-        zoneStatusChangeCallback = callback;
-      }
-      void onZoneStatusChangeBinarySensor(std::function<void(int zone,
-                                                             bool open)>
-                                              callback)
-      {
-        zoneStatusChangeBinaryCallback = callback;
-      }
-      void onSystemStatusChange(std::function<void(std::string status, uint8_t partition)> callback)
-      {
-        systemStatusChangeCallback = callback;
-      }
-      void onStatusChange(std::function<void(sysState led, bool isOpen, uint8_t partition)> callback)
-      {
-        statusChangeCallback = callback;
-      }
-      void onSystemMsgChange(std::function<void(std::string msg, uint8_t partition)> callback)
-      {
-        systemMsgChangeCallback = callback;
-      }
-      void onLrrMsgChange(std::function<void(std::string msg)> callback)
-      {
-        lrrMsgChangeCallback = callback;
-      }
-      void onLine1DisplayChange(std::function<void(std::string msg, uint8_t partition)> callback)
-      {
-        line1DisplayCallback = callback;
-      }
-      void onLine2DisplayChange(std::function<void(std::string msg, uint8_t partition)> callback)
-      {
-        line2DisplayCallback = callback;
-      }
-      void onBeepsChange(std::function<void(std::string beeps, uint8_t partition)> callback)
-      {
-        beepsCallback = callback;
-      }
-      void onZoneExtendedStatusChange(std::function<void(std::string zoneExtendedStatus)> callback)
-      {
-        zoneExtendedStatusCallback = callback;
-      }
-      void onRelayStatusChange(std::function<void(uint8_t addr, int channel, bool state)> callback)
-      {
-        relayStatusChangeCallback = callback;
-      }
-      void onRfMsgChange(std::function<void(std::string msg)> callback)
-      {
-        rfMsgChangeCallback = callback;
-      }
-
       void set_accessCode(const char *ac) { accessCode = ac; }
       void set_rfSerialLookup(const char *rf) { rfSerialLookup = rf; }
       void set_quickArm(bool qa) { quickArm = qa; }
@@ -255,6 +189,99 @@ class vistaECPHome : public time::RealTimeClock
       void stop();
 
     private:
+      struct zoneType
+      {
+        binary_sensor::BinarySensor *binary_sensor;
+        text_sensor::TextSensor *text_sensor;
+        uint16_t zone;
+        unsigned long time;
+        uint8_t partition : 7;
+        uint8_t open : 1;
+        uint8_t bypass : 1;
+        uint8_t alarm : 1;
+        uint8_t check : 1;
+        uint8_t fire : 1;
+        uint8_t panic : 1;
+        uint8_t trouble : 1;
+        uint8_t lowbat : 1;
+        uint8_t active : 1;
+        uint8_t rflowbat : 1;
+      };
+
+#if defined(ARDUINO_MQTT)
+      std::function<void(const std::string &, uint8_t, std::string *)> textSensorCallback;
+      std::function<void(const std::string &, uint8_t, bool)> binarySensorCallback;
+      void setBinarySensorCallback(std::function<void(const std::string &cstr, uint8_t partition, bool open)> callback)
+      {
+        binarySensorCallback = callback;
+      }
+      void setTextSensorCallback(std::function<void(const std::string &cstr, uint8_t partition, std::string *text)> callback)
+      {
+        textSensorCallback = callback;
+      }
+#endif
+
+      void publishZoneStatus(zoneType *zt, const char *open)
+      {
+      if (zt==NULL)
+        return;
+#if defined(ARDUINO_MQTT)
+        publishTextState("z", zt->zone, open);
+#else
+      std::string s=open;
+      if (zt->text_sensor != NULL)
+        zt->text_sensor->publish_state(s);
+#endif
+      }
+      void publishZoneStatusBinary(zoneType *zt, bool open)
+      {
+      if (zt==NULL)
+        return;
+#if defined(ARDUINO_MQTT)
+        publishBinaryState("z", zt->zone, open);
+#else
+      if (zt->binary_sensor != NULL)
+        zt->binary_sensor->publish_state(open);
+#endif
+      }
+      void publishSystemStatus(std::string statusCode, uint8_t partition)
+      {
+        publishTextState("ss_", partition, &statusCode);
+      }
+      void publishStatus(sysState led, bool open, uint8_t partition)
+      {
+        publishStatusChange(led, open, partition);
+      }
+      void publishLrrMsg(std::string msg)
+      {
+        publishTextState("lrr", 0, &msg);
+      }
+      void publishRfMsg(std::string msg)
+      {
+        publishTextState("rf", 0, &msg);
+      }
+      void publishLine1(std::string msg, uint8_t partition)
+      {
+        publishTextState("ln1_", partition, &msg);
+      }
+      void publishLine2(std::string msg, uint8_t partition)
+      {
+        publishTextState("ln2_", partition, &msg);
+      }
+      void publishBeeps(std::string beeps, uint8_t partition)
+      {
+        publishTextState("bp_", partition, &beeps);
+      }
+      void publishZoneExtendedStatus(std::string msg)
+      {
+        publishTextState("zs", 0, &msg);
+      }
+      void publishRelayStatus(uint8_t addr, int channel, bool state)
+      {
+        std::string sensor = "r" + std::to_string(addr) + std::to_string(channel);
+        publishBinaryState(sensor, 0, open);
+      }
+
       int TTL = 30000;
       uint8_t debug = 0;
       char keypadAddr1 = 0;
@@ -307,23 +334,10 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t device_type;
       };
 #endif
-      struct zoneType
-      {
-        uint16_t zone;
-        unsigned long time;
-        uint8_t partition : 7;
-        uint8_t open : 1;
-        uint8_t bypass : 1;
-        uint8_t alarm : 1;
-        uint8_t check : 1;
-        uint8_t fire : 1;
-        uint8_t panic : 1;
-        uint8_t trouble : 1;
-        uint8_t lowbat : 1;
-        uint8_t active : 1;
-        uint8_t rflowbat : 1;
-      };
+
       zoneType zonetype_INIT = {
+          .binary_sensor=NULL,
+          .text_sensor=NULL,
           .zone = 0,
           .time = 0,
           .partition = 0,
@@ -422,7 +436,7 @@ class vistaECPHome : public time::RealTimeClock
       }
       bool connected()
       {
-        vista.keybusConnected=vista.connected;
+        vista.keybusConnected = vista.connected;
         return vista.connected;
       }
 
@@ -430,7 +444,11 @@ class vistaECPHome : public time::RealTimeClock
       {
         vista.setExpFault(zone, fault);
       }
-     void createZoneFromId(const char * zid,uint8_t p=0);
+
+#if !defined(ARDUINO_MQTT)
+      void createZoneFromId(binary_sensor::BinarySensor *obj, uint8_t p = 0);
+      void createZoneFromId(text_sensor::TextSensor *obj, uint8_t p = 0);
+#endif
 
     private:
       std::string previousMsg,
@@ -452,7 +470,8 @@ class vistaECPHome : public time::RealTimeClock
       TaskHandle_t xHandle;
       static void cmdQueueTask(void *args);
 #endif
-     void createZone(uint16_t z,uint8_t p=0);
+      void createZone(uint16_t z, uint8_t p = 0);
+      int getZoneNumber(char *zid);
 
       auiCmdType auiCmd;
       std::vector<zoneType> extZones{};
@@ -463,11 +482,10 @@ class vistaECPHome : public time::RealTimeClock
       void fetchPanelZones();
 #endif
 
-          zoneType nz;
+      zoneType nz;
 
       zoneType *getZone(uint16_t z);
-      std::string getZoneName(uint16_t zone, bool append=false);
-
+      std::string getZoneName(uint16_t zone, bool append = false);
 
       serialType getRfSerialLookup(char *serialCode);
 

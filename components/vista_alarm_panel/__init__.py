@@ -1,22 +1,17 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID,CONF_BINARY_SENSORS,CONF_TEXT_SENSORS
+from esphome.const import CONF_ID
 from esphome.core import CORE
 import os
 import logging
 import pathlib
-from esphome.components.esp32 import get_esp32_variant
-from esphome.components.esp32.const import ( VARIANT_ESP32C3 )
-from esphome.helpers import copy_file_if_changed, sanitize, snake_case
-from esphome.components import binary_sensor,text_sensor
+
 
 _LOGGER = logging.getLogger(__name__)
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('vistaECPHome', cg.PollingComponent)
 
-web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
-WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
@@ -57,42 +52,6 @@ CONF_AUTOPOPULATE="autopopulate"
 CONF_USEASYNC="use_async_polling"
 CONF_TYPE_ID="code"
 
-systemstatus= '''[&](std::string statusCode,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ss_",partition,&statusCode); 
-    }'''
-line1 ='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ln1_",partition,&msg);
-    }'''
-line2='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("ln2_",partition,&msg);
-    }'''
-beeps='''[&](std::string  beeps,uint8_t partition) {
-      alarm_panel::alarmPanelPtr->publishTextState("bp_",partition,&beeps); 
-    }'''
-zoneext='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("zs",0,&msg);  
-    }'''
-lrr='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("lrr",0,&msg);  
-    }''' 
-rf='''[&](std::string msg) {
-      alarm_panel::alarmPanelPtr->publishTextState("rf",0,&msg);  
-    }'''
-statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
-     alarm_panel::alarmPanelPtr->publishStatusChange(led,open,partition);
-    }'''
-zonebinary='''[&](int zone, bool open) {
-      std::string sensor = "z" + std::to_string(zone) ;
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);    
-    }'''
-zonestatus='''[&](int zone, std::string open) {
-      std::string sensor = "z" + std::to_string(zone);
-      alarm_panel::alarmPanelPtr->publishTextState(sensor,0,&open); 
-    }''' 
-relay='''[&](uint8_t addr,int channel,bool open) {
-      std::string sensor = "r"+std::to_string(addr) + std::to_string(channel);
-      alarm_panel::alarmPanelPtr->publishBinaryState(sensor,0,open);       
-    }'''
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -147,8 +106,6 @@ async def to_code(config):
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     
-    # if config[CONF_AUTOPOPULATE]:
-    #     cg.add_define("AUTOPOPULATE")
     if  config[CONF_USEASYNC]:
         cg.add_define("USETASK")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
@@ -206,18 +163,7 @@ async def to_code(config):
     if CONF_HITSTAR in config:
         cg.add(var.set_text(7,config[CONF_HITSTAR]));  
 
-        
-    cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))   
-    cg.add(var.onLine1DisplayChange(cg.RawExpression(line1))) 
-    cg.add(var.onLine2DisplayChange(cg.RawExpression(line2)))    
-    cg.add(var.onBeepsChange(cg.RawExpression(beeps)))    
-    cg.add(var.onZoneExtendedStatusChange(cg.RawExpression(zoneext)))   
-    cg.add(var.onLrrMsgChange(cg.RawExpression(lrr))) 
-    cg.add(var.onRfMsgChange(cg.RawExpression(rf)))    
-    cg.add(var.onStatusChange(cg.RawExpression(statuschange)))    
-    cg.add(var.onZoneStatusChangeBinarySensor(cg.RawExpression(zonebinary)))    
-    cg.add(var.onZoneStatusChange(cg.RawExpression(zonestatus)))
-    cg.add(var.onRelayStatusChange(cg.RawExpression(relay)))      
+  
     await cg.register_component(var, config)
  
 def real_clean_build():

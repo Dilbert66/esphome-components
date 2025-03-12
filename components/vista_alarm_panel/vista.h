@@ -139,6 +139,8 @@ struct cmdQueueItem
     char extbuf[CMDBUFSIZE];
     bool newCmd;
     bool newExtCmd;
+    size_t size;
+    size_t rawsize;
     struct statusFlagType statusFlags;
 };
 const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false};
@@ -227,10 +229,10 @@ private:
     char haveExpMessage;
     char expFault, expBitAddr;
     char expFaultBits;
-    bool decodePacket();
+    size_t decodePacket();
     uint8_t getExtBytes();
     volatile bool is2400;
-    void pushCmdQueueItem(size_t extlen=0);
+    void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
     bool invertRead;
 
     char IRAM_ATTR addrToBitmask1(char addr)

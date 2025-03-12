@@ -253,27 +253,29 @@ bool Vista::cmdAvail()
     return true;
 }
 
-void Vista::pushCmdQueueItem(size_t extlen)
+void Vista::pushCmdQueueItem(size_t size,size_t rawsize)
 {
   struct cmdQueueItem q;
   q.statusFlags = statusFlags;
   q.newCmd = newCmd;
   q.newExtCmd = newExtCmd;
+  q.size=size;
+  q.rawsize=rawsize;
 
   if (newExtCmd)
   {
-    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
+    for (uint8_t i = 0; i < size; i++)
     {
       q.cbuf[i] = extcmd[i];
     }
-    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
+    for (uint8_t i = 0; i < rawsize; i++)
     {
       q.extbuf[i] = extbuf[i];
     } 
   }
   else
   {
-    for (uint8_t i = 0; i < CMDBUFSIZE; i++)
+    for (uint8_t i = 0; i < size; i++)
     {
       q.cbuf[i] = cbuf[i];
     }
@@ -908,7 +910,7 @@ bool Vista::validChksum(char cbuf[], int start, int len)
 }
 
 #ifdef MONITORTX
-bool Vista::decodePacket()
+size_t Vista::decodePacket()
 {
   newExtCmd = false;
   // format 0xFA deviceid subcommand channel on/off
@@ -926,7 +928,7 @@ bool Vista::decodePacket()
       extcmd[6] = extbuf[6];
       extcmd[12] = 0x77; // flag to identify chksum error
       newExtCmd = true;
-      return 1; // for debugging return what was sent so we can see why the chcksum failed
+      return 13; // for debugging return what was sent so we can see why the chcksum failed
     }
 
     char cmdtype = (extcmd[2] & 1) ? extcmd[5] : extcmd[4];
@@ -976,19 +978,16 @@ bool Vista::decodePacket()
       extcmd[2] = cmdtype; // copy subcommand to byte 2
       extcmd[3] = channel;
       extcmd[5] = extbuf[2]; // relay data
-      extcmd[6] = 0;
       newExtCmd = true;
-      return 1;
+      return 6;
     }
     else if (cmdtype == 0xf7)
     {                      // expander poll request
       extcmd[2] = cmdtype; // copy subcommand to byte 2
       extcmd[3] = 0;
       extcmd[4] = extbuf[3]; // zone faults
-      extcmd[5] = 0;
-      extcmd[6] = 0;
       newExtCmd = true;
-      return 1;
+      return 5;
     }
     else if (cmdtype == 0x00 || cmdtype == 0x0D)
     {                      // relay channel update
@@ -1013,10 +1012,8 @@ bool Vista::decodePacket()
       }
       extcmd[3] = channel;
       extcmd[4] = extbuf[3] & 0x80 ? 1 : 0;
-      extcmd[5] = 0;
-      extcmd[6] = 0;
       newExtCmd = true;
-      return 1;
+      return 5;
     }
     else
     { // unknown subcommand for FA
@@ -1029,7 +1026,7 @@ bool Vista::decodePacket()
       extcmd[6] = extbuf[6];
       extcmd[12] = 0x72; // flag to identify unknown subcommand
       newExtCmd = true;
-      return 1; // for debugging return what was sent so we can see why the chcksum failed
+      return 13; // for debugging return what was sent so we can see why the chcksum failed
     }
   }
   else if (extcmd[0] == 0xFB)
@@ -1066,9 +1063,8 @@ bool Vista::decodePacket()
         // bit 7 - Loop 4 (0=Closed, 1=Open)
         // bit 8 - Loop 1 (0=Closed, 1=Open)
         extcmd[5] = extbuf[5];
-        extcmd[6] = 0;
-        newExtCmd = true;
-        return 1;
+         newExtCmd = true;
+        return 6;
 
         // How to rebuild serial into single integer
         // uint32_t device_serial = (extbuf[2] & 0xF) << 16;  // Only the lower nibble is part of the device serial
@@ -1088,7 +1084,7 @@ bool Vista::decodePacket()
         extcmd[6] = extbuf[6];
         extcmd[12] = 0x77; // flag to identify cheksum failed
         newExtCmd = true;
-        return 1;
+        return 13;
       }
       //  #endif
     }
@@ -1105,7 +1101,7 @@ bool Vista::decodePacket()
       extcmd[6] = extbuf[6];
       extcmd[12] = 0x74; // flag to identify unknown command
       newExtCmd = true;
-      return 1;
+      return 13;
     }
   }
   else if (extcmd[0] != 0 && extcmd[0] != 0xf6)
@@ -1119,7 +1115,7 @@ bool Vista::decodePacket()
     //  Serial.printf("extcmd %02x\r\n",extcmd[2+i]);
   }
   newExtCmd = true;
-  return 1;
+  return extidx+2;
 }
 #endif
 #ifdef MONITORTX
@@ -1130,8 +1126,6 @@ uint8_t Vista::getExtBytes()
 
   if (!vistaSerialMonitor)
     return 0;
-  if (extidx == 0)
-    memset(extbuf, 0, OUTBUFSIZE); // clear buffer mem
   while (vistaSerialMonitor->available())
   {
     x = vistaSerialMonitor->read();
@@ -1148,8 +1142,9 @@ uint8_t Vista::getExtBytes()
   if (extidx > 0 && markPulse)
   {
     // ok, we are on the next pulse (gap) , lets decode the previous msg data
-    if (decodePacket())
-      ret = extidx + 2;
+    ret = decodePacket();
+    pushCmdQueueItem(ret,extidx);
+    memset(extbuf, 0, OUTBUFSIZE); // clear buffer mem
     extidx = 0;
    
   }
@@ -1167,13 +1162,9 @@ bool Vista::handle()
 #ifdef MONITORTX
   if (vistaSerialMonitor != NULL)
   {
-    x = getExtBytes();
-
-    if (x)
-    {
-      pushCmdQueueItem(x);
+   if (getExtBytes())
       return true;
-    }
+
   }
 #endif
 
