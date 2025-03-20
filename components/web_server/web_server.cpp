@@ -480,13 +480,6 @@ namespace esphome
         {
             // this->events_.send(this->text_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
             std::string data = this->text_sensor_json(obj, state, DETAIL_STATE);
-
-#if defined(USE_CUSTOM_ID) || defined(USE_TEMPLATE_ALARM_SENSORS)
-            // std::string id =obj->get_type_id();
-            // if (id.substr(0,2)=="ln" && get_credentials()->crypt) //encrypt display lines
-            //  data=encrypt(data.c_str());
-#endif
-
             this->push(STATE, data.c_str());
         }
 
@@ -3370,6 +3363,8 @@ namespace esphome
             snprintf(buf, 100, "OTA Update failed! Error: %s", ss.c_str());
             std::string ebuf = escape_json(buf);
             this->push(OTA, ebuf.c_str());
+            this->set_timeout(2000, []()
+                { App.safe_reboot(); });
 #endif
         }
 #if defined(ESP32)
@@ -3407,8 +3402,7 @@ namespace esphome
             }
             else if (Update.hasError())
             {
-                this->push(OTA, "OTA Update has error");
-                // don't spam logs with errors if something failed at start
+                report_ota_error();
                 return false;
             }
 

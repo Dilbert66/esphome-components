@@ -203,17 +203,28 @@ namespace esphome
 
 #define mlsize 2
 
-    enum panelStatus
-    {
-      acStatus,
-      batStatus,
-      trStatus,
-      fireStatus,
-      panicStatus,
-      rdyStatus,
-      armStatus,
-      chimeStatus
-    };
+#define TRSTATUS "tr"
+#define BATSTATUS "bat"
+#define ACSTATUS "ac"
+#define RDYSTATUS "rdy"
+#define ARMSTATUS "arm"
+#define SYSTEMSTATUS "ss"
+#define PARTITIONSTATUS "ps"
+#define ALARMSTATUS "al"
+#define PARTITIONMSG "msg"
+#define LINE1 "ln1"
+#define LINE2 "ln2"
+#define BEEP "bp"
+#define ZONEALARM "za"
+#define USER "user"
+#define ZONESTATUS "zs"
+#define TROUBLE "tr_msg"
+#define EVENT "evt"
+#define FIRE "fa"
+#define RELAY "r"
+#define ZONE "z"
+#define CHIMESTATUS "chm"
+#define TRIGGERED "triggered"
 
 #if !defined(USE_API)
 
@@ -256,97 +267,99 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       }
 #endif
 
-
-struct zoneType
-{
-  binary_sensor::BinarySensor* binary_sensor;
-  byte partition;
-  byte zone;
-  byte tamper : 1;
-  byte batteryLow : 1;
-  byte open : 1;
-  byte alarm : 1;
-  byte enabled : 1;
-  byte bypassed : 1;
-};
-
-      void publishZoneStatus(zoneType * zt)
+      struct zoneType
       {
-      if (zt==NULL)
-        return;
+#if !defined(ARDUINO_MQTT)
+        binary_sensor::BinarySensor *binary_sensor;
+#endif
+        byte partition;
+        byte zone;
+        byte tamper : 1;
+        byte battery_low : 1;
+        byte open : 1;
+        byte alarm : 1;
+        byte enabled : 1;
+        byte bypassed : 1;
+      };
+
+      void publishZoneStatus(zoneType *zt)
+      {
+        if (zt == NULL)
+          return;
 #if defined(ARDUINO_MQTT)
-        publishBinaryState("z", zt->zone, zt->open);
+        publishBinaryState(ZONE, zt->zone, zt->open);
 #else
     if (zt->binary_sensor != NULL)
       zt->binary_sensor->publish_state(zt->open);
 #endif
       }
 
+      void publishPanelStatus(const char *sensor, bool open, uint8_t partition)
+      {
+        publishBinaryState(sensor, partition, open);
+      }
+
       void publishSystemStatus(std::string statuscode)
       {
-        publishTextState("ss", 0, &statuscode);
+        publishTextState(SYSTEMSTATUS, 0, &statuscode);
       }
       void publishPartitionStatus(std::string statuscode, uint8_t partition)
       {
-        publishTextState("ps_", partition, &statuscode);
-        publishBinaryState("al_", partition, (statuscode.compare("triggered") == 0));
+        publishTextState(PARTITIONSTATUS, partition, &statuscode);
+        publishBinaryState(ALARMSTATUS, partition, (statuscode.compare(TRIGGERED) == 0));
       }
       void publishPartitionMsg(std::string msg, uint8_t partition)
       {
-        publishTextState("msg_", partition, &msg);
-      }
-      void publishPanelStatus(panelStatus ps, bool open, uint8_t partition)
-      {
-        publishPanelState(ps, open, partition);
+        publishTextState(PARTITIONMSG, partition, &msg);
       }
 
       void publishLine1(std::string msg, uint8_t partition)
       {
-        publishTextState("ln1_", partition, &msg);
+        publishTextState(LINE1, partition, &msg);
       }
       void publishLine2(std::string msg, uint8_t partition)
       {
-        publishTextState("ln2_", partition, &msg);
+        publishTextState(LINE2, partition, &msg);
       }
 
       void publishBeeps(std::string beeps, uint8_t partition)
       {
-        publishTextState("bp_", partition, &beeps);
+        publishTextState(BEEP, partition, &beeps);
       }
       void publishZoneAlarm(std::string zone, uint8_t partition)
       {
-        publishTextState("za_", partition, &zone);
+        publishTextState(ZONEALARM, partition, &zone);
       }
       void publishUserArmingDisarming(std::string user, uint8_t partition)
       {
-        publishTextState("user_", partition, &user);
+        publishTextState(USER, partition, &user);
       }
 
       void publishZoneMsgStatus(std::string msg)
       {
-        publishTextState("zs", 0, &msg);
+        publishTextState(ZONESTATUS, 0, &msg);
       }
       void publishTroubleMsgStatus(std::string msg)
       {
-        publishTextState("tr_msg", 0, &msg);
+        publishTextState(TROUBLE, 0, &msg);
       }
       void publishEventInfo(std::string msg)
       {
-        publishTextState("evt", 0, &msg);
+        publishTextState(EVENT, 0, &msg);
       }
 
       void publishFireStatus(bool open, uint8_t partition)
       {
-        publishBinaryState("fa_", partition, open);
+        publishBinaryState(FIRE, partition, open);
       }
       void publishRelayStatus(int channel, bool open)
       {
-        publishBinaryState("r", channel, open);
+        std::string sensor = RELAY + std::to_string(channel);
+        publishBinaryState(sensor, 0, open);
       }
 
       void set_panel_time();
 
-      void publishPanelState(panelStatus ps, bool open, uint8_t partition);
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
@@ -357,16 +370,15 @@ struct zoneType
       void set_userCodes(const char *uc);
       void set_defaultPartition(uint8_t dp);
       void set_debug(uint8_t db);
-      void set_expanderAddr(uint8_t idx, uint8_t addr);
+      void set_expanderAddr(uint8_t addr);
       void set_refresh_time(uint8_t rt);
       void set_trouble_fetch(bool fetch);
       void set_trouble_fetch_cmd(const char *cmd);
       void createZone(uint16_t z, uint8_t p = 0);
-      void createZoneFromId(const char *zid, uint8_t p = 0){}
-      #if !defined(ARDUINO_MQTT)
-      void createZoneFromId(binary_sensor::BinarySensor* obj, uint8_t p = 0);
-      void createZoneFromId(text_sensor::TextSensor * obj, uint8_t p = 0);
-      #endif
+#if !defined(ARDUINO_MQTT)
+      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0);
+      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0);
+#endif
       void stop();
 
     private:
@@ -420,14 +432,12 @@ struct zoneType
         byte chime : 1;
       };
 
-
-
       zoneType zonetype_INIT = {
           .binary_sensor = NULL,
           .partition = 0,
           .zone = 0,
           .tamper = false,
-          .batteryLow = false,
+          .battery_low = false,
           .open = false,
           .alarm = false,
           .enabled = false,
@@ -485,12 +495,10 @@ struct zoneType
       void alarm_trigger_fire();
 
       void alarm_trigger_panic();
-      
-     
+
     private:
       void loadZones();
-      // void loadZone(int z);
-      // template_alarm_::TemplateBinarySensor * gptr;
+
       void processMenu(byte key, byte partition = -1);
 
       void getPrevIdx(const char *tpl, byte partition);

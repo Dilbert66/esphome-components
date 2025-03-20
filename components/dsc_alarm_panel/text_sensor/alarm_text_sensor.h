@@ -7,20 +7,7 @@
 namespace esphome {
 namespace alarm_panel {
 
-class AlarmTextSensor : public text_sensor::TextSensor, public PollingComponent {
- public:
-  void set_template(std::function<optional<std::string>()> &&f);
-
-  void update() override;
-
-  float get_setup_priority() const override;
-
-  void dump_config() override;
-  
- 
- private:
- protected:
-  optional<std::function<optional<std::string>()>> f_{};
+class AlarmTextSensor : public text_sensor::TextSensor, public Component {
    
 };
 

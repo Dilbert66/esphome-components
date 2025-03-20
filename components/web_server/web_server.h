@@ -32,7 +32,6 @@ extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 #endif
 
 
-
 namespace esphome {
 namespace web_keypad {
 
@@ -468,6 +467,7 @@ static void webPollTask(void * args);
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;
 };
+
 
 }  // namespace web_server
 }  // namespace esphome

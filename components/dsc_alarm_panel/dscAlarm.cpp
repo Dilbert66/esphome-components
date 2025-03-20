@@ -31,33 +31,6 @@ namespace esphome
       disconnectKeybus();
     }
 
-    void DSCkeybushome::publishPanelState(panelStatus ps, bool open, uint8_t partition)
-    {
-
-      std::string sensor = "NIL";
-      switch (ps)
-      {
-      case trStatus:
-        sensor = "tr";
-        break;
-      case batStatus:
-        sensor = "bat";
-        break;
-      case acStatus:
-        sensor = "ac";
-        break;
-      case rdyStatus:
-        sensor = "rdy_";
-        break;
-      case armStatus:
-        sensor = "arm_";
-        break;
-      default:
-        break;
-      }
-      publishBinaryState(sensor, partition, open);
-    }
-
 #if defined(ARDUINO_MQTT)
     void DSCkeybushome::publishBinaryState(const std::string *idstr, uint8_t num, bool open)
     {
@@ -76,7 +49,7 @@ void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bo
   std::string id = idstr;
   if (num)
   {
-    id += std::to_string(num);
+    id += "_" + std::to_string(num);
   }
   auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
                          { return bs->get_object_id() == id; });
@@ -90,7 +63,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
   std::string id = idstr;
   if (num)
   {
-    id += std::to_string(num);
+    id += "_" + std::to_string(num);
   }
   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                          { return ts->get_object_id() == id; });
@@ -115,7 +88,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 
     std::string DSCkeybushome::getZoneName(int zone, bool append)
     {
-
+#if !defined(ARDUINO_MQTT)
       std::string c = "z" + std::to_string(zone);
       auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
                              { return bs->get_object_id() == c; });
@@ -127,6 +100,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
         else
           return (*it)->get_name();
       }
+#endif
       return "";
     }
 
@@ -161,12 +135,9 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     void DSCkeybushome::set_debug(uint8_t db) { debug = db; }
     void DSCkeybushome::set_trouble_fetch(bool fetch) { troubleFetch = fetch; }
     void DSCkeybushome::set_trouble_fetch_cmd(const char *cmd) { fetchCmd = cmd; }
-    void DSCkeybushome::set_expanderAddr(uint8_t idx, uint8_t addr)
+    void DSCkeybushome::set_expanderAddr(uint8_t addr)
     {
-      if (idx == 1)
-        expanderAddr1 = addr;
-      else if (idx == 2)
-        expanderAddr2 = addr;
+      dsc.addModule(addr);
     }
     void DSCkeybushome::set_refresh_time(uint8_t rt)
     {
@@ -199,9 +170,10 @@ void DSCkeybushome::setup()
 {
 #endif
 
+#if !defined(ARDUINO_MQTT)
       bMap = App.get_binary_sensors();
       tMap = App.get_text_sensors();
-
+#endif
       eventStatusMsg.reserve(64);
       if (debug > 2)
         Serial.begin(115200);
@@ -1522,6 +1494,7 @@ void DSCkeybushome::update()
       if (!firstrun && refreshTimeSetting > 0 && millis() - refreshTime > refreshTimeSetting)
       {
         refreshTime = millis();
+        forceRefresh = true;
         if (dsc.trouble && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
 
         {
@@ -1649,11 +1622,11 @@ void DSCkeybushome::update()
           dsc.powerChanged = false;
           if (dsc.powerTrouble)
           {
-            publishPanelStatus(acStatus, false, 0); // no ac
+            publishPanelStatus(ACSTATUS, false, 0); // no ac
           }
           else
           {
-            publishPanelStatus(acStatus, true, 0);
+            publishPanelStatus(ACSTATUS, true, 0);
           }
         }
 
@@ -1662,11 +1635,11 @@ void DSCkeybushome::update()
           dsc.batteryChanged = false;
           if (dsc.batteryTrouble)
           {
-            publishPanelStatus(batStatus, true, 0);
+            publishPanelStatus(BATSTATUS, true, 0);
           }
           else
           {
-            publishPanelStatus(batStatus, false, 0);
+            publishPanelStatus(BATSTATUS, false, 0);
           }
         }
 
@@ -1688,11 +1661,11 @@ void DSCkeybushome::update()
           dsc.troubleChanged = false; // Resets the trouble status flag
           if (dsc.trouble)
           {
-            publishPanelStatus(trStatus, true, 0); // Trouble alarm tripped
+            publishPanelStatus(TRSTATUS, true, 0); // Trouble alarm tripped
           }
           else
           {
-            publishPanelStatus(trStatus, false, 0); // Trouble alarm restored
+            publishPanelStatus(TRSTATUS, false, 0); // Trouble alarm restored
           }
           if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
           {
@@ -1737,7 +1710,7 @@ void DSCkeybushome::update()
             if (dsc.armed[partition] && !dsc.alarm[partition])
             {
               clearZoneAlarms(partition + 1);
-              publishPanelStatus(armStatus, true, partition + 1);
+              publishPanelStatus(ARMSTATUS, true, partition + 1);
             }
             else if (!dsc.exitDelay[partition] && !dsc.alarm[partition])
             {
@@ -1745,7 +1718,7 @@ void DSCkeybushome::update()
               {
                 clearZoneBypass(partition + 1);
               }
-              publishPanelStatus(armStatus, false, partition + 1);
+              publishPanelStatus(ARMSTATUS, false, partition + 1);
             }
           }
           // Publishes exit delay status
@@ -1762,15 +1735,15 @@ void DSCkeybushome::update()
             dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
             if (dsc.ready[partition] && !dsc.exitDelay[partition])
             {
-              publishPanelStatus(rdyStatus, true, partition + 1);
+              publishPanelStatus(RDYSTATUS, true, partition + 1);
             }
             else if (!dsc.exitDelay[partition])
             {
               if (!dsc.armed[partition])
               {
-                publishPanelStatus(armStatus, false, partition + 1);
+                publishPanelStatus(RDYSTATUS, false, partition + 1);
               }
-              publishPanelStatus(rdyStatus, false, partition + 1);
+              publishPanelStatus(RDYSTATUS, false, partition + 1);
             }
           }
 
@@ -1789,7 +1762,7 @@ void DSCkeybushome::update()
           }
           if (forceRefresh)
           {
-            publishPanelStatus(chimeStatus, partitionStatus[partition].chime, partition + 1);
+            publishPanelStatus(CHIMESTATUS, partitionStatus[partition].chime, partition + 1);
           }
 
           const char *status = getPartitionStatus(partition);
@@ -1820,7 +1793,7 @@ void DSCkeybushome::update()
                 zone = zoneBit + (zoneGroup * 8);
                 if (zone >= maxZones)
                   continue;
-                zoneType * zt = getZone(zone);
+                zoneType *zt = getZone(zone);
                 if (bitRead(dsc.openZones[zoneGroup], zoneBit))
                 {
 
@@ -1877,7 +1850,7 @@ void DSCkeybushome::update()
             zoneStatusMsg.append(s1);
           }
 
-          if (x.batteryLow)
+          if (x.battery_low)
           {
             if (zoneStatusMsg != "")
               sprintf(s1, PSTR(",LB:%d"), x.zone);
@@ -1911,7 +1884,7 @@ void DSCkeybushome::update()
             if (system1Changed)
             {
               dsc.batteryTrouble = true;
-              publishPanelStatus(batStatus, true, 0);
+              publishPanelStatus(BATSTATUS, true, 0);
             }
           }
           else
@@ -1919,7 +1892,7 @@ void DSCkeybushome::update()
             if (system1Changed)
             {
               dsc.batteryTrouble = false;
-              publishPanelStatus(batStatus, false, 0);
+              publishPanelStatus(BATSTATUS, false, 0);
             }
           }
 
@@ -2005,11 +1978,11 @@ void DSCkeybushome::update()
                 continue;
               if (!bitRead(dsc.moduleData[zoneByte + 2], x))
               { // Checks an individual zone battery status flag for low
-                getZone(zone)->batteryLow = true;
+                getZone(zone)->battery_low = true;
               }
               else if (!bitRead(dsc.moduleData[zoneByte + 6], x))
               { // Checks an individual zone battery status flag for restore
-                getZone(zone)->batteryLow = false;
+                getZone(zone)->battery_low = false;
               }
               zoneBit++;
             }
@@ -2241,13 +2214,13 @@ void DSCkeybushome::update()
         lcdLine1 = F("Door");
         lcdLine2 = F("chime enabled");
         partitionStatus[partition].chime = true;
-        publishPanelStatus(chimeStatus, true, partition + 1);
+        publishPanelStatus(CHIMESTATUS, true, partition + 1);
         break;
       case 0xA4:
         lcdLine1 = F("Door");
         lcdLine2 = F("chime disabled  ");
         partitionStatus[partition].chime = false;
-        publishPanelStatus(chimeStatus, false, partition + 1);
+        publishPanelStatus(CHIMESTATUS, false, partition + 1);
         break;
       case 0xA5:
         lcdLine1 = F("Enter");
@@ -2966,10 +2939,10 @@ void DSCkeybushome::update()
             continue;
           if (bitRead(dsc.panelData[panelByte], zoneBit))
           {
-            getZone(zone)->batteryLow = true;
+            getZone(zone)->battery_low = true;
           }
           else
-            getZone(zone)->batteryLow = false;
+            getZone(zone)->battery_low = false;
         }
       }
     }
@@ -3683,7 +3656,7 @@ void DSCkeybushome::update()
       {
         lcdLine1 = F("Zone bat OK");
         byte zone = dsc.panelData[panelByte] - 43;
-        getZone(zone - 1)->batteryLow = false;
+        getZone(zone - 1)->battery_low = false;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -3694,7 +3667,7 @@ void DSCkeybushome::update()
       {
         lcdLine1 = F("Zone bat LOW");
         byte zone = dsc.panelData[panelByte] - 75;
-        getZone(zone - 1)->batteryLow = true;
+        getZone(zone - 1)->battery_low = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -4702,13 +4675,13 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
-      for (binary_sensor::BinarySensor* obj : bMap)
+      for (binary_sensor::BinarySensor *obj : bMap)
       {
-        createZoneFromId(obj);
+        createZoneFromObj(obj);
       }
     }
 
-    void DSCkeybushome::createZoneFromId(binary_sensor::BinarySensor *obj, uint8_t p)
+    void DSCkeybushome::createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p)
     {
       MatchState ms;
       char buf[20];
@@ -4724,50 +4697,35 @@ void DSCkeybushome::update()
         zoneType *zt = getZone(z - 1);
         if (zt->zone == z)
           return;
-        zoneType n=zonetype_INIT;
+        zoneType n = zonetype_INIT;
         n.zone = z;
         n.binary_sensor = obj;
         n.enabled = true;
         n.partition = p;
         zoneStatus.push_back(n);
         ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
-        publishZoneStatus(&n);
       }
     }
 
 #else
-    void DSCkeybushome::createZoneFromId(const char *zid, uint8_t p)
-    {
-      MatchState ms;
-      char buf[20];
-      char res;
-      ms.Target((char *)zid);
-      res = ms.Match("^[zZ](%d+)$");
-      if (res == REGEXP_MATCHED)
-      {
-        ms.GetCapture(buf, 0);
-        int z = toInt(buf, 10);
-        createZone(z, p);
-      }
-    }
 
-    void DSCkeybushome::createZone(uint16_t z, uint8_t p)
-    {
+void DSCkeybushome::createZone(uint16_t z, uint8_t p)
+{
 
-      if (!z)
-        return;
-      zoneType *zt = getZone(z - 1);
-      if (zt->zone == z)
-        return;
-      zoneType n=zonetype_INIT;
-      n.zone = z;
-      n.enabled = true;
-      n.partition = p;
+  if (!z)
+    return;
+  zoneType *zt = getZone(z - 1);
+  if (zt->zone == z)
+    return;
+  zoneType n = zonetype_INIT;
+  n.zone = z;
+  n.enabled = true;
+  n.partition = p;
 
-      zoneStatus.push_back(n);
-      ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
-      publishZoneStatus(&n);
-    }
+  zoneStatus.push_back(n);
+  ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
+  publishZoneStatus(&n);
+}
 #endif
 
     const __FlashStringHelper *DSCkeybushome::statusText(uint8_t statusCode)

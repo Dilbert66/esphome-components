@@ -1,11 +1,9 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import CONF_ID
-#from esphome.components import mqtt
 from esphome.core import CORE
 import os
 import logging
-import pathlib
     
 _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
@@ -32,9 +30,6 @@ CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
 CONF_TYPE_ID="code"
 
-
-
-
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(AlarmComponent),
@@ -60,8 +55,6 @@ CONFIG_SCHEMA = cv.Schema(
     }
 )
 
-
-
 async def to_code(config):
 
     if config[CONF_EVENTFORMAT]=="json":
@@ -72,8 +65,8 @@ async def to_code(config):
     old_dir = CORE.relative_build_path("src")
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
-    if config[CONF_DEBOUNCE]:
-       cg.add_build_flag("-DDEBOUNCE")  
+    # if config[CONF_DEBOUNCE]:
+    #    cg.add_build_flag("-DDEBOUNCE")  
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
 
@@ -96,9 +89,9 @@ async def to_code(config):
     if CONF_DEBUGLEVEL in config:
         cg.add(var.set_debug(config[CONF_DEBUGLEVEL]));
     if CONF_EXPANDER1 in config:
-        cg.add(var.set_expanderAddr(1,config[CONF_EXPANDER1]));
+        cg.add(var.set_expanderAddr(config[CONF_EXPANDER1]));
     if CONF_EXPANDER2 in config:
-        cg.add(var.set_expanderAddr(2,config[CONF_EXPANDER2]));
+        cg.add(var.set_expanderAddr(config[CONF_EXPANDER2]));
        
   
     await cg.register_component(var, config)

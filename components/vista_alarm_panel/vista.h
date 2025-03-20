@@ -16,6 +16,7 @@
 #define CMDQUEUESIZE 2
 #endif
 #define FAULTQUEUESIZE 5
+#define LRRADDR 3
 
 // Used to read bits on F7 message
 #define BIT_MASK_BYTE1_BEEP 0x07
@@ -143,7 +144,7 @@ struct cmdQueueItem
     size_t rawsize;
     struct statusFlagType statusFlags;
 };
-const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false};
+const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
 
 class Vista
 {
@@ -172,6 +173,7 @@ public:
         if (keypadAddr > 0)
             kpAddr = keypadAddr;
     }
+    void addModule(byte addr);
     bool dataReceived;
     void IRAM_ATTR rxHandleISR(), txHandleISR();
     bool areEqual(char *, char *, uint8_t);
@@ -186,6 +188,7 @@ public:
     bool newExtCmd, newCmd;
     bool filterOwnTx;
     expanderType zoneExpanders[MAX_MODULES];
+    uint8_t moduleIdx;
     char b; // used in isr
     bool charAvail();
     bool cmdAvail();
@@ -194,6 +197,10 @@ public:
     // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
+    char lcbuf[14];
+    uint8_t _lcbuflen;
+    uint8_t _retriesf9;
+    char expectCmd;
     keyType *outbuf;
     char *tmpOutBuf;
     cmdQueueItem *cmdQueue;
