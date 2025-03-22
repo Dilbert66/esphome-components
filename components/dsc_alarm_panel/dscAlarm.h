@@ -750,7 +750,7 @@ private:
             dsc.pgmBuffer.data[y] = (dsc.pgmBuffer.data[y] & 0x0F) | (k << 4);
         }
         getNextIdx(tpl.c_str(), partition);
-        if (!partitionStatus[partition - 1].hex && partitionStatus[partition - 1].editIdx == 0) {
+        if (!partitionStatus[partition - 1].hex && partitionStatus[partition - 1].editIdx == 0  && partitionStatus[partition - 1].digits < 32) {
           dsc.setLCDSend(partition);
           partitionStatus[partition - 1].newData = false;
           return;
