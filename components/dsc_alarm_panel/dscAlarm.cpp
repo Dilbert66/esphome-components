@@ -433,7 +433,7 @@ void DSCkeybushome::setup()
               dsc.pgmBuffer.data[y] = (dsc.pgmBuffer.data[y] & 0x0F) | (k << 4);
           }
           getNextIdx(tpl.c_str(), partition);
-          if (partitionStatus[partition - 1].editIdx == 0)
+          if (partitionStatus[partition - 1].editIdx == 0 && partitionStatus[partition - 1].editIdx.digits < 32)
           {
             dsc.setLCDSend(partition);
             partitionStatus[partition - 1].newData = false;
@@ -2167,8 +2167,8 @@ void DSCkeybushome::update()
         lcdLine2 = F(" ");
         break;
       case 0x40:
-        lcdLine1 = F("Keypad");
-        lcdLine2 = F("blanked");
+        lcdLine1 = F("Keypad blanked");
+        lcdLine2 = F("Enter access code");
         break;
       case 0x80:
         lcdLine1 = F("Invalid entry");
