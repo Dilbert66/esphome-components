@@ -380,7 +380,7 @@ void DSCkeybushome::setup()
         if (key == '#')
         {
           partitionStatus[partition - 1].newData = false;
-          if (key == '#' && partitionStatus[partition - 1].hex && partitionStatus[partition - 1].digits > 2)
+          if ( partitionStatus[partition - 1].hex && partitionStatus[partition - 1].digits > 2)
           {
             dsc.setLCDSend(partition, (partitionStatus[partition - 1].digits > 8));
           }
@@ -433,10 +433,11 @@ void DSCkeybushome::setup()
               dsc.pgmBuffer.data[y] = (dsc.pgmBuffer.data[y] & 0x0F) | (k << 4);
           }
           getNextIdx(tpl.c_str(), partition);
-          if (partitionStatus[partition - 1].editIdx == 0 && partitionStatus[partition - 1].editIdx.digits < 32)
+          if (partitionStatus[partition - 1].editIdx == 0 && partitionStatus[partition - 1].digits < 32)
           {
             dsc.setLCDSend(partition);
             partitionStatus[partition - 1].newData = false;
+          
             return;
           }
         }
@@ -2139,8 +2140,8 @@ void DSCkeybushome::update()
         lcdLine2 = F("No entry delay");
         break;
       case 0x17:
-        lcdLine1 = F("Power saving");
-        lcdLine2 = F("Keypad blanked");
+        lcdLine1 = F("Keypad blanked");
+        lcdLine2 = F("Enter access code");
         break;
       case 0x19:
         lcdLine1 = F("Alarm");
