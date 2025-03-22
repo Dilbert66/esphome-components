@@ -101,7 +101,7 @@ bool dscKeybusInterface::setTime(unsigned int year, byte month, byte day, byte h
 void dscKeybusInterface::processPanelStatus() {
 
   // Trouble status  
-  if (panelData[3] <= 0x06) {  // Ignores trouble light status in intermittent states
+  if (panelData[3] <= 0x03) {  // Ignores trouble light status in intermittent states
     if (bitRead(panelData[2],4)) trouble = true;
     else trouble = false;
     if (trouble != previousTrouble) {

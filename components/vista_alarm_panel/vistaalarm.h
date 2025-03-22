@@ -239,9 +239,9 @@ class vistaECPHome : public time::RealTimeClock
 #if defined(ARDUINO_MQTT)
         publishTextState(SZONE, zt->zone, open);
 #else
-    std::string s = open;
-    if (zt->textsensor != NULL)
-      zt->textsensor->publish_state(s);
+      std::string s = open;
+      if (zt->textsensor != NULL)
+        zt->textsensor->publish_state(s);
 #endif
       }
 
@@ -252,8 +252,8 @@ class vistaECPHome : public time::RealTimeClock
 #if defined(ARDUINO_MQTT)
         publishBinaryState(SZONE, zt->zone, open);
 #else
-    if (zt->binarysensor != NULL)
-      zt->binarysensor->publish_state(open);
+        if (zt->binarysensor != NULL)
+          zt->binarysensor->publish_state(open);
 #endif
       }
 
@@ -357,13 +357,13 @@ class vistaECPHome : public time::RealTimeClock
       std::string topic_prefix, topic;
 
 #if defined(AUTOPOPULATE)
-      struct zoneNameType
-      {
-        std::string name;
-        uint8_t zone;
-        uint8_t zone_type;
-        uint8_t device_type;
-      };
+      // struct zoneNameType
+      // {
+      //   std::string name;
+      //   uint8_t zone;
+      //   uint8_t zone_type;
+      //   uint8_t device_type;
+      // };
 #endif
 
       zoneType zonetype_INIT = {
@@ -512,8 +512,8 @@ class vistaECPHome : public time::RealTimeClock
       std::queue<auiCmdType> auiQueue{};
 
 #if defined(AUTOPOPULATE)
-      std::vector<zoneNameType> autoZones{};
-      void fetchPanelZones();
+      // std::vector<zoneNameType> autoZones{};
+      // void fetchPanelZones();
 #endif
 
       zoneType nz;
