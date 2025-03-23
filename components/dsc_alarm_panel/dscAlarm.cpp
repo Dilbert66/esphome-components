@@ -137,7 +137,9 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     void DSCkeybushome::set_trouble_fetch_cmd(const char *cmd) { fetchCmd = cmd; }
     void DSCkeybushome::set_expanderAddr(uint8_t addr)
     {
+#if not defined(DISABLE_EXPANDER)
       dsc.addModule(addr);
+#endif
     }
     void DSCkeybushome::set_refresh_time(uint8_t rt)
     {
