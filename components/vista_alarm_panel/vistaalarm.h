@@ -242,7 +242,7 @@ class vistaECPHome : public time::RealTimeClock
         publishTextState(SZONE, zt->zone, open);
 #else
       std::string s = open;
-      if (zt->textsensor != NULL)
+      if (zt->textsensor != NULL && s != zt->textsensor->state)
         zt->textsensor->publish_state(s);
    #endif
       }
@@ -254,7 +254,7 @@ class vistaECPHome : public time::RealTimeClock
 #if defined(ARDUINO_MQTT)
         publishBinaryState(SZONE, zt->zone, open);
 #else
-        if (zt->binarysensor != NULL)
+        if (zt->binarysensor != NULL && open != zt->binarysensor->state)
           zt->binarysensor->publish_state(open);
 #endif
       }
