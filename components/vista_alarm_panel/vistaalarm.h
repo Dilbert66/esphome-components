@@ -214,9 +214,11 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t trouble : 1;
         uint8_t lowbat : 1;
         uint8_t active : 1;
-        uint8_t rflowbat : 1;
+        bool rflowbat ;
+        bool external;
         uint32_t rfserial;
         uint8_t loopmask;
+
       };
 
 #if defined(ARDUINO_MQTT)
@@ -242,7 +244,7 @@ class vistaECPHome : public time::RealTimeClock
       std::string s = open;
       if (zt->textsensor != NULL)
         zt->textsensor->publish_state(s);
-#endif
+   #endif
       }
 
       void publishZoneStatus(zoneType *zt, bool open)

@@ -213,7 +213,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         n.loopmask=getLoopMask(loop);
       }
       extZones.push_back(n);
-      ESP_LOGD(TAG, "added  binary zone %d", extZones.back().zone);
+      ESP_LOGD(TAG, "added  binary zone %d, rf serial=%d", extZones.back().zone,n.rfserial);
     }
 
     void vistaECPHome::createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p, uint32_t rfSerial, uint8_t loop)
@@ -1397,7 +1397,7 @@ void vistaECPHome::update()
           //   vistaCmd.cbuf[2] = 9;
           //   vistaCmd.cbuf[3] = 0x9a;
           //   vistaCmd.cbuf[4] = 0xc4;
-          //   vistaCmd.cbuf[5] = 0x80;
+          //   vistaCmd.cbuf[5] = 0x02;
 
           //   if (t1 == 1)
           //   {
@@ -1459,6 +1459,7 @@ void vistaECPHome::update()
                 {
                   zt->time = millis();
                   zt->open = vistaCmd.cbuf[4];
+                  zt->external = zt->open;
                   zoneStatusUpdate(zt);
                 }
               }
@@ -1532,6 +1533,7 @@ void vistaECPHome::update()
 
                 zt->time = millis();
                 zt->open = vistaCmd.cbuf[5] & zt->loopmask ? true : false;
+                zt->external = zt->open; //if zone is open we flag it as external so we dont reset it later
                 zt->rflowbat = vistaCmd.cbuf[5] & 2 ? true : false; // low bat
                 // ESP_LOGD(TAG, "set rf low bat to %d", zt->rflowbat);
                 zoneStatusUpdate(zt);
@@ -1871,6 +1873,7 @@ void vistaECPHome::update()
               zt->bypass = false;
               zoneStatusUpdate(zt);
             }
+            zt->external=false;
             if (!zt->partition && zt->active)
               assignPartitionToZone(zt);
 
@@ -2083,8 +2086,9 @@ void vistaECPHome::update()
             if (!x.active || !x.partition)
               continue;
 
-            if (!x.bypass && x.open && partitionStates[x.partition - 1].previousLightState.ready)
+            if (!x.bypass && x.open && partitionStates[x.partition - 1].previousLightState.ready && !x.external)
             {
+
               x.open = false;
               x.check = false;
               x.alarm = false;
@@ -2106,7 +2110,7 @@ void vistaECPHome::update()
               x.lowbat = false;
             }
 
-            if (!x.bypass && x.open && (millis() - x.time) > TTL)
+            if (!x.bypass && x.open && (millis() - x.time) > TTL && !x.external)
             {
               x.open = false;
               zoneStatusUpdate(&x);
