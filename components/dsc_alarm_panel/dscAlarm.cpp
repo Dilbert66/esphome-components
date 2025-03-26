@@ -137,9 +137,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     void DSCkeybushome::set_trouble_fetch_cmd(const char *cmd) { fetchCmd = cmd; }
     void DSCkeybushome::set_expanderAddr(uint8_t addr)
     {
-#if not defined(DISABLE_EXPANDER)
       dsc.addModule(addr);
-#endif
     }
     void DSCkeybushome::set_refresh_time(uint8_t rt)
     {
@@ -1662,6 +1660,7 @@ void DSCkeybushome::update()
         if (dsc.troubleChanged || forceRefresh)
         {
           dsc.troubleChanged = false; // Resets the trouble status flag
+
           if (dsc.trouble)
           {
             publishPanelStatus(TRSTATUS, true, 0); // Trouble alarm tripped
@@ -1676,6 +1675,8 @@ void DSCkeybushome::update()
             ESP_LOGD(TAG, "Fetching troubles..");
             dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
           }
+
+
         }
 
         // Publishes status per partition
@@ -2597,9 +2598,14 @@ void DSCkeybushome::update()
               bypassStatus = 'O';
             std::string name = getZoneName(*currentSelection);
             if (name != "")
-              snprintf(s, 50, PSTR("%02d %s  %c"), *currentSelection, name.c_str(), bypassStatus);
-            else
-              snprintf(s, 50, PSTR("%02d  %c"), *currentSelection, bypassStatus);
+                if (bypassStatus==' ')
+                  snprintf(s, 50, PSTR("%02d %s"), *currentSelection, name.c_str());
+                else
+                  snprintf(s, 50, PSTR("%02d %s %c"), *currentSelection, name.c_str(), bypassStatus);
+            else if (bypassStatus==' ')
+                snprintf(s, 50, PSTR("%02d"), *currentSelection);
+              else
+                snprintf(s, 50, PSTR("%02d %c"), *currentSelection, bypassStatus);
             lcdLine2 = s;
           }
         }
