@@ -115,7 +115,7 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(WebServer),
             cv.Optional(CONF_PORT, default=80): cv.port,
-            cv.Optional(CONF_VERSION, default=2): cv.one_of(2,3, int=True),
+            cv.Optional(CONF_VERSION, default=3): cv.one_of(2,3, int=True),
             cv.Optional(CONF_CSS_URL): cv.string,
             cv.Optional(CONF_CSS_INCLUDE): cv.file_,
             cv.Optional(CONF_JS_URL): cv.string,

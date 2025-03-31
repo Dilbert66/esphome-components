@@ -120,16 +120,17 @@ web_server:
   port: 80 
   partitions: 1  # a keypad will be shown for each partition
   log: false
+  version: 3
   auth:          #this section is optional. Enable if you need authentication/encryption
     username: test
     password: test
     encryption: true  #set true to use AES256HMAC encryption/auth for sent keys and returned LCD messages
                       #set to false to use Digest authentication - no encryption
   config_url: https://dilbert66.github.io/config_files/config_vista.yml
-  js_url: https://dilbert66.github.io/js_files/www.js
+  js_url: https://dilbert66.github.io/js_files/www_v3.js
   ## If you prefer to use locally hosted compile time files comment two lines above and uncomment below  
   #config_local: ./config_vista.yml     
-  #js_local: ./www.js    
+  #js_local: ./www_v3.js    
    ## custom function call to send keypresses if other than dsc/vista components are used. Parmeters are a string keys and int partition
   #service_lambda: |- 
       #$panelId->alarm_keypress_partition(keys,partition);    
