@@ -254,13 +254,13 @@ text:
 
 ![telegram](https://github.com/Dilbert66/esphome-components/assets/7193213/e890cceb-b76f-42df-83b9-b78a5f160bb7)
 
-# ESP32 Web Keypad component. 
+# ESP32 Web Server custom component with keypad. 
 
-This component provides a virtual keypad for each partition of your alarm system via a web page as well providing all sensor statuses. You can configure all buttons and keys using a config file. I’ve provided an example yaml file in my components directory. Just configure the yaml as usual for your system. There is an added section called web_keypad: for this new feature. 
+This is the web server adapted to include a virtual keypad for each partition of your alarm system via a web page as well providing all sensor statuses as usual. You can configure all buttons and keys using a config file. I’ve provided an example yaml file in my components directory. Just configure the yaml as usual for your system. There is an added section called web_server: for this new feature. 
 
-You don’t need to configure anything by default. Just add the section as is also insuring that “web_keypad” and "mg_lib" are also listed in the external_components section above. All code and config files will be retrieved automatically from my repository and compiled in. You can modify the files to your liking after if needed.
+You don’t need to configure anything by default. Just add the section as is also insuring that “web_server” and "mg_lib" are also listed in the external_components section above. All code and config files will be retrieved automatically from my repository and compiled in. You can modify the files to your liking after if needed.
 
-What this accomplishes, is that you can now run this esphome component as a standalone system to provide a virtual keypad and monitor your panel without home assistant. You can disable the api and mqtt section if you want. You can also just enable mqtt and use it with a non home assistant infrastructure and still have a virtual keypad. As usual, this program is still in development so bugs most likely still lurk around. 
+What this accomplishes is that you can now run this esphome component as a standalone system to provide a virtual keypad and monitor your panel without home assistant. You can disable the api and mqtt section if you want. You can also just enable mqtt and use it with a non home assistant infrastructure and still have a virtual keypad. As usual, this program is still in development so bugs most likely still lurk around. 
 
 As an added bonus, the component also provides end to end encryption for all browser traffic using  AES256 encryption with SHA256HMAC message authentication.  The user name and passwords  are used to create a unique key for the encryption.  The same key is also used for authentication.   Alternatively, you can use simple digest authentication (no data encryption) if that's all you need.  Why use AES, well using standard TLS based https encryption is way too resource hungry on embedded devices. It's overkill for this application as well.
 
@@ -270,11 +270,11 @@ Please note that this app is using the mongoose.ws web application library inste
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
   #- source:  my_components #uncomment to use alocal directory  called "my_components"
-    components: [web_keypad,mg_lib] #components to load
+    components: [web_server,mg_lib] #components to load
     refresh: 10min  #frequency to check for new versions
 
 
-web_keypad:
+web_server:
   port: 80  
   partitions: 1
   log: false

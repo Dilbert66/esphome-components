@@ -75,18 +75,18 @@ esp32:
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository (dev branch selected)
   #- source:  my_components #uncomment to use local directory 
-    components: [dsc_alarm_panel,web_keypad,mg_lib] 
+    components: [dsc_alarm_panel,web_server,mg_lib] 
     refresh: 10min
     
     
-#web keypad component. Remove or comment if not needed
+#web keypad component. emove or comment if not needed
 # each included files will be downloaded automatically and compiled within the flash.  
 # there will be no need for internet access when running.
 #For www.js build details and source: https://github.com/Dilbert66/esphome-webserver-custom/tree/keypad
 #Component source: https://github.com/Dilbert66/esphome-components/tree/keypad/components/web_keypad
 ### Note: this is an ESP32 only component. The esp8266 does not support the resources needed.
 
-web_keypad:
+web_server:
   port: 80 
   partitions: 1  # a keypad will be shown for each partition
   log: false
