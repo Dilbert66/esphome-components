@@ -893,7 +893,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"brightness",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("brightness"))
                     {
-                        auto brightness = parse_number<float>(doc["brightness"]);
+                        std::string num=doc["brightness"];
+                        auto brightness = parse_number<float>(num);
                         if (brightness.has_value())
                         {
                             call.set_brightness(*brightness / 255.0f);
