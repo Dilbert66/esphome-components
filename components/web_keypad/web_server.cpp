@@ -905,7 +905,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"r",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("r"))
                     {
-                        auto r = parse_number<float>(doc["r"]);
+                        std::string num=doc["r"];
+                        auto r = parse_number<float>(num);
                         if (r.has_value())
                         {
                             call.set_red(*r / 255.0f);
@@ -916,7 +917,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"g",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("g"))
                     {
-                        auto g = parse_number<float>(doc["g"]);
+                        std::string num=doc["g"];
+                        auto g = parse_number<float>(num);
                         if (g.has_value())
                         {
                             call.set_green(*g / 255.0f);
@@ -927,7 +929,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"b",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("b"))
                     {
-                        auto b = parse_number<float>(doc["b"]);
+                        std::string num=doc["b"];
+                        auto b = parse_number<float>(num);
                         if (b.has_value())
                         {
                             call.set_blue(*b / 255.0f);
@@ -938,7 +941,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"white_value",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("white_value"))
                     {
-                        auto white_value = parse_number<float>(doc["white_value"]);
+                        std::string num=doc["white_value"];
+                        auto white_value = parse_number<float>(num);
                         if (white_value.has_value())
                         {
                             call.set_white(*white_value / 255.0f);
@@ -949,7 +953,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"color_temp",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("color_temp"))
                     {
-                        auto color_temp = parse_number<float>(doc["color_temp"]);
+                        std::string num=doc["color_temp"];
+                        auto color_temp = parse_number<float>(num);
                         if (color_temp.has_value())
                         {
                             call.set_color_temperature(*color_temp);
@@ -960,7 +965,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"flash",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("flash"))
                     {
-                        auto flash = parse_number<uint32_t>(doc["flash"]);
+                        std::string num=doc["flash"];
+                        auto flash = parse_number<uint32_t>(num);
                         if (flash.has_value())
                         {
                             call.set_flash_length(*flash * 1000);
@@ -971,7 +977,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("transition"))
                     {
-                        auto transition = parse_number<uint32_t>(doc["transition"]);
+                        std::string num=doc["transition"];
+                        auto transition = parse_number<uint32_t>(num);
                         if (transition.has_value())
                         {
                             call.set_transition_length(*transition * 1000);
@@ -998,7 +1005,8 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("transition"))
                     {
-                        auto transition = parse_number<uint32_t>(doc["transition"]);
+                        std::string num=doc["transition"];
+                        auto transition = parse_number<uint32_t>(num);
                         if (transition.has_value())
                         {
                             call.set_transition_length(*transition * 1000);
