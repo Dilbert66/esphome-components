@@ -106,21 +106,34 @@ esp32:
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository
   #- source:  my_components #uncomment to use local directory  
-    components: [vista_alarm_panel,web_server,mg_lib] 
+    components: [vista_alarm_panel,web_keypad,mg_lib] 
     refresh: 10min
     
 ## web keypad component
-## each included files will be downloaded automatically and compiled within the flash.  
-## there will be no need for internet access when running. 
+## Each included files will be downloaded automatically and compiled within the flash.  
+## There will be no need for internet access when running. 
 #For www.js build details and source: https://github.com/Dilbert66/esphome-webserver-custom/tree/keypad
 #Component source: https://github.com/Dilbert66/esphome-components/tree/keypad/components/web_keypad
 ### Note: this is an ESP32 only component. The esp8266 does not support the resources needed.
 
-web_server:
+web_keypad:
   port: 80 
   partitions: 1  # a keypad will be shown for each partition
   log: false
   version: 3
+  sorting_groups:
+    - id: zones
+      name: "Zones"
+      sorting_weight: -4
+    - id: partition1
+      name: "Partition 1"
+      sorting_weight: -3
+    - id: partition2
+      name: "Partition 2"
+      sorting_weight: -2
+    - id: partition3
+      name: "Partition 3"
+      sorting_weight: -1
   auth:          #this section is optional. Enable if you need authentication/encryption
     username: test
     password: test
@@ -212,6 +225,10 @@ binary_sensor:
     id: z1  
     name: "Front door z1"
     device_class: door
+# example sorting group options. See Esphome web server sorting group documentation.
+#    web_keypad:
+#      sorting_group_id: zones
+#      sorting_weight: 1
 
   - platform: vista_alarm_panel
     id: z2

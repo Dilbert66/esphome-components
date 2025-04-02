@@ -893,7 +893,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"brightness",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("brightness"))
                     {
-                        std::string num=doc["brightness"];
+                        std::string num = doc["brightness"];
                         auto brightness = parse_number<float>(num);
                         if (brightness.has_value())
                         {
@@ -905,7 +905,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"r",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("r"))
                     {
-                        std::string num=doc["r"];
+                        std::string num = doc["r"];
                         auto r = parse_number<float>(num);
                         if (r.has_value())
                         {
@@ -917,7 +917,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"g",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("g"))
                     {
-                        std::string num=doc["g"];
+                        std::string num = doc["g"];
                         auto g = parse_number<float>(num);
                         if (g.has_value())
                         {
@@ -929,7 +929,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"b",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("b"))
                     {
-                        std::string num=doc["b"];
+                        std::string num = doc["b"];
                         auto b = parse_number<float>(num);
                         if (b.has_value())
                         {
@@ -941,7 +941,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"white_value",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("white_value"))
                     {
-                        std::string num=doc["white_value"];
+                        std::string num = doc["white_value"];
                         auto white_value = parse_number<float>(num);
                         if (white_value.has_value())
                         {
@@ -953,7 +953,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"color_temp",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("color_temp"))
                     {
-                        std::string num=doc["color_temp"];
+                        std::string num = doc["color_temp"];
                         auto color_temp = parse_number<float>(num);
                         if (color_temp.has_value())
                         {
@@ -965,7 +965,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"flash",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("flash"))
                     {
-                        std::string num=doc["flash"];
+                        std::string num = doc["flash"];
                         auto flash = parse_number<uint32_t>(num);
                         if (flash.has_value())
                         {
@@ -977,7 +977,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("transition"))
                     {
-                        std::string num=doc["transition"];
+                        std::string num = doc["transition"];
                         auto transition = parse_number<uint32_t>(num);
                         if (transition.has_value())
                         {
@@ -1005,7 +1005,7 @@ namespace esphome
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
                     if (doc.containsKey("transition"))
                     {
-                        std::string num=doc["transition"];
+                        std::string num = doc["transition"];
                         auto transition = parse_number<uint32_t>(num);
                         if (transition.has_value())
                         {
@@ -3373,7 +3373,7 @@ namespace esphome
             std::string ebuf = escape_json(buf);
             this->push(OTA, ebuf.c_str());
             this->set_timeout(2000, []()
-                { App.safe_reboot(); });
+                              { App.safe_reboot(); });
 #endif
         }
 #if defined(ESP32)

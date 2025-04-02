@@ -32,7 +32,6 @@ extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 #endif
 
 
-
 namespace esphome {
 namespace web_keypad {
 
@@ -72,6 +71,12 @@ struct Credentials {
   uint8_t token[KEYSIZE];
   uint8_t hmackey[KEYSIZE];
   bool crypt=false;
+};
+
+struct upload_state {
+  size_t expected;  // POST data length, bytes
+  size_t received;  // Already received bytes
+  String fn;
 };
 
 #define SALT "77992288"
@@ -170,7 +175,7 @@ class WebServer : public Controller, public Component {
   Credentials * get_credentials() { return &credentials_;}
   bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
   const std::string encrypt(const char * message);
-  const std::string decrypt(DynamicJsonDocument&  doc);
+  const std::string decrypt(JsonObject doc,uint8_t* e);
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -215,6 +220,64 @@ class WebServer : public Controller, public Component {
   /// Dump the sensor state with its value as a JSON string.
   std::string sensor_json(sensor::Sensor *obj, float value, JsonDetail start_config);
 #endif
+
+#ifdef USE_EVENT
+  void on_event(event::Event *obj, const std::string &event_type) override;
+
+  /// Handle a event request under '/event<id>'.
+  void handle_event_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the event details with its value as a JSON string.
+  std::string event_json(event::Event *obj, const std::string &event_type, JsonDetail start_config);
+#endif
+
+#ifdef USE_UPDATE
+  void on_update(update::UpdateEntity *obj) override;
+
+  /// Handle a update request under '/update/<id>'.
+  void handle_update_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the update state with its value as a JSON string.
+  std::string update_json(update::UpdateEntity *obj, JsonDetail start_config);
+#endif
+
+#ifdef USE_VALVE
+  void on_valve_update(valve::Valve *obj) override;
+
+  /// Handle a valve request under '/valve/<id>/<open/close/stop/set>'.
+  void handle_valve_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the valve state as a JSON string.
+  std::string valve_json(valve::Valve *obj, JsonDetail start_config);
+#endif
+
+#ifdef USE_DATETIME_DATE
+  void on_date_update(datetime::DateEntity *obj) override;
+  /// Handle a date request under '/date/<id>'.
+  void handle_date_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the date state with its value as a JSON string.
+  std::string date_json(datetime::DateEntity *obj, JsonDetail start_config);
+#endif
+
+#ifdef USE_DATETIME_TIME
+  void on_time_update(datetime::TimeEntity *obj) override;
+  /// Handle a time request under '/time/<id>'.
+  void handle_time_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the time state with its value as a JSON string.
+  std::string time_json(datetime::TimeEntity *obj, JsonDetail start_config);
+#endif
+
+#ifdef USE_DATETIME_DATETIME
+  void on_datetime_update(datetime::DateTimeEntity *obj) override;
+  /// Handle a datetime request under '/datetime/<id>'.
+  void handle_datetime_request(struct mg_connection *c, JsonObject doc);
+
+  /// Dump the datetime state with its value as a JSON string.
+  std::string datetime_json(datetime::DateTimeEntity *obj, JsonDetail start_config);
+#endif
+
 
 #ifdef USE_SWITCH
   void on_switch_update(switch_::Switch *obj, bool state) override;
@@ -396,9 +459,15 @@ static void webPollTask(void * args);
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;
 #endif
+  struct c_data {
+    std::string token;
+    int lastseq;
+  };
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
+  std::map<unsigned long,c_data> tokens_;
 };
+
 
 }  // namespace web_server
 }  // namespace esphome

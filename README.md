@@ -282,7 +282,7 @@ web_keypad:
     username: test
     password: test
     encryption: true
-    version: 3
+  version: 3
   config_url: https://dilbert66.github.io/config_files/config_dsc.yml
   js_url: https://dilbert66.github.io/js_files/www_v3.js
   #js_local: ./www_v3.js    
@@ -291,11 +291,16 @@ web_keypad:
   sorting_groups:
     - id: zones
       name: "Zones"
-      sorting_weight: 1
+      sorting_weight: -4
     - id: partition1
       name: "Partition 1"
-      sorting_weight: 2
-
+      sorting_weight: -3
+    - id: partition2
+      name: "Partition 2"
+      sorting_weight: -2
+    - id: partition3
+      name: "Partition 3"
+      sorting_weight: -1
 ```
 This project is licensed under the `Lesser General Public License` version `2.1`, or (at your option) any later version as per it's use of other libraries and code. Please see `COPYING.LESSER` for more information.
 
