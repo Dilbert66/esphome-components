@@ -12,11 +12,35 @@ CONF_PARTITION="partition"
 CONF_ALARM_ID = "alarm_id"
 CONF_RF_SERIAL="rf_serial"
 CONF_RF_LOOP="rf_loop"
+CONF_SORTING_GROUP_ID = "sorting_group_id"
+CONF_SORTING_WEIGHT = "sorting_weight"
+CONF_WEB_KEYPAD_ID="web_keypad_id"
+CONF_WEB_KEYPAD="web_keypad"
 
 AlarmBinarySensor = component_ns.class_(
     "AlarmBinarySensor", binary_sensor.BinarySensor, cg.Component
 )
 
+web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+
+WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
+    {
+         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
+             {
+                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+                cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.float_,
+                ),
+                cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.use_id(cg.int_),
+                ),
+             }
+         )
+    }
+)
 
 CONFIG_SCHEMA = (
     binary_sensor.binary_sensor_schema(AlarmBinarySensor)
@@ -30,6 +54,7 @@ CONFIG_SCHEMA = (
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
+    .extend(WEBKEYPAD_SORTING_SCHEMA)
 )
 
 
@@ -48,6 +73,9 @@ async def setup_entity_alarm(var, config):
     cg.add(var.publish_state(False))
     cg.add(var.set_publish_initial_state(True))
     # cg.register_component(var,config)
+    if web_keypad_config := config.get(CONF_WEB_KEYPAD):
+        from esphome.components import web_keypad
+        await web_keypad.add_entity_config(var, web_keypad_config)
 
 
 

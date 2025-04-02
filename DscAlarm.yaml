@@ -186,11 +186,19 @@ binary_sensor:
     id: z1
     name: "Front door z1"
     device_class: door
+    #example/optional sorting group functionality for web_keypad component
+    web_keypad:
+      sorting_group_id: zones
+      sorting_weight: 1
 
   - platform: dsc_alarm_panel
     id: z2
     name: "Garage door z2"
     device_class: door
+    #example/optional sorting group
+    web_keypad:
+      sorting_group_id: zones
+      sorting_weight: 2
       
 
   - platform: dsc_alarm_panel

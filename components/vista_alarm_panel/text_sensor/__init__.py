@@ -12,9 +12,34 @@ CONF_PARTITION="partition"
 CONF_ALARM_ID = "alarm_id"
 CONF_RF_SERIAL="rf_serial"
 CONF_RF_LOOP="rf_loop"
+CONF_SORTING_GROUP_ID = "sorting_group_id"
+CONF_SORTING_WEIGHT = "sorting_weight"
+CONF_WEB_KEYPAD_ID="web_keypad_id"
+CONF_WEB_KEYPAD="web_keypad"
 
 AlarmTextSensor = component_ns.class_(
     "AlarmTextSensor", text_sensor.TextSensor, cg.PollingComponent
+)
+
+web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+
+WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
+    {
+         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
+             {
+                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+                cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.float_,
+                ),
+                cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.use_id(cg.int_),
+                ),
+             }
+         )
+    }
 )
 
 CONFIG_SCHEMA = (
@@ -29,6 +54,7 @@ CONFIG_SCHEMA = (
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
+    .extend(WEBKEYPAD_SORTING_SCHEMA)
 )
 
 async def setup_entity_alarm(var, config):
@@ -42,6 +68,9 @@ async def setup_entity_alarm(var, config):
         cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_RF_SERIAL],config[CONF_RF_LOOP]))
     cg.add(var.publish_state(" "))
     # cg.register_component(var,config)
+    if web_keypad_config := config.get(CONF_WEB_KEYPAD):
+        from esphome.components import web_keypad
+        await web_keypad.add_entity_config(var, web_keypad_config)
 
 async def to_code(config):
     var = await text_sensor.new_text_sensor(config)

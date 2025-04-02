@@ -91,23 +91,23 @@ sorting_group = {
     cv.Optional(CONF_SORTING_WEIGHT): cv.float_,
 }
 
-# WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
-#     {
-#         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
-#             {
-#                 cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
-#                 cv.Optional(CONF_SORTING_WEIGHT): cv.All(
-#                     cv.requires_component("web_keypad"),
-#                     cv.float_,
-#                 ),
-#                 cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
-#                     cv.requires_component("web_keypad"),
-#                     cv.use_id(cg.int_),
-#                 ),
-#             }
-#         )
-#     }
-# )
+WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
+    {
+        cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
+            {
+                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+                cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.float_,
+                ),
+                cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.use_id(cg.int_),
+                ),
+            }
+        )
+    }
+)
 
 
 CONFIG_SCHEMA = cv.All(
@@ -175,18 +175,18 @@ def add_sorting_groups(web_server_var, config):
         )
 
 
-# async def add_entity_config(entity, config):
-#     web_keypad = await cg.get_variable(config[CONF_WEB_KEYPAD_ID])
-#     sorting_weight = config.get(CONF_SORTING_WEIGHT, 50)
-#     sorting_group_hash = hash(config.get(CONF_SORTING_GROUP_ID))
+async def add_entity_config(entity, config):
+    web_keypad = await cg.get_variable(config[CONF_WEB_KEYPAD_ID])
+    sorting_weight = config.get(CONF_SORTING_WEIGHT, 50)
+    sorting_group_hash = hash(config.get(CONF_SORTING_GROUP_ID))
 
-#     cg.add(
-#         web_keypad.add_entity_config(
-#             entity,
-#             sorting_weight,
-#             sorting_group_hash,
-#         )
-#     )
+    cg.add(
+        web_keypad.add_entity_config(
+            entity,
+            sorting_weight,
+            sorting_group_hash,
+        )
+    )
 
 
 def build_index_html(config) -> str:
