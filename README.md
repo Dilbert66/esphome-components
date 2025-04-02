@@ -270,7 +270,7 @@ Please note that this app is using the mongoose.ws web application library inste
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
   #- source:  my_components #uncomment to use alocal directory  called "my_components"
-    components: [web_keypad,mg_lib] #components to load
+    components: [web_keypad,mg_lib,dsc_alarm_panel (or vista_alarm_panel)] #components to load
     refresh: 10min  #frequency to check for new versions
 
 
