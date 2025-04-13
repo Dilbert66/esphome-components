@@ -209,6 +209,8 @@ namespace esphome
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
             webServerPtr = this;
+          //  this->pref_ = global_preferences->make_preference<KeypadConfig>(fnv1_hash(App.get_compilation_time()));
+
         }
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -218,9 +220,23 @@ namespace esphome
         void WebServer::set_js_include(const char *js_include) { this->js_include_ = js_include; }
 #endif
 
-        void WebServer::set_keypad_config(const char *json_keypad_config)
+        void WebServer::set_keypad_config(const char *json_keypad_config,uint8_t version)
         {
-            _json_keypad_config = json_keypad_config;
+            // if (!this->pref_.load(&keypadconfig_) || keypadconfig_.version < version){
+            //     ESP_LOGD(TAG,"version=%d,config=%s",keypadconfig_.config,keypadconfig_.version);
+      //              keypadconfig_.version = version;
+     //               memcpy(keypadconfig_.config,json_keypad_config,strlen(json_keypad_config));
+  //                  this->pref_.save(&keypadconfig_);
+
+           // } 
+             //if new version is higher or same than flash version, overwrite. Save version and config
+             json_keypad_config_=json_keypad_config;
+        }
+
+        const char * WebServer::get_keypad_config()
+        {
+           // return (char*) &keypadconfig_.config ;
+           return json_keypad_config_.c_str();
         }
 
         const std::string WebServer::get_config_json(unsigned long cid)
@@ -308,6 +324,8 @@ namespace esphome
                     });
             }
 #endif
+
+
             this->set_interval(10000, [this]()
                                { this->push(PING, "", millis(), 30000); });
         }
@@ -2032,9 +2050,9 @@ namespace esphome
 
             if (doc["method"] == "GET")
             {
-                if (doc["action"] == "getconfig" && strlen(_json_keypad_config) > 0)
+                if (doc["action"] == "getconfig" && strlen(get_keypad_config()) > 0)
                 {
-                    ws_reply(c, _json_keypad_config, true);
+                    ws_reply(c, get_keypad_config(), true);
                     return;
                 }
                 // ws_reply(c,"",true);
@@ -2045,6 +2063,12 @@ namespace esphome
                 ws_reply(c, "", false);
                 return;
             }
+            // if (doc.containsKey("config")) {
+            //    String conf=doc["config"].as<String>();
+            //     set_keypad_config((char *)conf.c_str());
+            //     ws_reply(c, "", true);
+            //     return;
+            // }
             int partition = 1; // get default partition
             if (doc.containsKey("partition"))
             {
@@ -3020,9 +3044,9 @@ namespace esphome
                     if (crypt)
                         enc = srv->encrypt(enc.c_str());
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type", "app_config", "data", enc.c_str());
-                    if (strlen(srv->_json_keypad_config) > 0)
+                    if (strlen(srv->get_keypad_config()) > 0)
                     {
-                        enc = srv->_json_keypad_config;
+                        enc = srv->get_keypad_config();
                         if (crypt)
                             enc = srv->encrypt(enc.c_str());
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
@@ -3065,9 +3089,9 @@ namespace esphome
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
 
-                    if (strlen(srv->_json_keypad_config) > 0)
+                    if (strlen(srv->get_keypad_config()) > 0)
                     {
-                        enc = srv->_json_keypad_config;
+                        enc = srv->get_keypad_config();
                         if (crypt)
                             enc = srv->encrypt(enc.c_str());
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
@@ -3158,8 +3182,9 @@ namespace esphome
             }
 
             handleRequest(c, obj);
-            if (c->send.size > 1500 || c->recv.size > 1500)
-                c->is_draining = 1; // if send or recv queue getting too large close the connection to free up ram
+
+           if (c->send.size > 1500 || c->recv.size > 1500)
+               c->is_draining = 1; // if send or recv queue getting too large close the connection to free up ram
         }
 
         void WebServer::handleRequest(mg_connection *c, JsonObject doc)

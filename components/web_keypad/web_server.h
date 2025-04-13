@@ -6,8 +6,10 @@
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
+//#include "esphome/core/preferences.h"
 #include <vector>
 #include <Crypto.h>
+
 
 #ifdef USE_ESP32
 #include <deque>
@@ -59,6 +61,11 @@ struct SortingComponents {
   float weight;
   uint64_t group_id;
 };
+ 
+// struct KeypadConfig {
+//   uint8_t config[2500];
+//   uint8_t version;
+// };
 
 struct SortingGroup {
   std::string name;
@@ -136,7 +143,8 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(const char *  json_keypad_config);
+  void set_keypad_config(const char *  json_keypad_config,uint8_t version=1);
+  const char * get_keypad_config();
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -439,7 +447,7 @@ void add_sorting_group(uint64_t group_id, const std::string &group_name, float w
 static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
-  const char * _json_keypad_config;
+  std::string json_keypad_config_;
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   const char *css_include_{nullptr};
@@ -463,6 +471,9 @@ static void webPollTask(void * args);
     std::string token;
     int lastseq;
   };
+  //ESPPreferenceObject pref_;
+ // KeypadConfig keypadconfig_;
+
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;
