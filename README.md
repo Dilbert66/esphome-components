@@ -301,6 +301,12 @@ web_keypad:
     - id: partition3
       name: "Partition 3"
       sorting_weight: -1
+
+#include the alarm panel configuration for the DSC or vista
+#For DSC see documenation  here: https://github.com/Dilbert66/esphome-dsckeybus/tree/dev
+#For Vista: https://github.com/Dilbert66/esphome-vistaECP/tree/dev
+#Sample dsc config file: https://github.com/Dilbert66/esphome-components/blob/dev/DscAlarm.yaml
+#Sample vista config file: https://github.com/Dilbert66/esphome-components/blob/dev/VistaAlarm.yaml
 ```
 This project is licensed under the `Lesser General Public License` version `2.1`, or (at your option) any later version as per it's use of other libraries and code. Please see `COPYING.LESSER` for more information.
 
