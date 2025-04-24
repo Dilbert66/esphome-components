@@ -303,17 +303,25 @@ web_keypad:
       sorting_weight: -1
 
 #Include the  alarm panel configuration for your DSC or Vista panels
-#For DSC panels see documentation  here: https://github.com/Dilbert66/esphome-dsckeybus/tree/dev
-#Sample dsc config file: https://github.com/Dilbert66/esphome-components/blob/dev/DscAlarm.yaml
-
-#For Vista panels see documentation here: https://github.com/Dilbert66/esphome-vistaECP/tree/dev
-#Sample vista config file: https://github.com/Dilbert66/esphome-components/blob/dev/VistaAlarm.yaml
 
 ```
+
+### DSC example
+- web keypad config file: https://dilbert66.github.io/config_files/config_v3_dsc_new.yml
+- web keypad js file: https://dilbert66.github.io/config_files/www_v3_dsc.js
+- DSC sample main config file:  https://github.com/Dilbert66/esphome-components/blob/dev/DscAlarm.yaml
+   
+![image](https://github.com/user-attachments/assets/da23c0f6-5d6c-4ce1-aa0c-bcf3e46c1324)
+
+### Vista example
+- config file: https://dilbert66.github.io/config_files/config_vista.yml
+- js file: https://dilbert66.github.io/config_files/www_v3.js
+- Vista sample main config file: https://github.com/Dilbert66/esphome-components/blob/dev/VistaAlarm.yaml
+
+![image](https://github.com/user-attachments/assets/2d5066a2-c0e8-4475-8181-ebfc83d4823a)
+
+
 This project is licensed under the `Lesser General Public License` version `2.1`, or (at your option) any later version as per it's use of other libraries and code. Please see `COPYING.LESSER` for more information.
-
-![vistaalarm](https://github.com/Dilbert66/esphome-components/assets/7193213/047c1fdb-1d90-4c14-8585-87309310d2bc)
-
 If you like this project and wish to supplement my coffee intake, please click the button below to donate! Thank you!
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Dilbert66)
