@@ -3342,7 +3342,7 @@ namespace esphome
             }
 #endif
 
-#if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
+
             if (doc["domain"] == "auth")
             {
                 this->handle_auth_request(c, doc);
@@ -3353,7 +3353,7 @@ namespace esphome
                 this->handle_alarm_panel_request(c, doc);
                 return;
             }
-#endif
+
 
 #ifdef USE_ALARM_CONTROL_PANEL
             if (doc["domain"] == "alarm_control_panel")
