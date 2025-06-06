@@ -383,8 +383,8 @@ binary_sensor:
 
 #Partition 2 example
   - platform: vista_alarm_panel
-    id: armi_2
-    name: "Instant partition 2"   
+    id: armn_2
+    name: "Night partition 2"   
  
 # ac status
 # ac id code = (ac)     
