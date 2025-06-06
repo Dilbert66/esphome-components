@@ -209,7 +209,9 @@ int SoftwareSerial::available()
     if (!avail)
     {
 
+        #if defined(ESP8266) || defined(ESP32)
         optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles);
+        #endif
 
         rxBits();
         avail = m_inPos - m_outPos;
