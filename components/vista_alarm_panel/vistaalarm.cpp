@@ -20,10 +20,16 @@
 #define RX_PIN 22
 #define TX_PIN 21
 #define MONITOR_PIN 18 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
-#else
+#endif
+#ifdef ESP8266
 #define RX_PIN 5
 #define TX_PIN 4
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
+#endif
+#ifdef USE_RP2040
+#define RX_PIN 21
+#define TX_PIN 20
+#define MONITOR_PIN 18 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
 #if !defined(ARDUINO_MQTT)
