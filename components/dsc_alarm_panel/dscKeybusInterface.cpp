@@ -680,7 +680,7 @@ dscKeybusInterface::dscDataInterrupt() {
 
       }  else
 
-      if (isrPanelBitTotal == 15 && isrPanelData[0] == 0xE6) {
+      if (isrPanelBitTotal == 16 && isrPanelData[0] == 0xE6) {
         processPendingResponses_0xE6(isrPanelData[2]); //check subcommand
       } 
 
