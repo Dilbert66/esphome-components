@@ -970,14 +970,13 @@ void DSCkeybushome::setup()
     byte DSCkeybushome::getPanelBitNumber(byte panelByte, byte startNumber)
     {
 
-      byte bitCount = 0;
       for (byte bit = 0; bit <= 7; bit++)
       {
         if (bitRead(dsc.panelData[panelByte], bit))
         {
-          return (byte)startNumber + bitCount;
+          return (byte)startNumber + bit;
         }
-        bitCount++;
+  
       }
       return defaultPartition;
     }
@@ -1016,7 +1015,7 @@ void DSCkeybushome::setup()
       bool zonesEnabled = false;
       byte zone;
 
-      byte partition = getPanelBitNumber(partitionByte, 1) + 1;
+      byte partition = getPanelBitNumber(partitionByte, 1);
       for (byte panelByte = inputByte; panelByte <= inputByte + 3; panelByte++)
       {
         if (dsc.panelData[panelByte] != 0)
@@ -1692,7 +1691,7 @@ void DSCkeybushome::update()
           {
             lastStatus[partition] = dsc.status[partition];
             char msg[50];
-            sprintf(msg, PSTR("%02d %s"), dsc.status[partition], String(statusText(dsc.status[partition])).c_str());
+            sprintf(msg, PSTR("%02x %s"), dsc.status[partition], String(statusText(dsc.status[partition])).c_str());
             publishPartitionMsg(msg, partition + 1);
           }
 
