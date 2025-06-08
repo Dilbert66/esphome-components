@@ -1136,14 +1136,12 @@ private:
 
   byte getPanelBitNumber(byte panelByte, byte startNumber) {
 
-    byte bitCount = 0;
     byte p=defaultPartition;
     for (byte bit = 0; bit <= 7; bit++) {
       if (bitRead(dsc.panelData[panelByte], bit)) {
-        p = startNumber + bitCount;
+        p = startNumber + bit;
         break;
       }
-      bitCount++;
     }
     return p;
   }
@@ -1173,7 +1171,7 @@ private:
   bool getEnabledZonesE6(byte inputByte, byte startZone, byte partitionByte) {
     bool zonesEnabled = false;
     byte zone;
-    byte partition = getPanelBitNumber(partitionByte, 1) + 1;
+    byte partition = getPanelBitNumber(partitionByte, 1);
     for (byte panelByte = inputByte; panelByte <= inputByte + 3; panelByte++) {
       if (dsc.panelData[panelByte] != 0) {
         zonesEnabled = true;
