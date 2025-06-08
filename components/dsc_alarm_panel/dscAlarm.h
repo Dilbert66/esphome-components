@@ -291,6 +291,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 #else
     if (zt->binary_sensor != NULL)
       zt->binary_sensor->publish_state(zt->open);
+   
 #endif
       }
 
