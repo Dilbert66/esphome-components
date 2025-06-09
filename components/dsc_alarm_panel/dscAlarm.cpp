@@ -974,7 +974,7 @@ void DSCkeybushome::setup()
       {
         if (bitRead(dsc.panelData[panelByte], bit))
         {
-          return (byte)startNumber + bit;
+          return startNumber + bit;
         }
   
       }
@@ -999,10 +999,12 @@ void DSCkeybushome::setup()
             {
               getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
+              if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
               getZone(zone)->enabled = false;
+              if (debug > 1) ESP_LOGD(TAG,"B1: Disabled zone %d on partition %d",zone+1,partition);
             }
           }
         }
@@ -1015,7 +1017,7 @@ void DSCkeybushome::setup()
       bool zonesEnabled = false;
       byte zone;
 
-      byte partition = getPanelBitNumber(partitionByte, 1);
+      byte partition = getPanelBitNumber(partitionByte, 1) ;
       for (byte panelByte = inputByte; panelByte <= inputByte + 3; panelByte++)
       {
         if (dsc.panelData[panelByte] != 0)
@@ -1030,10 +1032,12 @@ void DSCkeybushome::setup()
             {
               getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
+              if (debug > 1) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
               getZone(zone)->enabled = false;
+              if (debug > 1) ESP_LOGD(TAG,"E6: Disabled zone %d on partition %d",zone+1,partition);
             }
           }
         }
