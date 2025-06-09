@@ -156,12 +156,12 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
                              { return f.zone == z + 1; });
       if (it != zoneStatus.end())
         return &(*it);
-//#if defined(ARDUINO_MQTT)
-    else
-      return createZone(z+1);
-// #else
-  //else
-//   return &zonetype_INIT;
+// //#if defined(ARDUINO_MQTT)
+//     else
+//       return createZone(z+1);
+// // #else
+//   //else
+  return &zonetype_INIT;
 // #endif
     }
 
@@ -1001,12 +1001,12 @@ void DSCkeybushome::setup()
             {
               getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
-              if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
+             // if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
               getZone(zone)->enabled = false;
-              if (debug > 1) ESP_LOGD(TAG,"B1: Disabled zone %d on partition %d",zone+1,partition);
+              if (debug > 2) ESP_LOGD(TAG,"B1: Disabled zone %d on partition %d",zone+1,partition);
             }
           }
         }
@@ -1034,12 +1034,12 @@ void DSCkeybushome::setup()
             {
               getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
-              if (debug > 1) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
+              if (debug > 2) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
               getZone(zone)->enabled = false;
-              if (debug > 1) ESP_LOGD(TAG,"E6: Disabled zone %d on partition %d",zone+1,partition);
+              if (debug > 2) ESP_LOGD(TAG,"E6: Disabled zone %d on partition %d",zone+1,partition);
             }
           }
         }
