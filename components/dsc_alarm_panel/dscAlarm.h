@@ -2664,10 +2664,10 @@ void update() override {
           processProgramZones(5,4);
         break; // Alarm memory zones 33-64
       case 0x2B:
-        getEnabledZonesE6(4, 1, dsc.panelData[3]);
+        getEnabledZonesE6(4, 1, 3);
         break;
       case 0x2C:
-        getEnabledZonesE6(4, 33, dsc.panelData[3]);
+        getEnabledZonesE6(4, 33,3);
         break;
       };
 
