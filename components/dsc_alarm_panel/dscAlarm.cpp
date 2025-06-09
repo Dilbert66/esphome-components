@@ -158,7 +158,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
         return &(*it);
 //#if defined(ARDUINO_MQTT)
     else
-      return createZone(z);
+      return createZone(z+1);
 // #else
   //else
 //   return &zonetype_INIT;
