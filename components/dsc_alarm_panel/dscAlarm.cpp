@@ -156,11 +156,13 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
                              { return f.zone == z + 1; });
       if (it != zoneStatus.end())
         return &(*it);
-#if defined(ARDUINO_MQTT)
+//#if defined(ARDUINO_MQTT)
+    else
       return createZone(z);
-#else
-  return &zonetype_INIT;
-#endif
+// #else
+  //else
+//   return &zonetype_INIT;
+// #endif
     }
 
 #if defined(ARDUINO_MQTT)
@@ -967,14 +969,14 @@ void DSCkeybushome::setup()
 #endif
     }
 
-    byte DSCkeybushome::getPanelBitNumber(byte panelByte, byte startNumber)
+    byte DSCkeybushome::getPartitionE6(byte partitionByte)
     {
 
       for (byte bit = 0; bit <= 7; bit++)
       {
-        if (bitRead(dsc.panelData[panelByte], bit))
+        if (bitRead(dsc.panelData[partitionByte], bit))
         {
-          return startNumber + bit;
+          return bit + 1;
         }
   
       }
@@ -1017,7 +1019,7 @@ void DSCkeybushome::setup()
       bool zonesEnabled = false;
       byte zone;
 
-      byte partition = getPanelBitNumber(partitionByte, 1) ;
+      byte partition = getPartitionE6(partitionByte) ;
       for (byte panelByte = inputByte; panelByte <= inputByte + 3; panelByte++)
       {
         if (dsc.panelData[panelByte] != 0)
@@ -2855,10 +2857,10 @@ void DSCkeybushome::update()
             processProgramZones(5, 4);
           break; // Alarm memory zones 33-64
         case 0x2B:
-          getEnabledZonesE6(4, 1, dsc.panelData[3]);
+          getEnabledZonesE6(4, 1, 3);
           break;
         case 0x2C:
-          getEnabledZonesE6(4, 33, dsc.panelData[3]);
+          getEnabledZonesE6(4, 33, 3);
           break;
         };
 
@@ -4717,30 +4719,28 @@ void DSCkeybushome::update()
         n.enabled = true;
         n.partition = p;
         zoneStatus.push_back(n);
-        ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
+        ESP_LOGD(TAG, "CreatefromOjb: added zone %d", zoneStatus.back().zone);
       }
     }
 
-#else
+#endif
 
-void DSCkeybushome::createZone(uint16_t z, uint8_t p)
+ DSCkeybushome::zoneType * DSCkeybushome::createZone(uint16_t z, uint8_t p)
 {
 
   if (!z)
-    return;
-  zoneType *zt = getZone(z - 1);
-  if (zt->zone == z)
-    return;
+    return &zonetype_INIT;
   zoneType n = zonetype_INIT;
   n.zone = z;
   n.enabled = true;
   n.partition = p;
 
   zoneStatus.push_back(n);
-  ESP_LOGD(TAG, "added zone %d", zoneStatus.back().zone);
+  ESP_LOGD(TAG, "createzone: added zone %d", zoneStatus.back().zone);
   publishZoneStatus(&n);
+  return  &zoneStatus.back();
 }
-#endif
+
 
     const __FlashStringHelper *DSCkeybushome::statusText(uint8_t statusCode)
     {

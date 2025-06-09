@@ -375,7 +375,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void set_refresh_time(uint8_t rt);
       void set_trouble_fetch(bool fetch);
       void set_trouble_fetch_cmd(const char *cmd);
-      void createZone(uint16_t z, uint8_t p = 0);
+      zoneType* createZone(uint16_t z, uint8_t p = 0);
 #if !defined(ARDUINO_MQTT)
       void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0);
       void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0);
@@ -528,7 +528,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 
       void printPacket(const char *label, char cmd, volatile byte cbuf[], int len);
 
-      byte getPanelBitNumber(byte panelByte, byte startNumber);
+      byte getPartitionE6(byte panelByte);
 
       bool getEnabledZonesB1(byte inputByte, byte startZone, byte partition);
 
