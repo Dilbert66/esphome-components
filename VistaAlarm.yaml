@@ -58,6 +58,11 @@ vista_alarm_panel:
   #rxpin: "5" #GPIO pin to use for data receive (yellow line) 
   #txpin: "4" #GPIO pin to use for data transmit (green line)
   #monitorpin: "14" #GPIO pin to use for monitoring module traffic such as RF or Expanders . Set to -1 to disable
+
+  ##rp2040
+  #rxpin: "21" #GPIO pin to use for data receive (yellow line) 
+  #txpin: "20" #GPIO pin to use for data transmit (green line)
+  #monitorpin: "18" #GPIO pin to use for monitoring module traffic such as RF or Expanders . Set to -1 to disable
   
   #note for the vista128 and vista250, the expanderaddr and relayaddr addresses must be 0
   # module addresses:
@@ -99,6 +104,11 @@ esp32:
   #board: nodemcuv2
   #framework:
     #version: recommended
+
+#rp2040:
+  #board: rpipicow
+  #framework:
+    #platform_version: https://github.com/maxgerhardt/platform-raspberrypi.git
 
 #location of alarm panel code.  You can use the github release version  or 
 #copy the code to directory "my_components" in your main esphome directory

@@ -39,6 +39,13 @@ Modified for 4800 8E2
 #if defined(ESP32) && not defined(IRAM_ATTR)
 #define IRAM_ATTR IRAM_ATTR
 #endif
+#if defined(USE_RP2040) && not defined(IRAM_ATTR)
+#define IRAM_ATTR
+#endif
+
+#if defined(USE_RP2040) && not defined(ESP)
+#define ESP rp2040
+#endif
 
 // If only one tx or rx wanted then use this as parameter for the unused pin
 constexpr int SW_SERIAL_UNUSED_PIN = -1;
