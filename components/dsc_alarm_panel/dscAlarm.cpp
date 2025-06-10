@@ -149,20 +149,17 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
         troubleFetch = false;
     }
 
-    DSCkeybushome::zoneType *DSCkeybushome::getZone(byte z)
+    DSCkeybushome::zoneType *DSCkeybushome::getZone(byte z,bool create)
     {
       // zone=0 to maxZones-1
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [&z](zoneType &f)
                              { return f.zone == z + 1; });
       if (it != zoneStatus.end())
         return &(*it);
-// //#if defined(ARDUINO_MQTT)
-//     else
-//       return createZone(z+1);
-// // #else
-//   //else
-  return &zonetype_INIT;
-// #endif
+      else {
+        return create?createZone(z+1):&zonetype_INIT;
+      }
+
     }
 
 #if defined(ARDUINO_MQTT)
@@ -999,7 +996,7 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              getZone(zone)->partition = partition;
+              getZone(zone,true)->partition = partition;
               getZone(zone)->enabled = true;
              // if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
@@ -1032,7 +1029,7 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              getZone(zone)->partition = partition;
+              getZone(zone,true)->partition = partition;
               getZone(zone)->enabled = true;
               if (debug > 2) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
             }
@@ -4711,8 +4708,13 @@ void DSCkeybushome::update()
         if (!z)
           return;
         zoneType *zt = getZone(z - 1);
-        if (zt->zone == z)
+        if (zt->zone == z) {
+          if (zt->binary_sensor==NULL)
+            zt->binary_sensor=obj;
+          if (!zt->partition)
+            zt->partition=p;
           return;
+        }
         zoneType n = zonetype_INIT;
         n.zone = z;
         n.binary_sensor = obj;
@@ -4737,7 +4739,6 @@ void DSCkeybushome::update()
 
   zoneStatus.push_back(n);
   ESP_LOGD(TAG, "createzone: added zone %d", zoneStatus.back().zone);
-  publishZoneStatus(&n);
   return  &zoneStatus.back();
 }
 

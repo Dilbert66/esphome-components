@@ -444,7 +444,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
           .enabled = false,
           .bypassed = false};
 
-      zoneType *getZone(byte z);
+      zoneType *getZone(byte z,bool create=false);
       partitionType partitionStatus[dscPartitions];
       bool forceRefresh;
       std::string previousZoneStatusMsg, eventStatusMsg;
