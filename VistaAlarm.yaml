@@ -335,6 +335,7 @@ binary_sensor:
 # armed away status
 # armed away id code = arma_ + partition number 
   - platform: vista_alarm_panel
+    id: arma_1
     name: "Away partition 1"
 
 #Partition 2 example
@@ -350,7 +351,7 @@ binary_sensor:
 
 #Partition 2 example
   - platform: vista_alarm_panel
-    id: arma_1  
+    id: arm_2  
     name: "Armed partition 2" 
   
 # armed stay status
@@ -383,8 +384,8 @@ binary_sensor:
 
 #Partition 2 example
   - platform: vista_alarm_panel
-    id: armi_2
-    name: "Instant partition 2"   
+    id: armn_2
+    name: "Night partition 2"   
  
 # ac status
 # ac id code = (ac)     

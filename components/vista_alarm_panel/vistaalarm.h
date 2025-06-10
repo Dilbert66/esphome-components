@@ -296,7 +296,7 @@ class vistaECPHome : public time::RealTimeClock
       void publishRelayStatus(uint8_t addr, int channel, bool state)
       {
         std::string sensor = SRELAY + std::to_string(addr) + std::to_string(channel);
-        publishBinaryState(sensor, 0, open);
+        publishBinaryState(sensor, 0, state);
       }
       uint8_t getLoopMask(uint8_t loop)
       {
