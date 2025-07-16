@@ -452,7 +452,7 @@ namespace esphome
                 if (obj->get_object_id() != doc["oid"])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc.containsKey("detail"))
+                if (doc["detail"].is<JsonVariant>())
                 {
                     if (doc["detail"] == "all")
                     {
@@ -509,7 +509,7 @@ namespace esphome
                 if (obj->get_object_id() != doc["oid"])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc.containsKey("detail"))
+                if (doc["detail"].is<JsonVariant>())
                 {
                     if (doc["detail"] == "all")
                     {
@@ -586,7 +586,7 @@ namespace esphome
                 if (doc["action"] == "get")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -660,7 +660,7 @@ namespace esphome
                 if (doc["method"] == "GET" && doc["method"] == "")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -722,7 +722,7 @@ namespace esphome
                 if (obj->get_object_id() != doc["oid"])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc.containsKey("detail"))
+                if (doc["detail"].is<JsonVariant>())
                 {
                     if (doc["detail"] == "all")
                     {
@@ -790,7 +790,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -814,7 +814,7 @@ namespace esphome
                     // if (request->hasParam("speed_level")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"speed_level",buf,sizeof(buf)) > 0) {
-       if (doc.containsKey("speed_level") {
+       if (doc["speed_level"].is<JsonVariant>()) {
                         // auto speed_level = buf;
                         auto val = parse_number<int>(doc["speed_level"]);
                         if (!val.has_value())
@@ -828,7 +828,7 @@ namespace esphome
     //char buf[100];
     //if (mg_http_get_var(&hm->body,"oscillation",buf,sizeof(buf)) > 0) {         
      //   auto speed = buf;
-        if (doc.containsKey("oscillation")) {
+        if (doc["oscillation"].is<JsonVariant>()) {
                         auto val = parse_on_off(doc["oscillation"]);
                         switch (val)
                         {
@@ -886,7 +886,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -911,7 +911,7 @@ namespace esphome
                     // if (request->hasParam("brightness")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"brightness",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("brightness"))
+                    if (doc["brightness"].is<JsonVariant>())
                     {
                         std::string num = doc["brightness"];
                         auto brightness = parse_number<float>(num);
@@ -923,7 +923,7 @@ namespace esphome
                     // if (request->hasParam("r")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"r",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("r"))
+                    if (doc["r"].is<JsonVariant>())
                     {
                         std::string num = doc["r"];
                         auto r = parse_number<float>(num);
@@ -935,7 +935,7 @@ namespace esphome
                     // if (request->hasParam("g")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"g",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("g"))
+                    if (doc["g"].is<JsonVariant>())
                     {
                         std::string num = doc["g"];
                         auto g = parse_number<float>(num);
@@ -947,7 +947,7 @@ namespace esphome
                     // if (request->hasParam("b")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"b",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("b"))
+                    if (doc["b"].is<JsonVariant>())
                     {
                         std::string num = doc["b"];
                         auto b = parse_number<float>(num);
@@ -959,7 +959,7 @@ namespace esphome
                     // if (request->hasParam("white_value")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"white_value",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("white_value"))
+                    if (ddoc["white_value"].is<JsonVariant>())
                     {
                         std::string num = doc["white_value"];
                         auto white_value = parse_number<float>(num);
@@ -971,7 +971,7 @@ namespace esphome
                     // if (request->hasParam("color_temp")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"color_temp",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("color_temp"))
+                    if (doc["color_temp"].is<JsonVariant>())
                     {
                         std::string num = doc["color_temp"];
                         auto color_temp = parse_number<float>(num);
@@ -983,7 +983,7 @@ namespace esphome
                     // if (request->hasParam("flash")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"flash",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("flash"))
+                    if (doc["flash"].is<JsonVariant>())
                     {
                         std::string num = doc["flash"];
                         auto flash = parse_number<uint32_t>(num);
@@ -995,7 +995,7 @@ namespace esphome
                     // if (request->hasParam("transition")) {
                     //  char buf[100];
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("transition"))
+                    if (doc["transition"].is<JsonVariant>())
                     {
                         std::string num = doc["transition"];
                         auto transition = parse_number<uint32_t>(num);
@@ -1007,7 +1007,7 @@ namespace esphome
                     // if (request->hasParam("effect")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"effect",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("effect"))
+                    if (doc["effect"].is<JsonVariant>())
                     {
                         const char *effect = doc["effect"];
                         call.set_effect(effect);
@@ -1023,7 +1023,7 @@ namespace esphome
                     // if (request->hasParam("transition")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"transition",buf,sizeof(buf)) > 0) {
-                    if (doc.containsKey("transition"))
+                    if (doc["transition"].is<JsonVariant>())
                     {
                         std::string num = doc["transition"];
                         auto transition = parse_number<uint32_t>(num);
@@ -1099,7 +1099,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1142,7 +1142,7 @@ namespace esphome
                 //(request->hasParam("tilt") && !traits.get_supports_tilt())) {
                 // char buf[50];
                 // bool p= (mg_http_get_var(&hm->body,"position",buf,sizeof(buf)) > 0);
-                if ((doc.containsKey("position") && !traits.get_supports_position()) || (doc.containsKey("tilt") && !traits.get_supports_tilt()))
+                if ((doc["position"].is<JsonVariant>() && !traits.get_supports_position()) || (doc["tilt"].is<JsonVariant>() && !traits.get_supports_tilt()))
                 {
 
                     // bool t= (mg_http_get_var(&hm->body,"tilt",buf,sizeof(buf)) > 0);
@@ -1154,7 +1154,7 @@ namespace esphome
 
                 // char buf[100];
                 // if (mg_http_get_var(&hm->body,"position",buf,sizeof(buf)) > 0) {
-                if (doc.containsKey("position"))
+                if (doc["position"].is<JsonVariant>())
                 {
                     auto position = parse_number<float>(doc["position"]);
                     if (position.has_value())
@@ -1163,7 +1163,7 @@ namespace esphome
                     }
                 }
                 // if (mg_http_get_var(&hm->body,"tilt",buf,sizeof(buf)) > 0) {
-                if (doc.containsKey("tilt"))
+                if (doc["tilt"].is<JsonVariant>())
                 {
                     auto tilt = parse_number<float>(doc["tilt"]);
                     if (tilt.has_value())
@@ -1227,7 +1227,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1247,7 +1247,7 @@ namespace esphome
 
                 auto call = obj->make_call();
 
-                if (doc.containsKey("value"))
+                if (doc["value"].is<JsonVariant>())
                 {
                     std::string value = doc["value"];
                     auto value = parse_number<float>(value);
@@ -1335,7 +1335,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1371,7 +1371,7 @@ namespace esphome
                 // }
 
                 auto call = obj->make_call();
-                if (doc.containsKey("value"))
+                if (doc["value"].is<JsonVariant>())
                 {
                     std::string value = doc["value"];
                     call.set_date(value);
@@ -1472,7 +1472,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1491,7 +1491,7 @@ namespace esphome
                 }
 
                 auto call = obj->make_call();
-                if (doc.containsKey("value"))
+                if (doc["value"].is<JsonVariant>())
                 {
                     std::string value = doc["value"];
                     call.set_time(value);
@@ -1587,7 +1587,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1606,7 +1606,7 @@ namespace esphome
                 }
 
                 auto call = obj->make_call();
-                if (doc.containsKey("value"))
+                if (doc["value"].is<JsonVariant>())
                 {
                     std::string value = doc["value"];
                     call.set_datetime(value);
@@ -1676,7 +1676,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1754,7 +1754,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1831,7 +1831,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1864,7 +1864,7 @@ namespace esphome
                     ws_reply(c, "", false);
                 }
 
-                if (doc.containsKey("position"))
+                if (doc["position"].is<JsonVariant>())
                 {
                     std::string value = doc["position"];
 
@@ -1921,7 +1921,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -1938,7 +1938,7 @@ namespace esphome
                     return;
                 }
                 auto call = obj->make_call();
-                if (doc.containsKey("value"))
+                if (doc["value"].is<JsonVariant>())
                 {
                     call.set_value(doc["value"]);
                     this->defer([call]() mutable
@@ -2007,7 +2007,7 @@ namespace esphome
                 ws_reply(c, "", false);
                 return;
             }
-            if (doc.containsKey("cid"))
+            if (doc["cid"].is<JsonVariant>())
             {
                 // cid = toInt(doc["partition"],10);
                 unsigned long ul = (unsigned long)doc["cid"];
@@ -2065,18 +2065,18 @@ namespace esphome
                 ws_reply(c, "", false);
                 return;
             }
-            // if (doc.containsKey("config")) {
+            // if (doc["config"].is<JsonVariant>()) {
             //    String conf=doc["config"].as<String>();
             //     set_keypad_config((char *)conf.c_str());
             //     ws_reply(c, "", true);
             //     return;
             // }
             int partition = 1; // get default partition
-            if (doc.containsKey("partition"))
+            if (doc["partition"].is<JsonVariant>())
             {
                 partition = toInt(doc["partition"], 10);
             }
-            if (doc.containsKey("keys"))
+            if (doc["keys"].is<JsonVariant>())
             {
                 if (callKeyService(doc["keys"], partition))
                     ws_reply(c, "", true);
@@ -2106,7 +2106,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -2130,7 +2130,7 @@ namespace esphome
                 auto call = obj->make_call();
 
                 // if (mg_http_get_var(&hm->body,"option",buf,sizeof(buf)) > 0) {
-                if (doc.containsKey("option"))
+                if (doc["option"].is<JsonVariant>())
                 {
                     auto option = doc["option"];
                     // if (request->hasParam("option")) {
@@ -2195,7 +2195,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -2219,7 +2219,7 @@ namespace esphome
                 auto call = obj->make_call();
                 // char buf[100];
                 // if (mg_http_get_var(&hm->body,"mode",buf,sizeof(buf)) > 0) {
-                if (doc.containsKey("mode"))
+                if (doc["mode"].is<JsonVariant>())
                 {
                     // if (request->hasParam("mode")) {
                     //  auto mode = request->getParam("mode")->value();
@@ -2228,7 +2228,7 @@ namespace esphome
                 }
                 // if (mg_http_get_var(&hm->body,"target_temperature_high",buf,sizeof(buf)) > 0) {
                 // auto target_temperature_high=buf;
-                if (doc.containsKey("target_temperature_high"))
+                if (doc["target_temperature_high"].is<JsonVariant>())
                 {
 
                     // if (request->hasParam("target_temperature_high")) {
@@ -2240,7 +2240,7 @@ namespace esphome
                 // if (request->hasParam("target_temperature_low")) {
                 // auto target_temperature_low = parse_number<float>(request->getParam("target_temperature_low")->value().c_str());
                 // if (mg_http_get_var(&hm->body,"target_temperature_low",buf,sizeof(buf)) > 0) {
-                if (doc.containsKey("target_temperature_low"))
+                if (ddoc["target_temperature_low"].is<JsonVariant>())
                 {
                     auto target_temperature_low = parse_number<float>(doc["target_temperature_low"]);
                     if (target_temperature_low.has_value())
@@ -2250,7 +2250,7 @@ namespace esphome
                 // if (request->hasParam("target_temperature")) {
                 //  auto target_temperature = parse_number<float>(request->getParam("target_temperature")->value().c_str());
                 // if (mg_http_get_var(&hm->body,"target_temperature",buf,sizeof(buf)) > 0) {
-                if (doc.contains("target_temperature"))
+                if (doc["target_temperature"].is<JsonVariant>())
                 {
                     auto target_temperature = parse_number<float>(doc["target_temperature"]);
                     if (target_temperature.has_value())
@@ -2479,7 +2479,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -2558,7 +2558,7 @@ namespace esphome
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc.containsKey("detail"))
+                    if (doc["detail"].is<JsonVariant>())
                     {
                         if (doc["detail"] == "all")
                         {
@@ -2806,12 +2806,12 @@ namespace esphome
             int seq = 0;
             int *lastseq = NULL;
             // right now we don't force a seq/cid field in the encrypted packet.
-            if (doc.containsKey("seq"))
+            if (doc["seq"].is<JsonVariant>())
             {
                 seqstr = doc["seq"];
                 seq = (unsigned long)doc["seq"];
             }
-            if (doc.containsKey("cid"))
+            if (doc["cid"].is<JsonVariant>())
             {
                 // ensure packet is associated with an active session token and the sequence is newer to prevent replay attacks
                 cid = (unsigned long)doc["cid"];
@@ -2995,13 +2995,13 @@ namespace esphome
             {
                 // Got websocket frame. Received data is wm->data. Echo it back!
                 struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
-                DynamicJsonDocument doc(wm->data.len * 1.5);
+                JsonDocument doc;
                 JsonObject obj = doc.as<JsonObject>();
                 std::string buf = std::string(wm->data.buf, wm->data.len);
                 deserializeJson(doc, buf.c_str());
                 uint8_t err = 0;
 
-                if (doc.containsKey("iv") && srv->get_credentials()->crypt)
+                if (doc["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
                 {
 
                     buf = srv->decrypt(obj, &err);
@@ -3160,14 +3160,15 @@ namespace esphome
             }
 
 #endif
-            DynamicJsonDocument doc(hm->message.len * 1.5);
+            JsonDocument doc;
             JsonObject obj = doc.to<JsonObject>();
             if (mg_match(hm->uri, mg_str("/api"), NULL))
             {
 
                 std::string buf = std::string(hm->body.buf, hm->body.len);
                 DeserializationError err = deserializeJson(doc, buf.c_str());
-                if (!err && doc.containsKey("iv") && credentials_.password != "")
+
+                if (!err && doc["iv"].is<JsonVariant>() && credentials_.password != "")
                 {
                     uint8_t e = 0;
                     buf = decrypt(obj, &e);
@@ -3178,12 +3179,13 @@ namespace esphome
                 }
             }
 
-            if (!doc.containsKey("domain"))
+            if (!doc["domain"].is<JsonVariant>())
             {
                 parseUrl(hm, obj);
             }
 
             handleRequest(c, obj);
+
 
            if (c->send.size > 1500 || c->recv.size > 1500)
                c->is_draining = 1; // if send or recv queue getting too large close the connection to free up ram
