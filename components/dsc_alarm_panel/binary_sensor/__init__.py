@@ -3,7 +3,6 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID
 from esphome.helpers import sanitize, snake_case
 from esphome.components import binary_sensor
-from esphome import core
 
 from .. import component_ns,AlarmComponent
 
@@ -26,7 +25,7 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
     {
          cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
              {
-                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+               # cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
                 cv.Optional(CONF_SORTING_WEIGHT): cv.All(
                     cv.requires_component("web_keypad"),
                     cv.float_,
@@ -47,6 +46,16 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
             cv.Optional(CONF_PARTITION,default=0): cv.int_,
             cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
+            cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+            cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.float_,
+                ),
+            cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.use_id(cg.int_),
+            ),
+             
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
@@ -66,10 +75,16 @@ async def setup_entity_alarm(var, config):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
         cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
     cg.add(var.publish_state(False))
+    cg.add(var.set_trigger_on_initial_state(True))
     
     if web_keypad_config := config.get(CONF_WEB_KEYPAD):
+        web_keypad_config[CONF_WEB_KEYPAD_ID]=config.get(CONF_WEB_KEYPAD_ID)
         from esphome.components import web_keypad
         await web_keypad.add_entity_config(var, web_keypad_config)
+    else:
+        if config.get(CONF_SORTING_GROUP_ID):
+            from esphome.components import web_keypad
+            await web_keypad.add_entity_config(var, config)
 
 
 

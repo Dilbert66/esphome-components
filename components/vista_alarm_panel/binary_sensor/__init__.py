@@ -60,7 +60,7 @@ CONFIG_SCHEMA = (
 
 async def setup_entity_alarm(var, config):
     """Set up custom properties for an alarm sensor"""
-
+#
 
     paren = await cg.get_variable(config[CONF_ALARM_ID])
 
@@ -71,7 +71,7 @@ async def setup_entity_alarm(var, config):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
         cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_RF_SERIAL],config[CONF_RF_LOOP]))
     cg.add(var.publish_state(False))
-    cg.add(var.set_publish_initial_state(True))
+    cg.add(var.set_trigger_on_initial_state(True))
     # cg.register_component(var,config)
     if web_keypad_config := config.get(CONF_WEB_KEYPAD):
         from esphome.components import web_keypad

@@ -195,7 +195,8 @@ logger:
 
 api:
    encryption:
-     key: !secret encryption_key   
+     key: !secret encryption_key  
+   custom_services: true 
  
 #to use mqtt disable the api: section above. This enables you to use esphome with 
 #non homeassistant systems

@@ -20,16 +20,10 @@
 #define RX_PIN 22
 #define TX_PIN 21
 #define MONITOR_PIN 18 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
-#endif
-#ifdef ESP8266
+#else
 #define RX_PIN 5
 #define TX_PIN 4
 #define MONITOR_PIN 14 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
-#endif
-#ifdef USE_RP2040
-#define RX_PIN 21
-#define TX_PIN 20
-#define MONITOR_PIN 18 // pin used to monitor the green TX line (3.3 level dropped from 12 volts
 #endif
 
 #if !defined(ARDUINO_MQTT)
@@ -514,7 +508,7 @@ void vistaECPHome::setup()
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + setalarmcommandtopic, mqtt_callback);
 
 #endif
-#if defined(USE_API)
+#if defined(USE_API_SERVICES)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
       register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata"});
@@ -2920,8 +2914,8 @@ void vistaECPHome::update()
      ESP_LOGD(TAG,"get name=%s,get object_id=%s",ptr->get_name().c_str(),ptr->get_object_id().c_str());
 
         // ptr->set_device_class("window");
-         ptr->set_publish_initial_state(true);
-         ptr->set_disabled_by_default(false);
+       //  ptr->set_publish_initial_state(true);
+       //  ptr->set_disabled_by_default(false);
      #if defined(ESPHOME_MQTT)
          mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
          mqptr->set_component_source("mqtt");

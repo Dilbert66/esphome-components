@@ -152,11 +152,10 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   // esp32 timer1 calls dscDataInterrupt() from dscClockInterrupt()
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
-  timer1 = timerBegin(1, 80, true);
+  timer1 = timerBegin(1000000);
   timerStop(timer1);
-  timerAttachInterrupt(timer1, & dscDataInterrupt, true);
-  timerAlarmWrite(timer1, 250, true);
-  timerAlarmEnable(timer1);
+  timerAttachInterrupt(timer1, & dscDataInterrupt);
+  //timerAlarmEnable(timer1);
   #else // IDF4+
   esp_timer_create( & timer0Parameters, & timer0);
   #endif // ESP_IDF_VERSION_MAJOR
@@ -186,7 +185,7 @@ void dscKeybusInterface::stop() {
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
   if (timer1 != NULL)  {  
-    timerAlarmDisable(timer1);
+    //timerAlarmDisable(timer1);
     timerEnd(timer1);
   }
   #else // ESP-IDF 4+
@@ -583,6 +582,7 @@ dscKeybusInterface::dscClockInterrupt() {
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
   timerStart(timer1);
+  timerAlarm(timer1, 250, false,0);
   #else // IDF4+
   esp_timer_start_once(timer0, 250);
   #endif

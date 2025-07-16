@@ -317,8 +317,9 @@ namespace esphome
             if (logger::global_logger != nullptr && this->expose_log_)
             {
                 logger::global_logger->add_on_log_callback(
-                    [this](int level, const char *tag, const char *message)
+                    [this](int level, const char *tag, const char *message, size_t message_len)
                     {
+                        (void) message_len;
                         std::string msg = escape_json(message);
                         this->push(LOG, msg.c_str());
                     });
@@ -687,8 +688,9 @@ namespace esphome
 #endif
 
 #ifdef USE_BINARY_SENSOR
-        void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj, bool state)
+        void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj)
         {
+            bool state=obj->state;
             // this->events_.send(this->binary_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());
         }

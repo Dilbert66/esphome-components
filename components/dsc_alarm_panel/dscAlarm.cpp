@@ -190,7 +190,7 @@ void DSCkeybushome::setup()
       topic = discovery_prefix + "/alarm_control_panel/" + topic_prefix + "/config";
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(), mqtt_callback);
 #endif
-#if defined(USE_API)
+#if defined(USE_API_SERVICES)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
 #if !defined(ARDUINO_MQTT) && defined(USE_TIME)

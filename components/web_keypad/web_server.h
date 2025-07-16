@@ -306,7 +306,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_BINARY_SENSOR
-  void on_binary_sensor_update(binary_sensor::BinarySensor *obj, bool state) override;
+  void on_binary_sensor_update(binary_sensor::BinarySensor *obj) override;
 
   /// Handle a binary sensor request under '/binary_sensor/<id>'.
   void handle_binary_sensor_request(struct mg_connection *c, JsonObject doc);
