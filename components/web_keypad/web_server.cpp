@@ -414,7 +414,7 @@ namespace esphome
             for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s = s + 1024)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
                 mg_send(c, &buf[s], 1024);
-                mg_mgr_poll(&mgr, 0);
+                mg_mgr_poll(&mgr, 2);
             }
             c->is_resp = 0;
         }

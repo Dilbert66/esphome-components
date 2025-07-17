@@ -74,7 +74,7 @@ async def setup_entity_alarm(var, config):
     elif config[CONF_ID] and config[CONF_ID].is_manual:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
         cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
-    cg.add(var.publish_state(False))
+    #cg.add(var.publish_state(False))
     cg.add(var.set_trigger_on_initial_state(True))
     
     if web_keypad_config := config.get(CONF_WEB_KEYPAD):
