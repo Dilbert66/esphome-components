@@ -5,11 +5,11 @@ from esphome.core import CORE
 import os
 import logging
 
-
 _LOGGER = logging.getLogger(__name__)
 
 component_ns = cg.esphome_ns.namespace('alarm_panel')
-Component = component_ns.class_('vistaECPHome', cg.PollingComponent)
+AlarmComponent = component_ns.class_('vistaECPHome', cg.PollingComponent)
+
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
@@ -20,6 +20,7 @@ CONF_DEBUGLEVEL="vistadebuglevel"
 CONF_KEYPAD1="keypadaddr1"
 CONF_KEYPAD2="keypadaddr2"
 CONF_KEYPAD3="keypadaddr3"
+CONF_AUIADDR="auiaddr"
 CONF_RXPIN="rxpin"
 CONF_TXPIN="txpin"
 CONF_MONITORPIN="monitorpin"
@@ -40,76 +41,29 @@ CONF_FIRE="fire_text"
 CONF_CHECK="check_text"
 CONF_TRBL="trbl_text"
 CONF_HITSTAR="hitstar_text"
-
-systemstatus= '''[&](std::string statusCode,uint8_t partition) {
-      alarm_panel::publishTextState("ss_",partition,&statusCode); 
-    }'''
-line1 ='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln1_",partition,&msg);
-    }'''
-line2='''[&](std::string msg,uint8_t partition) {
-      alarm_panel::publishTextState("ln2_",partition,&msg);
-    }'''
-beeps='''[&](std::string  beeps,uint8_t partition) {
-      alarm_panel::publishTextState("bp_",partition,&beeps); 
-    }'''
-zoneext='''[&](std::string msg) {
-      alarm_panel::publishTextState("zs",0,&msg);  
-    }'''
-lrr='''[&](std::string msg) {
-      alarm_panel::publishTextState("lrr",0,&msg);  
-    }''' 
-rf='''[&](std::string msg) {
-      alarm_panel::publishTextState("rf",0,&msg);  
-    }'''
-statuschange='''[&](alarm_panel::sysState led,bool open,uint8_t partition) {
-     std::string sensor="NIL";   
-      switch(led) {
-                case alarm_panel::sfire: sensor="fire_";break;
-                case alarm_panel::salarm: sensor="alm_";break;
-                case alarm_panel::strouble: sensor="trbl_";break;
-                case alarm_panel::sarmedstay:sensor="arms_";break;
-                case alarm_panel::sarmedaway: sensor="arma_";break;
-                case alarm_panel::sinstant: sensor="armi_";break; 
-                case alarm_panel::sready: sensor="rdy_";break; 
-                case alarm_panel::sac: alarm_panel::publishBinaryState("ac",0,open);return;       
-                case alarm_panel::sbypass: sensor="byp_";break;  
-                case alarm_panel::schime: sensor="chm_";break;
-                case alarm_panel::sbat: alarm_panel::publishBinaryState("bat",0,open);return;  
-                case alarm_panel::sarmednight: sensor="armn_";break;  
-                case alarm_panel::sarmed: sensor="arm_";break;  
-                case alarm_panel::soffline: break;       
-                case alarm_panel::sunavailable: break; 
-                default: break;
-         };
-      alarm_panel::publishBinaryState(sensor.c_str(),partition,open);
-    }'''
-zonebinary='''[&](int zone, bool open) {
-      std::string sensor = "z" + std::to_string(zone) ;
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);    
-    }'''
-zonestatus='''[&](int zone, std::string open) {
-      std::string sensor = "z" + std::to_string(zone);
-      alarm_panel::publishTextState(sensor.c_str(),0,&open); 
-    }''' 
-relay='''[&](uint8_t addr,int channel,bool open) {
-      std::string sensor = "r"+std::to_string(addr) + std::to_string(channel);
-      alarm_panel::publishBinaryState(sensor.c_str(),0,open);       
-    }'''
+CONF_INVERT_RX="invert_rx"
+CONF_INVERT_TX="invert_tx"
+CONF_INVERT_MON="invert_mon"
+CONF_INPUT_MON="input_mode_mon"
+CONF_INPUT_RX="input_mode_rx"
+CONF_AUTOPOPULATE="autopopulate"
+CONF_USEASYNC="use_async_polling"
+CONF_TYPE_ID="code"
 
 
 CONFIG_SCHEMA = cv.Schema(
     {
-    cv.GenerateID(): cv.declare_id(Component),
-    cv.Optional(CONF_ACCESSCODE): cv.string  ,
-    cv.Optional(CONF_MAXZONES): cv.int_, 
-    cv.Optional(CONF_MAXPARTITIONS): cv.int_, 
-    cv.Optional(CONF_RFSERIAL): cv.string, 
+    cv.GenerateID(): cv.declare_id(AlarmComponent),
+    cv.Optional(CONF_ACCESSCODE,default=""): cv.string  ,
+    cv.Optional(CONF_MAXZONES,default=32): cv.int_, 
+    cv.Optional(CONF_MAXPARTITIONS,default=1): cv.int_, 
+    cv.Optional(CONF_RFSERIAL,default=""): cv.string, 
     cv.Optional(CONF_DEFAULTPARTITION): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL): cv.int_, 
-    cv.Optional(CONF_KEYPAD1): cv.int_, 
-    cv.Optional(CONF_KEYPAD2): cv.int_, 
-    cv.Optional(CONF_KEYPAD3): cv.int_, 
+    cv.Optional(CONF_KEYPAD1,default=17): cv.int_, 
+    cv.Optional(CONF_KEYPAD2,default=0): cv.int_, 
+    cv.Optional(CONF_KEYPAD3,default=0): cv.int_, 
+    cv.Optional(CONF_AUIADDR,default=0): cv.int_,
     cv.Optional(CONF_RXPIN): cv.int_, 
     cv.Optional(CONF_TXPIN): cv.int_, 
     cv.Optional(CONF_MONITORPIN): cv.int_, 
@@ -129,17 +83,30 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_FIRE): cv.string  ,  
     cv.Optional(CONF_CHECK): cv.string  ,
     cv.Optional(CONF_TRBL): cv.string  ,   
-    cv.Optional(CONF_HITSTAR): cv.string  ,    
+    cv.Optional(CONF_HITSTAR): cv.string  ,
+    cv.Optional(CONF_USEASYNC,default= 'true'): cv.boolean,
+    cv.Optional(CONF_INVERT_RX, default='true'): cv.boolean, 
+    cv.Optional(CONF_INVERT_TX, default='true'): cv.boolean,   
+    cv.Optional(CONF_INVERT_MON, default='true'): cv.boolean,  
+    cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
+    cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
+    cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
+  
     }
 )
 
 async def to_code(config):
-    old_dir = CORE.relative_build_path("src")
-    cg.add_define("USE_CUSTOM_ID")    
+
+    cg.add_define("USE_VISTA_PANEL")  
+    if CORE.is_esp8266:
+        cg.add_define("INPUT_PULLDOWN INPUT")
+    old_dir = CORE.relative_build_path("src")    
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
         real_clean_build()
     
-    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS])
+    if  config[CONF_USEASYNC]:
+        cg.add_define("USETASK")
+    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
     
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
@@ -160,24 +127,25 @@ async def to_code(config):
     if CONF_KEYPAD3 in config:
         cg.add(var.set_partitionKeypad(3,config[CONF_KEYPAD3]));
     if CONF_EXPANDER1 in config:
-        cg.add(var.set_expanderAddr(1,config[CONF_EXPANDER1]));
+        cg.add(var.set_expanderAddr(config[CONF_EXPANDER1]));
     if CONF_EXPANDER2 in config:
-        cg.add(var.set_expanderAddr(2,config[CONF_EXPANDER2]));
+        cg.add(var.set_expanderAddr(config[CONF_EXPANDER2]));
     if CONF_RELAY1 in config:
-        cg.add(var.set_expanderAddr(3,config[CONF_RELAY1]));
+        cg.add(var.set_expanderAddr(config[CONF_RELAY1]));
     if CONF_RELAY2 in config:
-        cg.add(var.set_expanderAddr(4,config[CONF_RELAY2]));
+        cg.add(var.set_expanderAddr(config[CONF_RELAY2]));
     if CONF_RELAY3 in config:
-        cg.add(var.set_expanderAddr(5,config[CONF_RELAY3]));
+        cg.add(var.set_expanderAddr(config[CONF_RELAY3]));
     if CONF_RELAY4 in config:
-        cg.add(var.set_expanderAddr(6,config[CONF_RELAY4]));
+        cg.add(var.set_expanderAddr(config[CONF_RELAY4]));
     if CONF_TTL in config:
         cg.add(var.set_ttl(config[CONF_TTL]));        
     if CONF_QUICKARM in config:
         cg.add(var.set_quickArm(config[CONF_QUICKARM]));        
     if CONF_LRR in config:
         cg.add(var.set_lrrSupervisor(config[CONF_LRR]));      
-
+    if CONF_AUIADDR in config:
+        cg.add(var.set_auiaddr(config[CONF_AUIADDR]));
     if CONF_FAULT in config:
         cg.add(var.set_text(1,config[CONF_FAULT])); 
     if CONF_BYPASS in config:
@@ -191,27 +159,18 @@ async def to_code(config):
     if CONF_TRBL in config:
         cg.add(var.set_text(6,config[CONF_TRBL]));  
     if CONF_HITSTAR in config:
-        cg.add(var.set_text(7,config[CONF_HITSTAR]));         
-        
-    cg.add(var.onSystemStatusChange(cg.RawExpression(systemstatus)))   
-    cg.add(var.onLine1DisplayChange(cg.RawExpression(line1))) 
-    cg.add(var.onLine2DisplayChange(cg.RawExpression(line2)))    
-    cg.add(var.onBeepsChange(cg.RawExpression(beeps)))    
-    cg.add(var.onZoneExtendedStatusChange(cg.RawExpression(zoneext)))   
-    cg.add(var.onLrrMsgChange(cg.RawExpression(lrr))) 
-    cg.add(var.onRfMsgChange(cg.RawExpression(rf)))    
-    cg.add(var.onStatusChange(cg.RawExpression(statuschange)))    
-    cg.add(var.onZoneStatusChangeBinarySensor(cg.RawExpression(zonebinary)))    
-    cg.add(var.onZoneStatusChange(cg.RawExpression(zonestatus)))
-    cg.add(var.onRelayStatusChange(cg.RawExpression(relay)))      
-    
+        cg.add(var.set_text(7,config[CONF_HITSTAR]));  
+
+  
     await cg.register_component(var, config)
-    
+ 
 def real_clean_build():
     import shutil
     build_dir = CORE.relative_build_path("")
     if os.path.isdir(build_dir):
         _LOGGER.info("Deleting %s", build_dir)
         shutil.rmtree(build_dir)
+
+        
             
     

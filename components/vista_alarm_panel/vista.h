@@ -1,22 +1,47 @@
 #pragma once
 
 #include "Arduino.h"
-
+#include <queue>
 #include "ECPSoftwareSerial.h"
 
-//#define DEBUG
+// #define DEBUG
 
 #define MONITORTX
+
+#define OUTBUFSIZE 30
+#define CMDBUFSIZE 50
+#ifdef ESP32
+#define CMDQUEUESIZE 5
+#else
+#define CMDQUEUESIZE 2
+#endif
+#define FAULTQUEUESIZE 5
+#define LRRADDR 3
 
 // Used to read bits on F7 message
 #define BIT_MASK_BYTE1_BEEP 0x07
 #define BIT_MASK_BYTE1_NIGHT 0x10
-
+//F7 00 00 51 10 21 00 - 50 28 - 02 00 00 4C //fault lowbat
+//F7 00 00 07 10 16 00 - 12 28 - 02 00 00 20 //check co
+//F7 00 00 07 10 03 00 - 00 28 - 02 00 00 46 //fault open
+//F7 00 00 40 00 08 00 - 5C 28 - 02 00 00 33 //system ready low bat
+//F7 00 00 20 00 08 00 - 4C 28 - 02 00 00 53 /system not ready low bat
+//F7 00 00 03 10 08 00 - CC 28 - 02 00 00 31 // system arming stay
+//F7 00 00 03 10 08 00 - CC 28 - 02 00 00 31 // system armed stay
+//F7 00 00 40 00 BF 00 - 12 28 - 02 00 00 43 //system check 103 ready
+//F7 00 00 20 00 BF 04 - 02 28 - 02 00 00 43 //system check 103 not ready
+//F7 00 00 20 00 04 01 - 50 38 - 02 00 00 42 // zone bypass
+//F7 00 00 03 10 17 00 - 80 2B - 02 00 00 41 // alarm zone 17 , in alarm
+//F7 00 00 02 00 08 00 - 8C 28 - 02 00 00 44 //entry when armed
+//F7 00 00 03 10 17 00 - 00 2A - 02 00 00 41 // alarm zone 17 , cleared, disarmed
+//F7 00 00 03 10 EA 00 - 00 2A - 02 00 00 45 // exit alarm
+//F7 00 00 03 10 EA 00 - 00 2A - 02 00 00 45 //alarm cancelled
+//F7 00 00 07 10 12 00 - 80 08 - 02 00 00 41  //armed stay countdown
 #define BIT_MASK_BYTE2_ARMED_HOME 0x80
 #define BIT_MASK_BYTE2_LOW_BAT 0x40
-#define BIT_MASK_BYTE2_ALARM_ZONE 0x20
+#define BIT_MASK_BYTE2_ZONE_FIRE 0x20
 #define BIT_MASK_BYTE2_READY 0x10
-#define BIT_MASK_BYTE2_AC_LOSS 0x08
+#define BIT_MASK_BYTE2_UNKNOWN 0x08
 #define BIT_MASK_BYTE2_SYSTEM_FLAG 0x04
 #define BIT_MASK_BYTE2_CHECK_FLAG 0x02
 #define BIT_MASK_BYTE2_FIRE 0x01
@@ -31,12 +56,11 @@
 #define BIT_MASK_BYTE3_IN_ALARM 0x01
 
 #define F7_MESSAGE_LENGTH 45
-#define F8_MESSAGE_LENGTH 7
 #define N98_MESSAGE_LENGTH 6
 
 #define MAX_MODULES 9
 
-//enum ecpState { sPulse, sNormal, sAckf7,sSendkpaddr,sPolling };
+// enum ecpState { sPulse, sNormal, sAckf7,sSendkpaddr,sPolling };
 #define sPulse 1
 #define sNormal 2
 #define sAckf7 3
@@ -44,137 +68,167 @@
 #define sPolling 5
 #define sCmdHigh 6
 
-    
-struct statusFlagType {
-    char beeps: 3;
-    bool armedStay;
-    bool armedAway;
-    bool night;
-    bool instant;
-    bool chime;
-    bool acPower;
-    bool acLoss;
-    bool ready;
-    bool entryDelay;
-    bool programMode;
-    bool zoneBypass;
-    bool zoneAlarm;
-    bool alarm;
-    bool check;
-    bool systemFlag;
-    bool lowBattery;
-    bool systemTrouble;
-    bool fire;
-    bool fireZone;
-    bool backlight;
-    bool armed;
-    bool away;
-    bool bypass;
-    bool inAlarm;
-    bool noAlarm;
-    bool exitDelay;
-    bool cancel;
-    bool fault;
-    bool panicAlarm;
+struct statusFlagType
+{
+    char beeps : 3;
+    uint8_t armedStay : 1;
+    uint8_t armedAway : 1;
+    uint8_t night : 1;
+    uint8_t instant : 1;
+    uint8_t chime : 1;
+    uint8_t acPower : 1;
+    uint8_t acLoss : 1;
+    uint8_t ready : 1;
+    uint8_t entryDelay : 1;
+    uint8_t programMode : 1;
+    uint8_t zoneBypass : 1;
+    uint8_t zoneAlarm : 1;
+    uint8_t alarm : 1;
+    uint8_t check : 1;
+    uint8_t systemFlag : 1;
+    uint8_t lowBattery : 1;
+    uint8_t systemTrouble : 1;
+    uint8_t fire : 1;
+    uint8_t fireZone : 1;
+    uint8_t backlight : 1;
+    uint8_t armed : 1;
+    uint8_t away : 1;
+    uint8_t bypass : 1;
+    uint8_t inAlarm : 1;
+    uint8_t noAlarm : 1;
+    uint8_t exitDelay : 1;
+    uint8_t cancel : 1;
+    uint8_t fault : 1;
+    uint8_t panicAlarm : 1;
     char keypad[4];
     int zone;
-    char prompt[36];
+    char prompt1[18];
+    char prompt2[18];
     char promptPos;
     uint8_t attempts = 10;
-    struct {
+    struct
+    {
         int code;
         uint8_t qual;
-        int zone;
-        uint8_t user;
+        int data;
         uint8_t partition;
     } lrr;
-
 };
 
-struct expanderType {
+struct expanderType
+{
     char expansionAddr;
     char expFault;
     char expFaultBits;
     char relayState;
 };
+const expanderType expanderType_INIT = {.expansionAddr = 0, .expFault = 0, .expFaultBits = 0, .relayState = 0};
 
-struct keyType {
+struct keyType
+{
     char key;
     uint8_t kpaddr;
+    bool direct;
+    uint8_t count;
+    uint8_t seq;
 };
+const keyType keyType_INIT = {.key = 0, .kpaddr = 0, .direct = false, .count = 0, .seq = 0};
 
-class Vista {
+struct cmdQueueItem
+{
+    char cbuf[CMDBUFSIZE];
+    char extbuf[CMDBUFSIZE];
+    bool newCmd;
+    bool newExtCmd;
+    size_t size;
+    size_t rawsize;
+    struct statusFlagType statusFlags;
+};
+const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
 
-    public:
-        Vista(Stream * OutStream);
+class Vista
+{
+
+public:
+    Vista();
     ~Vista();
-    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin);
+    void begin(int receivePin, int transmitPin, char keypadAddr, int monitorTxPin, bool invertRx = true, bool invertTx = true, bool invertMon = true, uint8_t inputRx = INPUT, uint8_t inputMon = INPUT);
     void stop();
     bool handle();
     void printStatus();
     void printTrouble();
     void decodeBeeps();
     void decodeKeypads();
-    void printPacket(char * , int);
-    void write(const char * );
+    void printPacket(char *, int);
+    void write(const char *);
     void write(const char);
-    void write(const char *,uint8_t addr );
-    void write(const char,uint8_t addr);    
+    void write(const char *, uint8_t addr);
+    void write(const char, uint8_t addr);
+    void writeDirect(const char *keys, uint8_t addr, size_t len);
+    void writeDirect(const char key, uint8_t addr, uint8_t seq = 0);
     statusFlagType statusFlags;
-    SoftwareSerial * vistaSerial, * vistaSerialMonitor;
-    void setKpAddr(char keypadAddr) {
+    SoftwareSerial *vistaSerial, *vistaSerialMonitor;
+    void setKpAddr(char keypadAddr)
+    {
         if (keypadAddr > 0)
             kpAddr = keypadAddr;
     }
+    void addModule(byte addr);
     bool dataReceived;
     void IRAM_ATTR rxHandleISR(), txHandleISR();
-    bool areEqual(char * , char * , uint8_t);
-    bool keybusConnected;
+    bool areEqual(char *, char *, uint8_t);
+    bool keybusConnected, connected;
     int toDec(int);
     void resetStatus();
     void initSerialHandlers(int, int, int);
-    char * cbuf, * extbuf, * extcmd;
+    char *cbuf, *extbuf, *extcmd;
 
     bool lrrSupervisor;
-    char expansionAddr;
     void setExpFault(int, bool);
-    bool newExtCmd, newCmd, newRelCmd;
+    bool newExtCmd, newCmd;
     bool filterOwnTx;
     expanderType zoneExpanders[MAX_MODULES];
-    char b; //used in isr
+    uint8_t moduleIdx;
+    char b; // used in isr
     bool charAvail();
+    bool cmdAvail();
+    cmdQueueItem getNextCmd();
     bool sendPending();
+    // std::queue<struct cmdQueueItem> cmdQueue;
 
-    private:
-    keyType * outbuf;
-    char * tmpOutBuf;
+private:
+    char lcbuf[14];
+    uint8_t _lcbuflen;
+    uint8_t _retriesf9;
+    char expectCmd;
+    keyType *outbuf;
+    char *tmpOutBuf;
+    cmdQueueItem *cmdQueue;
     volatile uint8_t outbufIdx, inbufIdx;
+    uint8_t outcmdIdx, incmdIdx;
     int rxPin, txPin;
     volatile char kpAddr;
     char monitorPin;
-    volatile char ackAddr;
-    Stream * outStream;
     volatile char rxState;
-    volatile unsigned long lowTime,highTime;
-    uint8_t * faultQueue;
+    volatile unsigned long lowTime, highTime;
+    uint8_t *faultQueue;
     void setNextFault(uint8_t);
     expanderType getNextFault();
     expanderType peekNextFault();
     expanderType currentFault;
-    uint8_t szOutbuf, szCbuf, szExt, szFaultQueue;
     uint8_t idx, outFaultIdx, inFaultIdx;
     int gidx;
     volatile int extidx;
     uint8_t write_Seq;
-    void onStatus(char * , int * );
-    void onDisplay(char * , int * );
+    void onAUI(char *, int *);
+    void onDisplay(char *, int *);
     void writeChars();
     volatile uint8_t markPulse;
-    void readChars(int, char * , int * );
-    bool validChksum(char * , int, int);
-    void readChar(char * , int * );
-    void onLrr(char * , int * );
-    void onExp(char * );
+    void readChars(int, char *, int *);
+    bool validChksum(char *, int, int);
+    void readChar(char *, int *);
+    void onLrr(char *, int *);
+    void onExp(char *);
     keyType getChar();
     uint8_t peekNextKpAddr();
     uint8_t writeSeq, expSeq;
@@ -182,29 +236,41 @@ class Vista {
     char haveExpMessage;
     char expFault, expBitAddr;
     char expFaultBits;
-    bool decodePacket();
-    bool getExtBytes();
+    size_t decodePacket();
+    uint8_t getExtBytes();
     volatile bool is2400;
+    void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
+    bool invertRead;
 
-    char IRAM_ATTR addrToBitmask1(char addr) {
-        if (addr > 7) return 0xFF;
-        else return 0xFF ^ (0x01 << (addr));
+    char IRAM_ATTR addrToBitmask1(char addr)
+    {
+        if (addr > 7)
+            return 0xFF;
+        else
+            return 0xFF ^ (0x01 << (addr));
     }
-    char IRAM_ATTR addrToBitmask2(char addr) {
-        if (addr < 8) return 0;
-        else if (addr > 16) return 0xFF;
-        else return 0xFF ^ (0x01 << (addr - 8));
+    char IRAM_ATTR addrToBitmask2(char addr)
+    {
+        if (addr < 8)
+            return 0;
+        else if (addr > 16)
+            return 0xFF;
+        else
+            return 0xFF ^ (0x01 << (addr - 8));
     }
-    char IRAM_ATTR addrToBitmask3(char addr) {
-        if (addr < 16) return 0;
-        else return 0xFF ^ (0x01 << (addr - 16));
+    char IRAM_ATTR addrToBitmask3(char addr)
+    {
+        if (addr < 16)
+            return 0;
+        else
+            return 0xFF ^ (0x01 << (addr - 16));
     }
 
     void hw_wdt_disable();
     void hw_wdt_enable();
 
-
     char expectByte;
     volatile uint8_t retries;
+    volatile uint8_t retryAddr;
     volatile bool sending;
 };

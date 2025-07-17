@@ -18,7 +18,6 @@
  */
 
 //#define DISABLE_EXPANDER  //disable zone virtual zone expander functionality
-//#define DEBOUNCE 
 
 //#define SERIALDEBUGCOMMANDS  //enable to use verbose debug cmd decoding  to serial port
 #ifndef dscKeybus_h
@@ -105,10 +104,10 @@ class dscKeybusInterface {
   public:
 
     // Initializes writes as disabled by default
-    dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin = 255);
+    dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin = 255,bool setInvertWrite=true);
 
     // Interface control
-    void begin(Stream &_stream = Serial,byte setClockPin=0, byte setReadPin=0, byte setWritePin=0);             // Initializes the stream output to Serial by default
+    void begin(Stream &_stream = Serial,byte setClockPin=0, byte setReadPin=0, byte setWritePin=0,bool setInvertWrite=true);             // Initializes the stream output to Serial by default
     bool loop();                                      // Returns true if valid panel data is available
     void stop();                                      // Disables the clock hardware interrupt and data timer interrupt
     void resetStatus();                               // Resets the state of all status components as changed for sketches to get the current status
@@ -226,6 +225,7 @@ class dscKeybusInterface {
     static volatile pgmBufferType pgmBuffer;
     bool keybusVersion1;  
     bool validCRC();    
+    static byte panelBitCount, panelByteCount;
     
   private:
 
@@ -396,10 +396,11 @@ class dscKeybusInterface {
     static byte dscClockPin;
     static byte dscReadPin;
     static byte dscWritePin;
+    static bool invertWrite;
     //static byte writeByte, writeBit;
     static bool virtualKeypad;
     static char writeKey;
-    static byte panelBitCount, panelByteCount;
+
     static volatile bool writeAlarm;
     static volatile bool moduleDataDetected, moduleDataCaptured;
     static volatile unsigned long keybusTime;

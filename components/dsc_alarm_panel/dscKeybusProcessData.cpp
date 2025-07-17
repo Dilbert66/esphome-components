@@ -99,10 +99,9 @@ bool dscKeybusInterface::setTime(unsigned int year, byte month, byte day, byte h
 
 // Processes status commands: 0x05 (Partitions 1-4) and 0x1B (Partitions 5-8)
 void dscKeybusInterface::processPanelStatus() {
-    
-  if (panelByteCount > 6 && panelData[0]==0x05 && !panelData[10]) return; // a valid 05 has 01 in byte 10
-  // Trouble status
-  if (panelData[3] <= 0x06) {  // Ignores trouble light status in intermittent states
+
+  // Trouble status  
+  if (panelData[3] <= 0x03) {  // Ignores trouble light status in intermittent states
     if (bitRead(panelData[2],4)) trouble = true;
     else trouble = false;
     if (trouble != previousTrouble) {
@@ -200,6 +199,12 @@ void dscKeybusInterface::processPanelStatus() {
 
       // Zones open
       case 0x03: {
+          
+        armedStay[partitionIndex] = false;
+        armedAway[partitionIndex] = false;
+        armed[partitionIndex] = false;
+        processAlarmStatus(partitionIndex, false);  
+        
         processReadyStatus(partitionIndex, false);
         processEntryDelayStatus(partitionIndex, false);
         break;
@@ -486,8 +491,8 @@ void dscKeybusInterface::processPanel_0x87() {
 
 void dscKeybusInterface::processPanel_0xA5() {
   if (!validCRC()) return;
-
-  processTime(2);
+  if (panelData[6] == 0 && panelData[7] == 0) 
+    processTime(2);
 
   // Timestamp
   if (panelData[6] == 0 && panelData[7] == 0) {
@@ -566,8 +571,8 @@ void dscKeybusInterface::processPanel_0xE6_0x1A() {
 void dscKeybusInterface::processPanel_0xEB() {
   if (!validCRC()) return;
   if (dscPartitions < 3) return;
-
-  processTime(3);
+  if (panelData[6] == 0 && panelData[7] == 0) 
+    processTime(3);
 
   byte partition;
   switch (panelData[2]) {

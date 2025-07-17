@@ -19,6 +19,62 @@
 
 #include "dscKeybus.h"
 
+byte dscKeybusInterface::dscClockPin;
+byte dscKeybusInterface::dscReadPin;
+byte dscKeybusInterface::dscWritePin;
+bool dscKeybusInterface::invertWrite;
+char dscKeybusInterface::writeKey;
+bool dscKeybusInterface::virtualKeypad;
+bool dscKeybusInterface::processModuleData;
+byte dscKeybusInterface::panelData[dscReadSize];
+byte dscKeybusInterface::panelByteCount;
+byte dscKeybusInterface::panelBitCount;
+volatile byte dscKeybusInterface::moduleData[dscReadSize];
+volatile bool dscKeybusInterface::moduleDataCaptured;
+volatile bool dscKeybusInterface::moduleDataDetected;
+volatile byte dscKeybusInterface::moduleByteCount;
+volatile byte dscKeybusInterface::moduleBitCount;
+volatile bool dscKeybusInterface::writeAlarm;
+volatile bool dscKeybusInterface::bufferOverflow;
+volatile byte dscKeybusInterface::panelBufferLength;
+volatile byte dscKeybusInterface::panelBuffer[dscBufferSize][dscReadSize];
+volatile byte dscKeybusInterface::panelBufferBitCount[dscBufferSize];
+volatile byte dscKeybusInterface::panelBufferByteCount[dscBufferSize];
+volatile byte dscKeybusInterface::isrPanelData[dscReadSize];
+volatile byte dscKeybusInterface::isrPanelByteCount;
+volatile byte dscKeybusInterface::isrPanelBitCount;
+volatile byte dscKeybusInterface::isrPanelBitTotal;
+volatile byte dscKeybusInterface::isrModuleData[dscReadSize];
+volatile byte dscKeybusInterface::moduleCmd;
+volatile byte dscKeybusInterface::moduleSubCmd;
+volatile unsigned long dscKeybusInterface::keybusTime;
+byte dscKeybusInterface::moduleSlots[6];
+moduleType dscKeybusInterface::modules[maxModules];
+byte dscKeybusInterface::moduleIdx;
+bool dscKeybusInterface::enableModuleSupervision;
+byte dscKeybusInterface::maxFields05; 
+byte dscKeybusInterface::maxFields11;
+
+writeQueueType dscKeybusInterface::writeQueue[writeQueueSize];
+Stream* dscKeybusInterface::stream;
+
+
+byte * dscKeybusInterface::writeBuffer;
+byte dscKeybusInterface::cmdD0buffer[6];
+bool dscKeybusInterface::pendingD0;
+bool dscKeybusInterface::pending70;
+bool dscKeybusInterface::pending6E;
+
+volatile byte dscKeybusInterface::writePartition;
+volatile byte dscKeybusInterface::writeBufferIdx;
+volatile byte dscKeybusInterface::writeBufferLength;
+volatile bool dscKeybusInterface::writeDataPending;
+byte dscKeybusInterface::writeDataBit;
+volatile pgmBufferType dscKeybusInterface::pgmBuffer;
+volatile byte dscKeybusInterface::inIdx;
+volatile byte dscKeybusInterface::outIdx;
+byte dscKeybusInterface::maxZones;
+byte dscKeybusInterface::panelVersion;
 
 #if defined(ESP32)
 portMUX_TYPE dscKeybusInterface::timer1Mux = portMUX_INITIALIZER_UNLOCKED;
@@ -35,12 +91,13 @@ const esp_timer_create_args_t timer0Parameters = {
 #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
 
-dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin) {
+dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   dscClockPin = setClockPin;
   dscReadPin = setReadPin;
   dscWritePin = setWritePin;
+  invertWrite=setInvertWrite;
   if (dscWritePin != 255) virtualKeypad = true;
-  //writeReady = false;
+  if (dscWritePin == dscReadPin) invertWrite=false;
   processRedundantData = true;
   displayTrailingBits = false;
   processModuleData = false;
@@ -64,17 +121,24 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
 
 }
 
-void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPin, byte setWritePin) {
+void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   
   if (setClockPin > 0 && setReadPin > 0 && setWritePin > 0) {  
     dscClockPin = setClockPin;
     dscReadPin = setReadPin;
     dscWritePin = setWritePin;
+    invertWrite=setInvertWrite;
+  }
+  if (dscWritePin == dscReadPin) {
+    pinMode(dscClockPin, INPUT_PULLUP);
+    pinMode(dscReadPin, INPUT_PULLUP);
+    invertWrite=false;
+  } else {
+    pinMode(dscClockPin, INPUT);
+    pinMode(dscReadPin, INPUT);  
+    if (virtualKeypad) pinMode(dscWritePin, OUTPUT);  
   }
   
-  pinMode(dscClockPin, INPUT);
-  pinMode(dscReadPin, INPUT);
-  if (virtualKeypad) pinMode(dscWritePin, OUTPUT);
   stream = & _stream;
 
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
@@ -88,11 +152,10 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   // esp32 timer1 calls dscDataInterrupt() from dscClockInterrupt()
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
-  timer1 = timerBegin(1, 80, true);
+  timer1 = timerBegin(1000000);
   timerStop(timer1);
-  timerAttachInterrupt(timer1, & dscDataInterrupt, true);
-  timerAlarmWrite(timer1, 250, true);
-  timerAlarmEnable(timer1);
+  timerAttachInterrupt(timer1, & dscDataInterrupt);
+  //timerAlarmEnable(timer1);
   #else // IDF4+
   esp_timer_create( & timer0Parameters, & timer0);
   #endif // ESP_IDF_VERSION_MAJOR
@@ -122,7 +185,7 @@ void dscKeybusInterface::stop() {
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
   if (timer1 != NULL)  {  
-    timerAlarmDisable(timer1);
+    //timerAlarmDisable(timer1);
     timerEnd(timer1);
   }
   #else // ESP-IDF 4+
@@ -511,6 +574,7 @@ dscKeybusInterface::dscClockInterrupt() {
   // 250us to read the data line.
 
   // AVR Timer1 calls dscDataInterrupt() via ISR(TIMER1_OVF_vect) when the Timer1 counter overflows
+  
   #if defined(ESP8266)
   timer1_write(1250);
 
@@ -518,6 +582,7 @@ dscKeybusInterface::dscClockInterrupt() {
   #elif defined(ESP32)
   #if ESP_IDF_VERSION_MAJOR < 444
   timerStart(timer1);
+  timerAlarm(timer1, 250, false,0);
   #else // IDF4+
   esp_timer_start_once(timer0, 250);
   #endif
@@ -526,14 +591,15 @@ dscKeybusInterface::dscClockInterrupt() {
 
   static unsigned long previousClockHighTime;
   static bool skipData = false;
-  #ifdef DEBOUNCE
-  static bool skipFirst = false;
-  #endif  
-
+  
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
-    if (virtualKeypad) 
-        digitalWrite(dscWritePin, LOW); // Restores the data line after a virtual keypad write
+    if (virtualKeypad ){
+        if (dscWritePin == dscReadPin && !writeDataPending)
+           pinMode(dscReadPin, INPUT_PULLUP);
+       
+        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
+    }
     previousClockHighTime = micros();
   }
 
@@ -548,47 +614,35 @@ dscKeybusInterface::dscClockInterrupt() {
       if (isrPanelBitTotal < 8) 
           skipData = true;
       else {
-      byte * pcmd=NULL;
-      static byte previousCmd05[dscReadSize];
-      static byte previousCmd1B[dscReadSize]; 
-      
-      switch (isrPanelData[0]) {
-        case 0x05: pcmd=previousCmd05;break;
-        case 0x1B: pcmd=previousCmd1B;break;
-     }
-      if (pcmd!=NULL) {
-        if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
-#ifdef DEBOUNCE            
-          if (skipFirst) 
-            skipFirst = false;
-           else 
-#endif              
-              skipData = true;
-        } 
-#ifdef DEBOUNCE        
-       else { // we skip the first cmd to remove spurious invalid ones during a changeover. Reported on a pc5005
-          skipData = true;
-          skipFirst = true;
-        }  
-#endif        
-       } else {
-#ifdef DEBOUNCE              
-          skipFirst = false;
-#endif          
+        byte * pcmd=NULL;
+        static byte previousCmd05[dscReadSize];
+        static byte previousCmd1B[dscReadSize]; 
+
+        switch (isrPanelData[0]) {
+          case 0x05: pcmd=previousCmd05;break;
+          case 0x1B: pcmd=previousCmd1B;break;
        }
-      }
+
+       if (pcmd!=NULL) {
+          if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
+            
+              skipData = true;  //3rd or more copy, so we skip
+          } 
+      
+       } 
+  
+     }
       // Stores new panel data in the panel buffer
-      if (panelBufferLength == dscBufferSize) 
-          bufferOverflow = true;
-      else if (!skipData && panelBufferLength < dscBufferSize) {
-        //for (byte i = 0; i < dscReadSize; i++) panelBuffer[panelBufferLength][i] = isrPanelData[i];
+     if (panelBufferLength == dscBufferSize) 
+        bufferOverflow = true;
+     else if (!skipData && panelBufferLength < dscBufferSize) {
         memcpy((void*)&panelBuffer[panelBufferLength],(void*)isrPanelData,dscReadSize);       
         panelBufferBitCount[panelBufferLength] = isrPanelBitTotal;
         panelBufferByteCount[panelBufferLength] = isrPanelByteCount;
         panelBufferLength++;
-      }
+     }
 
-      if (processModuleData) {
+     if (processModuleData) {
 
         // Stores new keypad and module data - this data is not buffered
         if (moduleDataDetected) {
@@ -596,16 +650,16 @@ dscKeybusInterface::dscClockInterrupt() {
           moduleSubCmd = isrPanelData[2];
           moduleDataDetected = false;
           moduleDataCaptured = true; // Sets a flag for handleModule()
-         // for (byte i = 0; i < dscReadSize; i++) moduleData[i] = isrModuleData[i];
+
           memcpy((void*)moduleData,(void*)isrModuleData,dscReadSize);
           moduleBitCount = isrPanelBitTotal;
           moduleByteCount = isrPanelByteCount;
         }
 
         // Resets the keypad and module capture data
-        //for (byte i = 0; i < dscReadSize; i++) isrModuleData[i] = 0;
+
         memset((void*)isrModuleData,0,dscReadSize);       
-      }
+     }
 
       // Resets the panel capture data and counters
       //for (byte i = 0; i < dscReadSize; i++) isrPanelData[i] = 0;
@@ -617,23 +671,28 @@ dscKeybusInterface::dscClockInterrupt() {
     }
 
     // Virtual keypad
-    if (virtualKeypad && writeDataPending && writeBufferIdx < writeBufferLength) {
-      static bool writeStart = false;
-      if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
+    if (virtualKeypad && writeDataPending ) {
 
+      static bool writeStart = false;
+
+      if (dscWritePin == dscReadPin )
+            pinMode(dscWritePin, OUTPUT);  
+        
+     // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
+      if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
-        if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, HIGH);
+        
+        if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) digitalWrite(dscWritePin, invertWrite);
 
         if (isrPanelBitCount == 7) {
           writeBufferIdx++;
 
-          if (writeBufferIdx == writeBufferLength) { //all bits written
+          if (writeBufferIdx == writeBufferLength ) { //all bits written
             writeStart = false;
-            writeDataPending = false;
+            writeDataPending = writeAlarm;
             if (writeAlarm) {
               writeAlarm = false;
               writeBufferIdx = 0; //reset byte counter to resend
-              writeDataPending = true;
             }
           }
         }
@@ -661,7 +720,6 @@ dscKeybusInterface::dscDataInterrupt() {
   #endif
   portENTER_CRITICAL( & timer1Mux);
   #endif
-
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
 
@@ -670,6 +728,7 @@ dscKeybusInterface::dscDataInterrupt() {
       if (isrPanelBitCount < 8) {
         // Data is captured in each byte by shifting left by 1 bit and writing to bit 0
         isrPanelData[isrPanelByteCount] <<= 1;
+
         if (digitalRead(dscReadPin) == HIGH) {
           isrPanelData[isrPanelByteCount] |= 1;
         }
@@ -686,7 +745,6 @@ dscKeybusInterface::dscDataInterrupt() {
 
       // Stores the stop bit by itself in byte 1 - this aligns the Keybus bytes with panelData[] bytes
       if (isrPanelBitTotal == 8) {
-
         isrPanelBitCount = 0;
         isrPanelByteCount++;
       }
@@ -728,6 +786,7 @@ dscKeybusInterface::dscDataInterrupt() {
       }
     }
   }
+
   #if defined(ESP32)
   portEXIT_CRITICAL( & timer1Mux);
   #endif
@@ -772,37 +831,37 @@ dscKeybusInterface::dscKeybusInterface::processPendingResponses(byte cmd) {
   case 0x0A:
   case 0x05:
     processPendingQueue(cmd);
-    return;
+    break;
 #if not defined(DISABLE_EXPANDER)    
   case 0x11:
-    if (!enableModuleSupervision) return;
-    updateWriteBuffer((byte * ) moduleSlots, 9,1,maxFields11 );
-    return; //setup supervisory slot response for devices
+    if (enableModuleSupervision) 
+        updateWriteBuffer((byte * ) moduleSlots, 9,1,maxFields11 );
+    break; //setup supervisory slot response for devices
   case 0x28:
     prepareModuleResponse(9, 9);
-    return; // the address will depend on the panel request command for the module
+    break;// the address will depend on the panel request command for the module
   case 0x33:
     prepareModuleResponse(10, 9);
-    return;
+    break;
   case 0x39:
     prepareModuleResponse(11, 9);
-    return;
+    break;
 #endif    
   case 0x70:
     if (pending70) {
         pending70=false;
         processCmd70();
     }
-    return; 
+    break; 
   case 0xD0:
     if (pendingD0) {
         pendingD0=false;
         updateWriteBuffer((byte *) cmdD0buffer,9,1,6);
     }
-    return;
+    break;
 
   default:
-    return;
+    break;
   }
 
 }
@@ -823,25 +882,26 @@ IRAM_ATTR
 dscKeybusInterface::processPendingResponses_0xE6(byte subcmd) {
 
   if (writeDataPending) return;
- 
+  byte addr;
   switch (subcmd) {
 
 #if not defined(DISABLE_EXPANDER)
   case 0x08:
-    prepareModuleResponse(12, 17);
-    break;
+     addr=12;
+     break;
   case 0x0A:
-    prepareModuleResponse(13, 17);;
+     addr=13;
     break;
   case 0x0C:
-    prepareModuleResponse(14, 17);;
+    addr=14;
     break;
   case 0x0E:
-    prepareModuleResponse(16, 17);;
+    addr=16;
     break;
 #endif
   default:
     return;
   }
+  prepareModuleResponse(addr,17);
 
 }

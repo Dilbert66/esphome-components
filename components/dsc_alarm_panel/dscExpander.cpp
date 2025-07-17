@@ -203,8 +203,7 @@ void dscKeybusInterface::setZoneFault(byte zone, bool fault) {
   byte channel = 0;
 
   //we try and do as much setup here so that the ISR functions do the mimimal work.
-  if (zone > maxZones) return;
-
+ 
   //get address and channel from zone range
   if (zone > 8 && zone < 17) {
     address = 9;
@@ -227,9 +226,8 @@ void dscKeybusInterface::setZoneFault(byte zone, bool fault) {
   } else if (zone > 56 && zone < 65) {
     address = 16;
     channel = zone - 57;
-  }
-
-  if (!address) return; //invalid zone, so return
+  } else
+    return;
 
   //see if we are emulating this zone range 
   int idx;
