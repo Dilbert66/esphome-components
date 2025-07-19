@@ -12,7 +12,7 @@
 #include "esphome/components/mqtt/mqtt_client.h"
 #endif
 
-#if defined(USE_API)
+#if defined(USE_API) || defined(USE_API_SERVICES)
 #include "esphome/components/api/custom_api_device.h"
 #endif
 
