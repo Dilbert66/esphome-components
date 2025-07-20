@@ -203,27 +203,38 @@ namespace esphome
 
 #define mlsize 2
 
+// binary, no zone
 #define TRSTATUS "tr"
 #define BATSTATUS "bat"
 #define ACSTATUS "ac"
+
+// binary, has numeric suffix with "_" prefix
 #define RDYSTATUS "rdy"
 #define ARMSTATUS "arm"
-#define SYSTEMSTATUS "ss"
-#define PARTITIONSTATUS "ps"
 #define ALARMSTATUS "al"
+#define FIRE "fa"
+#define CHIMESTATUS "chm"
+
+// text, no zone
+#define SYSTEMSTATUS "ss"
+#define ZONESTATUS "zs"
+#define TROUBLE "tr_msg"
+#define EVENT "evt"
+
+// text, has numeric suffix with "_" prefix
+#define PARTITIONSTATUS "ps"
 #define PARTITIONMSG "msg"
 #define LINE1 "ln1"
 #define LINE2 "ln2"
 #define BEEP "bp"
 #define ZONEALARM "za"
 #define USER "user"
-#define ZONESTATUS "zs"
-#define TROUBLE "tr_msg"
-#define EVENT "evt"
-#define FIRE "fa"
+
+// binary, has numeric suffix without "_"
 #define RELAY "r"
 #define ZONE "z"
-#define CHIMESTATUS "chm"
+
+// misc
 #define TRIGGERED "triggered"
 
 #if !defined(USE_API)
@@ -291,7 +302,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 #else
     if (zt->binary_sensor != NULL)
       zt->binary_sensor->publish_state(zt->open);
-   
+
 #endif
       }
 
