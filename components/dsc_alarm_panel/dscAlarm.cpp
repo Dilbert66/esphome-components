@@ -1668,18 +1668,20 @@ void DSCkeybushome::update()
           if (dsc.trouble)
           {
             publishPanelStatus(TRSTATUS, true, 0); // Trouble alarm tripped
+
           }
           else
           {
             publishPanelStatus(TRSTATUS, false, 0); // Trouble alarm restored
           }
-          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+
+          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch && (millis() - lastTroubleLightTime) > 20000)
           {
             partitionStatus[defaultPartition - 1].keyPressTime = millis();
             ESP_LOGD(TAG, "Fetching troubles..");
             dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
           }
-
+          lastTroubleLightTime=millis();
 
         }
 

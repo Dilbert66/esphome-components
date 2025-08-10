@@ -390,7 +390,8 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       unsigned long cmdWaitTime;
       bool extendedBufferFlag = false;
 
-      uint32_t refreshTimeSetting = 5 * 60 * 1000; // milliseconds - 5 minutes
+      uint32_t refreshTimeSetting = 10 * 60 * 1000; // milliseconds - 10 minutes
+      unsigned long lastTroubleLightTime;
       bool troubleFetch = true;
       byte debug;
       const char *laststatus;
