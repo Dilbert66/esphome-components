@@ -383,8 +383,8 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void stop();
 
     private:
-      std::vector<binary_sensor::BinarySensor *> bMap;
-      std::vector<text_sensor::TextSensor *> tMap;
+     esphome::StaticVector<binary_sensor::BinarySensor *,ESPHOME_ENTITY_BINARY_SENSOR_COUNT> bMap;
+     esphome::StaticVector<text_sensor::TextSensor *,ESPHOME_ENTITY_TEXT_SENSOR_COUNT> tMap;
 
       int activePartition = 1;
       unsigned long cmdWaitTime;

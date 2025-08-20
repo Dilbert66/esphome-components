@@ -191,8 +191,8 @@ class vistaECPHome : public time::RealTimeClock
         }
       }
 #if !defined(ARDUINO_MQTT)
-      std::vector<binary_sensor::BinarySensor *> bMap;
-      std::vector<text_sensor::TextSensor *> tMap;
+     esphome::StaticVector<binary_sensor::BinarySensor *,ESPHOME_ENTITY_BINARY_SENSOR_COUNT> bMap;
+     esphome::StaticVector<text_sensor::TextSensor *,ESPHOME_ENTITY_TEXT_SENSOR_COUNT> tMap;
 #endif
 
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
