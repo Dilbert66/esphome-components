@@ -29,6 +29,7 @@ CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
 CONF_TYPE_ID="code"
+CONF_STACK_SIZE="stack_size"
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -51,12 +52,23 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
-    cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),    
+    cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),  
+    cv.Optional(CONF_STACK_SIZE):cv.int_,  
     }
 )
 
 async def to_code(config):
-
+    if CORE.using_arduino:
+        #we double usual stack size
+        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+        if CORE.is_esp8266:
+            stack =f"SET_LOOP_TASK_STACK_SIZE(6 * 1024);"
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+        cg.add_global(cg.RawStatement(stack))
+        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+        cg.add_global(cg.RawStatement("#endif"))
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   

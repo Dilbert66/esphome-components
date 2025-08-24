@@ -309,7 +309,10 @@ async def to_code(config):
         stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
         cg.add_global(cg.RawStatement(stack))
+        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+        cg.add_global(cg.RawStatement("#endif"))
     if CORE.using_esp_idf: 
         stack=6
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:

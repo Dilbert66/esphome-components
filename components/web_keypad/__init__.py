@@ -127,6 +127,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_KEYPAD, default=True):cv.boolean,
             cv.Optional(CONF_KEYPAD_URL):cv.string,  
             cv.Optional(CONF_SERVICE_LAMBDA): cv.lambda_,
+            cv.Optional(CONF_STACK_SIZE):cv.int_,
             cv.Optional(CONF_ENABLE_PRIVATE_NETWORK_ACCESS, default=True): cv.boolean,
             cv.Optional(CONF_CERTIFICATE): cv.All(
                 cv.string
@@ -238,7 +239,10 @@ async def to_code(config):
         stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
         cg.add_global(cg.RawStatement(stack))
+        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+        cg.add_global(cg.RawStatement("#endif"))
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     cg.add_library("intrbiz/Crypto",None)
