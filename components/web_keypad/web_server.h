@@ -37,8 +37,6 @@ extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 namespace esphome {
 namespace web_keypad {
 
-#define KEYSIZE 32
-
 extern void * webServerPtr;
 /// Internal helper struct that is used to parse incoming URLs
 /*
@@ -75,8 +73,8 @@ struct SortingGroup {
 struct Credentials {
   std::string username="";
   std::string password="";
-  uint8_t token[KEYSIZE];
-  uint8_t hmackey[KEYSIZE];
+  uint8_t token[SHA256_SIZE];
+  uint8_t hmackey[SHA256HMAC_SIZE];
   bool crypt=false;
 };
 

@@ -52,6 +52,7 @@ CONF_SORTING_GROUPS = "sorting_groups"
 CONF_SORTING_WEIGHT = "sorting_weight"
 CONF_WEB_KEYPAD_ID="web_keypad_id"
 CONF_WEB_KEYPAD="web_keypad"
+CONF_STACK_SIZE="stack_size"
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
 WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
@@ -233,6 +234,11 @@ def add_resource_as_progmem(
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
+    if CORE.using_arduino:
+        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement(stack))
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     cg.add_library("intrbiz/Crypto",None)
