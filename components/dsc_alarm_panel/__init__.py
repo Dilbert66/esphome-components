@@ -61,8 +61,8 @@ async def to_code(config):
     if CORE.using_arduino:
         #we double usual stack size
         stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CORE.is_esp8266:
-            stack =f"SET_LOOP_TASK_STACK_SIZE(6 * 1024);"
+        # if CORE.is_esp8266:
+        #     stack =f"SET_LOOP_TASK_STACK_SIZE(6 * 1024);"
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
         cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
