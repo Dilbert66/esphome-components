@@ -51,6 +51,7 @@ void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bo
   {
     id += "_" + std::to_string(num);
   }
+  auto bMap=App.get_binary_sensors();
   auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
                          { return bs->get_object_id() == id; });
 
@@ -65,6 +66,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
   {
     id += "_" + std::to_string(num);
   }
+  auto tMap=App.get_text_sensors();
   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
@@ -90,6 +92,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     {
 #if !defined(ARDUINO_MQTT)
       std::string c = "z" + std::to_string(zone);
+      auto bMap=App.get_binary_sensors();
       auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
                              { return bs->get_object_id() == c; });
       if (it != bMap.end())
@@ -172,8 +175,8 @@ void DSCkeybushome::setup()
 #endif
 
 #if !defined(ARDUINO_MQTT)
-      bMap = App.get_binary_sensors();
-      tMap = App.get_text_sensors();
+     // bMap = App.get_binary_sensors();
+     // tMap = App.get_text_sensors();
 #endif
       eventStatusMsg.reserve(64);
       if (debug > 2)
@@ -4690,7 +4693,7 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
-      for (binary_sensor::BinarySensor *obj : bMap)
+      for (binary_sensor::BinarySensor *obj : App.get_binary_sensors())
       {
         createZoneFromObj(obj);
       }

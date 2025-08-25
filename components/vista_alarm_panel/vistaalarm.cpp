@@ -111,7 +111,7 @@ void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t num, boo
   std::string id = idstr;
   if (num)
     id += "_" + std::to_string(num);
-
+  auto bMap=App.get_binary_sensors();
   auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
                          { return bs->get_object_id() == id; });
   if (it != bMap.end() && (*it)->state != open)
@@ -123,6 +123,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   std::string id = idstr;
   if (num)
     id += "_" + std::to_string(num);
+  auto tMap=App.get_text_sensors();
   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
@@ -134,7 +135,8 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
-
+      auto bMap=App.get_binary_sensors();
+      auto tMap=App.get_text_sensors();
       for (auto obj : bMap)
       {
         createZoneFromObj(obj);
@@ -264,6 +266,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     {
 #if !defined(ARDUINO_MQTT)
       std::string c = "z" + std::to_string(zone);
+      auto bMap=App.get_binary_sensors();
       auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
                              { return bs->get_object_id() == c; });
       if (it != bMap.end())
@@ -494,8 +497,8 @@ void vistaECPHome::setup()
       //   the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
 
-      bMap = App.get_binary_sensors();
-      tMap = App.get_text_sensors();
+     // bMap = App.get_binary_sensors();
+     // tMap = App.get_text_sensors();
       set_update_interval(8); // set looptime to 8ms
       loadZones();
 #endif
@@ -1268,7 +1271,7 @@ void vistaECPHome::setup()
             checkTime = millis();
 #if not defined(ARDUINO_MQTT)
             UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
+           // ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
 #endif
           }
           if (millis() - dataTime > 60000)
