@@ -174,10 +174,6 @@ void DSCkeybushome::setup()
 {
 #endif
 
-#if !defined(ARDUINO_MQTT)
-     // bMap = App.get_binary_sensors();
-     // tMap = App.get_text_sensors();
-#endif
       eventStatusMsg.reserve(64);
       if (debug > 2)
         Serial.begin(115200);
@@ -226,7 +222,7 @@ void DSCkeybushome::setup()
       dsc.resetStatus();
       dsc.processModuleData = true;
 
-      if (dscClockPin && dscReadPin && dscWritePin)
+      if (dscClockPin && dscReadPin )
         dsc.begin(Serial, dscClockPin, dscReadPin, dscWritePin, invertWrite);
       else
         dsc.begin(Serial);

@@ -123,11 +123,15 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
 
 void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   
-  if (setClockPin > 0 && setReadPin > 0 && setWritePin > 0) {  
+  if (setClockPin > 0 && setReadPin > 0 ) {  
     dscClockPin = setClockPin;
     dscReadPin = setReadPin;
     dscWritePin = setWritePin;
     invertWrite=setInvertWrite;
+    if (dscWritePin != 255 && dscWritePin > 0) 
+       virtualKeypad = true;
+    else
+      virtualKeypad = false;
   }
   if (dscWritePin == dscReadPin) {
     pinMode(dscClockPin, INPUT_PULLUP);
@@ -596,7 +600,7 @@ dscKeybusInterface::dscClockInterrupt() {
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
         if (dscWritePin == dscReadPin && !writeDataPending)
-           pinMode(dscReadPin, INPUT_PULLUP);
+           pinMode(dscWritePin, INPUT_PULLUP);
        
         digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     }
