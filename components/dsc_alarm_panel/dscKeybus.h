@@ -198,11 +198,11 @@ class dscKeybusInterface {
     static volatile bool bufferOverflow;
 
     // Timer interrupt function to capture data - declared as public for use by AVR Timer1
-    #if ESP_IDF_VERSION_MAJOR < 444 // use old style timers. esp_idf high res timers don't work right on esphome 
+    //#if ESP_IDF_VERSION_MAJOR < 5// use old style timers. esp_idf high res timers don't work right on esphome 
     static void dscDataInterrupt();
-    #else
-    static void dscDataInterrupt( void* arg);
-    #endif
+    // #else
+    // static void dscDataInterrupt( void* arg);
+    // #endif
 
     // Deprecated
     bool processRedundantData;  // Controls if repeated periodic commands are processed and displayed (default: false)
@@ -368,9 +368,9 @@ class dscKeybusInterface {
     static void dscClockInterrupt();
     static bool redundantPanelData(byte   previousCmd[], volatile byte   currentCmd[], byte checkedBytes = dscReadSize);
     #if defined(ESP32)
-    #if ESP_IDF_VERSION_MAJOR < 444
+   // #if ESP_IDF_VERSION_MAJOR < 5
     static hw_timer_t * timer1;
-    #endif
+   // #endif
     static portMUX_TYPE timer1Mux;
     #endif
     static Stream* stream;
