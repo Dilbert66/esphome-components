@@ -90,7 +90,7 @@ hw_timer_t * dscKeybusInterface::timer1 = NULL;
     };
 
 gptimer_alarm_config_t alarm_config = {
-    .alarm_count = 1000000, // Set the actual alarm period, since the resolution is 1us, 1000000 represents 1s
+    .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 1000000 represents 1s
 };
   #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
@@ -589,7 +589,6 @@ dscKeybusInterface::dscClockInterrupt() {
   
   #if defined(ESP8266)
   timer1_write(1250);
-
   // esp32 timer1 calls dscDataInterrupt() in 250us
   #elif defined(ESP32)
   #if not defined(USE_ESP_IDF_TIMER)
