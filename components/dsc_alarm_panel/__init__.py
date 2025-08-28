@@ -30,6 +30,7 @@ CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
 CONF_TYPE_ID="code"
 CONF_STACK_SIZE="stack_size"
+CONF_USE_ESP_IDF_TIMER="use_esp_idf_timer"
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -53,7 +54,8 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
     cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),  
-    cv.Optional(CONF_STACK_SIZE):cv.int_,  
+    cv.Optional(CONF_STACK_SIZE):cv.int_, 
+    cv.Optional(CONF_USE_ESP_IDF_TIMER,default='false'):cv.boolean, 
     }
 )
 
@@ -81,7 +83,8 @@ async def to_code(config):
         cg.add_define("DISABLE_EXPANDER")
 
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN],config[CONF_INVERT_WRITE])
-
+    if config[CONF_USE_ESP_IDF_TIMER]:
+        cg.add_define("USE_ESP_IDF_TIMER")
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
     if CONF_MAXZONES in config:
