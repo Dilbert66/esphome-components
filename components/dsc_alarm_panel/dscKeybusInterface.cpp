@@ -90,7 +90,7 @@ hw_timer_t * dscKeybusInterface::timer1 = NULL;
     };
 
 gptimer_alarm_config_t alarm_config = {
-    .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 1000000 represents 1s
+    .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 250 is 250us
 };
   #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
@@ -636,13 +636,11 @@ dscKeybusInterface::dscClockInterrupt() {
        }
 
        if (pcmd!=NULL) {
-          if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
+          if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
             
-              skipData = true;  //3rd or more copy, so we skip
+              skipData = true;  
           } 
-      
        } 
-  
      }
       // Stores new panel data in the panel buffer
      if (panelBufferLength == dscBufferSize) 
