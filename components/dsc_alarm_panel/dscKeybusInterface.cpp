@@ -627,20 +627,25 @@ dscKeybusInterface::dscClockInterrupt() {
           skipData = true;
       else {
         byte * pcmd=NULL;
+        byte * bitcount=NULL;
         static byte previousCmd05[dscReadSize];
         static byte previousCmd1B[dscReadSize]; 
+        static byte previousCmd05BitCount;
+        static byte previousCmd1BBitCount;
 
         switch (isrPanelData[0]) {
-          case 0x05: pcmd=previousCmd05;break;
-          case 0x1B: pcmd=previousCmd1B;break;
+          case 0x05: pcmd=previousCmd05;bitcount=&previousCmd05BitCount;break;
+          case 0x1B: pcmd=previousCmd1B;bitcount=&previousCmd1BBitCount;break;
        }
 
        if (pcmd!=NULL) {
-          if (redundantPanelData(pcmd, isrPanelData, isrPanelByteCount)) {
+          if (*bitcount!=isrPanelBitTotal || redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
             
               skipData = true;  
           } 
+          *bitcount=isrPanelBitTotal;
        } 
+  
      }
       // Stores new panel data in the panel buffer
      if (panelBufferLength == dscBufferSize) 
