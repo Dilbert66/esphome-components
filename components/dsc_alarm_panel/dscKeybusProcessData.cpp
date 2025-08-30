@@ -183,6 +183,7 @@ void dscKeybusInterface::processPanelStatus() {
       case 0x02: {       // Stay/away zones open
         processReadyStatus(partitionIndex, true);
         processEntryDelayStatus(partitionIndex, false);
+        processExitDelayStatus(partitionIndex, false);
 
         armedStay[partitionIndex] = false;
         armedAway[partitionIndex] = false;
@@ -204,7 +205,7 @@ void dscKeybusInterface::processPanelStatus() {
         armedAway[partitionIndex] = false;
         armed[partitionIndex] = false;
         processAlarmStatus(partitionIndex, false);  
-        
+        processExitDelayStatus(partitionIndex, false);
         processReadyStatus(partitionIndex, false);
         processEntryDelayStatus(partitionIndex, false);
         break;
