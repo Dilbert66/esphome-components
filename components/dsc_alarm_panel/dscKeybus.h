@@ -29,7 +29,7 @@
 #include "esphome/core/defines.h"
 #endif
 
-#if  defined(USE_ESP_IDF_TIMER)
+#if defined(USE_ESP_IDF_TIMER)
 #include "driver/gptimer.h"
 #endif
 

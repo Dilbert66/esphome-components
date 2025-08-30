@@ -1404,6 +1404,7 @@ void DSCkeybushome::setup()
       static cmdCountType count05;
       static cmdCountType count1b;
 
+
       switch (dsc.panelData[0])
       {
       case 0x05:
@@ -1574,8 +1575,11 @@ void DSCkeybushome::update()
         bool valid05 = check051bCmd();
         if (debug > 1)
           printPacket("Panel ", dsc.panelData[0], dsc.panelData, 16);
-        if (!valid05)
+        if (!valid05) {
+          if (debug > 1)
+            ESP_LOGW(TAG,"Bit count mismatch. Ignoring cmd");
           return;
+        }
 #ifdef SERIALDEBUGCOMMANDS
         if (debug > 2)
         {
@@ -1775,7 +1779,7 @@ void DSCkeybushome::update()
           }
 
           const char *status = getPartitionStatus(partition);
-          if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus || forceRefresh))
+          if (status != NULL )
           {
             publishPartitionStatus(String(FPSTR(status)).c_str(), partition + 1);
           }

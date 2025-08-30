@@ -83,7 +83,7 @@ async def to_code(config):
         cg.add_define("DISABLE_EXPANDER")
 
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN],config[CONF_INVERT_WRITE])
-    if config[CONF_USE_ESP_IDF_TIMER]:
+    if config[CONF_USE_ESP_IDF_TIMER] and CORE.is_esp32:
         cg.add_define("USE_ESP_IDF_TIMER")
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
