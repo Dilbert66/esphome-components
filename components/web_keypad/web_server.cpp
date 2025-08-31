@@ -409,11 +409,17 @@ namespace esphome
 
             const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
             mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
-            for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s = s + 1024)
+            unsigned long timeout=millis();
+            for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-                mg_send(c, &buf[s], 1024);
-                mg_mgr_poll(&mgr, 2);
+              mg_mgr_poll(&mgr,2);
+              yield();
+              if(c->send.len > 5120) continue;
+              if (millis() - timeout > 10000) break;
+              mg_send(c, &buf[s], 1024);
+              s = s + 1024;
             }
+
             c->is_resp = 0;
         }
 #endif
