@@ -414,8 +414,8 @@ namespace esphome
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
               mg_mgr_poll(&mgr,2);
               yield();
-              if(c->send.len > 5120) continue;
               if (millis() - timeout > 10000) break;
+              if(c->send.len > 5120) continue; 
               mg_send(c, &buf[s], 1024);
               s = s + 1024;
             }
