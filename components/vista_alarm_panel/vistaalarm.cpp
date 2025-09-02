@@ -135,14 +135,13 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
 #if !defined(ARDUINO_MQTT)
     void vistaECPHome::loadZones()
     {
-      auto bMap=App.get_binary_sensors();
-      auto tMap=App.get_text_sensors();
-      for (auto obj : bMap)
+
+      for (auto obj : App.get_binary_sensors())
       {
         createZoneFromObj(obj);
       }
 
-      for (auto obj : tMap)
+      for (auto obj : App.get_text_sensors())
       {
         createZoneFromObj(obj);
       }
@@ -497,8 +496,6 @@ void vistaECPHome::setup()
       //   the system to not miss a response window on commands.
 #if !defined(ARDUINO_MQTT)
 
-     // bMap = App.get_binary_sensors();
-     // tMap = App.get_text_sensors();
       set_update_interval(8); // set looptime to 8ms
       loadZones();
 #endif

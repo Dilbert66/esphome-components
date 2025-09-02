@@ -6,13 +6,13 @@
 
 Vista *pointerToVistaClass;
 
-void IRAM_ATTR rxISRHandler()
+void rxISRHandler()
 {                                     // define global handler
   pointerToVistaClass->rxHandleISR(); // calls class member handler
 }
 
 #ifdef MONITORTX
-void IRAM_ATTR txISRHandler()
+void txISRHandler()
 {                                     // define global handler
   pointerToVistaClass->txHandleISR(); // calls class member handler
 }
@@ -734,6 +734,7 @@ void Vista::writeChars()
     tmpIdx = 2;
     uint8_t lastkpaddr = 0;
     uint8_t lastseq = 0;
+    retryAddr=0;
     while (charAvail() && sz < OUTBUFSIZE)
     {
       if (!(lastkpaddr == 0 || lastkpaddr == peekNextKpAddr()))
@@ -825,8 +826,9 @@ void Vista::writeChars()
   retries++;
   sending = false;
 }
+ 
 
-void IRAM_ATTR Vista::rxHandleISR()
+void Vista::rxHandleISR()
 {
   static byte b;
   static uint8_t ackAddr;
@@ -911,7 +913,7 @@ void IRAM_ATTR Vista::rxHandleISR()
 }
 
 #ifdef MONITORTX
-void IRAM_ATTR Vista::txHandleISR()
+void Vista::txHandleISR()
 {
   if ((!sending || !filterOwnTx) && rxState == sNormal)
     vistaSerialMonitor->rxRead();
