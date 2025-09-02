@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import CONF_ID
 from esphome.core import CORE
+import re
 import os
 import logging
     
@@ -28,7 +29,18 @@ CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
-CONF_TYPE_ID="code"
+
+CONF_TYPE_ID = "id_code"
+CONF_PARTITION="partition"
+CONF_ALARM_ID = "alarm_id"
+CONF_SORTING_GROUP_ID = "sorting_group_id"
+CONF_SORTING_WEIGHT = "sorting_weight"
+CONF_WEB_KEYPAD_ID="web_keypad_id"
+CONF_WEB_KEYPAD="web_keypad"
+BINARY_SENSOR_TYPE_ID_REGEX = "^(tr|bat|ac|rdy_\d+|arm_\d+|al_\d+|fa_\d+|chm_\d+|r\d+|z\d+)$"
+BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, bat, ac, rdy_<digits>, arm_<digits>, al_<digits>, fa_<digits>, chm_<digits>, r<digits>, z<digits>"
+TEXT_SENSOR_TYPE_ID_REGEX = "^(ss|zs|tr_msg|evt|ps_\d+|msg_\d+|ln1_\d+|ln2_\d+|bp_\d+|za_\d+|user_\d+)$"
+TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, za_<digits>, user_<digits>"
 CONF_STACK_SIZE="stack_size"
 CONF_USE_ESP_IDF_TIMER="use_esp_idf_timer"
 
@@ -56,6 +68,27 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),  
     cv.Optional(CONF_STACK_SIZE):cv.int_, 
     cv.Optional(CONF_USE_ESP_IDF_TIMER,default='false'):cv.boolean, 
+    }
+)
+
+web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+
+WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
+    {
+         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
+             {
+                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
+                cv.Optional(CONF_SORTING_WEIGHT): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.float_,
+                ),
+                cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
+                    cv.requires_component("web_keypad"),
+                    cv.use_id(cg.int_),
+                ),
+             }
+         )
     }
 )
 
@@ -109,12 +142,32 @@ async def to_code(config):
   
     await cg.register_component(var, config)
    
-
-    
 def real_clean_build():
     import shutil
     build_dir = CORE.relative_build_path("")
     if os.path.isdir(build_dir):
         _LOGGER.info("Deleting %s", build_dir)
         shutil.rmtree(build_dir)
-    
+
+def validate_id_code(value, is_binary_sensor=True):
+    """Validate the type_id for binary or text sensors."""
+    if is_binary_sensor:
+        regex = BINARY_SENSOR_TYPE_ID_REGEX
+        description = BINARY_SENSOR_TYPE_ID_DESCRIPTION
+    else:
+        regex = TEXT_SENSOR_TYPE_ID_REGEX
+        description = TEXT_SENSOR_TYPE_ID_DESCRIPTION
+
+    if not value or not re.fullmatch(regex, value):
+        raise cv.Invalid(f"Invalid type_id '{value}'. Allowed formats: {description}")
+        
+    return value
+
+def generate_validate_sensor_config(is_binary_sensor=True):
+    """Generate a validation function for sensor configuration."""
+    def validate_sensor_config(config):
+        id_val = config.get(CONF_TYPE_ID) or config[CONF_ID].id
+        validate_id_code(id_val, is_binary_sensor)
+        return config
+
+    return validate_sensor_config
