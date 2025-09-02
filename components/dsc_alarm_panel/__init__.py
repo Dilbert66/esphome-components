@@ -29,6 +29,7 @@ CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
+
 CONF_TYPE_ID = "id_code"
 CONF_PARTITION="partition"
 CONF_ALARM_ID = "alarm_id"
@@ -36,11 +37,12 @@ CONF_SORTING_GROUP_ID = "sorting_group_id"
 CONF_SORTING_WEIGHT = "sorting_weight"
 CONF_WEB_KEYPAD_ID="web_keypad_id"
 CONF_WEB_KEYPAD="web_keypad"
-
 BINARY_SENSOR_TYPE_ID_REGEX = "^(tr|bat|ac|rdy_\d+|arm_\d+|al_\d+|fa_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, bat, ac, rdy_<digits>, arm_<digits>, al_<digits>, fa_<digits>, chm_<digits>, r<digits>, z<digits>"
 TEXT_SENSOR_TYPE_ID_REGEX = "^(ss|zs|tr_msg|evt|ps_\d+|msg_\d+|ln1_\d+|ln2_\d+|bp_\d+|za_\d+|user_\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, za_<digits>, user_<digits>"
+CONF_STACK_SIZE="stack_size"
+CONF_USE_ESP_IDF_TIMER="use_esp_idf_timer"
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -51,7 +53,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_DEFAULTPARTITION, default=""): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL, default=""): cv.int_, 
     cv.Optional(CONF_READPIN, default=""): cv.int_, 
-    cv.Optional(CONF_WRITEPIN, default=""): cv.int_, 
+    cv.Optional(CONF_WRITEPIN, default="255"): cv.int_, 
     cv.Optional(CONF_CLOCKPIN, default=""): cv.int_,
     cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
@@ -63,7 +65,9 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_CLEAN,default='false'): cv.boolean,  
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
-    cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),    
+    cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),  
+    cv.Optional(CONF_STACK_SIZE):cv.int_, 
+    cv.Optional(CONF_USE_ESP_IDF_TIMER,default='false'):cv.boolean, 
     }
 )
 
@@ -89,7 +93,15 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-
+    if CORE.using_arduino and CORE.is_esp32:
+        #we double usual stack size
+        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+        cg.add_global(cg.RawStatement(stack))
+        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+        cg.add_global(cg.RawStatement("#endif"))
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
@@ -104,7 +116,8 @@ async def to_code(config):
         cg.add_define("DISABLE_EXPANDER")
 
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_CLOCKPIN],config[CONF_READPIN],config[CONF_WRITEPIN],config[CONF_INVERT_WRITE])
-
+    if config[CONF_USE_ESP_IDF_TIMER] and CORE.is_esp32:
+        cg.add_define("USE_ESP_IDF_TIMER")
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
     if CONF_MAXZONES in config:

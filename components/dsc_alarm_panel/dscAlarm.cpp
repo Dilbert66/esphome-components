@@ -51,6 +51,7 @@ void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bo
   {
     id += "_" + std::to_string(num);
   }
+  auto bMap=App.get_binary_sensors();
   auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
                          { return bs->get_object_id() == id; });
 
@@ -65,6 +66,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
   {
     id += "_" + std::to_string(num);
   }
+  auto tMap=App.get_text_sensors();
   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
@@ -90,6 +92,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     {
 #if !defined(ARDUINO_MQTT)
       std::string c = "z" + std::to_string(zone);
+      auto bMap=App.get_binary_sensors();
       auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
                              { return bs->get_object_id() == c; });
       if (it != bMap.end())
@@ -171,10 +174,6 @@ void DSCkeybushome::setup()
 {
 #endif
 
-#if !defined(ARDUINO_MQTT)
-      bMap = App.get_binary_sensors();
-      tMap = App.get_text_sensors();
-#endif
       eventStatusMsg.reserve(64);
       if (debug > 2)
         Serial.begin(115200);
@@ -223,7 +222,7 @@ void DSCkeybushome::setup()
       dsc.resetStatus();
       dsc.processModuleData = true;
 
-      if (dscClockPin && dscReadPin && dscWritePin)
+      if (dscClockPin && dscReadPin )
         dsc.begin(Serial, dscClockPin, dscReadPin, dscWritePin, invertWrite);
       else
         dsc.begin(Serial);
@@ -1405,6 +1404,7 @@ void DSCkeybushome::setup()
       static cmdCountType count05;
       static cmdCountType count1b;
 
+
       switch (dsc.panelData[0])
       {
       case 0x05:
@@ -1575,8 +1575,11 @@ void DSCkeybushome::update()
         bool valid05 = check051bCmd();
         if (debug > 1)
           printPacket("Panel ", dsc.panelData[0], dsc.panelData, 16);
-        if (!valid05)
+        if (!valid05) {
+          if (debug > 1)
+            ESP_LOGW(TAG,"Bit count mismatch. Ignoring cmd");
           return;
+        }
 #ifdef SERIALDEBUGCOMMANDS
         if (debug > 2)
         {
@@ -1668,18 +1671,20 @@ void DSCkeybushome::update()
           if (dsc.trouble)
           {
             publishPanelStatus(TRSTATUS, true, 0); // Trouble alarm tripped
+
           }
           else
           {
             publishPanelStatus(TRSTATUS, false, 0); // Trouble alarm restored
           }
-          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch)
+
+          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch && (millis() - lastTroubleLightTime) > 20000)
           {
             partitionStatus[defaultPartition - 1].keyPressTime = millis();
             ESP_LOGD(TAG, "Fetching troubles..");
             dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
           }
-
+          lastTroubleLightTime=millis();
 
         }
 
@@ -1774,7 +1779,7 @@ void DSCkeybushome::update()
           }
 
           const char *status = getPartitionStatus(partition);
-          if (status != NULL && (status != partitionStatus[partition].lastPartitionStatus || forceRefresh))
+          if (status != NULL )
           {
             publishPartitionStatus(String(FPSTR(status)).c_str(), partition + 1);
           }
@@ -4688,7 +4693,7 @@ void DSCkeybushome::update()
     void DSCkeybushome::loadZones()
     {
 
-      for (binary_sensor::BinarySensor *obj : bMap)
+      for (binary_sensor::BinarySensor *obj : App.get_binary_sensors())
       {
         createZoneFromObj(obj);
       }

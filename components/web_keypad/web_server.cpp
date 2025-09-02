@@ -41,8 +41,6 @@ namespace esphome
     namespace web_keypad
     {
 
-#define KEYSIZE 32
-
         static const char *const TAG = "web_server";
         void *webServerPtr;
 
@@ -411,11 +409,17 @@ namespace esphome
 
             const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
             mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
-            for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s = s + 1024)
+            unsigned long timeout=millis();
+            for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-                mg_send(c, &buf[s], 1024);
-                mg_mgr_poll(&mgr, 2);
+              mg_mgr_poll(&mgr,2);
+              yield();
+              if (millis() - timeout > 10000) break;
+              if(c->send.len > 5120) continue; 
+              mg_send(c, &buf[s], 1024);
+              s = s + 1024;
             }
+
             c->is_resp = 0;
         }
 #endif
@@ -2576,6 +2580,7 @@ namespace esphome
 
         void WebServer::push(msgType mt, const char *data, uint32_t id, uint32_t reconnect)
         {
+
             struct mg_connection *c;
             std::string type;
             switch (mt)
@@ -2599,6 +2604,7 @@ namespace esphome
                 return;
             }
 
+
             std::string newdata;
 
             if (credentials_.crypt && strlen(data) > 0)
@@ -2616,9 +2622,9 @@ namespace esphome
                 {
                     // ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
                     if (id && reconnect)
-                        mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), id, reconnect, type.c_str(), newdata.c_str());
+                        mg_printf(c, "id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n", id, reconnect, type.c_str(), newdata.c_str());
                     else
-                        mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), type.c_str(), newdata.c_str());
+                        mg_printf(c, "event: %s\r\ndata: %s\r\n\r\n", type.c_str(), newdata.c_str());
 
                     if (c->send.len > 15000)
                         c->is_closing = 1; // dead connection. kill it.
@@ -2762,26 +2768,29 @@ namespace esphome
         const std::string WebServer::encrypt(const char *message)
         {
             int i = strlen(message);
-            // ESP_LOGD(TAG,"len=%d",i);
+
             if (!i)
                 return "";
-            int buf = round(i / 16) * 16;
-            int length = (buf <= i) ? buf + 16 : buf;
-            uint8_t encrypted[length];
-            uint8_t iv[16];
-            random_bytes(iv, 16);
 
-            std::string eiv = base64_encode(iv, 16);
+            int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
+            int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
+            uint8_t encrypted[length+1];
+            uint8_t iv[AES_IV_SIZE +1];
+            random_bytes(iv, AES_IV_SIZE );
+
+            std::string eiv = base64_encode(iv, AES_IV_SIZE );
 
             AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
-            aes.process((uint8_t *)message, &encrypted[0], i);
+            aes.process((uint8_t *)message, encrypted, i);
+ 
+            std::string em = base64_encode(encrypted, length);
+            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
 
-            std::string em = base64_encode(&encrypted[0], length);
-
-            SHA256HMAC hmac(credentials_.hmackey, 32);
             hmac.doUpdate(eiv.c_str(), eiv.length());
+ 
             hmac.doUpdate(em.c_str(), em.length());
-            uint8_t authCode[SHA256HMAC_SIZE];
+  
+            uint8_t authCode[SHA256HMAC_SIZE+1];
             hmac.doFinal(authCode);
 
             // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
@@ -2789,8 +2798,10 @@ namespace esphome
             std::string enc = "{\"iv\":\"" + eiv + "\",\"data\":\"";
             enc.append(em);
             enc.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
-            // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
-            // ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
+           //  ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
+           //ESP_LOGD(TAG,"message size=%d,encoded=%s",enc.length(),enc.c_str());
+           //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
+
             return enc;
         }
 
@@ -2846,7 +2857,7 @@ namespace esphome
             uint8_t data_decoded[strlen(data)];
             uint8_t iv_decoded[strlen(iv)];
 
-            SHA256HMAC hmac(credentials_.hmackey, 32);
+            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {

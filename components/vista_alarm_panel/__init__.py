@@ -49,6 +49,7 @@ CONF_INPUT_RX="input_mode_rx"
 CONF_AUTOPOPULATE="autopopulate"
 CONF_USEASYNC="use_async_polling"
 CONF_TYPE_ID="code"
+CONF_STACK_SIZE="stack_size"
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -91,11 +92,20 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_AUTOPOPULATE,default='false'): cv.boolean,  
     cv.Optional(CONF_INPUT_RX,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
     cv.Optional(CONF_INPUT_MON,default='INPUT'): cv.one_of('INPUT_PULLUP','INPUT_PULLDOWN','INPUT',upper=True),
-  
+    cv.Optional(CONF_STACK_SIZE):cv.int_,
     }
 )
 
 async def to_code(config):
+    if CORE.using_arduino and CORE.is_esp32:
+        #we double usual stack size
+        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+        cg.add_global(cg.RawStatement(stack))
+        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+        cg.add_global(cg.RawStatement("#endif"))
 
     cg.add_define("USE_VISTA_PANEL")  
     if CORE.is_esp8266:
