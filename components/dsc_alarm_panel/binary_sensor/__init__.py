@@ -4,53 +4,28 @@ from esphome.const import CONF_ID
 from esphome.helpers import sanitize, snake_case
 from esphome.components import binary_sensor
 
-from .. import component_ns,AlarmComponent
+from .. import component_ns, AlarmComponent, validate_id_code, generate_validate_sensor_config
+from .. import CONF_TYPE_ID, CONF_ALARM_ID, CONF_WEB_KEYPAD, CONF_PARTITION, WEBKEYPAD_SORTING_SCHEMA
 
-CONF_TYPE_ID = "id_code"
-CONF_PARTITION="partition"
-CONF_ALARM_ID = "alarm_id"
-CONF_SORTING_GROUP_ID = "sorting_group_id"
-CONF_SORTING_WEIGHT = "sorting_weight"
-CONF_WEB_KEYPAD_ID="web_keypad_id"
-CONF_WEB_KEYPAD="web_keypad"
 
 AlarmBinarySensor = component_ns.class_(
     "AlarmBinarySensor", binary_sensor.BinarySensor, cg.Component
 )
 
-web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
-WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
 
-WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
-    {
-         cv.Optional(CONF_WEB_KEYPAD): cv.Schema(
-             {
-                cv.OnlyWith(CONF_WEB_KEYPAD_ID, "web_keypad"): cv.use_id(WebKeypad),
-                cv.Optional(CONF_SORTING_WEIGHT): cv.All(
-                    cv.requires_component("web_keypad"),
-                    cv.float_,
-                ),
-                cv.Optional(CONF_SORTING_GROUP_ID): cv.All(
-                    cv.requires_component("web_keypad"),
-                    cv.use_id(cg.int_),
-                ),
-             }
-         )
-    }
-)
 
-CONFIG_SCHEMA = (
+CONFIG_SCHEMA = cv.All(
     binary_sensor.binary_sensor_schema(AlarmBinarySensor)
     .extend(
         {
-            cv.Optional(CONF_TYPE_ID, default=""): cv.string_strict,  
+            cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
             cv.Optional(CONF_PARTITION,default=0): cv.int_,
             cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
-    .extend(WEBKEYPAD_SORTING_SCHEMA)
-
+    .extend(WEBKEYPAD_SORTING_SCHEMA),
+    generate_validate_sensor_config(True) # True indicates this is a binary sensor
 
 )
 

@@ -175,7 +175,8 @@ public:
     }
     void addModule(byte addr);
     bool dataReceived;
-    void IRAM_ATTR rxHandleISR(), txHandleISR();
+    void IRAM_ATTR rxHandleISR();
+    void IRAM_ATTR txHandleISR();
     bool areEqual(char *, char *, uint8_t);
     bool keybusConnected, connected;
     int toDec(int);
