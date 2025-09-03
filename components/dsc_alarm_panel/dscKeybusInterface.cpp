@@ -882,6 +882,7 @@ dscKeybusInterface::dscKeybusInterface::processPendingResponses(byte cmd) {
   }
 
 }
+
 void
 IRAM_ATTR
 dscKeybusInterface::processPendingQueue(byte cmd) {

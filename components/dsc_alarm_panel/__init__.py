@@ -5,6 +5,8 @@ from esphome.core import CORE
 import re
 import os
 import logging
+from esphome.helpers import sanitize, snake_case
+
     
 _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
@@ -29,7 +31,8 @@ CONF_REFRESHTIME="trouble_fetch_update_time"
 CONF_TROUBLEFETCH="trouble_fetch"
 CONF_TROUBLEFETCHCMD="trouble_fetch_cmd"
 CONF_EVENTFORMAT="event_format"
-
+CONF_STACK_SIZE="stack_size"
+CONF_USE_ESP_IDF_TIMER="use_esp_idf_timer"
 CONF_TYPE_ID = "id_code"
 CONF_PARTITION="partition"
 CONF_ALARM_ID = "alarm_id"
@@ -37,12 +40,11 @@ CONF_SORTING_GROUP_ID = "sorting_group_id"
 CONF_SORTING_WEIGHT = "sorting_weight"
 CONF_WEB_KEYPAD_ID="web_keypad_id"
 CONF_WEB_KEYPAD="web_keypad"
+
 BINARY_SENSOR_TYPE_ID_REGEX = "^(tr|bat|ac|rdy_\d+|arm_\d+|al_\d+|fa_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, bat, ac, rdy_<digits>, arm_<digits>, al_<digits>, fa_<digits>, chm_<digits>, r<digits>, z<digits>"
 TEXT_SENSOR_TYPE_ID_REGEX = "^(ss|zs|tr_msg|evt|ps_\d+|msg_\d+|ln1_\d+|ln2_\d+|bp_\d+|za_\d+|user_\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, za_<digits>, user_<digits>"
-CONF_STACK_SIZE="stack_size"
-CONF_USE_ESP_IDF_TIMER="use_esp_idf_timer"
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -92,6 +94,29 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
     }
 )
 
+
+def validate_id_code(value, is_binary_sensor=True):
+    """Validate the type_id for binary or text sensors."""
+    if is_binary_sensor:
+        regex = BINARY_SENSOR_TYPE_ID_REGEX
+        description = BINARY_SENSOR_TYPE_ID_DESCRIPTION
+    else:
+        regex = TEXT_SENSOR_TYPE_ID_REGEX
+        description = TEXT_SENSOR_TYPE_ID_DESCRIPTION
+
+    if not value or not re.fullmatch(regex, value):
+        raise cv.Invalid(f"Invalid type_id '{value}'. Allowed formats: {description}")
+
+    return value
+
+ALARM_SENSOR_SCHEMA = cv.Schema(
+    {
+        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
+        cv.Optional(CONF_PARTITION,default=0): cv.int_,
+        cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
+    }
+)
+
 async def to_code(config):
     if CORE.using_arduino and CORE.is_esp32:
         #we double usual stack size
@@ -110,8 +135,6 @@ async def to_code(config):
     old_dir = CORE.relative_build_path("src")
     if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
         real_clean_build()
-    # if config[CONF_DEBOUNCE]:
-    #    cg.add_build_flag("-DDEBOUNCE")  
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
 
@@ -142,6 +165,7 @@ async def to_code(config):
   
     await cg.register_component(var, config)
    
+   
 def real_clean_build():
     import shutil
     build_dir = CORE.relative_build_path("")
@@ -149,19 +173,26 @@ def real_clean_build():
         _LOGGER.info("Deleting %s", build_dir)
         shutil.rmtree(build_dir)
 
-def validate_id_code(value, is_binary_sensor=True):
-    """Validate the type_id for binary or text sensors."""
-    if is_binary_sensor:
-        regex = BINARY_SENSOR_TYPE_ID_REGEX
-        description = BINARY_SENSOR_TYPE_ID_DESCRIPTION
-    else:
-        regex = TEXT_SENSOR_TYPE_ID_REGEX
-        description = TEXT_SENSOR_TYPE_ID_DESCRIPTION
+async def setup_alarm_sensor(var, config,is_binary_sensor=True):
+    """Set up custom properties for an alarm sensor"""
+    paren = await cg.get_variable(config[CONF_ALARM_ID])
 
-    if not value or not re.fullmatch(regex, value):
-        raise cv.Invalid(f"Invalid type_id '{value}'. Allowed formats: {description}")
-        
-    return value
+    if config.get(CONF_TYPE_ID):
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
+        if is_binary_sensor:
+            cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
+    elif config[CONF_ID] and config[CONF_ID].is_manual:
+        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
+        if is_binary_sensor:
+            cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
+    if is_binary_sensor:
+        cg.add(var.publish_state(False))
+        cg.add(var.set_trigger_on_initial_state(True))
+    else:
+        cg.add(var.publish_state(" "))
+    if web_keypad_config := config.get(CONF_WEB_KEYPAD):
+        from esphome.components import web_keypad
+        await web_keypad.add_entity_config(var, web_keypad_config)
 
 def generate_validate_sensor_config(is_binary_sensor=True):
     """Generate a validation function for sensor configuration."""

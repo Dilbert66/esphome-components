@@ -207,8 +207,6 @@ namespace esphome
 #define TRSTATUS "tr"
 #define BATSTATUS "bat"
 #define ACSTATUS "ac"
-
-// binary, has numeric suffix with "_" prefix
 #define RDYSTATUS "rdy"
 #define ARMSTATUS "arm"
 #define ALARMSTATUS "al"
@@ -223,6 +221,7 @@ namespace esphome
 
 // text, has numeric suffix with "_" prefix
 #define PARTITIONSTATUS "ps"
+#define ALARMSTATUS "al"
 #define PARTITIONMSG "msg"
 #define LINE1 "ln1"
 #define LINE2 "ln2"
@@ -233,8 +232,9 @@ namespace esphome
 // binary, has numeric suffix without "_"
 #define RELAY "r"
 #define ZONE "z"
+#define CHIMESTATUS "chm"
 
-// misc
+//misc
 #define TRIGGERED "triggered"
 
 #if !defined(USE_API)
@@ -302,7 +302,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 #else
     if (zt->binary_sensor != NULL)
       zt->binary_sensor->publish_state(zt->open);
-
+   
 #endif
       }
 

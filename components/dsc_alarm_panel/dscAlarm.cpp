@@ -1397,64 +1397,64 @@ void DSCkeybushome::setup()
       }
     }
 
-    bool DSCkeybushome::check051bCmd()
-    {
+    // bool DSCkeybushome::check051bCmd()
+    // {
 
-      cmdCountType *cmdCount;
-      static cmdCountType count05;
-      static cmdCountType count1b;
+    //   cmdCountType *cmdCount;
+    //   static cmdCountType count05;
+    //   static cmdCountType count1b;
 
 
-      switch (dsc.panelData[0])
-      {
-      case 0x05:
-        cmdCount = &count05;
-        break;
-      case 0x1b:
-        cmdCount = &count1b;
-        break;
-      default:
-        return true;
-      }
+    //   switch (dsc.panelData[0])
+    //   {
+    //   case 0x05:
+    //     cmdCount = &count05;
+    //     break;
+    //   case 0x1b:
+    //     cmdCount = &count1b;
+    //     break;
+    //   default:
+    //     return true;
+    //   }
 
-      if (cmdCount->bcount > 0 && cmdCount->bcount != dsc.panelBitCount)
-      {
-        dsc.panelData[11] = 0x77;
-        cmdCount->ecount = cmdCount->ecount + 1;
-        if (cmdCount->ecount > 1)
-        {
-          cmdCount->ccount = 0; // get a new updated bit count since we have more than 1 error count in a row
-          cmdCount->bcount = 0;
-          cmdCount->lbcount = 0;
-          cmdCount->ecount = 0;
-        }
-        return false;
-      }
-      else
-      {
-        cmdCount->ecount = 0; // matching bit count reset error count
-        if (cmdCount->ccount < 3)
-        {
-          if (cmdCount->lbcount == dsc.panelBitCount || cmdCount->lbcount == 0)
-          {
-            cmdCount->ccount = cmdCount->ccount + 1;
-            if (cmdCount->ccount >= 3)
-              cmdCount->bcount = dsc.panelBitCount;
-          }
-          else
-          {
-            dsc.panelData[11] = 0x76;
-            cmdCount->ccount = 0; // reset since we did not get 3 in a row
-            cmdCount->bcount = 0;
-            cmdCount->lbcount = 0;
-            return false;
-          }
-          cmdCount->lbcount = dsc.panelBitCount;
-        }
-      }
+    //   if (cmdCount->bcount > 0 && cmdCount->bcount != dsc.panelBitCount)
+    //   {
+    //     dsc.panelData[11] = 0x77;
+    //     cmdCount->ecount = cmdCount->ecount + 1;
+    //     if (cmdCount->ecount > 1)
+    //     {
+    //       cmdCount->ccount = 0; // get a new updated bit count since we have more than 1 error count in a row
+    //       cmdCount->bcount = 0;
+    //       cmdCount->lbcount = 0;
+    //       cmdCount->ecount = 0;
+    //     }
+    //     return false;
+    //   }
+    //   else
+    //   {
+    //     cmdCount->ecount = 0; // matching bit count reset error count
+    //     if (cmdCount->ccount < 3)
+    //     {
+    //       if (cmdCount->lbcount == dsc.panelBitCount || cmdCount->lbcount == 0)
+    //       {
+    //         cmdCount->ccount = cmdCount->ccount + 1;
+    //         if (cmdCount->ccount >= 3)
+    //           cmdCount->bcount = dsc.panelBitCount;
+    //       }
+    //       else
+    //       {
+    //         dsc.panelData[11] = 0x76;
+    //         cmdCount->ccount = 0; // reset since we did not get 3 in a row
+    //         cmdCount->bcount = 0;
+    //         cmdCount->lbcount = 0;
+    //         return false;
+    //       }
+    //       cmdCount->lbcount = dsc.panelBitCount;
+    //     }
+    //   }
 
-      return true;
-    }
+    //   return true;
+    // }
 
 #if defined(ARDUINO_MQTT)
 
@@ -1572,14 +1572,14 @@ void DSCkeybushome::update()
           }
         }
 
-        bool valid05 = check051bCmd();
+     //   bool valid05 = check051bCmd();
         if (debug > 1)
           printPacket("Panel ", dsc.panelData[0], dsc.panelData, 16);
-        if (!valid05) {
-          if (debug > 1)
-            ESP_LOGW(TAG,"Bit count mismatch. Ignoring cmd");
-          return;
-        }
+        // if (!valid05) {
+        //   if (debug > 1)
+        //     ESP_LOGW(TAG,"Bit count mismatch. Ignoring cmd");
+        //   return;
+        // }
 #ifdef SERIALDEBUGCOMMANDS
         if (debug > 2)
         {
