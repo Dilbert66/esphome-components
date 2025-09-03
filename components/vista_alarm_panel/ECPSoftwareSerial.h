@@ -160,7 +160,7 @@ private:
     int m_rxCurBit; // 0 - 7: data bits. -1: start bit. 8: stop bit.
     uint8_t m_rxCurByte = 0;
 
-    static inline uint32_t microsToTicks(uint32_t micros) __attribute__((always_inline))
+    static inline uint32_t  IRAM_ATTR microsToTicks(uint32_t micros) __attribute__((always_inline))
     {
         return micros << 1;
     }

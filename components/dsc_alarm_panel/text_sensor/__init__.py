@@ -4,7 +4,7 @@ from esphome.components import text_sensor
 from esphome.helpers import sanitize, snake_case
 
 from esphome.const import CONF_ID
-from .. import component_ns, AlarmComponent, validate_id_code, generate_validate_sensor_config, CONF_TYPE_ID
+from .. import component_ns, AlarmComponent, validate_id_code, generate_validate_sensor_config
 from .. import CONF_TYPE_ID, CONF_ALARM_ID, CONF_WEB_KEYPAD, CONF_PARTITION, WEBKEYPAD_SORTING_SCHEMA
 
 AlarmTextSensor = component_ns.class_(
