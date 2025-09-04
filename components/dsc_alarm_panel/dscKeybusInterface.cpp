@@ -82,6 +82,8 @@ portMUX_TYPE dscKeybusInterface::timer1Mux = portMUX_INITIALIZER_UNLOCKED;
 #if not defined(USE_ESP_IDF_TIMER)
 hw_timer_t * dscKeybusInterface::timer1 = NULL;
  #else // ESP-IDF 5+
+//esp_timer_handle_t timer;
+
    gptimer_handle_t gptimer = NULL;
    gptimer_config_t timer_config = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
@@ -92,6 +94,7 @@ hw_timer_t * dscKeybusInterface::timer1 = NULL;
 gptimer_alarm_config_t alarm_config = {
     .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 250 is 250us
 };
+
   #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
 
@@ -163,14 +166,18 @@ void dscKeybusInterface::begin(Stream & _stream,byte setClockPin, byte setReadPi
   timer1 = timerBegin(1000000);
   timerAttachInterrupt(timer1, & dscDataInterrupt);
    #else // IDF5+
+  // const esp_timer_create_args_t timer_args = {
+  //     .callback = &dscDataInterrupt
+  //     };
+  // esp_timer_create(&timer_args, &timer);
+ 
   gptimer_new_timer(&timer_config, &gptimer);
+  gptimer_set_alarm_action(gptimer, &alarm_config);
   gptimer_event_callbacks_t cbs = {
     .on_alarm = dscDataInterrupt, // Call the user callback function when the alarm event occurs
   };
   gptimer_register_event_callbacks(gptimer, &cbs, NULL);
   gptimer_enable(gptimer);
-  gptimer_set_alarm_action(gptimer, &alarm_config);
-  gptimer_start(gptimer);
    #endif // ESP_IDF_VERSION_MAJOR
   #endif // ESP32
   // Generates an interrupt when the Keybus clock rises or falls - requires a hardware interrupt pin on Arduino/AVR
@@ -595,7 +602,8 @@ dscKeybusInterface::dscClockInterrupt() {
   timerAlarm(timer1, 250, false,0);
   timerStart(timer1);
    #else // IDF5+
-  //gptimer_set_alarm_action(gptimer, &alarm_config);
+//   esp_timer_start_once(timer,250);
+  gptimer_set_raw_count(gptimer,0); 
   gptimer_start(gptimer);
    #endif
   portENTER_CRITICAL_ISR( & timer1Mux);
@@ -725,6 +733,7 @@ dscKeybusInterface::dscClockInterrupt() {
 #if not defined(USE_ESP_IDF_TIMER)
 void IRAM_ATTR dscKeybusInterface::dscDataInterrupt() {
      #else
+  //   void IRAM_ATTR dscKeybusInterface::dscDataInterrupt(void *arg) { //used by esp_timer
 bool IRAM_ATTR dscKeybusInterface::dscDataInterrupt(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)  {
      #endif
   #if defined(ESP32)
