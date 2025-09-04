@@ -162,10 +162,8 @@ async def to_code(config):
     if CONF_EXPANDER2 in config:
         cg.add(var.set_expanderAddr(config[CONF_EXPANDER2]));
        
-  
     await cg.register_component(var, config)
-   
-   
+
 def real_clean_build():
     import shutil
     build_dir = CORE.relative_build_path("")
