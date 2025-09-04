@@ -86,7 +86,7 @@ hw_timer_t * dscKeybusInterface::timer1 = NULL;
    gptimer_config_t timer_config = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
       .direction = GPTIMER_COUNT_UP,      // Counting direction is up
-      .resolution_hz = 1 * 1000 * 1000,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
+      .resolution_hz = 1000000,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
     };
 
 gptimer_alarm_config_t alarm_config = {
@@ -201,7 +201,7 @@ void dscKeybusInterface::stop() {
     timerEnd(timer1);
   }
    #else // ESP-IDF 5+
-   gptimer_stop(gptimer);
+  gptimer_del_timer(gptimer);
    #endif // ESP_IDF_VERSION_MAJOR
   #endif // ESP32
 
@@ -595,7 +595,7 @@ dscKeybusInterface::dscClockInterrupt() {
   timerAlarm(timer1, 250, false,0);
   timerStart(timer1);
    #else // IDF5+
-  gptimer_set_alarm_action(gptimer, &alarm_config);
+  //gptimer_set_alarm_action(gptimer, &alarm_config);
   gptimer_start(gptimer);
    #endif
   portENTER_CRITICAL_ISR( & timer1Mux);
