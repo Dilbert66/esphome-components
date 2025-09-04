@@ -61,9 +61,9 @@ CONF_WEB_KEYPAD="web_keypad"
 CONF_RF_SERIAL="rf_serial"
 CONF_RF_LOOP="rf_loop"
 
-BINARY_SENSOR_TYPE_ID_REGEX = "^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
+BINARY_SENSOR_TYPE_ID_REGEX = r"^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<digits>, arm_<digits>, arma_<digits>, arms_<digits>, arma_<digits>, armn_<digits>,alm_<digits>, fire_<digits>, chm_<digits>, r<digits>, z<digits>"
-TEXT_SENSOR_TYPE_ID_REGEX = "^(zs|lrr|rf|ss_\d+|ln1_\d+|ln2_\d+|bp_\d+|z\d+)$"
+TEXT_SENSOR_TYPE_ID_REGEX = r"^(zs|lrr|rf|ss_\d+|ln1_\d+|ln2_\d+|bp_\d+|z\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "zs, lrr, rf, ss_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, z<digits>"
 
 CONFIG_SCHEMA = cv.Schema(
@@ -262,8 +262,6 @@ async def setup_alarm_sensor(var, config,is_binary_sensor=True):
         from esphome.components import web_keypad
         await web_keypad.add_entity_config(var, web_keypad_config)
         
-
-
 def generate_validate_sensor_config(is_binary_sensor=True):
     """Generate a validation function for sensor configuration."""
     def validate_sensor_config(config):
