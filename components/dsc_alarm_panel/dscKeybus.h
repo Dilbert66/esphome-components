@@ -206,6 +206,7 @@ class dscKeybusInterface {
     static void dscDataInterrupt();
     #else
     static bool dscDataInterrupt(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data);
+   // static void dscDataInterrupt(void *arg); //used by esp_timer
     #endif
 
     // Deprecated
