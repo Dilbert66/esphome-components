@@ -401,7 +401,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 
       uint32_t refreshTimeSetting = 10 * 60 * 1000; // milliseconds - 10 minutes
       unsigned long lastTroubleLightTime;
-      bool troubleFetch = true;
+      bool troubleFetch = false;
       byte debug;
       const char *laststatus;
       const char *accessCode;

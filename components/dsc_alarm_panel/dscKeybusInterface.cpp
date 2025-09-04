@@ -602,7 +602,7 @@ dscKeybusInterface::dscClockInterrupt() {
   timerAlarm(timer1, 250, false,0);
   timerStart(timer1);
    #else // IDF5+
-//   esp_timer_start_once(timer,250);
+   //esp_timer_start_once(timer,200);
   gptimer_set_raw_count(gptimer,0); 
   gptimer_start(gptimer);
    #endif
@@ -733,7 +733,7 @@ dscKeybusInterface::dscClockInterrupt() {
 #if not defined(USE_ESP_IDF_TIMER)
 void IRAM_ATTR dscKeybusInterface::dscDataInterrupt() {
      #else
-  //   void IRAM_ATTR dscKeybusInterface::dscDataInterrupt(void *arg) { //used by esp_timer
+   //  void IRAM_ATTR dscKeybusInterface::dscDataInterrupt(void *arg) { //used by esp_timer
 bool IRAM_ATTR dscKeybusInterface::dscDataInterrupt(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)  {
      #endif
   #if defined(ESP32)
@@ -815,7 +815,7 @@ bool IRAM_ATTR dscKeybusInterface::dscDataInterrupt(gptimer_handle_t timer, cons
   portEXIT_CRITICAL_ISR( & timer1Mux);
   #endif
 #if defined(USE_ESP_IDF_TIMER)
-  return false;
+  return false; //gptimer
 #endif
 }
 
