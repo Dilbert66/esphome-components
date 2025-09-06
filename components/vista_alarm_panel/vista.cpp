@@ -51,7 +51,14 @@ Vista::~Vista()
     free(vistaSerialMonitor);
     detachInterrupt(monitorPin);
   }
+  delete[] extbuf;
+  delete[] extcmd;
 #endif
+  delete[] cbuf;
+  delete[] outbuf;
+  delete[] tmpOutBuf;
+  delete[] cmdQueue;
+  delete[] faultQueue;
   pointerToVistaClass = NULL;
 }
 expanderType Vista::getNextFault()

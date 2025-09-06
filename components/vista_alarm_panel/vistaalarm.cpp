@@ -77,6 +77,13 @@ namespace esphome
 #endif
     }
 
+vistaECPHome::~vistaECPHome()
+{   
+      delete[] partitionKeypads;
+      delete[] partitions;
+      delete[] partitionStates;
+}
+
     void vistaECPHome::zoneStatusUpdate(zoneType *zt)
     {
 
@@ -365,7 +372,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
           p = payload["addr"];
           std::string s = payload["keys"];
           int NumberChars = s.length();
-          char *bytes = new char[NumberChars / 2];
+          char bytes[NumberChars/2];
           for (int i = 0; i < NumberChars; i += 2)
           {
             bytes[i / 2] = toInt(s.substr(i, 2), 16);
@@ -670,13 +677,12 @@ void vistaECPHome::setup()
       hexbytes.erase(end_pos, hexbytes.end());
 
       int NumberChars = hexbytes.length();
-      char *bytes = new char[NumberChars / 2];
+      char bytes[NumberChars/2];
       for (int i = 0; i < NumberChars; i += 2)
       {
         bytes[i / 2] = toInt(hexbytes.substr(i, 2), 16);
       }
       vista.writeDirect(bytes, addr, NumberChars / 2);
-
       return;
     }
 
