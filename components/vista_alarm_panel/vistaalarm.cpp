@@ -1,6 +1,9 @@
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 #include "vistaalarm.h"
 
+#if !defined(ARDUINO_MQTT)
+#include "esphome/components/network/util.h"
+#endif
 
 #if defined(ESP32) && defined(USETASK)
 #include <esp_chip_info.h>
@@ -525,14 +528,13 @@ void vistaECPHome::setup()
       publishStatus(SAC, true, 1);
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
 
-      firstRun = true;
-
       vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
 
       setDefaultKpAddr(defaultPartition);
 
       for (uint8_t p = 0; p < maxPartitions; p++)
       {
+        partitionStates[p]=partitionStates_INIT;
         partitions[p] = 0;
         publishSystemStatus(STATUS_NOT_READY, p + 1);
         publishBeeps("0", p + 1);
@@ -960,7 +962,12 @@ void vistaECPHome::setup()
           if (shift >= 0 && (vistaCmd.statusFlags.keypad[i] & (0x01 << shift)))
           {
             partitionTargets = partitionTargets + 1;
+            if (!partitionStates[p - 1].active) {
+                forceRefreshGlobal = true;//new partition so we update it's sensors
+                partitionStates[p - 1].active=true;
+            }
             partitions[p - 1] = 1;
+            
             break;
           }
         }
@@ -1322,20 +1329,21 @@ void vistaECPHome::setup()
 void vistaECPHome::update()
 {
 #endif
-        // static unsigned long t1=millis();
-        // if (millis() - t1 > 5000) {
-        //   t1=millis();
-        //   uint64_t t;
-        //   timer_get_counter_value(TIMER_GROUP_0, TIMER_0,&t) ;
-        //   ESP_LOGD("test","Micros = %d, millis=%d,t=%d",micros(),millis(),t);
-        // }
 
+        static bool firstRun=false;
+        static bool lastConnectState=false;
+        bool is_connected=network::is_connected();
+        if (is_connected && is_connected != lastConnectState) firstRun=true;
+        lastConnectState=is_connected;
+        
         processAuiQueue();
 
 #if defined(ESPHOME_MQTT)
-        if (firstRun && mqtt::global_mqtt_client->is_connected())
+        static bool firstRunMqtt=true;
+        if (firstRunMqtt && mqtt::global_mqtt_client->is_connected())
         {
           mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + setalarmcommandtopic + "\"}", 0, 1);
+          firstRunMqtt=false;
         }
 #endif
 
@@ -1376,7 +1384,7 @@ void vistaECPHome::update()
 
           static unsigned long refreshTime = millis();
 
-          if (firstRun || millis() - refreshTime > 60000)
+          if (firstRun  || millis() - refreshTime > 60000)
           {
             forceRefreshZones = true;
             forceRefreshGlobal = true;
