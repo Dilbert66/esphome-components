@@ -183,8 +183,6 @@ async def to_code(config):
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
     if CONF_MAXZONES in config:
         cg.add(var.set_maxZones(config[CONF_MAXZONES]));
-    if CONF_MAXPARTITIONS in config:
-        cg.add(var.set_maxPartitions(config[CONF_MAXPARTITIONS]));
     if CONF_RFSERIAL in config:
         cg.add(var.set_rfSerialLookup(config[CONF_RFSERIAL]));
     if CONF_DEFAULTPARTITION in config:

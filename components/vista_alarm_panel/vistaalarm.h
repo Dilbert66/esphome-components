@@ -140,7 +140,7 @@ class vistaECPHome : public time::RealTimeClock
 
     public:
       vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN, int maxzones = MAX_ZONES, int maxpartitions = MAX_PARTITIONS, bool invertrx = true, bool inverttx = true, bool invertmon = true, uint8_t inputrx = INPUT, uint8_t inputmon = INPUT);
-
+      ~vistaECPHome();
       void set_accessCode(const char *ac) { accessCode = ac; }
       void set_rfSerialLookup(const char *rf) { rfSerialLookup = rf; }
       void set_quickArm(bool qa) { quickArm = qa; }
@@ -152,7 +152,6 @@ class vistaECPHome : public time::RealTimeClock
         vista.addModule(addr);
       }
       void set_maxZones(int mz) { maxZones = mz; }
-      void set_maxPartitions(uint8_t mp) { maxPartitions = mp; }
       void set_partitionKeypad(uint8_t idx, uint8_t addr)
       {
         if (idx && idx < 4)
@@ -532,7 +531,6 @@ class vistaECPHome : public time::RealTimeClock
       // void fetchPanelZones();
 #endif
 
-      zoneType nz;
 
       zoneType *getZone(uint16_t z);
       std::string getZoneName(uint16_t zone, bool append = false);
