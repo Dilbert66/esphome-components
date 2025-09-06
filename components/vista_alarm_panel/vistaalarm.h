@@ -413,13 +413,13 @@ class vistaECPHome : public time::RealTimeClock
         char prompt[17];
       };
 
-      struct lrrType
-      {
-        int code;
-        uint8_t qual;
-        uint16_t zone;
-        uint8_t user;
-      };
+      // struct lrrType
+      // {
+      //   int code;
+      //   uint8_t qual;
+      //   uint16_t zone;
+      //   uint8_t user;
+      // };
 
       struct lightStates
       {
@@ -442,11 +442,11 @@ class vistaECPHome : public time::RealTimeClock
 
       lightStates currentLightState,
           previousLightState;
-      enum lrrtype
-      {
-        user_t,
-        zone_t
-      };
+      // enum lrrtype
+      // {
+      //   user_t,
+      //   zone_t
+      // };
 
       struct partitionStateType
       {
@@ -455,6 +455,16 @@ class vistaECPHome : public time::RealTimeClock
         int lastbeeps;
         bool refreshStatus;
         bool refreshLights;
+        bool active;
+      };
+
+     partitionStateType partitionStates_INIT = {
+          .previousSystemState= sunavailable,
+          .previousLightState={0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+          .lastbeeps=0,
+          .refreshStatus=false,
+          .refreshLights=false,
+          .active=false,
       };
 
       void updateZoneState(zoneType *zt, int p, bool state, unsigned long t);
@@ -499,7 +509,6 @@ class vistaECPHome : public time::RealTimeClock
           panicStatus,
           alarmStatus;
       uint8_t partitionTargets;
-      bool firstRun;
 
       struct serialType
       {

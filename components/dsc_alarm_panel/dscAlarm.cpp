@@ -2,6 +2,10 @@
 
 #include "dscAlarm.h"
 
+#if !defined(ARDUINO_MQTT)
+#include "esphome/components/network/util.h"
+#endif
+
 static const char *const TAG = "dscalarm";
 
 dscKeybusInterface dsc(dscClockPinDefault, dscReadPinDefault, dscWritePinDefault);
@@ -208,7 +212,6 @@ void DSCkeybushome::setup()
       register_service(&DSCkeybushome::set_default_partition, "set_default_partition", {"partition"});
 #endif
 
-      firstrun = true;
       publishSystemStatus(String(FPSTR(STATUS_OFFLINE)).c_str());
       forceDisconnect = false;
 #ifdef MODULESUPERVISION
@@ -229,8 +232,8 @@ void DSCkeybushome::setup()
 
       for (int p = 0; p < dscPartitions; p++)
       {
-        partitionStatus[p].editIdx = 0;
-        partitionStatus[p].digits = 0;
+
+        partitionStatus[p]={0,0,NULL,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         publishBeeps("0", p + 1);
         publishPartitionMsg("No messages", p + 1);
         publishPartitionStatus("No messages", p + 1);
@@ -1467,6 +1470,12 @@ void DSCkeybushome::update()
 
       if (forceDisconnect)
         return;
+        
+        static bool firstRun=false;
+        static bool lastConnectState=false;
+        bool is_connected=network::is_connected();
+        if (is_connected && is_connected != lastConnectState) firstRun=true;
+        lastConnectState=is_connected;
 
 #if defined(ESPHOME_MQTT)
       static bool firstrunmqtt = true;
