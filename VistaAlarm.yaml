@@ -38,9 +38,20 @@ vista_alarm_panel:
   # For vista20p or lower address 0 and you are limmited to 1 physical or emulated rf receiver.
   # For vista128 or 250 use whatever device address you configured on your panel for the emulated rf receiver.  
   # You CANNOT use the same address as an existing device.
+# Emulated zone setup.  
+# Make up a serial number/loop and enter it in your panel zone programming and in the zone setup section here
+# Ensure you use type 4 (RF unsupervised zone) in your panel.
+# Example rf zone config:
+#  - platform: vista_alarm_panel
+#    id: z16
+#    name: "rf zone 16 (z16)"
+#    device_class: window   
+#    rf_serial: 0629444
+#    rf_loop: 1
+
   emulate_rf_receiver: true
   rf_receiver_addr: "0"  
- 
+
   #AUI address from program field *189 to use for zone status queries (open/close and bypass). 
   #Ensure it is not assigned to a real keypad or to Total Connect 2.0. For those panels, you can select auiaddr: 5 or 6.
   #As a final option, you can assign it to the same address as your existing AUI display address of 1
