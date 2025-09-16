@@ -1994,9 +1994,9 @@ void vistaECPHome::update()
 
           currentLightState.alarm = alarmStatus.state;
 
-          if (currentLightState.bat != previousLightState.bat)
+          if (currentLightState.bat != previousLightState.bat || forceRefreshGlobal)
             publishStatus(SBAT, currentLightState.bat);
-          if (currentLightState.ac != previousLightState.ac)
+          if (currentLightState.ac != previousLightState.ac || forceRefreshGlobal)
             publishStatus(SAC, currentLightState.ac);
 
           for (uint8_t partition = 1; partition <= maxPartitions; partition++)
