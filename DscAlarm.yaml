@@ -55,6 +55,9 @@ dsc_alarm_panel:
   #triggered,armed_home,armed_away,armed_night,pending,arming,disarmed
   #the default is "false"
   detailed_partition_state: false
+
+  # esp32 only. Set this flag to true if you are getting garbage data in your logs
+  use_esp_idf_timer: false
  
   clean_build: "false" #default is false.  set to true if getting duplication errors in linking step.  
 

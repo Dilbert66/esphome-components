@@ -121,8 +121,9 @@ struct expanderType
     char expFault;
     char expFaultBits;
     char relayState;
+    uint8_t idx;
 };
-const expanderType expanderType_INIT = {.expansionAddr = 0, .expFault = 0, .expFaultBits = 0, .relayState = 0};
+const expanderType expanderType_INIT = {.expansionAddr = 0xFF,.expFault = 0, .expFaultBits = 0, .relayState = 0, .idx = 0};
 
 struct keyType
 {
@@ -143,6 +144,12 @@ struct cmdQueueItem
     size_t size;
     size_t rawsize;
     struct statusFlagType statusFlags;
+};
+struct rfSerialQueueItem
+{
+  uint8_t fault;
+  uint32_t serial; 
+  uint8_t idx; 
 };
 const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
 
@@ -186,6 +193,7 @@ public:
 
     bool lrrSupervisor;
     void setExpFault(int, bool);
+    void setRFFault(uint8_t fault,uint32_t serial);
     bool newExtCmd, newCmd;
     bool filterOwnTx;
     expanderType zoneExpanders[MAX_MODULES];
@@ -195,6 +203,9 @@ public:
     bool cmdAvail();
     cmdQueueItem getNextCmd();
     bool sendPending();
+    void set_rf_emulation(bool emulate);
+    void set_rf_addr(uint8_t addr);
+    bool get_rf_emulation();
     // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
@@ -213,11 +224,15 @@ private:
     volatile char rxState;
     volatile unsigned long lowTime, highTime;
     uint8_t *faultQueue;
+    rfSerialQueueItem *rfSerialQueue;
     void setNextFault(uint8_t);
-    expanderType getNextFault();
+    void setNextRfSerial(uint8_t fault,uint32_t serial);
     expanderType peekNextFault();
+    expanderType getNextFault();
+    rfSerialQueueItem peekNextRfSerial();
+    rfSerialQueueItem getNextRfSerial();
     expanderType currentFault;
-    uint8_t idx, outFaultIdx, inFaultIdx;
+    uint8_t idx,outFaultIdx, inFaultIdx,rfSerialIdx,outRfSerialIdx,inRfSerialIdx;
     int gidx;
     volatile int extidx;
     uint8_t write_Seq;
@@ -230,15 +245,17 @@ private:
     void readChar(char *, int *);
     void onLrr(char *, int *);
     void onExp(char *);
+    void onRF(char *);
     keyType getChar();
     uint8_t peekNextKpAddr();
-    uint8_t writeSeq, expSeq;
+    uint8_t writeSeq;
     char expZone;
     char haveExpMessage;
     char expFault, expBitAddr;
     char expFaultBits;
     size_t decodePacket();
     uint8_t getExtBytes();
+    void sendBuffer(char *lcbuf,uint8_t lcbuflen);
     volatile bool is2400;
     void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
     bool invertRead;
@@ -274,4 +291,6 @@ private:
     volatile uint8_t retries;
     volatile uint8_t retryAddr;
     volatile bool sending;
+    bool _emulate_rf_receiver=false;
+    uint8_t _rf_addr=0;
 };

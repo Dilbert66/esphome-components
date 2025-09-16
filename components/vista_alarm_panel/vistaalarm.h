@@ -149,6 +149,14 @@ class vistaECPHome : public time::RealTimeClock
       void set_auiaddr(uint8_t addr) { auiAddr = addr; };
       void set_expanderAddr(uint8_t addr)
       {
+        if (!addr) return;
+        vista.addModule(addr);
+      }
+      void set_rf_emulation(bool emulate) {
+        vista.set_rf_emulation(emulate);
+      }
+      void set_rf_addr(uint8_t addr){
+        vista.set_rf_addr(addr);
         vista.addModule(addr);
       }
       void set_maxZones(int mz) { maxZones = mz; }
@@ -388,7 +396,8 @@ class vistaECPHome : public time::RealTimeClock
           .lowbat = 0,
           .active = 0,
           .rfserial = 0,
-          .loopmask = 0x80};
+          .loopmask = 0x80
+        };
 
       struct
       {
@@ -470,12 +479,13 @@ class vistaECPHome : public time::RealTimeClock
       char *parseAUIMessage(char *cmd);
       void processZoneList(char *list);
       void sendZoneRequest();
-      void loadZones();
+      //void loadZones();
       void loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype);
       void getZoneCount();
       void getZoneRecord();
       void processZoneInfo(char *list);
       void getRFSerial(zoneType *zt);
+      void enableModuleAddr(zoneType n);
 
     public:
       partitionStateType *partitionStates;
@@ -572,7 +582,7 @@ class vistaECPHome : public time::RealTimeClock
 
         void set_keypad_address(int32_t addr)
         {
-          // if (addr > 0 and addr < 24)
+          // if (addr > 0 and addr < 30)
           ///  vista.setKpAddr(addr); //disabled for now
         }
 

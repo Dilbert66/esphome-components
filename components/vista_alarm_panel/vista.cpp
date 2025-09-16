@@ -37,6 +37,7 @@ Vista::Vista()
   tmpOutBuf = new char[CMDBUFSIZE];
   cmdQueue = new cmdQueueItem[CMDQUEUESIZE];
   faultQueue = new uint8_t[FAULTQUEUESIZE];
+  rfSerialQueue = new rfSerialQueueItem[FAULTQUEUESIZE];
   lrrSupervisor = false;
   filterOwnTx=false;
 }
@@ -59,31 +60,61 @@ Vista::~Vista()
   delete[] tmpOutBuf;
   delete[] cmdQueue;
   delete[] faultQueue;
-  pointerToVistaClass = NULL;
-}
-expanderType Vista::getNextFault()
-{
-  uint8_t currentFaultIdx;
-  expanderType currentFault = expanderType_INIT;
-  if (inFaultIdx == outFaultIdx)
-    return currentFault;
-  currentFaultIdx = faultQueue[outFaultIdx];
-  outFaultIdx = (outFaultIdx + 1) % FAULTQUEUESIZE;
-  return zoneExpanders[currentFaultIdx];
+  free(pointerToVistaClass);
 }
 
 expanderType Vista::peekNextFault()
 {
   expanderType currentFault = expanderType_INIT;
-  if (inFaultIdx == outFaultIdx)
-    return currentFault;
-  return zoneExpanders[faultQueue[outFaultIdx]];
+  if (inFaultIdx != outFaultIdx) {
+    currentFault=zoneExpanders[faultQueue[outFaultIdx]];
+    currentFault.idx=outFaultIdx;
+  }
+  return currentFault;
+}
+
+expanderType Vista::getNextFault()
+{
+  expanderType currentFault=peekNextFault();
+  if (currentFault.expansionAddr!=0xff)
+    outFaultIdx = (outFaultIdx + 1) % FAULTQUEUESIZE;
+  return currentFault;
+
+}
+
+
+rfSerialQueueItem Vista::peekNextRfSerial()
+{
+  rfSerialQueueItem q={0,0,0};
+  if (inRfSerialIdx != outRfSerialIdx) {
+    q = rfSerialQueue[outRfSerialIdx];
+    q.idx=outRfSerialIdx;
+  }
+  return  q;
+}
+
+
+rfSerialQueueItem Vista::getNextRfSerial()
+{
+  rfSerialQueueItem q = peekNextRfSerial();
+  if (q.serial)
+    outRfSerialIdx = (outRfSerialIdx + 1) % FAULTQUEUESIZE;
+  return  q;
 }
 
 void Vista::setNextFault(uint8_t idx)
 {
   faultQueue[inFaultIdx] = idx;
   inFaultIdx = (inFaultIdx + 1) % FAULTQUEUESIZE;
+}
+
+void Vista::setNextRfSerial(uint8_t fault, uint32_t serial)
+{
+  rfSerialQueueItem q;
+  q.fault=fault;
+  q.serial=serial;
+  rfSerialQueue[inRfSerialIdx] = q;
+  inRfSerialIdx = (inRfSerialIdx + 1) % FAULTQUEUESIZE;
 }
 
 void Vista::readChars(int ct, char buf[], int *idx)
@@ -292,6 +323,76 @@ void Vista::pushCmdQueueItem(size_t size, size_t rawsize)
   incmdIdx = (incmdIdx + 1) % CMDQUEUESIZE;
 }
 
+
+void Vista::onRF(char cbuf[])
+{
+
+  if (!_emulate_rf_receiver || _rf_addr > 30) return;
+
+
+  uint8_t req_addr;
+   switch (cbuf[1]) {
+    case 1: req_addr=7;break;
+    case 2: req_addr=0;break;
+    case 4: req_addr=1;break;
+    case 8: req_addr=2;break;
+    case 0x10: req_addr=3;break;
+    case 0x20: req_addr=4;break;
+    case 0x40: req_addr=5;break;
+    case 0x80: req_addr=6;break;
+    default: return; //unknown
+  }
+  if (req_addr != _rf_addr) return; //not for this this device
+
+  char type = cbuf[3];
+  char seq = cbuf[2];
+  char lcbuf[8];
+  uint8_t lcbuflen;
+  char expSeq = (seq == 0x20 ? 0x24 : 0x21); //get current alternating sequence number. Top nibble is byte count
+
+  // 0xF1 - response to request
+  if (type == 0xF1)
+  {
+    rfSerialQueueItem rfitem=peekNextRfSerial(); 
+    if (!rfitem.serial ) return; //no pending request 
+    getNextRfSerial(); // clear this request as we are now processing it
+    expanderType currentFault = peekNextFault(); 
+    if (currentFault.expansionAddr==_rf_addr)
+      getNextFault(); //clear this request as it's from an rf request
+
+    uint8_t serial[4];
+    *(uint32_t*)&serial = rfitem.serial; //convert from int to byte array
+    lcbuflen=6;
+    lcbuf[0]=_rf_addr; //address
+    lcbuf[1]=0x50 | (expSeq & 0x0f);
+    lcbuf[2]=serial[2] | 0x80; //unknown what 0x80 bit is for 
+    lcbuf[3]=serial[1];
+    lcbuf[4]=serial[0];
+    lcbuf[5]=rfitem.fault;
+
+    rfitem=peekNextRfSerial();
+
+    if (rfitem.serial) 
+      setNextFault(rfitem.idx); // push to the pending queue as we have another pending fault
+  }
+
+  else if (  (type == 0x81 || type==0x82 || type==0x60 || type == 0x40)) { //wireless device supervision query 
+    lcbuflen = 3;
+    lcbuf[0] = _rf_addr;
+    lcbuf[1] = expSeq;
+    lcbuf[2] = type==0x82?5:0;     //5881enh id is 5 
+  }
+
+  else
+  {
+    return; // unknown so we don't acknowledge  
+  }
+
+  sendBuffer(lcbuf,lcbuflen);
+
+}
+
+
 /**
  * Typical packet
  * positions 8 and 9 hold the report code
@@ -304,13 +405,14 @@ void Vista::pushCmdQueueItem(size_t size, size_t rawsize)
  * 0x48 is a startup sequence, the byte after 0x48 will be 00 01 02 03
  //1=new event or opening, 3=new restore or closing,6=previous still present
  */
-void Vista::onLrr(char cbuf[], int *idx)
+void Vista::onLrr(char *cbuf, int *idx)
 {
   //response to a f9 resend. Send back last message
   if (_retriesf9 > 0 && _retriesf9 < 4)
   {
     if (peekNextKpAddr() == LRRADDR)
       getChar(); //remove last request
+
     sending = true;
     delayMicroseconds(500);
     for (uint8_t x = 0; x < _lcbuflen; x++)
@@ -322,6 +424,7 @@ void Vista::onLrr(char cbuf[], int *idx)
     _retriesf9++;
     sending = false;
     return;
+
   }
 
   _retriesf9 = 0;
@@ -398,17 +501,48 @@ void Vista::onLrr(char cbuf[], int *idx)
   }
 }
 
+  void Vista::set_rf_emulation(bool emulate){
+        _emulate_rf_receiver=emulate;
+  }
+
+  void Vista::set_rf_addr(uint8_t addr){
+        _rf_addr=addr;
+  }
+
+  bool Vista::get_rf_emulation() {
+      return _emulate_rf_receiver;
+  }
+
 // add new expander modules and init zone fields
 void Vista::addModule(uint8_t addr)
 {
-  if (!addr)
+  if (addr > 30)
     return;
+  for (uint8_t x=0;x < moduleIdx;x++){
+    if (addr==zoneExpanders[x].expansionAddr) return;
+  }
   if (moduleIdx < MAX_MODULES)
   {
     zoneExpanders[moduleIdx] = expanderType_INIT;
     zoneExpanders[moduleIdx].expansionAddr = addr;
     moduleIdx++;
   }
+}
+
+void Vista::setRFFault(uint8_t fault,uint32_t serial)
+{
+  if (!_emulate_rf_receiver || _rf_addr > 30) return;
+  uint8_t idx;
+  for (idx = 0; idx < moduleIdx; idx++)
+  {
+    if (zoneExpanders[idx].expansionAddr == _rf_addr)
+      break;
+  }
+  if (idx == moduleIdx)
+    return;
+  setNextRfSerial(fault,serial);
+  setNextFault(idx); // push to the pending queue
+                                                       
 }
 
 void Vista::setExpFault(int zone, bool fault)
@@ -467,6 +601,8 @@ void Vista::setExpFault(int zone, bool fault)
   }
 }
 
+
+
 // 98 2E 02 20 F7 EC
 // 98 2E 04 20 F7 EA
 // 98 2E 01 04 25 F1 EA - relay address 14 and 15  have an extra byte . byte 2 is flag and shifts other bytes right
@@ -482,7 +618,7 @@ void Vista::onExp(char cbuf[])
   char type = cbuf[4];
   char seq = cbuf[3];
   char lcbuf[6];
-  sending = true;
+
   char expansionAddr = 0;
   uint8_t idx;
 
@@ -509,13 +645,12 @@ void Vista::onExp(char cbuf[])
 
   if (idx == moduleIdx)
   {
-    sending = false;
     return; // no match return
   }
   expFaultBits = zoneExpanders[idx].expFaultBits;
 
   uint8_t lcbuflen = 0;
-  expSeq = (seq == 0x20 ? 0x34 : 0x31);
+  char expSeq = (seq == 0x20 ? 0x34 : 0x31);
 
   // we use zone to either | or & bits depending if in fault or reset
   // 0xF1 - response to request, 0xf7 - poll, 0x80 - retry ,0x00 relay control
@@ -531,7 +666,7 @@ void Vista::onExp(char cbuf[])
       currentFault = zoneExpanders[idx]; // no pending fault, use current fault data instead
     lcbuflen = 4;
     lcbuf[0] = (char)currentFault.expansionAddr;
-    lcbuf[1] = (char)expSeq;
+    lcbuf[1] = expSeq;
     // lcbuf[2] = (char) currentFault.relayState;
     lcbuf[2] = 0;
     lcbuf[3] = (char)currentFault.expFault; // we send out the current zone state
@@ -540,7 +675,7 @@ void Vista::onExp(char cbuf[])
   { // periodic  zone state poll (every 30 seconds) expander
     lcbuflen = 4;
     lcbuf[0] = (char)0xF0;
-    lcbuf[1] = (char)expSeq;
+    lcbuf[1] = expSeq;
     // lcbuf[2]= (char) expFaultBits ^ 0xFF; //closed zones - opposite of expfaultbits. If set in byte3 we clear here. (not used )
     lcbuf[2] = 0;                  // we simulate having a termination resistor so set to zero for all zones
     lcbuf[3] = (char)expFaultBits; // opens zones - we send out the list of zone states. if 0 in both fields, means terminated
@@ -549,7 +684,7 @@ void Vista::onExp(char cbuf[])
   { // relay module
     lcbuflen = 4;
     lcbuf[0] = (char)expansionAddr;
-    lcbuf[1] = (char)expSeq;
+    lcbuf[1] = expSeq;
     lcbuf[2] = (char)0x00;
     if (cbuf[2] & 1)
     { // address 14/15
@@ -564,22 +699,26 @@ void Vista::onExp(char cbuf[])
   }
   else
   {
-    sending = false;
-    return; // we don't acknowledge   //0x80 or 0x81
+     return; // we don't acknowledge   //0x80 or 0x81
   }
 
+  sendBuffer(lcbuf,lcbuflen);
+}
+
+void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
+  sending = true;
   uint32_t chksum = 0;
-  delayMicroseconds(500);
-   for (uint8_t x = 0; x < lcbuflen; x++)
+  for (uint8_t x = 0; x < lcbuflen; x++)
   {
     chksum += lcbuf[x];
-  }
-  lcbuf[lcbuflen]=(char)((chksum-1) ^ 0xFF);
-  for (uint8_t x = 0; x < lcbuflen+1; x++)
-  {
     if (filterOwnTx) 
       extbuf[x]=lcbuf[x];
-      
+  }
+  lcbuf[lcbuflen]=(char)((chksum-1) ^ 0xFF);
+  if (filterOwnTx) 
+      extbuf[lcbuflen]=lcbuf[lcbuflen];
+  for (uint8_t x = 0; x < lcbuflen+1; x++)
+  {
     vistaSerial->write(lcbuf[x]);
   }
   if (filterOwnTx) {
@@ -716,7 +855,7 @@ void Vista::writeChars()
     outbufIdx = inbufIdx;
     return;
   }
-  sending = true;
+
 
   int tmpIdx = 0;
   // header is the bit mask YYXX-XXXX
@@ -822,16 +961,18 @@ void Vista::writeChars()
     tmpOutBuf[x]=(char)chksum;
 
   }
+
+  sending = true;
   //delayMicroseconds(500);
   for (int x = 0; x < tmpOutBuf[1] + 2; x++)
   {
     vistaSerial->write(tmpOutBuf[x]);
   }
-
+  sending = false;
   expectByte = tmpOutBuf[0];
   expectCmd = 0xf6;
   retries++;
-  sending = false;
+
 }
  
 
@@ -848,9 +989,9 @@ void IRAM_ATTR Vista::rxHandleISR()
     {
       markPulse = 2;
 
-      ackAddr = inFaultIdx == outFaultIdx ? 0 : zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
+      ackAddr = inFaultIdx == outFaultIdx ? 0xFF : zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
 
-      if (ackAddr > 0 && ackAddr < 24)
+      if (ackAddr >= 0 && ackAddr < 24)
       {
         vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
         b = addrToBitmask2(ackAddr);
@@ -1062,6 +1203,7 @@ size_t Vista::decodePacket()
   }
   else if (extcmd[0] == 0xFB)
   {
+    //07 54 84 F3 5C 80 52
     // Check how many bytes are in RF message (stored in upper nibble of Byte 2)
     uint8_t n_rf_bytes = extbuf[1] >> 4;
 
@@ -1102,7 +1244,6 @@ size_t Vista::decodePacket()
         // device_serial += extbuf[3] << 8;
         // device_serial += extbuf[4];
       }
-      //  #ifdef DEBUG
       else
       {
         // also print if chksum fails
@@ -1117,10 +1258,10 @@ size_t Vista::decodePacket()
         newExtCmd = true;
         return 13;
       }
-      //  #endif
     }
     else
-    {
+    {//uint8_t n_rf_bytes = extbuf[1] >> 4;
+
       // FB packet but with different length then 5
       // we send out the packet as received for debugging
       extcmd[0] = extbuf[0];
@@ -1417,6 +1558,7 @@ bool Vista::handle()
         cbuf[12] = 0x77;
       else
         newCmd = true;
+      onRF(cbuf); //if rf emulation
 #ifdef MONITORTX
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
       memcpy(extcmd, cbuf, 6);
@@ -1517,7 +1659,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   {
     free(vistaSerial);
     vistaSerial = NULL;
-    printf("Warning rx pin %d is invalid", rxPin);
+    Serial.printf("Warning rx pin %d is invalid", rxPin);
   }
 #ifdef MONITORTX
 // interrupt for capturing keypad/module data on green transmit line
@@ -1536,7 +1678,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   {
     free(vistaSerialMonitor);
     vistaSerialMonitor = NULL;
-    printf("Warning monitor rx pin %d is invalid", monitorPin);
+    Serial.printf("Warning monitor rx pin %d is invalid", monitorPin);
   }
 #endif
 }

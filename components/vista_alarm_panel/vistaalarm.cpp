@@ -142,21 +142,21 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
 
 #endif
 
-#if !defined(ARDUINO_MQTT)
-    void vistaECPHome::loadZones()
-    {
+// #if !defined(ARDUINO_MQTT)
+//     void vistaECPHome::loadZones()
+//     {
 
-      for (auto obj : App.get_binary_sensors())
-      {
-        createZoneFromObj(obj);
-      }
+//       for (auto obj : App.get_binary_sensors())
+//       {
+//         createZoneFromObj(obj);
+//       }
 
-      for (auto obj : App.get_text_sensors())
-      {
-        createZoneFromObj(obj);
-      }
-    }
-#endif
+//       for (auto obj : App.get_text_sensors())
+//       {
+//         createZoneFromObj(obj);
+//       }
+//     }
+// #endif
 
 #if !defined(ARDUINO_MQTT)
 
@@ -202,6 +202,35 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     //   return 0;
     // }
 
+    void vistaECPHome::enableModuleAddr(zoneType n){
+       if ( n.rfserial > 0) return; //rf emulation
+         uint8_t addr = 0;
+         uint8_t zone=n.zone;
+          if (zone > 8 && zone < 17)
+          {
+            addr = 7;
+          }
+          else if (zone > 16 && zone < 25)
+          {
+            addr = 8;
+          }
+          else if (zone > 24 && zone < 33)
+          {
+            addr = 9;
+          }
+          else if (zone > 32 && zone < 41)
+          {
+            addr = 10;
+          }
+          else if (zone > 40 && zone < 49)
+          {
+            addr = 11;
+          }
+          else
+            return;
+          vista.addModule(addr);
+  
+    }
 
 
     void vistaECPHome::createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p, uint32_t rfSerial, uint8_t loop)
@@ -224,7 +253,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         n.loopmask=getLoopMask(loop);
       }
       extZones.push_back(n);
-      ESP_LOGD(TAG, "added  binary zone %d, rf serial=%d", extZones.back().zone,n.rfserial);
+      ESP_LOGD(TAG, "added  binary zone %d, rfserial=%d", extZones.back().zone,n.rfserial);
     }
 
     void vistaECPHome::createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p, uint32_t rfSerial, uint8_t loop)
@@ -500,6 +529,7 @@ void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour,
 void vistaECPHome::setup()
 {
 #endif
+
       ESP_LOGD(TAG, "Start setup: Free heap: %04X (%d)", ESP.getFreeHeap(), ESP.getFreeHeap());
       // tg_timer_init(TIMER_GROUP_0, TIMER_0);
       //  use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
@@ -507,7 +537,7 @@ void vistaECPHome::setup()
 #if !defined(ARDUINO_MQTT)
 
       set_update_interval(8); // set looptime to 8ms
-      loadZones();
+    //  loadZones();
 #endif
 
 #if defined(ESPHOME_MQTT)
@@ -605,8 +635,12 @@ void vistaECPHome::setup()
 
     void vistaECPHome::set_zone_fault(int32_t zone, bool fault)
     {
-
-      vista.setExpFault(zone, fault);
+      zoneType *z = getZone(zone);
+       ESP_LOGD(TAG,"Setting fault %d to zone %d",fault,zone);
+      if (z->zone > 0 &&  z->rfserial > 0) {
+        vista.setRFFault(fault?z->loopmask:0,z->rfserial);
+      } else
+        vista.setExpFault(zone, fault);
     }
 
     void vistaECPHome::alarm_keypress(std::string keystring)
@@ -885,14 +919,13 @@ void vistaECPHome::setup()
       // Fire command
       else if (state.compare("F") == 0)
       {
-
+        vista.write("F", addr);
         // todo
       }
       // Panic command
       else if (state.compare("P") == 0)
       {
-
-        // todo
+        vista.write("P", addr);
       }
       else if (state.compare("B") == 0)
       {
@@ -1994,9 +2027,9 @@ void vistaECPHome::update()
 
           currentLightState.alarm = alarmStatus.state;
 
-          if (currentLightState.bat != previousLightState.bat)
+          if (currentLightState.bat != previousLightState.bat || forceRefreshGlobal)
             publishStatus(SBAT, currentLightState.bat);
-          if (currentLightState.ac != previousLightState.ac)
+          if (currentLightState.ac != previousLightState.ac || forceRefreshGlobal)
             publishStatus(SAC, currentLightState.ac);
 
           for (uint8_t partition = 1; partition <= maxPartitions; partition++)

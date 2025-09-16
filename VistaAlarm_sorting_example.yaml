@@ -33,6 +33,13 @@ vista_alarm_panel:
   keypadaddr1: "17" #partition 1 virtual keyapd
   keypadaddr2: "0" #partition 2 virtual keypad. set to 0 to disable
   keypadaddr3: "0" #partition 3 virtual keypad. set to 0 to disable
+
+  # 5881enh RF receiver emulation. 
+  # For vista20p or lower address 0 and you are limmited to 1 physical or emulated rf receiver.
+  # For vista128 or 250 use whatever device address you configured on your panel for the emulated rf receiver.  
+  # You CANNOT use the same address as an existing device.
+  emulate_rf_receiver: true
+  rf_receiver_addr: "0"  
  
   #AUI address from program field *189 to use for zone status queries (open/close and bypass). 
   #Ensure it is not assigned to a real keypad or to Total Connect 2.0. For those panels, you can select auiaddr: 5 or 6.
