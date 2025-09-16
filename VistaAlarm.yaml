@@ -23,7 +23,7 @@ vista_alarm_panel:
   # without these entries except you will have a delay of TTL milliseconds before 
   # the report of closed zones. 
   
-  rfseriallookup: "0019994:2:66,0818433:4:22,0123456:1:55,0399512:1:17" # serial1:loop#:zone1,serial2:loop#:zone2
+  rfseriallookup: "0019994:2:66,0818433:4:22,0123456:1:55" # serial1:loop#:zone1,serial2:loop#:zone2
  
   defaultpartition: "1" #set to your main partition
   vistadebuglevel: "3" #component debug level for messages
@@ -292,6 +292,8 @@ binary_sensor:
     id: z17  
     name: "zone 17 z17"
     device_class: window   
+    rf_serial: 0629444
+    rf_loop: 1
   
 # you can also add fields to show fault statuses of other devices you have.  The id will be 1 + device address.  
 
