@@ -111,9 +111,9 @@ def validate_id_code(value, is_binary_sensor=True):
 
 ALARM_SENSOR_SCHEMA = cv.Schema(
     {
-        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
-        cv.Optional(CONF_PARTITION,default=0): cv.int_,
         cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
+        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
+        cv.Optional(CONF_PARTITION,default=0): cv.int_
     }
 )
 

@@ -193,7 +193,8 @@ void DSCkeybushome::setup()
       topic = discovery_prefix + "/alarm_control_panel/" + topic_prefix + "/config";
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + String(FPSTR(setalarmcommandtopic)).c_str(), mqtt_callback);
 #endif
-#if defined(USE_API_SERVICES)
+#if defined(USE_API)
+      #if defined(USE_API_SERVICES)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
 #if !defined(ARDUINO_MQTT) && defined(USE_TIME)
@@ -210,6 +211,9 @@ void DSCkeybushome::setup()
       register_service(&DSCkeybushome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&DSCkeybushome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
       register_service(&DSCkeybushome::set_default_partition, "set_default_partition", {"partition"});
+      #else
+      #error "Missing "custom_services: true" line in the api: section"
+      #endif
 #endif
 
       publishSystemStatus(String(FPSTR(STATUS_OFFLINE)).c_str());

@@ -103,7 +103,7 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
   dscReadPin = setReadPin;
   dscWritePin = setWritePin;
   invertWrite=setInvertWrite;
-  if (dscWritePin != 255) virtualKeypad = true;
+  if (dscWritePin != 255 && dscWritePin > 0) virtualKeypad = true;
   if (dscWritePin == dscReadPin) invertWrite=false;
   processRedundantData = true;
   displayTrailingBits = false;

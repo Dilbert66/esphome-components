@@ -64,6 +64,10 @@
 #define SZONE "z"
 #define SRELAY "r"
 
+#define WIRED_TYPE 0
+#define RF_TYPE 1
+#define LOOP_TYPE 2
+
 #define ASYNC_CORE 1
 // #define USETASK
 
@@ -123,6 +127,7 @@ namespace esphome
       rsicode,
       rsdate,
     };
+
 
 #if defined(ESPHOME_MQTT) && !defined(USE_API)
     class vistaECPHome : public time::RealTimeClock
@@ -228,10 +233,11 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t active : 1;
         bool rflowbat ;
         bool external;
-        uint32_t rfserial;
+        uint32_t serial;
         uint8_t loopmask;
-
-      };
+        uint8_t type; 
+        bool emulated;
+     };
 
 #if defined(ARDUINO_MQTT)
       std::function<void(const std::string &, uint8_t, std::string *)> textSensorCallback;
@@ -310,21 +316,24 @@ class vistaECPHome : public time::RealTimeClock
         std::string sensor = SRELAY + std::to_string(addr) + std::to_string(channel);
         publishBinaryState(sensor, 0, state);
       }
-      uint8_t getLoopMask(uint8_t loop)
+      uint8_t getLoopMask(uint8_t loop, uint8_t type)
       {
-        switch (loop)
-        {
-        case 1:
-          return 0x80;
-        case 2:
-          return 0x20;
-        case 3:
-          return 0x10;
-        case 4:
-          return 0x40;
-        default:
-          return 0x80;
-        }
+        if (type==RF_TYPE) {
+          switch (loop)
+          {
+            case 1:
+              return 0x80;
+            case 2:
+              return 0x20;
+            case 3:
+              return 0x10;
+            case 4:
+              return 0x40;
+            default:
+              return 0x80;
+            }
+      } else 
+          return type; //temp for LOOP_TYPE
       }
 
       int TTL = 30000;
@@ -395,8 +404,11 @@ class vistaECPHome : public time::RealTimeClock
           .trouble = 0,
           .lowbat = 0,
           .active = 0,
-          .rfserial = 0,
-          .loopmask = 0x80
+          .serial = 0,
+          .loopmask = 0x80,
+          .type=0,
+          .emulated=0
+
         };
 
       struct
@@ -485,7 +497,7 @@ class vistaECPHome : public time::RealTimeClock
       void getZoneRecord();
       void processZoneInfo(char *list);
       void getRFSerial(zoneType *zt);
-      void enableModuleAddr(zoneType n);
+     // void enableModuleAddr(zoneType n);
 
     public:
       partitionStateType *partitionStates;
@@ -506,8 +518,8 @@ class vistaECPHome : public time::RealTimeClock
       }
 
 #if !defined(ARDUINO_MQTT)
-      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0, uint32_t rfSerial = 0, uint8_t loop = 0);
-      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0, uint32_t rfSerial = 0, uint8_t loop = 0);
+      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0, uint32_t serrial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
+      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0, uint32_t serial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
 #endif
 
     private:
@@ -545,7 +557,7 @@ class vistaECPHome : public time::RealTimeClock
       zoneType *getZone(uint16_t z);
       std::string getZoneName(uint16_t zone, bool append = false);
 
-      zoneType *getZoneFromRFSerial(uint32_t serialCode);
+      zoneType *getZoneFromSerial(uint32_t serialCode);
 
       void zoneStatusUpdate(zoneType *zt);
       void assignPartitionToZone(zoneType *zt);

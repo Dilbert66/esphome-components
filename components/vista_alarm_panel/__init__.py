@@ -58,10 +58,12 @@ CONF_SORTING_GROUP_ID = "sorting_group_id"
 CONF_SORTING_WEIGHT = "sorting_weight"
 CONF_WEB_KEYPAD_ID="web_keypad_id"
 CONF_WEB_KEYPAD="web_keypad"
-CONF_RF_SERIAL="rf_serial"
-CONF_RF_LOOP="rf_loop"
+CONF_DEVICE_SERIAL="device_serial"
+CONF_DEVICE_LOOP="device_loop"
+CONF_DEVICE_TYPE="device_type"
 CONF_RF_ADDR="rf_receiver_addr"
 CONF_EMULATE_RF_RECEIVER="emulate_rf_receiver"
+CONF_EMULATED="emulated"
 
 BINARY_SENSOR_TYPE_ID_REGEX = r"^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<digits>, arm_<digits>, arma_<digits>, arms_<digits>, arma_<digits>, armn_<digits>,alm_<digits>, fire_<digits>, chm_<digits>, r<digits>, z<digits>"
@@ -156,8 +158,10 @@ ALARM_SENSOR_SCHEMA = cv.Schema(
         cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
         cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
         cv.Optional(CONF_PARTITION,default=0): cv.int_,
-        cv.Optional(CONF_RF_SERIAL,default=0):cv.int_,
-        cv.Optional(CONF_RF_LOOP,default=0):cv.int_
+        cv.Optional(CONF_DEVICE_SERIAL,default=0):cv.int_,
+        cv.Optional(CONF_DEVICE_LOOP,default=0):cv.int_,
+        cv.Optional(CONF_DEVICE_TYPE,default="WIRED"): cv.one_of("WIRED","RF","LOOP",upper=True),
+        cv.Optional(CONF_EMULATED,default=False):cv.boolean
     }
 )
 
@@ -249,13 +253,17 @@ def real_clean_build():
 async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     """Set up custom properties for an alarm sensor"""
     paren = await cg.get_variable(config[CONF_ALARM_ID])
-
+    device_type=0
+    if config[CONF_DEVICE_TYPE] =="RF":
+        device_type=1
+    if config[CONF_DEVICE_TYPE] =="LOOP":
+        device_type=2
     if config.get(CONF_TYPE_ID):
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
-        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_RF_SERIAL],config[CONF_RF_LOOP]))
+        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED]))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
         cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_RF_SERIAL],config[CONF_RF_LOOP]))
+        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED]))
     if is_binary_sensor:
         cg.add(var.publish_state(False))
         cg.add(var.set_trigger_on_initial_state(True))
@@ -269,9 +277,15 @@ async def setup_alarm_sensor(var, config,is_binary_sensor=True):
 def generate_validate_sensor_config(is_binary_sensor=True):
     """Generate a validation function for sensor configuration."""
     def validate_sensor_config(config):
+        if config[CONF_DEVICE_SERIAL] > 0:
+            if (config[CONF_DEVICE_TYPE]=="WIRED"):
+                raise cv.Invalid(f"Option 'device_type' required for RF/LOOP zones. Allowed values: RF, LOOP")
+            if config[CONF_DEVICE_LOOP]==0 or config[CONF_DEVICE_LOOP]>3:
+                raise cv.Invalid(f"Option 'device_loop' required for RF/LOOP zones. Allowed values: 1,2 or 3")
         id_val = config.get(CONF_TYPE_ID) or config[CONF_ID].id
         validate_id_code(id_val, is_binary_sensor)
         return config
+
 
     return validate_sensor_config            
     

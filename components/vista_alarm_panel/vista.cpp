@@ -1275,6 +1275,27 @@ size_t Vista::decodePacket()
       newExtCmd = true;
       return 13;
     }
+  }   
+  else if (extcmd[0] == 0xF0) 
+  {
+    //f0 xx C8 87 00 xx xx xx 00 00 A9
+      uint16_t lp_checksum = 0;
+      for (uint8_t i = 0; i < 9; i++)
+      {
+        lp_checksum += extbuf[i];
+        extcmd[i+2]=extbuf[i];
+      }
+      if (lp_checksum % 256 == 0)
+      {
+        newExtCmd = true;
+        extcmd[1]=9;
+        return 11;
+
+      } else {
+        extcmd[1]=0;
+        extcmd[12]=0x77; //cksum error
+        return 13;
+      }
   }
   else if (extcmd[0] != 0 && extcmd[0] != 0xf6)
   {
@@ -1531,7 +1552,7 @@ bool Vista::handle()
       pushCmdQueueItem(gidx);
       return 1;
     }
-    // unknown
+    // polling loop
     if (x == 0xF0)
     {
       vistaSerial->setBaud(4800);
