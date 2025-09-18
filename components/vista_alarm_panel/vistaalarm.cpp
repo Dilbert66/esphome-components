@@ -518,7 +518,8 @@ void vistaECPHome::setup()
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + setalarmcommandtopic, mqtt_callback);
 
 #endif
-#if defined(USE_API_SERVICES)
+#if defined(USE_API)
+      #if defined(USE_API_SERVICES)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
       register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata"});
@@ -530,6 +531,9 @@ void vistaECPHome::setup()
       register_service(&vistaECPHome::alarm_trigger_panic, "alarm_trigger_panic", {"code", "partition"});
       register_service(&vistaECPHome::alarm_trigger_fire, "alarm_trigger_fire", {"code", "partition"});
       register_service(&vistaECPHome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
+      #else
+      #error "Missing "custom_services: true" line in the api: section"
+      #endif
 #endif
       publishSystemStatus(STATUS_ONLINE, 1);
       publishStatus(SAC, true, 1);
