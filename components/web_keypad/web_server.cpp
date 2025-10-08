@@ -412,9 +412,9 @@ namespace esphome
             unsigned long timeout=millis();
             for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-              mg_mgr_poll(&mgr,2);
-              yield();
-              if (millis() - timeout > 10000) break;
+              mg_mgr_poll(&mgr,0);
+              delay(1);
+              if (millis() - timeout > 5000) break;
               if(c->send.len > 5120) continue; 
               mg_send(c, &buf[s], 1024);
               s = s + 1024;
@@ -963,7 +963,7 @@ namespace esphome
                     // if (request->hasParam("white_value")) {
                     // char buf[100];
                     // if (mg_http_get_var(&hm->body,"white_value",buf,sizeof(buf)) > 0) {
-                    if (ddoc["white_value"].is<JsonVariant>())
+                    if (doc["white_value"].is<JsonVariant>())
                     {
                         std::string num = doc["white_value"];
                         auto white_value = parse_number<float>(num);
@@ -2244,7 +2244,7 @@ namespace esphome
                 // if (request->hasParam("target_temperature_low")) {
                 // auto target_temperature_low = parse_number<float>(request->getParam("target_temperature_low")->value().c_str());
                 // if (mg_http_get_var(&hm->body,"target_temperature_low",buf,sizeof(buf)) > 0) {
-                if (ddoc["target_temperature_low"].is<JsonVariant>())
+                if (doc["target_temperature_low"].is<JsonVariant>())
                 {
                     auto target_temperature_low = parse_number<float>(doc["target_temperature_low"]);
                     if (target_temperature_low.has_value())
