@@ -133,8 +133,8 @@ async def to_code(config):
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
-    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
-        real_clean_build()
+#    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
+#        real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
 

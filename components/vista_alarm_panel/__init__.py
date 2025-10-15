@@ -180,8 +180,8 @@ async def to_code(config):
     if CORE.is_esp8266:
         cg.add_define("INPUT_PULLDOWN INPUT")
     old_dir = CORE.relative_build_path("src")    
-    if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
-        real_clean_build()
+#    if config[CONF_CLEAN] or os.path.exists(old_dir+'/vistaalarm.h'):
+#        real_clean_build()
 
     if  config[CONF_USEASYNC]:
         cg.add_define("USETASK")
