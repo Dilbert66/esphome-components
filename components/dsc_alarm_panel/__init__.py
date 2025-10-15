@@ -133,8 +133,8 @@ async def to_code(config):
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
-    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
-        real_clean_build()
+#    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
+#        real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
 
@@ -164,12 +164,12 @@ async def to_code(config):
        
     await cg.register_component(var, config)
 
-def real_clean_build():
-    import shutil
-    build_dir = CORE.relative_build_path("")
-    if os.path.isdir(build_dir):
-        _LOGGER.info("Deleting %s", build_dir)
-        shutil.rmtree(build_dir)
+#def real_clean_build():
+#    import shutil
+#    build_dir = CORE.relative_build_path("")
+#    if os.path.isdir(build_dir):
+#        _LOGGER.info("Deleting %s", build_dir)
+#        shutil.rmtree(build_dir)
 
 async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     """Set up custom properties for an alarm sensor"""
