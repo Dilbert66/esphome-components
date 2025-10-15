@@ -2767,11 +2767,12 @@ namespace esphome
 
         const std::string WebServer::encrypt(const char *message)
         {
+                    // const char *message="test message";
             int i = strlen(message);
 
             if (!i)
                 return "";
-
+   
             int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
             int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
             uint8_t encrypted[length+1];
@@ -2782,8 +2783,9 @@ namespace esphome
 
             AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
             aes.process((uint8_t *)message, encrypted, i);
- 
+       // std::string akey=base64_encode(credentials_.token,SHA256_SIZE);
             std::string em = base64_encode(encrypted, length);
+            
             SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
 
             hmac.doUpdate(eiv.c_str(), eiv.length());
@@ -2798,8 +2800,8 @@ namespace esphome
             std::string enc = "{\"iv\":\"" + eiv + "\",\"data\":\"";
             enc.append(em);
             enc.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
-           //  ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
-           //ESP_LOGD(TAG,"message size=%d,encoded=%s",enc.length(),enc.c_str());
+           // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
+          // ESP_LOGD(TAG,"aeskey=%s,message size=%d,encoded=%s",akey.c_str(),enc.length(),enc.c_str());
            //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
 
             return enc;
@@ -2887,7 +2889,7 @@ namespace esphome
             AES aes(key, iv_decoded, AES::AES_MODE_256, AES::CIPHER_DECRYPT);
             aes.process((uint8_t *)data_decoded, data_decoded, encrypted_length);
             std::string out = std::string((char *)data_decoded);
-            // ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s",data,iv,strlen(iv),ehm.c_str());
+             //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
             return out;
         }

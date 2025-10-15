@@ -159,11 +159,10 @@ class WebServer : public Controller, public Component {
   }
 
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
-  credentials_.username = auth_username;   
-  credentials_.password = auth_password;
-  
-  const char * keystr=(credentials_.username + SALT + credentials_.password).c_str();
-
+    credentials_.username = auth_username;   
+    credentials_.password = auth_password;
+    std::string aeskeystring=credentials_.username + SALT + credentials_.password;
+    const char * keystr=aeskeystring.c_str();
     SHA256HMAC aeskey((const byte*)keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
     aeskey.doFinal(credentials_.token);
@@ -171,8 +170,7 @@ class WebServer : public Controller, public Component {
     SHA256HMAC hmac((const byte*)keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
     hmac.doFinal(credentials_.hmackey);
-   
-    
+  
    this->crypt_ = use_encryption;  
    credentials_.crypt=use_encryption;
 
