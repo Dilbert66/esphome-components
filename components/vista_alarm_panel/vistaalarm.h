@@ -153,7 +153,8 @@ class vistaECPHome : public time::RealTimeClock
       void set_lrrSupervisor(bool ls) { lrrSupervisor = ls; }
       void set_auiaddr(uint8_t addr) { 
         auiAddr = addr; 
-        switch addr{
+        switch (addr)
+        {
           case 1: auiAddrMask=0x02;break;
           case 2: auiAddrMask=0x04;break;
           case 5: auiAddrMask=0x20;break;
