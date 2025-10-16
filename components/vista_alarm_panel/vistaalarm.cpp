@@ -1655,7 +1655,7 @@ void vistaECPHome::update()
               ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
             // if ((vistaCmd.cbuf[2] >> 1) & auiAddr)
             //  activeAuiAddr=true;
-            if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
+            if (((vistaCmd.cbuf[2]) & auiAddrMask) && (vistaCmd.cbuf[7] & 0xf0) == 0x60 && vistaCmd.cbuf[8] == 0x63 && vistaCmd.cbuf[9] == 0x02)
             { // partition update broadcast
               char *m = parseAUIMessage(vistaCmd.cbuf);
               if (m == NULL)
@@ -1688,7 +1688,7 @@ void vistaECPHome::update()
                 // exitDelay=m[5] for partition partitionRequest
               }
             }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
+            else if (((vistaCmd.cbuf[2] ) & auiAddrMask) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && vistaCmd.cbuf[8] == 0xfe && vistaCmd.cbuf[10] != 0xfd)
             { // response data from request
               char *m = parseAUIMessage(vistaCmd.cbuf);
               if (m == NULL)
@@ -1733,7 +1733,7 @@ void vistaECPHome::update()
      
 #endif
             }
-            else if (((vistaCmd.cbuf[2] >> 1) & auiAddr) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd))
+            else if (((vistaCmd.cbuf[2] ) & auiAddrMask) && (vistaCmd.cbuf[7] & 0xf0) == 0x50 && (vistaCmd.cbuf[8] == 0xfd || vistaCmd.cbuf[10] == 0xfd))
             {
               char *m = parseAUIMessage(vistaCmd.cbuf);
               if (m == NULL)

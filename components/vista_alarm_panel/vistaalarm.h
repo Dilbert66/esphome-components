@@ -151,7 +151,15 @@ class vistaECPHome : public time::RealTimeClock
       void set_quickArm(bool qa) { quickArm = qa; }
       void set_displaySystemMsg(bool dsm) { displaySystemMsg = dsm; }
       void set_lrrSupervisor(bool ls) { lrrSupervisor = ls; }
-      void set_auiaddr(uint8_t addr) { auiAddr = addr; };
+      void set_auiaddr(uint8_t addr) { 
+        auiAddr = addr; 
+        switch addr{
+          case 1: auiAddrMask=0x02;break;
+          case 2: auiAddrMask=0x04;break;
+          case 5: auiAddrMask=0x20;break;
+          case 6: auiAddrMask=0x40;break;
+          default: addr=0;auiAddrMask=0;
+        }};
       void set_expanderAddr(uint8_t addr)
       {
         if (!addr) return;
@@ -350,6 +358,7 @@ class vistaECPHome : public time::RealTimeClock
       uint8_t inputRx = 0;
       uint8_t inputMon = 0;
       uint8_t auiAddr = 0;
+      uint8_t auiAddrMask=0;
       // bool activeAuiAddr=false;
       bool sendAuiTime();
       // bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
