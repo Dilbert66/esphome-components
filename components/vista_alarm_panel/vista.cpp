@@ -991,7 +991,7 @@ void IRAM_ATTR Vista::rxHandleISR()
 
       ackAddr = inFaultIdx == outFaultIdx ? 0xFF : zoneExpanders[faultQueue[outFaultIdx]].expansionAddr;
 
-      if (ackAddr >= 0 && ackAddr < 24)
+      if (ackAddr > 0 && ackAddr < 24)
       {
         vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
         b = addrToBitmask2(ackAddr);
@@ -1004,7 +1004,7 @@ void IRAM_ATTR Vista::rxHandleISR()
       else if (outbufIdx != inbufIdx || retries)
       {
         if (!retries && outbuf[outbufIdx].count > 4)
-        { // after 5 failed retries to send, we remove this entry from the buffer
+        { // after x failed retries to send, we remove this entry from the buffer
           ackAddr = outbuf[outbufIdx].kpaddr;
           outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
           while (outbufIdx != inbufIdx && outbuf[outbufIdx].kpaddr == ackAddr)
@@ -1016,13 +1016,15 @@ void IRAM_ATTR Vista::rxHandleISR()
           ackAddr = retries ? retryAddr : outbuf[outbufIdx].kpaddr; // get pending keypad address
           if (!retries)
             outbuf[outbufIdx].count++;
-          vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
-          b = addrToBitmask2(ackAddr);
-          if (b)
-            vistaSerial->write(b, false, 4800);
-          b = addrToBitmask3(ackAddr);
-          if (b)
-            vistaSerial->write(b, false, 4800);
+          if (ackAddr > 0 && ackAddr < 24) {
+            vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
+            b = addrToBitmask2(ackAddr);
+            if (b)
+              vistaSerial->write(b, false, 4800);
+            b = addrToBitmask3(ackAddr);
+            if (b)
+              vistaSerial->write(b, false, 4800);
+          }
         }
       }
       rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
