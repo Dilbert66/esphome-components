@@ -16,54 +16,6 @@
 //  #include <esp_task_wdt.h>
 //  #endif
 
-#ifdef USE_ARDUINO
-#include <StreamString.h>
-#else
-#define F(x) x
-#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
-
-class String : public std::string
-{
-public:
-  String() : std::string() {}
-  String(const char *p, size_t &s) : std::string(p, s) {}
-
-  int indexOf(char ch, unsigned int fromIndex) const
-  {
-    if (fromIndex >= this->length())
-      return -1;
-    const char *temp = strchr(this->c_str() + fromIndex, ch);
-    if (temp == NULL)
-      return -1;
-    return temp - this->c_str();
-  }
-
-  String substring(unsigned int left, unsigned int right) const
-  {
-    if (left > right)
-    {
-      unsigned int temp = right;
-      right = left;
-      left = temp;
-    }
-    unsigned int len = this->length();
-    String out;
-    if (left >= len)
-      return out;
-    if (right > len)
-      right = len;
-    out.copy(((char *)this->c_str()) + left, right - left);
-    return out;
-  }
-
-  long toInt(void) const
-  {
-    if (this->c_str())
-      return atol(this->c_str());
-    return 0;
-  }
-};
-#endif
 
 namespace esphome
 {
@@ -478,6 +430,7 @@ namespace esphome
           mg_printf(c,"Host: %.*s\r\n",host.len,host.buf);
           mg_printf(c,"Content-Type: application/json\r\n");
           mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
+
           // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
         } else if ( global_notify->enableBot_) {
           global_notify->sending_=false;
@@ -496,7 +449,7 @@ namespace esphome
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
-        String payload = String(hm->body.buf, hm->body.len);
+        std::string payload = std::string(hm->body.buf, hm->body.len);
         //  printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!payload.length() || !global_notify->processMessage(payload.c_str()))
         {
@@ -506,13 +459,15 @@ namespace esphome
           int update_id_last_digit = 0;
           for (int a = 0; a < 3; a++)
           {
-            update_id_first_digit = payload.indexOf(':', update_id_first_digit + 1);
+            //update_id_first_digit = payload.indexOf(':', update_id_first_digit + 1);
+            update_id_first_digit = payload.find(':', update_id_first_digit + 1);
           }
           for (int a = 0; a < 2; a++)
           {
-            update_id_last_digit = payload.indexOf(',', update_id_last_digit + 1);
+            update_id_last_digit = payload.find(',', update_id_last_digit + 1);
           }
-          global_notify->lastMsgReceived_ = payload.substring(update_id_first_digit + 1, update_id_last_digit).toInt() + 1;
+         // global_notify->lastMsgReceived_ = payload.substring(update_id_first_digit + 1, update_id_last_digit).toInt() + 1;
+           global_notify->lastMsgReceived_ = std::stoi(payload.substr(update_id_first_digit + 1, update_id_last_digit)) + 1;
         }
         global_notify->sending_ = false;
         c->is_closing = 1; // Tell mongoose to close this connection

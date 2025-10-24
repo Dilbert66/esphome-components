@@ -6,10 +6,8 @@
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
-//#include "esphome/core/preferences.h"
 #include <vector>
-#include <Crypto.h>
-
+#include "crypto.h"
 
 #ifdef USE_ESP32
 #include <deque>
@@ -17,19 +15,26 @@
 #include <freertos/semphr.h>
 #endif
 
+#ifdef USE_ESP_IDF
+#define PSTR(s)   ((const char *)(s))
+#endif
+
 
 #if USE_WEBKEYPAD_VERSION >= 2
-extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
-extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_JS_INCLUDE
-extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 #endif
 
@@ -38,15 +43,7 @@ namespace esphome {
 namespace web_keypad {
 
 extern void * webServerPtr;
-/// Internal helper struct that is used to parse incoming URLs
-/*
-struct UrlMatch {
-  std::string domain;  ///< The domain of the component, for example "sensor"
-  std::string id;      ///< The id of the device that's being accessed, for example "living_room_fan"
-  std::string method;  ///< The method that's being called, for example "turn_on"
-  bool valid;          ///< Whether this match is valid
-};
-*/
+
 enum msgType {
   STATE = 0,
   LOG,
@@ -60,11 +57,6 @@ struct SortingComponents {
   uint64_t group_id;
 };
  
-// struct KeypadConfig {
-//   uint8_t config[2500];
-//   uint8_t version;
-// };
-
 struct SortingGroup {
   std::string name;
   float weight;
@@ -81,7 +73,7 @@ struct Credentials {
 struct upload_state {
   size_t expected;  // POST data length, bytes
   size_t received;  // Already received bytes
-  String fn;
+  std::string fn;
 };
 
 #define SALT "77992288"
@@ -163,13 +155,13 @@ class WebServer : public Controller, public Component {
     credentials_.password = auth_password;
     std::string aeskeystring=credentials_.username + SALT + credentials_.password;
     const char * keystr=aeskeystring.c_str();
-    SHA256HMAC aeskey((const byte*)keystr,strlen(keystr));
+    SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
-    aeskey.doFinal(credentials_.token);
+    aeskey.doFinal((char*)credentials_.token);
     
-    SHA256HMAC hmac((const byte*)keystr,strlen(keystr));
+    SHA256HMAC hmac((const char*)keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
-    hmac.doFinal(credentials_.hmackey);
+    hmac.doFinal((char*)credentials_.hmackey);
   
    this->crypt_ = use_encryption;  
    credentials_.crypt=use_encryption;
@@ -177,7 +169,7 @@ class WebServer : public Controller, public Component {
    }  
    
   Credentials * get_credentials() { return &credentials_;}
-  bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
+  bool handleUpload(size_t bodylen,  const std::string &filename, size_t index,uint8_t *data, size_t len, bool final);
   const std::string encrypt(const char * message);
   const std::string decrypt(JsonObject doc,uint8_t* e);
 
@@ -427,7 +419,7 @@ void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);
 static void ev_handler(struct mg_connection *nc, int ev, void *p);
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
-void parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl,JsonObject doc);
+void parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
 void add_entity_config(EntityBase *entity, float weight, uint64_t group);
 void add_sorting_group(uint64_t group_id, const std::string &group_name, float weight);

@@ -5,14 +5,13 @@
 #include "esphome/core/entity_base.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
-#include "ArduinoJson.h"
 
 #if defined(USE_DSC_PANEL)
-#include "esphome/components/dsc_alarm_panel/dscAlarm.h"
+#include "esphome/components/dsc_alarm_panel_idf/dscAlarm.h"
 
 #endif
 #if defined(USE_VISTA_PANEL)
-#include "esphome/components/vista_alarm_panel/vistaalarm.h"
+#include "esphome/components/vista_alarm_panel_idf/vistaalarm.h"
 #endif
 
 #include <cstdlib>
@@ -51,7 +50,7 @@ namespace esphome
         static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
 
-        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl, JsonObject doc)
+        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
             int ct = 0;
             char *name;
@@ -2786,14 +2785,14 @@ namespace esphome
        // std::string akey=base64_encode(credentials_.token,SHA256_SIZE);
             std::string em = base64_encode(encrypted, length);
             
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
 
             hmac.doUpdate(eiv.c_str(), eiv.length());
  
             hmac.doUpdate(em.c_str(), em.length());
   
             uint8_t authCode[SHA256HMAC_SIZE+1];
-            hmac.doFinal(authCode);
+            hmac.doFinal((char*)authCode);
 
             // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
 
@@ -2859,7 +2858,7 @@ namespace esphome
             uint8_t data_decoded[strlen(data)];
             uint8_t iv_decoded[strlen(iv)];
 
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {
@@ -2872,7 +2871,7 @@ namespace esphome
 
             hmac.doUpdate(data, strlen(data));
             uint8_t authCode[SHA256HMAC_SIZE];
-            hmac.doFinal(authCode);
+            hmac.doFinal((char*)authCode);
 
             std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
             if (ehm != hash)
@@ -3419,7 +3418,7 @@ namespace esphome
 #endif
         }
 #if defined(ESP32)
-        bool WebServer::handleUpload(size_t bodylen, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
+        bool WebServer::handleUpload(size_t bodylen, const std::string &filename, size_t index, uint8_t *data, size_t len, bool final)
         {
             char buf[100];
 #ifdef USE_ARDUINO

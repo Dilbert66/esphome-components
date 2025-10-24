@@ -82,6 +82,7 @@ namespace esphome
 
       void setup() override;
       void loop() override;
+      float get_setup_priority() const override { return -100.0f; }
 
       void dump_config() override;
       void publish(SendData &out);
