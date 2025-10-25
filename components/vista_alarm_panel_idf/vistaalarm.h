@@ -600,6 +600,9 @@ class vistaECPHome : public time::RealTimeClock
   void setup() override;
 #endif
 
+// float get_loop_priority() const override {
+//   return 800.0f ; 
+// }
         void set_panel_time();
         //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
         void alarm_disarm(std::string code, int32_t partition);

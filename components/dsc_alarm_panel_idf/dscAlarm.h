@@ -598,6 +598,9 @@ unsigned long micros() {
       void loop();
 #else
   void update() override;
+  float get_loop_priority() const override {
+  return 800.0f ; 
+}
 #endif
 
       std::string getZoneName(int zone, bool append = false);

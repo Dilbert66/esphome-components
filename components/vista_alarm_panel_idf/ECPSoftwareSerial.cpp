@@ -583,14 +583,17 @@ void SoftwareSerial::rxBits()
 
 void IRAM_ATTR SoftwareSerial::rxRead()
 {
-
-    unsigned long curCycle = ticks();
     #if defined(USE_ESP_IDF) or defined(ESP32)
     bool level= gpio_get_level((gpio_num_t)m_rxPin);
     #else
     bool level = digitalRead(m_rxPin);
     #endif
+    rxSave(level);
+}
 
+void IRAM_ATTR SoftwareSerial::rxSave(bool level)
+{
+    unsigned long curCycle = ticks();
     // Store inverted edge value & cycle in the buffer unless we have an overflow
     // cycle's LSB is repurposed for the level bit
     int next = (m_isrInPos.load() + 1) % m_isrBufSize;

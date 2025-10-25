@@ -122,6 +122,7 @@ public:
     uint8_t checkParity(uint8_t b);
 
     void rxRead();
+    void rxSave(bool);
 
     int bitsAvailable();
 
@@ -205,8 +206,8 @@ void IRAM_ATTR digitalWriteByte(int pin, int val) {
 #if defined(USE_ESP_IDF)
 
 
-#if not defined(NOP())
-#define NOP() __asm__ __volatile__ ("nop\n\t")
+#if not defined(NOP)
+#define NOP __asm__ __volatile__ ("nop\n\t")
 #endif
  void delayMicroseconds(uint32_t us)
 {
@@ -215,11 +216,11 @@ void IRAM_ATTR digitalWriteByte(int pin, int val) {
         uint32_t e = (m + us);
         if(m > e){ //overflow
             while(esp_timer_get_time() > e){
-                NOP();
+                NOP;
             }
         }
         while(esp_timer_get_time() < e){
-            NOP();
+            NOP;
         }
     }
 }

@@ -221,10 +221,9 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
   
 
         #if defined (USE_ESP_IDF)
-       gpio_set_intr_type((gpio_num_t)dscClockPin, GPIO_INTR_ANYEDGE);
        gpio_install_isr_service(0);
+       gpio_set_intr_type((gpio_num_t)dscClockPin, GPIO_INTR_ANYEDGE);
        gpio_isr_handler_add((gpio_num_t)dscClockPin, dscClockInterrupt, (void*)(gpio_num_t)dscClockPin);
-       gpio_intr_enable((gpio_num_t) dscClockPin);
         #else
           attachInterrupt(digitalPinToInterrupt(dscClockPin), dscClockInterrupt, CHANGE);
         #endif

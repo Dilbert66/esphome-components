@@ -318,11 +318,11 @@ unsigned long IRAM_ATTR micros() {
 }
 
 unsigned long millis() {
-     (unsigned long)(esp_timer_get_time() / 1000ULL);
+    return (unsigned long)(esp_timer_get_time() / 1000ULL);
  }
 
 #if not defined(NOP)
-#define NOP() __asm__ __volatile__ ("nop\n\t")
+#define NOP __asm__ __volatile__ ("nop\n\t")
 #endif
 void IRAM_ATTR delayMicroseconds(uint32_t us) {
   uint64_t m = (uint64_t)esp_timer_get_time();
@@ -330,11 +330,11 @@ void IRAM_ATTR delayMicroseconds(uint32_t us) {
     uint64_t e = (m + us);
     if (m > e) {  //overflow
       while ((uint64_t)esp_timer_get_time() > e) {
-        NOP();
+        NOP;
       }
     }
     while ((uint64_t)esp_timer_get_time() < e) {
-      NOP();
+      NOP;
     }
   }
 }

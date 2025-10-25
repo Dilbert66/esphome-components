@@ -168,20 +168,20 @@ ALARM_SENSOR_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-    if CORE.using_arduino and CORE.is_esp32:
-        #we double usual stack size
-        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
-        cg.add_global(cg.RawStatement(stack))
-        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-        cg.add_global(cg.RawStatement("#endif"))
-    if CORE.using_esp_idf:
-         stack=16384
-         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =config[CONF_STACK_SIZE] * 1024
-         CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS]["CONFIG_ESP_MAIN_TASK_STACK_SIZE"] = stack
+    # if CORE.using_arduino and CORE.is_esp32:
+    #     #we double usual stack size
+    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+    #     cg.add_global(cg.RawStatement(stack))
+    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+    #     cg.add_global(cg.RawStatement("#endif"))
+    # if CORE.using_esp_idf:
+    #      stack=16384
+    #      if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =config[CONF_STACK_SIZE] * 1024
+    #      CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS]["CONFIG_ESP_MAIN_TASK_STACK_SIZE"] = stack
     cg.add_define("USE_VISTA_PANEL")  
 
     old_dir = CORE.relative_build_path("src")    

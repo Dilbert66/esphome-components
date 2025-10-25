@@ -11,17 +11,15 @@
 #ifndef CRYPTO_h
 #define CRYPTO_h
 
-#if defined(USE_ESP_IDF)
+
 #include <cstring>
 #include <cstdlib>
 #include "math.h"
-#else
-#include <Arduino.h>
-#endif
 
-#if defined ESP8266
-#include <osapi.h>
-#endif
+
+// #if defined ESP8266
+// #include <osapi.h>
+// #endif
 
 #define SHA256_SIZE             32
 #define SHA256HMAC_SIZE         32

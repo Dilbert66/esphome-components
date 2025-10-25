@@ -1,9 +1,7 @@
 #include "vista.h"
 
-// #include "esp_task_wdt.h"
-
 Vista *pointerToVistaClass;
-#if defined(USE_ESP_IDF) 
+#if defined(USE_ESP_IDF) or defined(ESP32)
 void IRAM_ATTR rxISRHandler(void* args)
 #else
 void IRAM_ATTR rxISRHandler()
@@ -16,7 +14,7 @@ void IRAM_ATTR rxISRHandler()
 
 
 #ifdef MONITORTX
-#if defined( USE_ESP_IDF )
+#if defined( USE_ESP_IDF ) or defined(ESP32)
 void IRAM_ATTR txISRHandler(void* args)
 #else
 void  IRAM_ATTR txISRHandler()
@@ -53,7 +51,7 @@ Vista::Vista()
 Vista::~Vista()
 {
   free(vistaSerial);
-  #if defined(USE_ESP_IDF)
+  #if defined(USE_ESP_IDF) or defined(ESP32)
   gpio_intr_disable((gpio_num_t) rxPin);
   gpio_isr_handler_remove((gpio_num_t) rxPin);
 #else
@@ -63,7 +61,7 @@ Vista::~Vista()
   if (vistaSerialMonitor)
   {
     free(vistaSerialMonitor);
-    #if defined(USE_ESP_IDF) 
+    #if defined(USE_ESP_IDF) or defined(ESP32)
   gpio_intr_disable((gpio_num_t) monitorPin);
   gpio_isr_handler_remove((gpio_num_t) monitorPin);
 #else
@@ -1042,14 +1040,15 @@ void IRAM_ATTR Vista::rxHandleISR()
   static byte b;
   static uint8_t ackAddr;
     #if defined(USE_ESP_IDF) or defined(ESP32)
-    //gpio_intr_disable((gpio_num_t)rxPin);
-  if (gpio_get_level((gpio_num_t) rxPin) == invertRead) 
+  bool level=gpio_get_level((gpio_num_t) rxPin);
   #else
-  if (digitalRead(rxPin) == invertRead)
+  bool level=digitalRead(rxPin);
   #endif
+    if ( level == invertRead)
   {
     if (lowTime)
-    lowTime = micros() - lowTime;
+     lowTime = micros() - lowTime;
+
     highTime = micros();
 
 
@@ -1128,9 +1127,6 @@ void IRAM_ATTR Vista::rxHandleISR()
   }
   if (rxState == sNormal || highTime == 0)
     vistaSerial->rxRead();
-   #if defined(USE_ESP_IDF) 
-   // gpio_intr_enable((gpio_num_t)rxPin);
-  #endif
 #ifdef ESP8266
   else // clear pending interrupts for this pin if any occur during transmission
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << rxPin);
@@ -1714,7 +1710,7 @@ void Vista::hw_wdt_enable()
 void Vista::stop()
 {
   // hw_wdt_enable(); //debugging only
-  #if defined(USE_ESP_IDF) 
+  #if defined(USE_ESP_IDF) or defined(ESP32)
   gpio_intr_disable((gpio_num_t) rxPin);
   gpio_isr_handler_remove((gpio_num_t) rxPin);
 #else
@@ -1723,7 +1719,7 @@ void Vista::stop()
 #ifdef MONITORTX
   if (vistaSerialMonitor)
   {
-    #if defined(USE_ESP_IDF) 
+    #if defined(USE_ESP_IDF) or defined(ESP32)
   gpio_intr_disable((gpio_num_t) monitorPin);
   gpio_isr_handler_remove((gpio_num_t) monitorPin);
 #else
@@ -1761,12 +1757,15 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   if (vistaSerial->isValidGPIOpin(rxPin))
   {
     vistaSerial->begin(4800, SWSERIAL_8E2);
-      #if defined (USE_ESP_IDF) 
-        gpio_set_intr_type((gpio_num_t)rxPin, GPIO_INTR_ANYEDGE);
+      #if defined (USE_ESP_IDF)  or defined(ESP32)
        gpio_install_isr_service(0);
+       gpio_set_intr_type((gpio_num_t)rxPin, GPIO_INTR_ANYEDGE);
        gpio_isr_handler_add((gpio_num_t)rxPin, rxISRHandler, (void*)(gpio_num_t)rxPin);
+
+    //gpio_set_intr_type((gpio_num_t)rxPin, GPIO_INTR_ANYEDGE);
+   // esp_err_t err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, rxISRHandler, NULL, NULL);
    //  gpio_isr_register(rxISRHandler, NULL, ESP_INTR_FLAG_LOWMED, NULL);
-     gpio_intr_enable((gpio_num_t) rxPin);
+     //gpio_intr_enable((gpio_num_t) rxPin);
 
         #else
     attachInterrupt(digitalPinToInterrupt(rxPin), rxISRHandler, CHANGE);
@@ -1789,11 +1788,14 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   if (vistaSerialMonitor->isValidGPIOpin(monitorPin))
   {
     vistaSerialMonitor->begin(4800, SWSERIAL_8E2);
-      #if defined (USE_ESP_IDF) 
+      #if defined (USE_ESP_IDF) or defined(ESP32)
+       //gpio_install_isr_service(0);
        gpio_set_intr_type((gpio_num_t)monitorPin, GPIO_INTR_ANYEDGE);
-       gpio_install_isr_service(0);
        gpio_isr_handler_add((gpio_num_t)monitorPin, txISRHandler, (void*)(gpio_num_t)monitorPin);
-        gpio_intr_enable((gpio_num_t) monitorPin);
+      //  gpio_intr_enable((gpio_num_t) monitorPin);
+
+         //  gpio_set_intr_type((gpio_num_t)monitorPin, GPIO_INTR_ANYEDGE);
+   // esp_err_t err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, txISRHandler, NULL, NULL);
         #else
     attachInterrupt(digitalPinToInterrupt(monitorPin), txISRHandler, CHANGE);
     #endif

@@ -573,8 +573,9 @@ void vistaECPHome::setup()
 #endif
       publishSystemStatus(STATUS_ONLINE, 1);
       publishStatus(SAC, true, 1);
+       #if not defined(USETASK) || not defined(ESP32)
       vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
-
+      #endif
       vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
 
       setDefaultKpAddr(defaultPartition);
@@ -591,8 +592,9 @@ void vistaECPHome::setup()
 #if defined(ESP32) && defined(USETASK)
       esp_chip_info_t info;
       esp_chip_info(&info);
-      ESP_LOGD(TAG, "Cores: %d", info.cores);
-      uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
+      ESP_LOGE(TAG, "Cores: %d", info.cores);
+      ESP_LOGE(TAG,"Running on core %d",xPortGetCoreID());
+  //    uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
       xTaskCreatePinnedToCore(
           this->cmdQueueTask, // Function to implement the task
           "cmdQueueTask",     // Name of the task
@@ -601,7 +603,7 @@ void vistaECPHome::setup()
           10,                 // Priority of the task
           &xHandle            // Task handle.
           ,
-          core // Core where the task should run
+          ASYNC_CORE // Core where the task should run. If only one core, async_core will be ignored
       );
 #endif
       ESP_LOGD(TAG, "Completed setup. Free heap=%04X (%d)",esp_get_free_heap_size(), esp_get_free_heap_size());
@@ -1307,7 +1309,8 @@ void vistaECPHome::setup()
 
     void vistaECPHome::cmdQueueTask(void *args)
     {
-
+      //ensure we run the vista interrupts on core 1 for multicore esp32 devices
+      vista.begin(alarmPanelPtr->rxPin, alarmPanelPtr->txPin, alarmPanelPtr->keypadAddr1, alarmPanelPtr->monitorPin, alarmPanelPtr->invertRx, alarmPanelPtr->invertTx, alarmPanelPtr->invertMon, alarmPanelPtr->inputRx, alarmPanelPtr->inputMon);
       // vistaECPHome *_this = (vistaECPHome *)args;
       unsigned long checkTime = millis();
       unsigned long dataTime = millis();
@@ -1386,6 +1389,13 @@ void vistaECPHome::update()
         lastConnectState=is_connected;
         
         processAuiQueue();
+      static unsigned long checkTime = millis();
+      if (millis() - checkTime > 10000)
+      {
+        checkTime = millis();
+        UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+        ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
+      }
 
 #if defined(ESPHOME_MQTT)
         static bool firstRunMqtt=true;
