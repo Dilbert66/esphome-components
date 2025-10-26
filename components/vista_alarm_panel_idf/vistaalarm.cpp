@@ -605,6 +605,17 @@ void vistaECPHome::setup()
           ,
           ASYNC_CORE // Core where the task should run. If only one core, async_core will be ignored
       );
+
+      //       xTaskCreatePinnedToCore(
+      //     this->i, // Function to implement the task
+      //     "interruptstart",     // Name of the task
+      //      1000,               // Stack size in words
+      //     (void *)this,       // Task input parameter
+      //     10,                 // Priority of the task
+      //     NULL            // Task handle.
+      //     ,
+      //     ASYNC_CORE // Core where the task should run. If only one core, async_core will be ignored
+      // );
 #endif
       ESP_LOGD(TAG, "Completed setup. Free heap=%04X (%d)",esp_get_free_heap_size(), esp_get_free_heap_size());
     }

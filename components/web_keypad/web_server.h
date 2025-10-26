@@ -91,6 +91,7 @@ enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 class WebServer : public Controller, public Component {
  public:
   WebServer();
+  ~WebServer();
 
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -126,7 +127,7 @@ class WebServer : public Controller, public Component {
    */
 
  // std::map<mg_connection *,std::string> sessionTokens;
-  Credentials credentials_;
+  Credentials *  credentials_;
   using key_service_t = std::function<void(std::string,int)>;
   optional<key_service_t> key_service_func_{}; 
   
@@ -151,24 +152,24 @@ class WebServer : public Controller, public Component {
   }
 
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
-    credentials_.username = auth_username;   
-    credentials_.password = auth_password;
-    std::string aeskeystring=credentials_.username + SALT + credentials_.password;
+    credentials_->username = auth_username;   
+    credentials_->password = auth_password;
+    std::string aeskeystring=credentials_->username + SALT + credentials_->password;
     const char * keystr=aeskeystring.c_str();
     SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
-    aeskey.doFinal((char*)credentials_.token);
+    aeskey.doFinal((char*)credentials_->token);
     
     SHA256HMAC hmac((const char*)keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
-    hmac.doFinal((char*)credentials_.hmackey);
+    hmac.doFinal((char*)credentials_->hmackey);
   
    this->crypt_ = use_encryption;  
-   credentials_.crypt=use_encryption;
+   credentials_->crypt=use_encryption;
 
    }  
    
-  Credentials * get_credentials() { return &credentials_;}
+  Credentials * get_credentials() { return credentials_;}
   bool handleUpload(size_t bodylen,  const std::string &filename, size_t index,uint8_t *data, size_t len, bool final);
   const std::string encrypt(const char * message);
   const std::string decrypt(JsonObject doc,uint8_t* e);
@@ -412,8 +413,6 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 void push(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 bool callKeyService(const char *buf,int partition);
 void report_ota_error();
-#define MATCH_BUF_SIZE 60
-static char matchBuf[MATCH_BUF_SIZE];
 static uint8_t matchIndex;
 void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);

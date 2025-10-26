@@ -545,8 +545,8 @@ void SoftwareSerial::rxBits()
                 }
 
                //  if (!byt || bits > 12) printf("*** byte=%02X, parity=%d,checkParity=%d,bits=%d,level=%d,cycles=%d,m_bitCycles=%d,self=%d\n\n",byt,parity,checkParity(byt),bits,level,cycles,m_bitCycles,this);
-               // if (checkParity(byt) == parity && bits < 15)
-                if (bits < 15)
+                if (checkParity(byt) == parity && bits < 15)
+                //if (bits < 15)
                 {
                     if (next != m_outPos)
                     {

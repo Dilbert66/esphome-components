@@ -180,7 +180,7 @@ namespace esphome
                     }
                     else
                     {
-                        if (credentials_.crypt)
+                        if (credentials_->crypt)
                         {
                             if (c->data[1])
                             {
@@ -205,9 +205,15 @@ namespace esphome
 #ifdef USE_ESP32
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
+            credentials_ = new Credentials;
             webServerPtr = this;
           //  this->pref_ = global_preferences->make_preference<KeypadConfig>(fnv1_hash(App.get_compilation_time()));
 
+        }
+
+
+        WebServer::~WebServer() {
+            delete credentials_;
         }
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -2606,7 +2612,7 @@ namespace esphome
 
             std::string newdata;
 
-            if (credentials_.crypt && strlen(data) > 0)
+            if (credentials_->crypt && strlen(data) > 0)
                 newdata = encrypt(data);
             else
                 newdata = std::string(data);
@@ -2614,7 +2620,7 @@ namespace esphome
             for (c = mgr.conns; c != NULL; c = c->next)
             {
 
-                if (credentials_.crypt && !c->data[1])
+                if (credentials_->crypt && !c->data[1])
                     continue; // not authenticated with encrypted response
 
                 if (c->data[0] == 'E')
@@ -2635,7 +2641,7 @@ namespace esphome
 
                 if (mt == PING)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type.c_str(), "data", id);
-                else if ((mt == LOG || mt == OTA) && !credentials_.crypt)
+                else if ((mt == LOG || mt == OTA) && !credentials_->crypt)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type.c_str(), "data", newdata.c_str());
                 else
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", type.c_str(), "data", newdata.c_str());
@@ -2774,18 +2780,20 @@ namespace esphome
    
             int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
             int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
-            uint8_t encrypted[length+1];
+            //uint8_t encrypted[length+1];
+           // ESP_LOGE(TAG,"Encrypted len =%d",length+1);
+            uint8_t * encrypted = new uint8_t[length+AES_BLOCKSIZE];
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
 
             std::string eiv = base64_encode(iv, AES_IV_SIZE );
 
-            AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
+            AES aes(credentials_->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
             aes.process((uint8_t *)message, encrypted, i);
-       // std::string akey=base64_encode(credentials_.token,SHA256_SIZE);
+       // std::string akey=base64_encode(credentials_->token,SHA256_SIZE);
             std::string em = base64_encode(encrypted, length);
             
-            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) credentials_->hmackey, SHA256HMAC_SIZE);
 
             hmac.doUpdate(eiv.c_str(), eiv.length());
  
@@ -2802,7 +2810,7 @@ namespace esphome
            // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
           // ESP_LOGD(TAG,"aeskey=%s,message size=%d,encoded=%s",akey.c_str(),enc.length(),enc.c_str());
            //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
-
+            delete[] encrypted;
             return enc;
         }
 
@@ -2853,12 +2861,14 @@ namespace esphome
                 }
             }
 
-            uint8_t *key = credentials_.token;
-            uint8_t *hmackey = credentials_.hmackey;
-            uint8_t data_decoded[strlen(data)];
-            uint8_t iv_decoded[strlen(iv)];
+            uint8_t *key = credentials_->token;
+            uint8_t *hmackey = credentials_->hmackey;
+           // uint8_t data_decoded[strlen(data)];
+            uint8_t * data_decoded= new uint8_t[strlen(data)+1];
+           // uint8_t iv_decoded[strlen(iv)];
+            uint8_t * iv_decoded = new uint8_t[strlen(iv)+1];
 
-            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) credentials_->hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {
@@ -2872,12 +2882,13 @@ namespace esphome
             hmac.doUpdate(data, strlen(data));
             uint8_t authCode[SHA256HMAC_SIZE];
             hmac.doFinal((char*)authCode);
-
-            std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
+             std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
             if (ehm != hash)
             {
                 ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
                 *err = 1;
+                delete[] data_decoded;
+                delete[] iv_decoded;
                 return "";
             }
             if (seq > 0 && lastseq != NULL)
@@ -2890,6 +2901,8 @@ namespace esphome
             std::string out = std::string((char *)data_decoded);
              //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
+            delete[] data_decoded;
+            delete[] iv_decoded;
             return out;
         }
 
@@ -3013,7 +3026,7 @@ namespace esphome
                 deserializeJson(doc, buf.c_str());
                 uint8_t err = 0;
 
-                if (doc["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
+                if (obj["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
                 {
 
                     buf = srv->decrypt(obj, &err);
@@ -3085,9 +3098,8 @@ namespace esphome
                     c->data[0] = 'E';
                     mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                     c->send.c = c;
-                    std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
-                    enc = srv->get_config_json(c->id);
+                    std::string enc = srv->get_config_json(c->id);
                     if (crypt)
                         enc = srv->encrypt(enc.c_str());
                     mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
@@ -3180,7 +3192,7 @@ namespace esphome
                 std::string buf = std::string(hm->body.buf, hm->body.len);
                 DeserializationError err = deserializeJson(doc, buf.c_str());
 
-                if (!err && doc["iv"].is<JsonVariant>() && credentials_.password != "")
+                if (!err && obj["iv"].is<JsonVariant>() && credentials_->password != "")
                 {
                     uint8_t e = 0;
                     buf = decrypt(obj, &e);

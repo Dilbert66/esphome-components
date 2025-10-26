@@ -78,8 +78,7 @@ TelegramMessageTrigger = web_notify_ns.class_(
     "TelegramMessageTrigger", automation.Trigger.template(cg.std_string)
 )
 
-RemoteData= web_notify_ns.struct(f"RemoteData")
-SendData= web_notify_ns.struct(f"SendData")
+RemoteData= web_notify_ns.namespace(f"RemoteData&")
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -314,7 +313,7 @@ async def to_code(config):
         cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
         cg.add_global(cg.RawStatement("#endif"))
     if CORE.using_esp_idf: 
-        stack=6
+        stack=16
         if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
             stack=config[CONF_STACK_SIZE]
         CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
@@ -366,7 +365,7 @@ async def to_code(config):
     #      copy_file_if_changed(src,dst)
     
     #remove old version file
-    dst=CORE.relative_build_path("src/mongoose.c")
-    if os.path.isfile(dst):
-          os.remove(dst)
+    # dst=CORE.relative_build_path("src/mongoose.c")
+    # if os.path.isfile(dst):
+    #       os.remove(dst)
 
