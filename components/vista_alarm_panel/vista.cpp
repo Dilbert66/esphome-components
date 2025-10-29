@@ -986,7 +986,7 @@ void Vista::writeChars()
   }
 
   sending = true;
-  //delayMicroseconds(500);
+  delayMicroseconds(500);
   for (int x = 0; x < tmpOutBuf[1] + 2; x++)
   {
     vistaSerial->write(tmpOutBuf[x]);
