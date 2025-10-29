@@ -1343,7 +1343,7 @@ size_t Vista::decodePacket()
       extcmd[5] = extbuf[5];
       extcmd[6] = extbuf[6];
       extcmd[12] = 0x74; // flag to identify unknown command
-      newExtCmd = false;
+      newExtCmd = true;
       return 13;
     }
   }   
