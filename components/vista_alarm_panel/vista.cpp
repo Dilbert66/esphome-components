@@ -734,6 +734,7 @@ void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
   lcbuf[lcbuflen]=(char)((chksum-1) ^ 0xFF);
   if (filterOwnTx) 
       extbuf[lcbuflen]=lcbuf[lcbuflen];
+  delayMicroseconds(500);
   for (uint8_t x = 0; x < lcbuflen+1; x++)
   {
     vistaSerial->write(lcbuf[x]);
