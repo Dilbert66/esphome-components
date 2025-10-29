@@ -64,6 +64,8 @@ CONF_DEVICE_TYPE="device_type"
 CONF_RF_ADDR="rf_receiver_addr"
 CONF_EMULATE_RF_RECEIVER="emulate_rf_receiver"
 CONF_EMULATED="emulated"
+KEY_ESP32 = "esp32"
+KEY_SDKCONFIG_OPTIONS = "sdkconfig_options"
 
 BINARY_SENSOR_TYPE_ID_REGEX = r"^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<digits>, arm_<digits>, arma_<digits>, arms_<digits>, arma_<digits>, armn_<digits>,alm_<digits>, fire_<digits>, chm_<digits>, r<digits>, z<digits>"
@@ -166,26 +168,34 @@ ALARM_SENSOR_SCHEMA = cv.Schema(
 )
 
 async def to_code(config):
-    if CORE.using_arduino and CORE.is_esp32:
-        #we double usual stack size
-        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
-        cg.add_global(cg.RawStatement(stack))
-        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-        cg.add_global(cg.RawStatement("#endif"))
-
+    # if CORE.using_arduino and CORE.is_esp32:
+    #     #we double usual stack size
+    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+    #     cg.add_global(cg.RawStatement(stack))
+    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+    #     cg.add_global(cg.RawStatement("#endif"))
+    # if CORE.using_esp_idf:
+    #      stack=16384
+    #      if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =config[CONF_STACK_SIZE] * 1024
+    #      CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS]["CONFIG_ESP_MAIN_TASK_STACK_SIZE"] = stack
     cg.add_define("USE_VISTA_PANEL")  
-    if CORE.is_esp8266:
-        cg.add_define("INPUT_PULLDOWN INPUT")
+
     old_dir = CORE.relative_build_path("src")    
     # if config[CONF_CLEAN] or os.path.exists(old_dir / 'vistaalarm.h'):
     #     real_clean_build()
-
-    if  config[CONF_USEASYNC]:
-        cg.add_define("USETASK")
-    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),cg.RawExpression(config[CONF_INPUT_MON]))
+    input_type=0
+    if config[CONF_INPUT_MON] == "INPUT_PULLUP":
+        input_type=2
+    if config[CONF_INPUT_MON] == "INPUT_PULLDOWN":
+        if not CORE.is_esp8266:
+            input_type=3
+    # if  config[CONF_USEASYNC]:
+    #     cg.add_define("USETASK")
+    var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),input_type)
     
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
@@ -249,6 +259,7 @@ async def to_code(config):
 #     if os.path.isdir(build_dir):
 #         _LOGGER.info("Deleting %s", build_dir)
 #         shutil.rmtree(build_dir)
+
 
 async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     """Set up custom properties for an alarm sensor"""

@@ -24,21 +24,41 @@ Modified for 4800 8E2
 
 #pragma once
 
+#if not defined(ALWAYS_INLINE_ATTR)
+#define ALWAYS_INLINE_ATTR __attribute__((always_inline)) 
+#endif
 
 #include <inttypes.h>
 
+#if defined(USE_ESP_IDF) 
+#define ESP32
+#include <cstring>
+#include "driver/gpio.h"
+#include "driver/gptimer.h"
+#include <esp_attr.h>
+#include <stdio.h>
+#include <cstdlib>
+#include <string>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_timer.h"
+#include "esp_private/esp_clk.h"
+typedef char byte;
+#define INPUT           (0x0)
+#define OUTPUT          (0x1)
+#define INPUT_PULLUP    (0x2)
+#define INPUT_PULLDOWN  (0x3)
+#define HIGH 1
+#define LOW 0
+#else
 #include <Stream.h>
+#include "Arduino.h"
+#endif
 
 #include <functional>
-
 #include <atomic>
 
-#include "Arduino.h"
-//#include "driver/timer.h"
-
-#if defined(ESP32) && not defined(IRAM_ATTR)
-#define IRAM_ATTR IRAM_ATTR
-#endif
 #if defined(USE_RP2040) && not defined(IRAM_ATTR)
 #define IRAM_ATTR
 #endif
@@ -62,10 +82,10 @@ enum SoftwareSerialConfig
 // the constructor however has an optional rx buffer size.
 // Baudrates up to 115200 can be used.
 
-class SoftwareSerial : public Stream
+class SoftwareSerial 
 {
 public:
-    SoftwareSerial(int receivePin, int transmitPin, bool invertRx = false, bool invertTx = false, int bufSize = 64, int isrBufSize = 0, uint8_t inputRx = INPUT);
+    SoftwareSerial(int receivePin, int transmitPin, bool invertRx = false, bool invertTx = false, int bufSize = 64, int isrBufSize = 0, int inputRx = INPUT);
     virtual ~SoftwareSerial();
 
     void begin(int32_t baud = 2400)
@@ -90,10 +110,10 @@ public:
 
     // size_t write(const uint8_t * buffer, size_t size, bool parity);
     // size_t write(const uint8_t *buffer, size_t size) override;
-    operator bool() const
-    {
-        return m_rxValid || m_txValid;
-    }
+    // operator bool() const
+    // {
+    //     return m_rxValid || m_txValid;
+    // }
 
     // Disable or enable interrupts on the rx pin
     void enableRx(bool on);
@@ -102,6 +122,7 @@ public:
     uint8_t checkParity(uint8_t b);
 
     void rxRead();
+    void rxSave(bool);
 
     int bitsAvailable();
 
@@ -113,20 +134,8 @@ public:
     bool debug;
 
 private:
-    uint32_t m_periodStart;
-    uint32_t m_periodDuration;
-    bool parityEven(uint8_t byte)
-    {
-        byte ^= byte >> 4;
-        byte &= 0xf;
-        return (0x6996 >> byte) & 1;
-    }
-    uint8_t pduBits = 11;
-    void resetPeriodStart()
-    {
-        m_periodDuration = 0;
-        m_periodStart = ESP.getCycleCount();
-    }
+
+
     unsigned long m_bitTime;
     /* check m_rxValid that calling is safe */
     void rxBits();
@@ -160,29 +169,62 @@ private:
     int m_rxCurBit; // 0 - 7: data bits. -1: start bit. 8: stop bit.
     uint8_t m_rxCurByte = 0;
 
-    static inline uint32_t  IRAM_ATTR microsToTicks(uint32_t micros) __attribute__((always_inline))
+    static inline unsigned long  IRAM_ATTR microsToTicks(unsigned long micros) ALWAYS_INLINE_ATTR
     {
-        return micros << 1;
+        // return (ESP.getCpuFreqMHz() * micros) << 1;
+       // return ((esp_clk_cpu_freq()/1000000) * micros) << 1;
+       return micros << 1;
     }
-    uint32_t ticksToMicros(uint32_t ticks)
+   static inline unsigned long ticksToMicros(unsigned long ticks) ALWAYS_INLINE_ATTR
     {
         return ticks >> 1;
     }
 
-    static inline uint32_t IRAM_ATTR ticks() __attribute__((always_inline))
+    static inline unsigned long IRAM_ATTR ticks()  ALWAYS_INLINE_ATTR
     {
 #if defined(ESP32)
-
-       return esp_timer_get_time()  << 1;
-    //    uint64_t t;
-    //    t=timer_group_get_counter_value_in_isr(TIMER_GROUP_0, TIMER_0);
-    //    return t << 1;
-     //     return micros() << 1;
+    //return esp_cpu_get_cycle_count() << 1;
+       return (unsigned long) esp_timer_get_time()  << 1;
 
 #else
         return micros() << 1;
        
 #endif
     }
+
+void IRAM_ATTR digitalWriteByte(int pin, int val) {
+    #if defined(USE_ESP_IDF) or defined(ESP32)
+        gpio_set_level((gpio_num_t)pin, val);
+    #else
+        digitalWrite(pin,val);
+    #endif
+
+}
+
+
+
+#if defined(USE_ESP_IDF)
+
+
+#if not defined(NOP)
+#define NOP __asm__ __volatile__ ("nop\n\t")
+#endif
+ void delayMicroseconds(uint32_t us)
+{
+    uint32_t m = esp_timer_get_time();
+    if(us){
+        uint32_t e = (m + us);
+        if(m > e){ //overflow
+            while(esp_timer_get_time() > e){
+                NOP;
+            }
+        }
+        while(esp_timer_get_time() < e){
+            NOP;
+        }
+    }
+}
+
+#endif
 };
 

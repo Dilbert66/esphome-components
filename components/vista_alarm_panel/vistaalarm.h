@@ -15,6 +15,20 @@
 // #endif
 // #endif
 
+#if defined(USE_ESP_IDF)
+#define ESP32
+#include <cstring>
+#include <esp_attr.h>
+#include <stdio.h>
+#include <cstdlib>
+#include <string>
+
+typedef char __FlashStringHelper;
+#define PSTR(s)   ((const char *)(s))
+#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
+#endif
+
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
 #include "esphome/components/mqtt/mqtt_client.h"
@@ -69,8 +83,6 @@
 #define LOOP_TYPE 2
 
 #define ASYNC_CORE 1
-// #define USETASK
-
 // default pins to use for serial comms to the panel
 // The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.
 // These have proven to work fine.
@@ -536,9 +548,9 @@ class vistaECPHome : public time::RealTimeClock
       std::string previousMsg,
           previousZoneStatusMsg;
 
-      alarmStatusType fireStatus,
-          panicStatus,
-          alarmStatus;
+      alarmStatusType * fireStatus;
+       alarmStatusType * panicStatus;
+       alarmStatusType * alarmStatus;
       uint8_t partitionTargets;
 
       struct serialType
@@ -546,10 +558,11 @@ class vistaECPHome : public time::RealTimeClock
         uint16_t zone;
         int mask;
       };
-      struct cmdQueueItem vistaCmd;
+      struct cmdQueueItem * vistaCmd;
 #ifdef ESP32
       TaskHandle_t xHandle;
       static void cmdQueueTask(void *args);
+      static void setupTask(void *args);
 #endif
       void createZone(uint16_t z, uint8_t p = 0);
       int getZoneNumber(char *zid);
@@ -565,10 +578,7 @@ class vistaECPHome : public time::RealTimeClock
 
 
       zoneType *getZone(uint16_t z);
-      std::string getZoneName(uint16_t zone, bool append = false);
-
       zoneType *getZoneFromSerial(uint32_t serialCode);
-
       void zoneStatusUpdate(zoneType *zt);
       void assignPartitionToZone(zoneType *zt);
 
@@ -586,6 +596,9 @@ class vistaECPHome : public time::RealTimeClock
   void setup() override;
 #endif
 
+// float get_loop_priority() const override {
+//   return 800.0f ; 
+// }
         void set_panel_time();
         //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
         void alarm_disarm(std::string code, int32_t partition);
@@ -622,8 +635,8 @@ class vistaECPHome : public time::RealTimeClock
         bool areEqual(char *a1, char *a2, uint8_t len);
 
         int getZoneFromPrompt(char *p1);
-        std::string getNameFromPrompt(char *p1, char *p2);
-
+       // void getNameFromPrompt(char *p1, char *p2,std::string & out);
+        void getZoneName(uint16_t zone, std::string & out,bool append=false);
         // bool promptContains(char * p1, const char * msg, int & zone);
 
         void printPacket(const char *label, char cbuf[], int len);
@@ -651,7 +664,18 @@ class vistaECPHome : public time::RealTimeClock
 
       private:
         const __FlashStringHelper *statusText(int statusCode);
+
+    #if defined (USE_ESP_IDF)
+static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+ #endif
+
+
+
       };
+
+      
 
       extern vistaECPHome *alarmPanelPtr;
 #if !defined(ARDUINO_MQTT)

@@ -150,8 +150,8 @@ CONFIG_SCHEMA = cv.All(
             cv.SplitDefault(
                 CONF_OTA,
                 esp8266=False,
-                esp32_arduino=False,
-                esp32_idf=False,
+                esp32_arduino=True,
+                esp32_idf=True,
                 bk72xx=False,
                 rtl87xx=False,
             ): cv.boolean,
@@ -245,7 +245,7 @@ async def to_code(config):
         cg.add_global(cg.RawStatement("#endif"))
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    cg.add_library("intrbiz/Crypto",None)
+    #cg.add_library("intrbiz/Crypto",None)
     version = config[CONF_VERSION]
 
     cg.add(var.set_port(config[CONF_PORT]))

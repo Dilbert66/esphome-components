@@ -7,6 +7,8 @@
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
+#include <string.h>
+
 
 
 #if defined(USE_MQTT)
@@ -28,7 +30,6 @@
 #endif
 
 #ifdef ESP32
-
 #define dscClockPinDefault 22 // esp32: GPIO22
 #define dscReadPinDefault 21  // esp32: GPIO21
 #define dscWritePinDefault 18 // esp32: GPIO18
@@ -45,6 +46,7 @@
 #define maxRelays 8
 #include "dscKeybusInterface.h"
 #include "Regexp.h"
+#include <cstring> //esp-idf
 
 extern dscKeybusInterface dsc;
 extern bool forceDisconnect;
@@ -56,6 +58,7 @@ namespace esphome
   namespace alarm_panel
   {
 #endif
+
 
 #if defined(ESPHOME_MQTT)
     extern std::function<void(const std::string &, JsonObject)> mqtt_callback;
@@ -279,6 +282,17 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       }
 #endif
 
+#if defined (USE_ESP_IDF)
+ unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+
+unsigned long micros() {
+     return esp_timer_get_time() ;
+ }
+
+ #endif
+
       struct zoneType
       {
 #if !defined(ARDUINO_MQTT)
@@ -490,6 +504,9 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       std::string getUserName(int usercode, bool append = false, bool returncode = false);
       void toLower(std::string *s);
       const char *getPartitionStatus(byte partition);
+      #ifdef USE_ESP_IDF
+      static void setupTask(void *args);
+      #endif
 
     public:
       void set_default_partition(int32_t partition);
@@ -545,7 +562,7 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
 
       bool getEnabledZonesE6(byte inputByte, byte startZone, byte partitionByte);
 
-      String getOptionsString();
+      std::string getOptionsString();
 
       bool checkUserCode(byte code);
 
@@ -583,6 +600,9 @@ class DSCkeybushome : public api::CustomAPIDevice, public PollingComponent
       void loop();
 #else
   void update() override;
+  float get_loop_priority() const override {
+  return 800.0f ; 
+}
 #endif
 
       std::string getZoneName(int zone, bool append = false);

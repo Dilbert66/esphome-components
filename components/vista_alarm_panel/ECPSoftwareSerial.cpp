@@ -21,13 +21,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 Modified for 4800 8E2
 */
 
-#include <Arduino.h>
-
 #include "ECPSoftwareSerial.h"
 
 
 SoftwareSerial::SoftwareSerial(
-    int receivePin, int transmitPin, bool invertRx, bool invertTx, int bufSize, int isrBufSize, uint8_t inputRx)
+    int receivePin, int transmitPin, bool invertRx, bool invertTx, int bufSize, int isrBufSize, int inputRx)
 {
     m_isrBuffer = 0;
     m_isrOverflow = false;
@@ -88,7 +86,6 @@ void SoftwareSerial::setBaud(int32_t baud)
 {
 
     m_bitCycles = microsToTicks(1000000UL) / baud;
-   //m_bitCycles = microsToTicks(APB_CLK_FREQ/64) / baud;
 
     if (baud == 4800) // we save 4800 bit cycles for call from ISR later
         m_4800_bitCycles = m_bitCycles;
@@ -110,12 +107,33 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config)
         m_inPos = m_outPos = 0;
         m_isrInPos.store(0);
         m_isrOutPos.store(0);
+        #if defined (USE_ESP_IDF) or defined(ESP32)
+        gpio_reset_pin((gpio_num_t)m_rxPin);
+        gpio_set_direction((gpio_num_t)m_rxPin, GPIO_MODE_INPUT);
+        gpio_pullup_dis((gpio_num_t)m_rxPin);
+        gpio_pulldown_dis((gpio_num_t)m_rxPin);
+        if (m_input_type==INPUT_PULLDOWN) {
+              gpio_pulldown_en((gpio_num_t)m_rxPin);
+        } else if (m_input_type==INPUT_PULLUP) {
+            gpio_pullup_en((gpio_num_t)m_rxPin);
+        }
+        #else
         pinMode(m_rxPin, m_input_type);
+        #endif
+
     }
+    
     if (m_txValid && !m_oneWire)
     {
-        pinMode(m_txPin, OUTPUT);
-        digitalWrite(m_txPin, !m_invert_tx);
+
+        #if defined(USE_ESP_IDF) or defined(ESP32)
+        gpio_reset_pin((gpio_num_t)m_txPin);
+        gpio_set_direction((gpio_num_t)m_txPin, GPIO_MODE_OUTPUT);
+        #else
+            pinMode(m_txPin, OUTPUT);
+        #endif
+
+        digitalWriteByte(m_txPin, !m_invert_tx);
     }
 
     if (!m_rxEnabled)
@@ -136,12 +154,25 @@ void SoftwareSerial::enableTx(bool on)
         if (on)
         {
             enableRx(false);
+            #if defined (USE_ESP_IDF) or defined(ESP32)
+            gpio_reset_pin((gpio_num_t)m_txPin);
+            gpio_set_direction((gpio_num_t)m_txPin, GPIO_MODE_OUTPUT);
+            #else
             pinMode(m_txPin, OUTPUT);
-            digitalWrite(m_txPin, !m_invert_tx);
+            #endif
+            digitalWriteByte(m_txPin, !m_invert_tx);
         }
         else
         {
+            #if defined (USE_ESP_IDF)  or defined(ESP32)
+            gpio_reset_pin((gpio_num_t)m_rxPin);
+            gpio_set_direction((gpio_num_t)m_rxPin, GPIO_MODE_INPUT);
+            gpio_pullup_dis((gpio_num_t)m_rxPin);
+            gpio_pulldown_dis((gpio_num_t)m_rxPin);
+    
+            #else
             pinMode(m_rxPin, INPUT);
+            #endif
             enableRx(true);
         }
     }
@@ -208,11 +239,6 @@ int SoftwareSerial::available()
     }
     if (!avail)
     {
-
-        #if defined(ESP8266) || defined(ESP32)
-        optimistic_yield(2 * (m_dataBits + 4) * m_bitCycles);
-        #endif
-
         rxBits();
         avail = m_inPos - m_outPos;
         if (avail < 0)
@@ -259,24 +285,24 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
         b = ~b;
     unsigned long wait = m_bitCycles;
 
-    uint32_t start = ticks();
+    unsigned long start = ticks();
 
     // Start bit;
     if (m_invert_tx)
-        digitalWrite(m_txPin, HIGH);
+        digitalWriteByte(m_txPin, HIGH);
     else
-        digitalWrite(m_txPin, LOW);
+        digitalWriteByte(m_txPin, LOW);
     WAIT;
     for (int i = 0; i < m_dataBits; i++)
     {
         if (b & 1)
         {
-            digitalWrite(m_txPin, HIGH);
+            digitalWriteByte(m_txPin, HIGH);
             parity = parity ^ 0x01;
         }
         else
         {
-            digitalWrite(m_txPin, LOW);
+            digitalWriteByte(m_txPin, LOW);
             parity = parity ^ 0x00;
         }
         WAIT;
@@ -289,22 +315,22 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWrite(m_txPin, HIGH);
+                digitalWriteByte(m_txPin, HIGH);
             }
             else
             {
-                digitalWrite(m_txPin, LOW);
+                digitalWriteByte(m_txPin, LOW);
             }
         }
         else
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWrite(m_txPin, LOW);
+                digitalWriteByte(m_txPin, LOW);
             }
             else
             {
-                digitalWrite(m_txPin, HIGH);
+                digitalWriteByte(m_txPin, HIGH);
             }
         }
         WAIT;
@@ -313,11 +339,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
     // restore pin to natural state
     if (m_invert_tx)
     {
-        digitalWrite(m_txPin, LOW);
+        digitalWriteByte(m_txPin, LOW);
     }
     else
     {
-        digitalWrite(m_txPin, HIGH);
+        digitalWriteByte(m_txPin, HIGH);
     }
     WAIT;                // 1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
@@ -415,8 +441,11 @@ void SoftwareSerial::rxBits()
         m_isrOutPos.store((m_isrOutPos.load() + 1) % m_isrBufSize);
 
         int32_t cycles = static_cast<int32_t>(isrCycle - m_isrLastCycle.load()) - (m_bitCycles / 2);
-        if (cycles < 0)
-            cycles = +0x7fffffff;
+       // if (cycles < 0)
+          //  cycles = +0x7fffffff;
+          if (cycles < 0)
+            cycles= +0x80000000;
+
         m_isrLastCycle.store(isrCycle);
 
         do
@@ -508,15 +537,16 @@ void SoftwareSerial::rxBits()
                 //  stop2=!level;
                 //}
                 cycles -= m_bitCycles;
-                // Serial.printf("   stop2: stop1=%d,parity=%d,bits=%d,level=%d\n",stop1,parity,bits,level);
                 // Store the received value in the buffer unless we have an overflow
                 int next = (m_inPos + 1) % m_bufSize;
                 char byt = m_rxCurByte >> (8 - m_dataBits);
+                if (checkParity(byt) != parity && byt) {
+                        printf("\nParity error: byte=%02X\n",byt);
+                }
 
-                //  if (!stop2) Serial.printf("Stop: byte=%02X\n",byt);
-                // if (checkParity(byt) != parity && byt) Serial.printf("parity: byte=%02X\n",byt);
-                // if (!byt || bits > 12) Serial.printf("*** byte=%02X,stop1=%d,stop2=%d,parity=%d,checkParity=%d,bits=%d,level=%d,cycles=%d,m_bitCycles=%d,self=%d\n\n",byt,stop1,stop2,parity,checkParity(byt),bits,level,cycles,m_bitCycles,this);
+               //  if (!byt || bits > 12) printf("*** byte=%02X, parity=%d,checkParity=%d,bits=%d,level=%d,cycles=%d,m_bitCycles=%d,self=%d\n\n",byt,parity,checkParity(byt),bits,level,cycles,m_bitCycles,this);
                 if (checkParity(byt) == parity && bits < 15)
+                //if (bits < 15)
                 {
                     if (next != m_outPos)
                     {
@@ -527,7 +557,7 @@ void SoftwareSerial::rxBits()
                     {
                         m_overflow = true;
                     }
-                }
+               }
                 // reset to 0 is important for masked bit logic
                 m_rxCurByte = 0;
 
@@ -553,11 +583,17 @@ void SoftwareSerial::rxBits()
 
 void IRAM_ATTR SoftwareSerial::rxRead()
 {
-
-    uint32_t curCycle = ticks();
-
+    #if defined(USE_ESP_IDF) or defined(ESP32)
+    bool level= gpio_get_level((gpio_num_t)m_rxPin);
+    #else
     bool level = digitalRead(m_rxPin);
+    #endif
+    rxSave(level);
+}
 
+void IRAM_ATTR SoftwareSerial::rxSave(bool level)
+{
+    unsigned long curCycle = ticks();
     // Store inverted edge value & cycle in the buffer unless we have an overflow
     // cycle's LSB is repurposed for the level bit
     int next = (m_isrInPos.load() + 1) % m_isrBufSize;

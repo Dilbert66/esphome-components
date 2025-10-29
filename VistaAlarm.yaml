@@ -115,7 +115,7 @@ vista_alarm_panel:
 esp32: 
   board: nodemcu-32s
   framework: 
-    type: arduino
+    type: esp-idf
     version: recommended
 
 #esp8266:    

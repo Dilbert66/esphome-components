@@ -22,23 +22,57 @@
 //#define SERIALDEBUGCOMMANDS  //enable to use verbose debug cmd decoding  to serial port
 #ifndef dscKeybus_h
 #define dscKeybus_h
-//#define USE_ESP_IDF_TIMER
-#include <Arduino.h>
+
+
+#if defined(USE_ESP_IDF_TIMER) or defined(USE_ESP_IDF)
+#define USE_ESP_IDF_TIMER
+#define ESP32
+#include <cstring>
+#include "driver/gpio.h"
+#include "driver/gptimer.h"
+#include <esp_attr.h>
+#include <stdio.h>
+#include <cstdlib>
+#include <string>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_timer.h"
+#endif
+
+#if defined(USE_ESP_IDF)
+typedef char byte;
+typedef char __FlashStringHelper;
+
+#define HIGH 1
+#define LOW 0
+
+#define bitRead(value, bit)            (((value) >> (bit)) & 0x01)
+#define bitSet(value, bit)             ((value) |= (1UL << (bit)))
+#define bitClear(value, bit)           ((value) &= ~(1UL << (bit)))
+#define bitToggle(value, bit)          ((value) ^= (1UL << (bit)))
+#define bitWrite(value, bit, bitvalue) ((bitvalue) ? bitSet(value, bit) : bitClear(value, bit))
+
+#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define strcat_P(fmt,...) strcat(fmt, ##__VA_ARGS__)
+
+#define PSTR(s)   ((const char *)(s))
+#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
+#endif
 
 #if not defined(ARDUINO_MQTT)
 #include "esphome/core/defines.h"
 #endif
 
-#if defined(USE_ESP_IDF_TIMER)
-#include "driver/gptimer.h"
-#endif
+
 
 #if defined(ESP8266)
 const byte dscPartitions = 4;
 const byte dscZones = 8;
 const byte dscBufferSize = 50;
 const byte dscReadSize = 16;
-#elif defined(ESP32) 
+#elif defined(ESP32)
 const byte dscPartitions = 8;
 const byte dscZones = 8;
 const DRAM_ATTR byte dscBufferSize = 50;
@@ -46,11 +80,10 @@ const DRAM_ATTR byte dscReadSize = 16;
 #endif
 
 
-
 #if defined(ESP8266)
 const byte maxModules = 4;
 const byte writeQueueSize=20; //zone pending update queue
-#elif defined(ESP32)
+#elif defined(ESP32) 
 const byte maxModules = 4;
 const byte writeQueueSize=20; //zone pending update queue
 #endif
@@ -107,11 +140,21 @@ class dscKeybusInterface {
 
   public:
 
+    #if defined (USE_ESP_IDF)
+ static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+
+ static unsigned long micros() {
+     return esp_timer_get_time();
+ }
+
+ #endif
     // Initializes writes as disabled by default
     dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin = 255,bool setInvertWrite=true);
 
     // Interface control
-    void begin(Stream &_stream = Serial,byte setClockPin=0, byte setReadPin=0, byte setWritePin=255,bool setInvertWrite=true);             // Initializes the stream output to Serial by default
+    void begin(byte setClockPin=0, byte setReadPin=0, byte setWritePin=255,bool setInvertWrite=true);             // Initializes the stream output to Serial by default
     bool loop();                                      // Returns true if valid panel data is available
     void stop();                                      // Disables the clock hardware interrupt and data timer interrupt
     void resetStatus();                               // Resets the state of all status components as changed for sketches to get the current status
@@ -370,7 +413,11 @@ class dscKeybusInterface {
 
 
     void writeKeys(const char * writeKeysArray);
+    #if defined(USE_ESP_IDF)
+    static void dscClockInterrupt(void * args); 
+    #else
     static void dscClockInterrupt();
+    #endif
     static bool redundantPanelData(byte   previousCmd[], volatile byte   currentCmd[], byte checkedBytes = dscReadSize);
     #if defined(ESP32)
 #if not defined(USE_ESP_IDF_TIMER)
@@ -378,7 +425,7 @@ class dscKeybusInterface {
  #endif
     static portMUX_TYPE timer1Mux;
     #endif
-    static Stream* stream;
+
     //const char* writeKeysArray;
    // bool writeKeysPending;
     bool queryResponse;
@@ -453,6 +500,8 @@ class dscKeybusInterface {
     static void writeCharsToQueue(byte* keys,byte partition=1,byte len=1,bool alarm=false);
     byte getWriteBitFromPartition(byte partition);
     //end new command handling    
+
+
  
 };
 

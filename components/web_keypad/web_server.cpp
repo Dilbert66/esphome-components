@@ -5,7 +5,6 @@
 #include "esphome/core/entity_base.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
-#include "ArduinoJson.h"
 
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
@@ -51,7 +50,7 @@ namespace esphome
         static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
 
-        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl, JsonObject doc)
+        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
             int ct = 0;
             char *name;
@@ -171,6 +170,7 @@ namespace esphome
 
         void WebServer::ws_reply(mg_connection *c, const char *data, bool ok)
         {
+            std::string newdata=std::string(data);
             if (c->data[0] != 'W')
             {
                 if (ok)
@@ -181,7 +181,7 @@ namespace esphome
                     }
                     else
                     {
-                        if (credentials_.crypt)
+                        if (get_credentials()->crypt)
                         {
                             if (c->data[1])
                             {
@@ -189,10 +189,10 @@ namespace esphome
                                 return;
                             }
                             else
-                                data = encrypt(data).c_str();
+                                encrypt(newdata);
                         }
                         //  ESP_LOGD(TAG,"sending %s",data);
-                        mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", data);
+                        mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", newdata.c_str());
                     }
                 }
                 else
@@ -206,9 +206,15 @@ namespace esphome
 #ifdef USE_ESP32
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
+            credentials_ = new Credentials;
             webServerPtr = this;
           //  this->pref_ = global_preferences->make_preference<KeypadConfig>(fnv1_hash(App.get_compilation_time()));
 
+        }
+
+
+        WebServer::~WebServer() {
+            delete credentials_;
         }
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -234,10 +240,10 @@ namespace esphome
         const char * WebServer::get_keypad_config()
         {
            // return (char*) &keypadconfig_.config ;
-           return json_keypad_config_.c_str();
+           return json_keypad_config_;
         }
 
-        const std::string WebServer::get_config_json(unsigned long cid)
+        void WebServer::get_config_json(unsigned long cid,std::string & out)
         {
 
             uint8_t key[16];
@@ -247,7 +253,7 @@ namespace esphome
             cd.token = token;
             cd.lastseq = 0;
             tokens_[cid] = cd;
-            return json::build_json([this, cid, token](JsonObject root)
+            out = json::build_json([this, cid, token](JsonObject root)
                                     {
                                         root["title"] = App.get_friendly_name().empty() ? App.get_name() : App.get_friendly_name();
                                         root["comment"] = App.get_comment();
@@ -261,9 +267,9 @@ namespace esphome
                                         root["token"] = token; });
         }
 
-        const std::string WebServer::escape_json(const char *input)
+        void WebServer::escape_json(const char *input,std::string & output)
         {
-            std::string output;
+
 
             for (int i = 0; i < strlen(input); i++)
             {
@@ -303,7 +309,7 @@ namespace esphome
                 }
             }
 
-            return output;
+           // return output;
         }
 
         void WebServer::setup()
@@ -318,7 +324,8 @@ namespace esphome
                     [this](int level, const char *tag, const char *message, size_t message_len)
                     {
                         (void) message_len;
-                        std::string msg = escape_json(message);
+                        std::string msg;
+                        escape_json(message,msg);
                         this->push(LOG, msg.c_str());
                     });
             }
@@ -2015,8 +2022,15 @@ namespace esphome
             {
                 // cid = toInt(doc["partition"],10);
                 unsigned long ul = (unsigned long)doc["cid"];
-                for (struct mg_connection *cl = mgr.conns; cl != NULL; cl = cl->next)
-                {
+            //                 UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            // ESP_LOGE(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
+            mg_connection *cl  = mgr.conns;
+            //                     uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+            // ESP_LOGE(TAG, "after assignment level: %5d", (uint16_t)uxHighWaterMark);
+                while (cl != NULL) {
+                         // for ( cl=mgr.conns ;cl != NULL; cl = cl->next)
+                // {
+
                     if (cl->id == ul)
                     {
                         cl->data[1] = 1;
@@ -2024,11 +2038,15 @@ namespace esphome
                         entities_iterator_.begin(this->include_internal_);
                         break;
                     }
+                    cl=cl->next;
                 }
+
                 ws_reply(c, "", true);
+                c->is_draining = 1;
                 return;
             }
             ws_reply(c, "", false);
+
         }
 
         bool WebServer::callKeyService(const char *buf, int partition)
@@ -2605,17 +2623,16 @@ namespace esphome
             }
 
 
-            std::string newdata;
+            std::string newdata=std::string(data);
 
-            if (credentials_.crypt && strlen(data) > 0)
-                newdata = encrypt(data);
-            else
-                newdata = std::string(data);
+            if (get_credentials()->crypt && strlen(data) > 0)
+                encrypt(newdata);
+
 
             for (c = mgr.conns; c != NULL; c = c->next)
             {
 
-                if (credentials_.crypt && !c->data[1])
+                if (get_credentials()->crypt && !c->data[1])
                     continue; // not authenticated with encrypted response
 
                 if (c->data[0] == 'E')
@@ -2636,7 +2653,7 @@ namespace esphome
 
                 if (mt == PING)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type.c_str(), "data", id);
-                else if ((mt == LOG || mt == OTA) && !credentials_.crypt)
+                else if ((mt == LOG || mt == OTA) && !get_credentials()->crypt)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type.c_str(), "data", newdata.c_str());
                 else
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", type.c_str(), "data", newdata.c_str());
@@ -2765,9 +2782,10 @@ namespace esphome
             return 0;
         }
 
-        const std::string WebServer::encrypt(const char *message)
+        bool WebServer::encrypt(std::string &data)
         {
                     // const char *message="test message";
+            const char * message=data.c_str();
             int i = strlen(message);
 
             if (!i)
@@ -2775,39 +2793,41 @@ namespace esphome
    
             int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
             int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
-            uint8_t encrypted[length+1];
+            //uint8_t encrypted[length+1];
+           // ESP_LOGE(TAG,"Encrypted len =%d",length+1);
+            uint8_t * encrypted = new uint8_t[length+AES_BLOCKSIZE];
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
 
             std::string eiv = base64_encode(iv, AES_IV_SIZE );
 
-            AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
+            AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
             aes.process((uint8_t *)message, encrypted, i);
-       // std::string akey=base64_encode(credentials_.token,SHA256_SIZE);
+       // std::string akey=base64_encode(credentials_->token,SHA256_SIZE);
             std::string em = base64_encode(encrypted, length);
             
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
 
             hmac.doUpdate(eiv.c_str(), eiv.length());
  
             hmac.doUpdate(em.c_str(), em.length());
   
             uint8_t authCode[SHA256HMAC_SIZE+1];
-            hmac.doFinal(authCode);
+            hmac.doFinal((char*)authCode);
 
             // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
 
-            std::string enc = "{\"iv\":\"" + eiv + "\",\"data\":\"";
-            enc.append(em);
-            enc.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
+            data = "{\"iv\":\"" + eiv + "\",\"data\":\"";
+            data.append(em);
+            data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
            // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
           // ESP_LOGD(TAG,"aeskey=%s,message size=%d,encoded=%s",akey.c_str(),enc.length(),enc.c_str());
            //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
-
-            return enc;
+            delete[] encrypted;
+            return 1;
         }
 
-        const std::string WebServer::decrypt(JsonObject doc, uint8_t *err)
+        bool WebServer::decrypt(JsonObject doc, uint8_t *err,std::string & out)
         {
             const char *iv = doc["iv"];
             const char *data = doc["data"];
@@ -2838,28 +2858,30 @@ namespace esphome
                         if (seq > 0 && seq <= *lastseq)
                         {
                             *err = 1;
-                            return "";
+                            return 0;
                         }
                     }
                     else
                     {
                         *err = 1;
-                        return "";
+                        return 0;
                     }
                 }
                 else
                 {
                     *err = 1;
-                    return "";
+                    return 0;
                 }
             }
 
-            uint8_t *key = credentials_.token;
-            uint8_t *hmackey = credentials_.hmackey;
-            uint8_t data_decoded[strlen(data)];
-            uint8_t iv_decoded[strlen(iv)];
+            uint8_t *key = get_credentials()->token;
+            uint8_t *hmackey = get_credentials()->hmackey;
+           // uint8_t data_decoded[strlen(data)];
+            uint8_t * data_decoded= new uint8_t[strlen(data)+1];
+           // uint8_t iv_decoded[strlen(iv)];
+            uint8_t * iv_decoded = new uint8_t[strlen(iv)+1];
 
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {
@@ -2872,14 +2894,15 @@ namespace esphome
 
             hmac.doUpdate(data, strlen(data));
             uint8_t authCode[SHA256HMAC_SIZE];
-            hmac.doFinal(authCode);
-
-            std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
+            hmac.doFinal((char*)authCode);
+             std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
             if (ehm != hash)
             {
                 ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
                 *err = 1;
-                return "";
+                delete[] data_decoded;
+                delete[] iv_decoded;
+                return 0;
             }
             if (seq > 0 && lastseq != NULL)
                 *lastseq = seq;
@@ -2888,10 +2911,12 @@ namespace esphome
             base64_decode(std::string(iv), iv_decoded, strlen(iv));
             AES aes(key, iv_decoded, AES::AES_MODE_256, AES::CIPHER_DECRYPT);
             aes.process((uint8_t *)data_decoded, data_decoded, encrypted_length);
-            std::string out = std::string((char *)data_decoded);
+            out = std::string((char *)data_decoded);
              //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
-            return out;
+            delete[] data_decoded;
+            delete[] iv_decoded;
+            return 1;
         }
 
         static void handle_uploads(struct mg_connection *c, int ev, void *ev_data)
@@ -3014,10 +3039,10 @@ namespace esphome
                 deserializeJson(doc, buf.c_str());
                 uint8_t err = 0;
 
-                if (doc["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
+                if (obj["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
                 {
 
-                    buf = srv->decrypt(obj, &err);
+                    srv->decrypt(obj, &err,buf);
                     if (buf == "" || err)
                         err = 1;
                     if (!err)
@@ -3055,15 +3080,15 @@ namespace esphome
                     c->send.c = c;
                     std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
-                    enc = srv->get_config_json(c->id);
+                    srv->get_config_json(c->id,enc);
                     if (crypt)
-                        enc = srv->encrypt(enc.c_str());
+                        srv->encrypt(enc);
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type", "app_config", "data", enc.c_str());
                     if (strlen(srv->get_keypad_config()) > 0)
                     {
                         enc = srv->get_keypad_config();
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
                     }
                     for (auto &group : srv->sorting_groups_)
@@ -3073,7 +3098,7 @@ namespace esphome
                    root["name"] = group.second.name;
                    root["sorting_weight"] = group.second.weight; });
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
                     }
 
@@ -3081,16 +3106,17 @@ namespace esphome
                 }
                 else if (mg_match(hm->uri, mg_str("/events"), NULL) && !c->is_websocket)
                 {
+  
                     mg_str *hdr = mg_http_get_header(hm, "Accept");
                     // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
                     c->data[0] = 'E';
                     mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                     c->send.c = c;
-                    std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
-                    enc = srv->get_config_json(c->id);
+                    std::string enc;
+                    srv->get_config_json(c->id,enc);
                     if (crypt)
-                        enc = srv->encrypt(enc.c_str());
+                        srv->encrypt(enc);
                     mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
 
                     for (auto &group : srv->sorting_groups_)
@@ -3100,7 +3126,7 @@ namespace esphome
                      root["name"] = group.second.name;
                      root["sorting_weight"] = group.second.weight; });
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
 
@@ -3108,7 +3134,7 @@ namespace esphome
                     {
                         enc = srv->get_keypad_config();
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
                     srv->entities_iterator_.begin(srv->include_internal_);
@@ -3121,6 +3147,7 @@ namespace esphome
                     {
                         c->send.c = c;
                         srv->handleWebRequest(c, hm);
+
                     }
                 }
             }
@@ -3181,10 +3208,10 @@ namespace esphome
                 std::string buf = std::string(hm->body.buf, hm->body.len);
                 DeserializationError err = deserializeJson(doc, buf.c_str());
 
-                if (!err && doc["iv"].is<JsonVariant>() && credentials_.password != "")
+                if (!err && obj["iv"].is<JsonVariant>() && get_credentials()->password != "")
                 {
                     uint8_t e = 0;
-                    buf = decrypt(obj, &e);
+                    decrypt(obj, &e,buf);
                     if (buf != "")
                         deserializeJson(doc, buf.c_str());
                     else
@@ -3412,14 +3439,15 @@ namespace esphome
             char buf[100];
             ESP_LOGW(TAG, "OTA Update failed! Error: %s", ss.c_str());
             snprintf(buf, 100, "OTA Update failed! Error: %s", ss.c_str());
-            std::string ebuf = escape_json(buf);
+            std::string ebuf;
+            escape_json(buf,ebuf);
             this->push(OTA, ebuf.c_str());
             this->set_timeout(2000, []()
                               { App.safe_reboot(); });
 #endif
         }
 #if defined(ESP32)
-        bool WebServer::handleUpload(size_t bodylen, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
+        bool WebServer::handleUpload(size_t bodylen, const std::string &filename, size_t index, uint8_t *data, size_t len, bool final)
         {
             char buf[100];
 #ifdef USE_ARDUINO

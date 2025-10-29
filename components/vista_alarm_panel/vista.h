@@ -1,8 +1,14 @@
 #pragma once
 
+#if not defined(USE_ESP_IDF)
 #include "Arduino.h"
+#else
+#define ESP32
+#endif
+
 #include <queue>
 #include "ECPSoftwareSerial.h"
+
 
 // #define DEBUG
 
@@ -151,7 +157,7 @@ struct rfSerialQueueItem
   uint32_t serial; 
   uint8_t idx; 
 };
-const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
+//const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
 
 class Vista
 {
@@ -180,9 +186,11 @@ public:
         if (keypadAddr > 0)
             kpAddr = keypadAddr;
     }
-    void addModule(byte addr);
+    void addModule(uint8_t addr);
     bool dataReceived;
-    void  rxHandleISR();
+    void gpioISRHandler();
+    void rxHandleISR();
+
     void txHandleISR();
     bool areEqual(char *, char *, uint8_t);
     bool keybusConnected, connected;
@@ -201,7 +209,7 @@ public:
     char b; // used in isr
     bool charAvail();
     bool cmdAvail();
-    cmdQueueItem getNextCmd();
+    cmdQueueItem * getNextCmd();
     bool sendPending();
     void set_rf_emulation(bool emulate);
     void set_rf_addr(uint8_t addr);
@@ -293,4 +301,34 @@ private:
     volatile bool sending;
     bool _emulate_rf_receiver=false;
     uint8_t _rf_addr=0;
+
+
+#if defined (USE_ESP_IDF)
+
+unsigned long IRAM_ATTR micros() {
+  return (unsigned long)(esp_timer_get_time());
+}
+
+unsigned long millis() {
+    return (unsigned long)(esp_timer_get_time() / 1000ULL);
+ }
+
+#if not defined(NOP)
+#define NOP __asm__ __volatile__ ("nop\n\t")
+#endif
+void IRAM_ATTR delayMicroseconds(uint32_t us) {
+  uint64_t m = (uint64_t)esp_timer_get_time();
+  if (us) {
+    uint64_t e = (m + us);
+    if (m > e) {  //overflow
+      while ((uint64_t)esp_timer_get_time() > e) {
+        NOP;
+      }
+    }
+    while ((uint64_t)esp_timer_get_time() < e) {
+      NOP;
+    }
+  }
+}
+ #endif
 };
