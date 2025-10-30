@@ -324,8 +324,9 @@ class vistaECPHome : public time::RealTimeClock
       {
         publishTextState(SLINE2, partition, &msg);
       }
-      void publishBeeps(std::string beeps, uint8_t partition)
+      void publishBeeps(uint8_t beep, uint8_t partition)
       {
+        std::string beeps=std::to_string(beep);
         publishTextState(SBEEP, partition, &beeps);
       }
       void publishZoneExtendedStatus(std::string msg)

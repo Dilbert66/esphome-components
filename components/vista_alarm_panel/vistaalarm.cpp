@@ -146,13 +146,8 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
     (*it)->publish_state(*text);
-  else
-    if (id=="bp_1")
-    ESP_LOGE("test","sensor %s ,current value %s, new value=%s",id.c_str(),(*it)->state.c_str(), text->c_str());
 
-      if (id=="bp_1") {
-    ESP_LOGE("test","got beep sensor %s",id.c_str());
-  }
+  
 }
 
 #endif
@@ -601,7 +596,7 @@ void vistaECPHome::setup()
         partitionStates[p]=partitionStates_INIT;
         partitions[p] = 0;
         publishSystemStatus(STATUS_NOT_READY, p + 1);
-        publishBeeps("0", p + 1);
+        publishBeeps(0, p + 1);
       }
       publishLrrMsg("ESP Restart");
       publishRfMsg(" ");
@@ -1816,8 +1811,6 @@ void vistaECPHome::update()
             {
               if (partitions[partition - 1])
               {
-                forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
-
 #if defined(ARDUINO_MQTT)
                 Serial.printf("Partition: %02X\n", partition);
 #else
@@ -1825,15 +1818,6 @@ void vistaECPHome::update()
 #endif
 
                 updateDisplayLines(partition);
-               // if (partitionStates[partition - 1].lastbeeps != vistaCmd->statusFlags.beeps || forceRefresh)
-               // {
-               if (vistaCmd->statusFlags.beeps > 0)
-                ESP_LOGE("test","publising beeps %d",vistaCmd->statusFlags.beeps);
-                  publishBeeps(std::to_string(vistaCmd->statusFlags.beeps), partition);
-             //   }
-
-                partitionStates[partition - 1].lastbeeps = vistaCmd->statusFlags.beeps;
-
                 if (vistaCmd->statusFlags.systemFlag && strstr(vistaCmd->statusFlags.prompt2, HITSTAR))
                   alarm_keypress_partition("*", partition);
               }
@@ -1843,10 +1827,11 @@ void vistaECPHome::update()
             Serial.printf("Prompt: %s\n", vistaCmd->statusFlags.prompt2);
             Serial.printf("Beeps: %d\n", vistaCmd->statusFlags.beeps);
 #else
-      ESP_LOGI(TAG, "Prompt: %s", vistaCmd->statusFlags.prompt1);
-      ESP_LOGI(TAG, "Prompt: %s", vistaCmd->statusFlags.prompt2);
-      ESP_LOGI(TAG, "Beeps: %d", vistaCmd->statusFlags.beeps);
+            ESP_LOGI(TAG, "Prompt: %s", vistaCmd->statusFlags.prompt1);
+            ESP_LOGI(TAG, "Prompt: %s", vistaCmd->statusFlags.prompt2);
+            ESP_LOGI(TAG, "Beeps: %d", vistaCmd->statusFlags.beeps);
 #endif
+            publishBeeps(vistaCmd->statusFlags.beeps, 1);
           }
 
           // publishes lrr status messages
