@@ -128,8 +128,8 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config)
 
         #if defined(USE_ESP_IDF) or defined(ESP32)
         gpio_reset_pin((gpio_num_t)m_txPin);
-        gpio_pulldown_dis((gpio_num_t)txPin);
-        gpio_pullup_dis((gpio_num_t)txPin); 
+        gpio_pulldown_dis((gpio_num_t)m_txPin);
+        gpio_pullup_dis((gpio_num_t)m_txPin); 
         gpio_set_direction((gpio_num_t)m_txPin, GPIO_MODE_OUTPUT);
         #else
             pinMode(m_txPin, OUTPUT);
@@ -158,8 +158,8 @@ void SoftwareSerial::enableTx(bool on)
             enableRx(false);
             #if defined (USE_ESP_IDF) or defined(ESP32)
             gpio_reset_pin((gpio_num_t)m_txPin);
-            gpio_pulldown_dis((gpio_num_t)txPin);
-            gpio_pullup_dis((gpio_num_t)txPin); 
+            gpio_pulldown_dis((gpio_num_t)m_txPin);
+            gpio_pullup_dis((gpio_num_t)m_txPin); 
             gpio_set_direction((gpio_num_t)m_txPin, GPIO_MODE_OUTPUT);
             #else
             pinMode(m_txPin, OUTPUT);
