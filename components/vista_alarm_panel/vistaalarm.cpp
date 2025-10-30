@@ -141,10 +141,18 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   if (num)
     id += "_" + std::to_string(num);
   auto tMap=App.get_text_sensors();
+
   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
     (*it)->publish_state(*text);
+  else
+    if (id=="bp_1")
+    ESP_LOGE("test","sensor %s ,current value %s, new value=%s",id.c_str(),(*it)->state.c_str(), text->c_str());
+
+      if (id=="bp_1") {
+    ESP_LOGE("test","got beep sensor %s",id.c_str());
+  }
 }
 
 #endif
@@ -1817,10 +1825,12 @@ void vistaECPHome::update()
 #endif
 
                 updateDisplayLines(partition);
-                if (partitionStates[partition - 1].lastbeeps != vistaCmd->statusFlags.beeps || forceRefresh)
-                {
+               // if (partitionStates[partition - 1].lastbeeps != vistaCmd->statusFlags.beeps || forceRefresh)
+               // {
+               if (vistaCmd->statusFlags.beeps > 0)
+                ESP_LOGE("test","publising beeps %d",vistaCmd->statusFlags.beeps);
                   publishBeeps(std::to_string(vistaCmd->statusFlags.beeps), partition);
-                }
+             //   }
 
                 partitionStates[partition - 1].lastbeeps = vistaCmd->statusFlags.beeps;
 

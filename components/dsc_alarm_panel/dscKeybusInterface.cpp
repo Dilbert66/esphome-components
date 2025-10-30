@@ -179,6 +179,8 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
     if (virtualKeypad) {
         #if defined (USE_ESP_IDF)
         gpio_reset_pin((gpio_num_t)dscWritePin);
+        gpio_pulldown_dis((gpio_num_t)dscWritePin);
+        gpio_pullup_dis((gpio_num_t)dscWritePin); 
         gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
         #else
            pinMode(dscWritePin, OUTPUT); 
@@ -786,6 +788,8 @@ dscKeybusInterface::dscClockInterrupt()
 
         #if defined (USE_ESP_IDF)
         gpio_reset_pin((gpio_num_t)dscWritePin);
+        gpio_pulldown_dis((gpio_num_t)dscWritePin);
+        gpio_pullup_dis((gpio_num_t)dscWritePin); 
         gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
         #else
            pinMode(dscWritePin, OUTPUT);
