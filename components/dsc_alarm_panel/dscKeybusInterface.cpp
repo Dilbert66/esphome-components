@@ -691,15 +691,16 @@ dscKeybusInterface::dscClockInterrupt()
   if (digitalRead(dscClockPin) == HIGH) {
   #endif
     if (virtualKeypad ){
-        if (dscWritePin == dscReadPin && !writeDataPending)
-        #if defined (USE_ESP_IDF)
-        gpio_reset_pin((gpio_num_t)dscWritePin);
-        gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_INPUT);
-        gpio_pulldown_dis((gpio_num_t)dscWritePin);
-        gpio_pullup_en((gpio_num_t)dscWritePin);
-        #else
-           pinMode(dscWritePin, INPUT_PULLUP);
-        #endif
+        if (dscWritePin == dscReadPin && !writeDataPending) {
+          #if defined (USE_ESP_IDF)
+          gpio_reset_pin((gpio_num_t)dscWritePin);
+          gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_INPUT);
+          gpio_pulldown_dis((gpio_num_t)dscWritePin);
+          gpio_pullup_en((gpio_num_t)dscWritePin);
+          #else
+            pinMode(dscWritePin, INPUT_PULLUP);
+          #endif
+        }
     #ifdef USE_ESP_IDF
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
     #else
@@ -784,7 +785,7 @@ dscKeybusInterface::dscClockInterrupt()
 
       static bool writeStart = false;
 
-      if (dscWritePin == dscReadPin )
+      if (dscWritePin == dscReadPin ) {
 
         #if defined (USE_ESP_IDF)
         gpio_reset_pin((gpio_num_t)dscWritePin);
@@ -794,7 +795,7 @@ dscKeybusInterface::dscClockInterrupt()
         #else
            pinMode(dscWritePin, OUTPUT);
         #endif
- 
+      }
         
      // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
       if (isrPanelBitTotal == writeDataBit || writeStart) {
