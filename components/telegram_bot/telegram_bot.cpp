@@ -114,7 +114,7 @@ namespace esphome
       else
         x.args = "";
 
-      ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
+    //  ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
     }
 
     bool WebNotify::processMessage(const char *payload)
@@ -191,7 +191,7 @@ namespace esphome
                  
                                   if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
                                      std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
-                                     global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
+                                   //  global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
                                   }
                                   
 
