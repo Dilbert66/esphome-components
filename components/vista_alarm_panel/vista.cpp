@@ -1489,11 +1489,11 @@ bool Vista::handle()
       // we did not get the expect byte response. So assume this byte is another cmd
       expectByte = 0;
       pendingAck=false;
-     if (disableRetries)
-        retries = 0;
-       // _retriesf9 = 0;
-        retryAddr = 0;
-      #endif
+    //  if (disableRetries) 
+    //     retries = 0;
+    //    // _retriesf9 = 0;
+    //     retryAddr = 0;
+    
      
     }
     // expander request command
