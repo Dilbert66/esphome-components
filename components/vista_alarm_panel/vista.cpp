@@ -1,5 +1,9 @@
 #include "vista.h"
 
+#if !defined(ARDUINO_MQTT)
+#include "esphome/core/defines.h"
+#endif
+
 Vista *pointerToVistaClass;
 #if defined(USE_ESP_IDF) or defined(ESP32)
 void IRAM_ATTR rxISRHandler(void* args)
@@ -1489,11 +1493,12 @@ bool Vista::handle()
       // we did not get the expect byte response. So assume this byte is another cmd
       expectByte = 0;
       pendingAck=false;
-    //  if (disableRetries) {
-    //     retries = 0;
-    //    // _retriesf9 = 0;
-    //     retryAddr = 0;
-      //}
+      #ifdef VISTA_DISABLE_RETRIES
+         retries = 0;
+        // _retriesf9 = 0;
+         retryAddr = 0;
+         zz
+      #endif
     
      
     }
@@ -1768,6 +1773,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   retries = 0;
   is2400 = false;
   pendingAck=false;
+  
 
   kpAddr = keypadAddr;
   txPin = transmitPin;

@@ -214,6 +214,7 @@ public:
     void set_rf_emulation(bool emulate);
     void set_rf_addr(uint8_t addr);
     bool get_rf_emulation();
+
     // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
@@ -268,7 +269,6 @@ private:
     volatile bool is2400;
     void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
     bool invertRead;
-    bool disableRetries;
 
     char IRAM_ATTR addrToBitmask1(char addr)
     {

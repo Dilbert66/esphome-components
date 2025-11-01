@@ -66,6 +66,7 @@ CONF_EMULATE_RF_RECEIVER="emulate_rf_receiver"
 CONF_EMULATED="emulated"
 KEY_ESP32 = "esp32"
 KEY_SDKCONFIG_OPTIONS = "sdkconfig_options"
+CONF_DISABLE_RETRY="disable_retry"
 
 BINARY_SENSOR_TYPE_ID_REGEX = r"^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<digits>, arm_<digits>, arma_<digits>, arms_<digits>, arma_<digits>, armn_<digits>,alm_<digits>, fire_<digits>, chm_<digits>, r<digits>, z<digits>"
@@ -115,6 +116,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_STACK_SIZE):cv.int_,
     cv.Optional(CONF_EMULATE_RF_RECEIVER,default= 'false'): cv.boolean,
     cv.Optional(CONF_RF_ADDR,default=0xff): cv.int_, 
+    cv.Optional(CONF_DISABLE_RETRY): cv.boolean,
     }
 )
 
@@ -197,8 +199,11 @@ async def to_code(config):
     #     cg.add_define("USETASK")
     var = cg.new_Pvariable(config[CONF_ID],config[CONF_KEYPAD1],config[CONF_RXPIN],config[CONF_TXPIN],config[CONF_MONITORPIN],config[CONF_MAXZONES],config[CONF_MAXPARTITIONS],config[CONF_INVERT_RX],config[CONF_INVERT_TX],config[CONF_INVERT_MON],cg.RawExpression(config[CONF_INPUT_RX]),input_type)
     
+    if CONF_DISABLE_RETRY in config and config[CONF_DISABLE_RETRY]:
+       cg.add_define("VISTA_DISABLE_RETRIES")
+  
     if CONF_ACCESSCODE in config:
-        cg.add(var.set_accessCode(config[CONF_ACCESSCODE]));
+        cg.add(var.set_accessCode(config[CONF_ACCESSCODE]))
     if CONF_MAXZONES in config:
         cg.add(var.set_maxZones(config[CONF_MAXZONES]))
     if CONF_RFSERIAL in config:
