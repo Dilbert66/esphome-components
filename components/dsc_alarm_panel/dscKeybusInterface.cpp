@@ -278,13 +278,6 @@ void dscKeybusInterface::stop() {
 
 bool dscKeybusInterface::loop() {
 
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
 
   // Checks if Keybus data is detected and sets a status flag if data is not detected for 3s
   #if defined(ESP32)
@@ -384,6 +377,14 @@ bool dscKeybusInterface::loop() {
     static byte previousCmdE6_03[dscReadSize];
     if (panelData[0] == 0xE6 && panelData[2] == 0x03 && redundantPanelData(previousCmdE6_03, panelData, 8)) return false; // Status in alarm/programming, partitions 5-8
   }
+  
+  #if defined(ESP8266) || defined(ESP32)
+  #if defined(USE_ESP_IDF)
+  taskYIELD ();
+  #else
+  yield();
+  #endif
+  #endif
 
   // Processes valid panel data
   switch (panelData[0]) {

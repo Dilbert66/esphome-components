@@ -154,6 +154,11 @@ class vistaECPHome : public api::CustomAPIDevice, public time::RealTimeClock
 class vistaECPHome : public time::RealTimeClock
 {
 #endif
+#if defined(ESP8266)
+#define FC(s) (String(FPSTR(s)).c_str())
+#else
+#define FC(s) ((const char*)(s))
+#endif
 
     public:
       vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN, int maxzones = MAX_ZONES, int maxpartitions = MAX_PARTITIONS, bool invertrx = true, bool inverttx = true, bool invertmon = true, uint8_t inputrx = INPUT, uint8_t inputmon = INPUT);

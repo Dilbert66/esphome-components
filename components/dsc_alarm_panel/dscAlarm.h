@@ -65,6 +65,8 @@ namespace esphome
     const char setalarmcommandtopic[] PROGMEM = "/alarm/set";
 #endif
 
+
+
     typedef struct
     {
       byte lbcount = 0;
@@ -293,6 +295,14 @@ unsigned long micros() {
 
  #endif
 
+#if defined(ESP8266)
+#define FC(s) (String(FPSTR(s)).c_str())
+#else
+#define FC(s) ((const char*)(s))
+#endif
+
+
+
       struct zoneType
       {
 #if !defined(ARDUINO_MQTT)
@@ -503,7 +513,8 @@ unsigned long micros() {
     private:
       std::string getUserName(int usercode, bool append = false, bool returncode = false);
       void toLower(std::string *s);
-      const char *getPartitionStatus(byte partition);
+      std::string partitionStatusGlobal;
+      const char * getPartitionStatus(byte partition,std::string & status);
       #ifdef USE_ESP_IDF
       static void setupTask(void *args);
       #endif
