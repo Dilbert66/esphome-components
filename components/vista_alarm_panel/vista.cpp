@@ -423,7 +423,7 @@ void Vista::onRF(char cbuf[])
 void Vista::onLrr(char *cbuf, int *idx)
 {
   //response to a f9 resend. Send back last message
-  if (_retriesf9 > 0 && _retriesf9 < 4 && !lrrSupervisor)
+  if (_retriesf9 > 0 && _retriesf9 < 4 && lrrSupervisor)
   {
     if (peekNextKpAddr() == LRRADDR)
       getChar(); //remove last request
@@ -1489,10 +1489,11 @@ bool Vista::handle()
       // we did not get the expect byte response. So assume this byte is another cmd
       expectByte = 0;
       pendingAck=false;
-    //  if (disableRetries) 
+    //  if (disableRetries) {
     //     retries = 0;
     //    // _retriesf9 = 0;
     //     retryAddr = 0;
+      //}
     
      
     }
