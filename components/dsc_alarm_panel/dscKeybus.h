@@ -24,9 +24,11 @@
 #define dscKeybus_h
 
 
-#if defined(USE_ESP_IDF_TIMER) or defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF_TIMER) or defined(USE_ESP_IDF) or defined(ESP32)
 #define USE_ESP_IDF_TIMER
+#ifndef ESP32
 #define ESP32
+#endif
 #include <cstring>
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
