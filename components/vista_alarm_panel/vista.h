@@ -231,6 +231,7 @@ private:
     char monitorPin;
     volatile char rxState;
     volatile unsigned long lowTime, highTime;
+    volatile bool pendingAck;
     uint8_t *faultQueue;
     rfSerialQueueItem *rfSerialQueue;
     void setNextFault(uint8_t);
@@ -267,6 +268,7 @@ private:
     volatile bool is2400;
     void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
     bool invertRead;
+    bool disableRetries;
 
     char IRAM_ATTR addrToBitmask1(char addr)
     {

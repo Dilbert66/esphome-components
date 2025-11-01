@@ -423,7 +423,7 @@ void Vista::onRF(char cbuf[])
 void Vista::onLrr(char *cbuf, int *idx)
 {
   //response to a f9 resend. Send back last message
-  if (_retriesf9 > 0 && _retriesf9 < 4)
+  if (_retriesf9 > 0 && _retriesf9 < 4 && !lrrSupervisor)
   {
     if (peekNextKpAddr() == LRRADDR)
       getChar(); //remove last request
@@ -484,16 +484,18 @@ void Vista::onLrr(char *cbuf, int *idx)
     // 0x04 if you have network problems?
     // 0x06 if you have network problems?
     lcbuf[4] = (char)0x00;
-    _lcbuflen = 5;
-    expectByte = lcbuf[0];
-    expectCmd = 0xf9;
-    _retriesf9++;
+    if (lrrSupervisor) {
+      _lcbuflen = 5;
+      expectByte = lcbuf[0];
+       expectCmd = 0xf9;
+      _retriesf9++;
+    }
   }
 
   // we don't need a checksum for 1 byte messages (no length bit)
   // if we don't even have a message length byte, then we are just
   //  ACKing a cycle header byte.
-  if (_lcbuflen >= 2)
+  if (_lcbuflen >= 2 && lrrSupervisor)
   {
     uint32_t chksum = 0;
     for (int x = 0; x < _lcbuflen; x++)
@@ -987,7 +989,7 @@ void Vista::writeChars()
   }
 
   sending = true;
-  delayMicroseconds(500);
+  delayMicroseconds(600);
   for (int x = 0; x < tmpOutBuf[1] + 2; x++)
   {
     vistaSerial->write(tmpOutBuf[x]);
@@ -1038,6 +1040,7 @@ void IRAM_ATTR Vista::rxHandleISR()
 {
   static byte b;
   static uint8_t ackAddr;
+  static uint8_t ackCount=0;
     #if defined(USE_ESP_IDF) or defined(ESP32)
   bool level=gpio_get_level((gpio_num_t) rxPin);
   #else
@@ -1069,7 +1072,15 @@ void IRAM_ATTR Vista::rxHandleISR()
       }
       else if (outbufIdx != inbufIdx || retries)
       {
-        if (!retries && outbuf[outbufIdx].count > 4)
+        if (pendingAck) { //we wait at least 2 cycles to wait for an F6 response and if not we cancel the pending ack and allow a new one to go through
+          if (ackCount > 1) {
+            pendingAck=false;
+            ackCount=0;
+          } else
+            ackCount++;
+        }
+
+        if (!retries && outbuf[outbufIdx].count > 2)
         { // after x failed retries to send, we remove this entry from the buffer
           ackAddr = outbuf[outbufIdx].kpaddr;
           outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // Not valid or no answer. Skip it.
@@ -1077,11 +1088,12 @@ void IRAM_ATTR Vista::rxHandleISR()
             outbufIdx = (outbufIdx + 1) % CMDBUFSIZE; // skip any other entries with same address
         }
 
-        if (outbufIdx != inbufIdx || retries)
+        if (!pendingAck && (outbufIdx != inbufIdx || retries))
         {
           ackAddr = retries ? retryAddr : outbuf[outbufIdx].kpaddr; // get pending keypad address
           if (!retries)
             outbuf[outbufIdx].count++;
+          
           if (ackAddr > 0 && ackAddr < 24) {
             vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
             b = addrToBitmask2(ackAddr);
@@ -1090,7 +1102,10 @@ void IRAM_ATTR Vista::rxHandleISR()
             b = addrToBitmask3(ackAddr);
             if (b)
               vistaSerial->write(b, false, 4800);
+            pendingAck=true;
+
           }
+          
         }
       }
       rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
@@ -1441,14 +1456,15 @@ bool Vista::handle()
 
   if (vistaSerial->available())
   {
-
+    
     x = vistaSerial->read();
-
+    if (outbufIdx == inbufIdx && !retries) pendingAck=false;
     memset(cbuf, 0, CMDBUFSIZE); // clear buffer mem
     if (expectByte && x)
     {
       if (x == expectByte)
       {
+        
         retries = 0;
         _retriesf9 = 0;
         expectByte = 0;
@@ -1468,9 +1484,17 @@ bool Vista::handle()
             outbuf[inbufIdx] = kt;
             inbufIdx = (inbufIdx + 1) % CMDBUFSIZE;
         }
+
       }
       // we did not get the expect byte response. So assume this byte is another cmd
       expectByte = 0;
+      pendingAck=false;
+     if (disableRetries)
+        retries = 0;
+       // _retriesf9 = 0;
+        retryAddr = 0;
+      #endif
+     
     }
     // expander request command
     if (x == 0xFA)
@@ -1571,6 +1595,7 @@ bool Vista::handle()
     // key ack
     if (x == 0xF6)
     {
+      
       vistaSerial->setBaud(4800);
       newCmd = true;
       gidx = 0;
@@ -1579,7 +1604,9 @@ bool Vista::handle()
       uint8_t kpaddr = retries ? retryAddr : peekNextKpAddr();
       if (cbuf[1] == kpaddr && kpaddr > 0)
       {
+        pendingAck=false;
         writeChars();
+
       }
 #ifdef MONITORTX
       memset(extcmd, 0, OUTBUFSIZE); // store the previous panel sent data in extcmd buffer for later use
@@ -1739,6 +1766,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
   expectByte = 0;
   retries = 0;
   is2400 = false;
+  pendingAck=false;
 
   kpAddr = keypadAddr;
   txPin = transmitPin;
