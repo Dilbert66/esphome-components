@@ -1714,6 +1714,13 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 6);
 #endif
       pushCmdQueueItem(gidx);
+      if (filterOwnTx && extidx) {
+          newCmd=false;
+          newExtCmd=true;
+          uint8_t ret = decodePacket();
+          pushCmdQueueItem(ret, extidx);
+          extidx=0;
+      }
       return 1;
     }
 
