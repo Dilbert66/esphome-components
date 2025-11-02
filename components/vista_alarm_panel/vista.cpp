@@ -997,6 +997,7 @@ void Vista::writeChars()
   for (int x = 0; x < tmpOutBuf[1] + 2; x++)
   {
     vistaSerial->write(tmpOutBuf[x]);
+    delayMicroseconds(5); //add inter char delay
   }
   sending = false;
   expectByte = tmpOutBuf[0];
