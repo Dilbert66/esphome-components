@@ -749,6 +749,8 @@ void Vista::ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen) {
 void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
   sending = true;
   delayMicroseconds(500);
+  if (filterOwnTx)
+    memset(extbuf, 0, OUTBUFSIZE);
   for (uint8_t x = 0; x < lcbuflen; x++)
   {
     vistaSerial->write(lcbuf[x],filterOwnTx);
@@ -1363,8 +1365,7 @@ size_t Vista::decodePacket()
     }
     else
     {//uint8_t n_rf_bytes = extbuf[1] >> 4;
-
-      // FB packet but with different length then 5
+       // FB packet but with different length then 5
       // we send out the packet as received for debugging
       extcmd[0] = extbuf[0];
       extcmd[1] = extbuf[1];
