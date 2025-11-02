@@ -181,7 +181,7 @@ async def add_entity_config(entity, config):
     web_keypad = await cg.get_variable(config[CONF_WEB_KEYPAD_ID])
     sorting_weight = config.get(CONF_SORTING_WEIGHT, 50)
     sorting_group_hash = hash(config.get(CONF_SORTING_GROUP_ID))
-
+    cg.add_define("USE_WEBSERVER_SORTING")
     cg.add(
         web_keypad.add_entity_config(
             entity,
@@ -322,6 +322,7 @@ async def to_code(config):
             cg.add_library("Update", None)     
             
     if (sorting_group_config := config.get(CONF_SORTING_GROUPS)) is not None:
+        cg.add_define("USE_WEBSERVER_SORTING")
         add_sorting_groups(var, sorting_group_config)
 
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")

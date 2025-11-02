@@ -2022,15 +2022,8 @@ namespace esphome
             {
                 // cid = toInt(doc["partition"],10);
                 unsigned long ul = (unsigned long)doc["cid"];
-            //                 UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            // ESP_LOGE(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
-            mg_connection *cl  = mgr.conns;
-            //                     uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            // ESP_LOGE(TAG, "after assignment level: %5d", (uint16_t)uxHighWaterMark);
-                while (cl != NULL) {
-                         // for ( cl=mgr.conns ;cl != NULL; cl = cl->next)
-                // {
-
+              for (mg_connection * cl=mgr.conns ;cl != NULL; cl = cl->next)
+                 {
                     if (cl->id == ul)
                     {
                         cl->data[1] = 1;
@@ -2038,9 +2031,7 @@ namespace esphome
                         entities_iterator_.begin(this->include_internal_);
                         break;
                     }
-                    cl=cl->next;
                 }
-
                 ws_reply(c, "", true);
                 c->is_draining = 1;
                 return;

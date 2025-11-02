@@ -568,7 +568,8 @@ class vistaECPHome : public time::RealTimeClock
 #ifdef ESP32
       TaskHandle_t xHandle;
       static void cmdQueueTask(void *args);
-      static void setupTask(void *args);
+     // static void setupTask(void *args);
+      
 #endif
       void createZone(uint16_t z, uint8_t p = 0);
       int getZoneNumber(char *zid);

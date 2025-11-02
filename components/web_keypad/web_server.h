@@ -8,6 +8,7 @@
 #include "esphome/components/mg_lib/mongoose.h"
 #include <vector>
 #include "crypto.h"
+#include <map>
 
 
 #ifdef USE_ESP_IDF
@@ -422,6 +423,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *p);
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
 void parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
+
 void add_entity_config(EntityBase *entity, float weight, uint64_t group);
 void add_sorting_group(uint64_t group_id, const std::string &group_name, float weight);
 
@@ -463,6 +465,7 @@ static void webPollTask(void * args);
   //ESPPreferenceObject pref_;
  // KeypadConfig keypadconfig_;
   Credentials * credentials_ ;
+
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;
