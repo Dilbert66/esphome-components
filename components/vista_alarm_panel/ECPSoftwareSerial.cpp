@@ -22,6 +22,9 @@ Modified for 4800 8E2
 */
 
 #include "ECPSoftwareSerial.h"
+#if !defined(ARDUINO_MQTT)
+#include "esphome/core/defines.h"
+#endif
 
 
 SoftwareSerial::SoftwareSerial(
@@ -79,6 +82,31 @@ bool SoftwareSerial::isValidGPIOpin(int pin)
 #endif
 #ifdef USE_RP2040
     return (pin >= 0 && pin <= 21) || (pin >=26 && pin <= 27);
+#endif
+}
+
+
+#ifndef ESP32
+uint32_t SoftwareSerial::m_savedPS = 0;
+#else
+portMUX_TYPE SoftwareSerial::m_interruptsMux = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR SoftwareSerial::disableInterrupts()
+{
+#ifndef ESP32
+    m_savedPS = xt_rsil(15);
+#else
+    taskENTER_CRITICAL(&m_interruptsMux);
+#endif
+}
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR SoftwareSerial::restoreInterrupts()
+{
+#ifndef ESP32
+    xt_wsr_ps(m_savedPS);
+#else
+    taskEXIT_CRITICAL(&m_interruptsMux);
 #endif
 }
 
@@ -275,23 +303,24 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b, bool parity, int32_t baud)
 
 
     m_parity = parity;
-    size_t r = write(b);
+    size_t r = write(b,true);
     m_parity = origParity;
     m_bitCycles = origCycles;
     return r;
 }
 
-size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
+size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
 {
     uint8_t parity = 0;
     if (!m_txValid)
         return 0;
     if (m_invert_tx)
         b = ~b;
+
     unsigned long wait = m_bitCycles;
 
     unsigned long start = ticks();
-
+    if (interrupt) disableInterrupts();
     // Start bit;
     if (m_invert_tx)
         digitalWriteByte(m_txPin, HIGH);
@@ -353,6 +382,7 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b)
     WAIT;                // 1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
         WAIT;
+    if (interrupt) restoreInterrupts();
     return 1;
 }
 
@@ -446,10 +476,10 @@ void SoftwareSerial::rxBits()
         m_isrOutPos.store((m_isrOutPos.load() + 1) % m_isrBufSize);
 
         int32_t cycles = static_cast<int32_t>(isrCycle - m_isrLastCycle.load()) - (m_bitCycles / 2);
-       // if (cycles < 0)
-          //  cycles = +0x7fffffff;
-          if (cycles < 0)
-            cycles= +0x80000000;
+        if (cycles < 0)
+            cycles = +0x7fffffff;
+        //   if (cycles < 0)
+        //     cycles= +0x80000000;
 
         m_isrLastCycle.store(isrCycle);
 

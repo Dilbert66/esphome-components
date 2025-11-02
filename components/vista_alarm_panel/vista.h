@@ -266,6 +266,7 @@ private:
     size_t decodePacket();
     uint8_t getExtBytes();
     void sendBuffer(char *lcbuf,uint8_t lcbuflen);
+    void ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen);
     volatile bool is2400;
     void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
     bool invertRead;

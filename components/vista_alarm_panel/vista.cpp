@@ -35,6 +35,12 @@ Vista::Vista()
   extbuf = new char[OUTBUFSIZE];
   extcmd = new char[OUTBUFSIZE];
 #endif
+
+  #ifdef VISTA_FILTER_OWN_TX
+  filterOwnTx=true;
+  #else
+  filterOwnTx=false;
+  #endif
   inbufIdx = 0;
   outbufIdx = 0;
   incmdIdx = 0;
@@ -49,7 +55,7 @@ Vista::Vista()
   faultQueue = new uint8_t[FAULTQUEUESIZE];
   rfSerialQueue = new rfSerialQueueItem[FAULTQUEUESIZE];
   lrrSupervisor = false;
-  filterOwnTx=false;
+
 }
 
 Vista::~Vista()
@@ -407,7 +413,7 @@ void Vista::onRF(char cbuf[])
     return; // unknown so we don't acknowledge  
   }
 
-  sendBuffer(lcbuf,lcbuflen);
+  ckSumSendBuffer(lcbuf,lcbuflen);
 
 }
 
@@ -431,19 +437,18 @@ void Vista::onLrr(char *cbuf, int *idx)
   {
     if (peekNextKpAddr() == LRRADDR)
       getChar(); //remove last request
+    sendBuffer(lcbuf,_lcbuflen);
+    // sending = true;
 
-    sending = true;
+    // delayMicroseconds(500);
 
-    delayMicroseconds(500);
-
-    for (uint8_t x = 0; x < _lcbuflen; x++)
-    {
-      vistaSerial->write(lcbuf[x]);
-    }
+    // for (uint8_t x = 0; x < _lcbuflen; x++)
+    // {
+    //   vistaSerial->write(lcbuf[x]);
+    // }
     expectByte = lcbuf[0];
     expectCmd = 0xf9;
     _retriesf9++;
-    sending = false;
     return;
 
   }
@@ -514,13 +519,14 @@ void Vista::onLrr(char *cbuf, int *idx)
 
   if (lrrSupervisor)
   {
-    sending = true;
-    delayMicroseconds(500);
-    for (int x = 0; x < _lcbuflen; x++)
-    {
-      vistaSerial->write(lcbuf[x]);
-    }
-    sending = false;
+    sendBuffer(lcbuf,_lcbuflen);
+    // sending = true;
+    // delayMicroseconds(500);
+    // for (int x = 0; x < _lcbuflen; x++)
+    // {
+    //   vistaSerial->write(lcbuf[x]);
+    // }
+    // sending = false;
   }
 }
 
@@ -725,30 +731,33 @@ void Vista::onExp(char cbuf[])
      return; // we don't acknowledge   //0x80 or 0x81
   }
 
-  sendBuffer(lcbuf,lcbuflen);
+  ckSumSendBuffer(lcbuf,lcbuflen);
 }
 
-void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
+void Vista::ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen) {
   sending = true;
   uint32_t chksum = 0;
   for (uint8_t x = 0; x < lcbuflen; x++)
   {
     chksum += lcbuf[x];
+  }
+  lcbuf[lcbuflen]=(char)((chksum-1) ^ 0xFF);
+  sendBuffer(lcbuf,lcbuflen+1);
+ 
+}
+
+void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
+  sending = true;
+  delayMicroseconds(500);
+  for (uint8_t x = 0; x < lcbuflen; x++)
+  {
+    vistaSerial->write(lcbuf[x],filterOwnTx);
     if (filterOwnTx) 
       extbuf[x]=lcbuf[x];
   }
-  lcbuf[lcbuflen]=(char)((chksum-1) ^ 0xFF);
-  if (filterOwnTx) 
-      extbuf[lcbuflen]=lcbuf[lcbuflen];
-  delayMicroseconds(500);
-  for (uint8_t x = 0; x < lcbuflen+1; x++)
-  {
-    vistaSerial->write(lcbuf[x]);
-  }
   if (filterOwnTx) {
-    extidx=lcbuflen+1;
+    extidx=lcbuflen;
   }
-
   sending = false;
 }
 
@@ -973,6 +982,7 @@ void Vista::writeChars()
               }
       }
       tmpOutBuf[tmpIdx++] = c;
+
     }
 
     if (kt.seq > 0)
@@ -980,7 +990,6 @@ void Vista::writeChars()
     else
       tmpOutBuf[0] = ((++writeSeq << 6) & 0xc0) | (lastkpaddr & 0x3F);
     tmpOutBuf[1] = sz + 1;
-
     int checksum = 0;
     uint8_t x;
     for (x = 2; x < tmpOutBuf[1] + 1; x++)
@@ -991,15 +1000,15 @@ void Vista::writeChars()
     tmpOutBuf[x]=(char)chksum;
 
   }
+  sendBuffer(tmpOutBuf,tmpOutBuf[1] + 2);
+  // sending = true;
+  // delayMicroseconds(500);
+  // for (int x = 0; x < tmpOutBuf[1] + 2; x++)
+  // {
+  //   vistaSerial->write(tmpOutBuf[x]);
 
-  sending = true;
-  delayMicroseconds(500);
-  for (int x = 0; x < tmpOutBuf[1] + 2; x++)
-  {
-    vistaSerial->write(tmpOutBuf[x]);
-    delayMicroseconds(5); //add inter char delay
-  }
-  sending = false;
+  // }
+  // sending = false;
   expectByte = tmpOutBuf[0];
   expectCmd = 0xf6;
   retries++;
@@ -1155,7 +1164,8 @@ void IRAM_ATTR Vista::rxHandleISR()
 #ifdef MONITORTX
 void IRAM_ATTR Vista::txHandleISR()
 {
-  if ((!sending || !filterOwnTx) && rxState == sNormal)
+  //if ((!sending || !filterOwnTx) && rxState == sNormal)
+  if (rxState == sNormal)
     vistaSerialMonitor->rxRead();
 }
 #endif
@@ -1596,6 +1606,13 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 6);
 #endif
       pushCmdQueueItem(gidx);
+      if (filterOwnTx && extidx) {
+          newCmd=false;
+          newExtCmd=true;
+          uint8_t ret = decodePacket();
+          pushCmdQueueItem(ret, extidx);
+          extidx=0;
+      }
       return 1;
     }
     // key ack
@@ -1620,6 +1637,13 @@ bool Vista::handle()
 
 #endif
       pushCmdQueueItem(gidx);
+      if (filterOwnTx && extidx) {
+          newCmd=false;
+          newExtCmd=true;
+          uint8_t ret = decodePacket();
+          pushCmdQueueItem(ret, extidx);
+          extidx=0;
+      }
       return 1;
     }
 

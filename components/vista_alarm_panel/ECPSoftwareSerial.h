@@ -106,7 +106,7 @@ public:
     int read();
     // size_t write(uint8_t byte, bool parity);
     size_t write(uint8_t b, bool parity, int32_t baud);
-    size_t write(uint8_t byte);
+    size_t write(uint8_t byte,bool interrupt=true);
 
     // size_t write(const uint8_t * buffer, size_t size, bool parity);
     // size_t write(const uint8_t *buffer, size_t size) override;
@@ -140,6 +140,9 @@ private:
     /* check m_rxValid that calling is safe */
     void rxBits();
 
+    static void disableInterrupts();
+    static void restoreInterrupts();
+
     // Member variables
     bool m_oneWire;
     int m_rxPin = SW_SERIAL_UNUSED_PIN;
@@ -168,6 +171,11 @@ private:
     std::atomic<uint32_t> m_isrLastCycle;
     int m_rxCurBit; // 0 - 7: data bits. -1: start bit. 8: stop bit.
     uint8_t m_rxCurByte = 0;
+#ifndef ESP32
+    static uint32_t m_savedPS;
+#else
+    static portMUX_TYPE m_interruptsMux;
+#endif
 
     static inline unsigned long  IRAM_ATTR microsToTicks(unsigned long micros) ALWAYS_INLINE_ATTR
     {

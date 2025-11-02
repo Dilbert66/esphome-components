@@ -67,6 +67,7 @@ CONF_EMULATED="emulated"
 KEY_ESP32 = "esp32"
 KEY_SDKCONFIG_OPTIONS = "sdkconfig_options"
 CONF_DISABLE_RETRY="disable_retry"
+CONF_FILTER_OWN_TX="filter_own_tx"
 
 BINARY_SENSOR_TYPE_ID_REGEX = r"^(ac|bat|trbl_\d+|byp_\d+|rdy_\d+|arm_\d+|arma_\d+|arms_\d+|armi_\d+|armn_\d+|alm_\d+|fire_\d+|chm_\d+|r\d+|z\d+)$"
 BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<digits>, arm_<digits>, arma_<digits>, arms_<digits>, arma_<digits>, armn_<digits>,alm_<digits>, fire_<digits>, chm_<digits>, r<digits>, z<digits>"
@@ -117,6 +118,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_EMULATE_RF_RECEIVER,default= 'false'): cv.boolean,
     cv.Optional(CONF_RF_ADDR,default=0xff): cv.int_, 
     cv.Optional(CONF_DISABLE_RETRY): cv.boolean,
+    cv.Optional(CONF_FILTER_OWN_TX,default="true"): cv.boolean,
     }
 )
 
@@ -201,6 +203,9 @@ async def to_code(config):
     
     if CONF_DISABLE_RETRY in config and config[CONF_DISABLE_RETRY]:
        cg.add_define("VISTA_DISABLE_RETRIES")
+
+    if CONF_FILTER_OWN_TX in config and config[CONF_FILTER_OWN_TX]:
+       cg.add_define("VISTA_FILTER_OWN_TX")
   
     if CONF_ACCESSCODE in config:
         cg.add(var.set_accessCode(config[CONF_ACCESSCODE]))
