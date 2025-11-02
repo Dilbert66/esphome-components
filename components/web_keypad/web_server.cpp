@@ -6,6 +6,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include "ArduinoJson.h"
+#include <map>
 
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
