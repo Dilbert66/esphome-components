@@ -265,6 +265,7 @@ private:
     char expFaultBits;
     size_t decodePacket();
     uint8_t getExtBytes();
+    void pushExtBuffer();
     void sendBuffer(char *lcbuf,uint8_t lcbuflen);
     void ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen);
     volatile bool is2400;
@@ -301,7 +302,7 @@ private:
     char expectByte;
     volatile uint8_t retries;
     volatile uint8_t retryAddr;
-    volatile bool sending;
+    //volatile bool sending;
     bool _emulate_rf_receiver=false;
     uint8_t _rf_addr=0;
 

@@ -735,7 +735,6 @@ void Vista::onExp(char cbuf[])
 }
 
 void Vista::ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen) {
-  sending = true;
   uint32_t chksum = 0;
   for (uint8_t x = 0; x < lcbuflen; x++)
   {
@@ -747,7 +746,7 @@ void Vista::ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen) {
 }
 
 void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
-  sending = true;
+  //sending = true;
   delayMicroseconds(500);
   if (filterOwnTx)
     memset(extbuf, 0, OUTBUFSIZE);
@@ -760,7 +759,7 @@ void Vista::sendBuffer(char *lcbuf,uint8_t lcbuflen) {
   if (filterOwnTx) {
     extidx=lcbuflen;
   }
-  sending = false;
+  //sending = false;
 }
 
 void Vista::write(const char key, uint8_t addr)
@@ -1448,6 +1447,17 @@ uint8_t Vista::getExtBytes()
 }
 #endif
 
+void Vista::pushExtBuffer() 
+{
+  if (filterOwnTx && extidx) {
+    newCmd=false;
+    newExtCmd=true;
+    uint8_t ret = decodePacket();
+    pushCmdQueueItem(ret, extidx);
+    extidx=0;
+  }
+}
+
 bool Vista::handle()
 {
   newCmd = false;
@@ -1543,18 +1553,9 @@ bool Vista::handle()
         onExp(cbuf);
         newCmd = true;
         pushCmdQueueItem(gidx);
-        if (filterOwnTx && extidx) {
-          newCmd=false;
-          newExtCmd=true;
-          uint8_t ret = decodePacket();
-          pushCmdQueueItem(ret, extidx);
-          extidx=0;
-        }
-
+        pushExtBuffer();
+        return 1;
       }
-
-
-      return 1;
     }
 
     if (x == 0xF7)
@@ -1607,13 +1608,7 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 6);
 #endif
       pushCmdQueueItem(gidx);
-      if (filterOwnTx && extidx) {
-          newCmd=false;
-          newExtCmd=true;
-          uint8_t ret = decodePacket();
-          pushCmdQueueItem(ret, extidx);
-          extidx=0;
-      }
+      pushExtBuffer();
       return 1;
     }
     // key ack
@@ -1638,13 +1633,7 @@ bool Vista::handle()
 
 #endif
       pushCmdQueueItem(gidx);
-      if (filterOwnTx && extidx) {
-          newCmd=false;
-          newExtCmd=true;
-          uint8_t ret = decodePacket();
-          pushCmdQueueItem(ret, extidx);
-          extidx=0;
-      }
+      pushExtBuffer();
       return 1;
     }
 
@@ -1715,13 +1704,7 @@ bool Vista::handle()
       memcpy(extcmd, cbuf, 6);
 #endif
       pushCmdQueueItem(gidx);
-      if (filterOwnTx && extidx) {
-          newCmd=false;
-          newExtCmd=true;
-          uint8_t ret = decodePacket();
-          pushCmdQueueItem(ret, extidx);
-          extidx=0;
-      }
+      pushExtBuffer();
       return 1;
     }
 
