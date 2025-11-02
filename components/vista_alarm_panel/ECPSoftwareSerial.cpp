@@ -244,6 +244,7 @@ int SoftwareSerial::available()
     if (!avail)
     {
         rxBits();
+        
         avail = m_inPos - m_outPos;
         if (avail < 0)
         {
