@@ -56,21 +56,21 @@ namespace esphome
       vista.stop();
     }
 
-    vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin, int maxzones, int maxpartitions, bool invertrx, bool inverttx, bool invertmon, uint8_t inputrx, uint8_t inputmon) : keypadAddr1(kpaddr),
-                                                                                                                                                                                                                   rxPin(receivePin),
-                                                                                                                                                                                                                   txPin(transmitPin),
-                                                                                                                                                                                                                   monitorPin(monitorTxPin),
-                                                                                                                                                                                                                   maxZones(maxzones),
-                                                                                                                                                                                                                   maxPartitions(maxpartitions),
-                                                                                                                                                                                                                   invertRx(invertrx),
-                                                                                                                                                                                                                   invertTx(inverttx),
-                                                                                                                                                                                                                   invertMon(invertmon),
-                                                                                                                                                                                                                   inputRx(inputrx),
-                                                                                                                                                                                                                   inputMon(inputmon)
+    vistaECPHome::vistaECPHome(char kpaddr, int receivePin, int transmitPin, int monitorTxPin, int maxzones, int maxpartitions, bool invertrx, bool inverttx, bool invertmon, uint8_t inputrx, uint8_t inputmon) : _keypadAddr1(kpaddr),
+                                                                                                                                                                                                                   _rxPin(receivePin),
+                                                                                                                                                                                                                   _txPin(transmitPin),
+                                                                                                                                                                                                                   _monitorPin(monitorTxPin),
+                                                                                                                                                                                                                   _maxZones(maxzones),
+                                                                                                                                                                                                                   _maxPartitions(maxpartitions),
+                                                                                                                                                                                                                   _invertRx(invertrx),
+                                                                                                                                                                                                                   _invertTx(inverttx),
+                                                                                                                                                                                                                   _invertMon(invertmon),
+                                                                                                                                                                                                                   _inputRx(inputrx),
+                                                                                                                                                                                                                   _inputMon(inputmon)
     {
-      partitionKeypads = new char[maxPartitions + 1];
-      partitions = new uint8_t[maxPartitions];
-      partitionStates = new partitionStateType[maxPartitions];
+      _partitionKeypads = new char[_maxPartitions + 1];
+      _partitions = new uint8_t[_maxPartitions];
+      partitionStates = new partitionStateType[_maxPartitions];
       fireStatus = new alarmStatusType;
       panicStatus = new alarmStatusType;
       alarmStatus = new alarmStatusType;
@@ -82,8 +82,8 @@ namespace esphome
 
 vistaECPHome::~vistaECPHome()
 {   
-      delete[] partitionKeypads;
-      delete[] partitions;
+      delete[] _partitionKeypads;
+      delete[] _partitions;
       delete[] partitionStates;
       delete alarmStatus;
       delete fireStatus;
@@ -103,7 +103,7 @@ vistaECPHome::~vistaECPHome()
       msg.append(zs1).append(lb);
       publishZoneStatus(zt, msg.c_str());
 
-      if (zt->zone <= maxZones)
+      if (zt->zone <= _maxZones)
         publishZoneStatus(zt, zt->open || zt->check);
       else
         publishZoneStatus(zt, zt->check || zt->open || zt->alarm || zt->trouble);
@@ -361,9 +361,9 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     void vistaECPHome::getRFSerial(zoneType *zt)
     {
 
-      if (rfSerialLookup != NULL && *rfSerialLookup)
+      if (_rfSerialLookup != NULL && *_rfSerialLookup)
       {
-        std::string s = rfSerialLookup;
+        std::string s = _rfSerialLookup;
 
         size_t pos, pos1, pos2;
         s.append(",");
@@ -483,7 +483,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     {
 #if defined(USE_TIME)
 
-      if (auiAddr)
+      if (_auiAddr)
       {
         if (auiCmd.state != rsidle)
         {
@@ -495,7 +495,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         else
           sendAuiTime();
       }
-      if (vistaCmd->statusFlags.programMode || auiAddr)
+      if (vistaCmd->statusFlags.programMode || _auiAddr)
         return;
       ESPTime rtc = now();
       if (!rtc.is_valid())
@@ -506,11 +506,11 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
       if (hour > 12)
         hour -= 12;
       char cmd[30];
-      sprintf(cmd, "%s#63*|%02d%02d%01d%02d%02d%02d*", accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
+      sprintf(cmd, "%s#63*|%02d%02d%01d%02d%02d%02d*", _accessCode, hour, rtc.minute, ampm, rtc.year % 100, rtc.month, rtc.day_of_month);
 #if not defined(ARDUINO_MQTT)
       ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
-      int addr = partitionKeypads[defaultPartition];
+      int addr = _partitionKeypads[_defaultPartition];
       vista.write(cmd, addr);
 
 #endif
@@ -526,14 +526,14 @@ void vistaECPHome::set_panel_time_manual(int year, int month, int day, int hour,
       if (hour > 12)
         hour -= 12;
       char cmd[30];
-      sprintf(cmd, "%s#63*|%02d%02d%1d%02d%02d%02d*", accessCode, hour, minute, ampm, year % 100, month, day);
+      sprintf(cmd, "%s#63*|%02d%02d%1d%02d%02d%02d*", _accessCode, hour, minute, ampm, year % 100, month, day);
 #if defined(ARDUINO_MQTT)
       Serial.printf("Setting panel time...\n");
 #else
   ESP_LOGD(TAG, "Send time string: %s", cmd);
 #endif
 
-      int addr = partitionKeypads[defaultPartition];
+      int addr = _partitionKeypads[_defaultPartition];
       vista.write(cmd, addr);
     }
     */
@@ -558,11 +558,11 @@ void vistaECPHome::setup()
 #endif
 
 #if defined(ESPHOME_MQTT)
-      topic_prefix = mqtt::global_mqtt_client->get_topic_prefix();
+      _topicPrefix = mqtt::global_mqtt_client->get_topic_prefix();
       mqtt::MQTTDiscoveryInfo mqttDiscInfo = mqtt::global_mqtt_client->get_discovery_info();
       std::string discovery_prefix = mqttDiscInfo.prefix;
-      topic = discovery_prefix + "/alarm_control_panel/" + topic_prefix + "/config";
-      mqtt::global_mqtt_client->subscribe_json(topic_prefix + setalarmcommandtopic, mqtt_callback);
+      _topic = discovery_prefix + "/alarm_control_panel/" + _topicPrefix + "/config";
+      mqtt::global_mqtt_client->subscribe_json(_topicPrefix + setalarmcommandtopic, mqtt_callback);
 
 #endif
 #if defined(USE_API)
@@ -585,16 +585,16 @@ void vistaECPHome::setup()
       publishSystemStatus(STATUS_ONLINE, 1);
       publishStatus(SAC, true, 1);
        #if not defined(USE_ESP_IDF) && not defined(ESP32)
-      vista.begin(rxPin, txPin, keypadAddr1, monitorPin, invertRx, invertTx, invertMon, inputRx, inputMon);
+      vista.begin(_rxPin, _txPin, _keypadAddr1, _monitorPin, _invertRx, _invertTx, _invertMon, _inputRx, _inputMon);
       #endif
-      vista.lrrSupervisor = lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
+      vista.lrrSupervisor = _lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
 
-      setDefaultKpAddr(defaultPartition);
+      setDefaultKpAddr(_defaultPartition);
 
-      for (uint8_t p = 0; p < maxPartitions; p++)
+      for (uint8_t p = 0; p < _maxPartitions; p++)
       {
         partitionStates[p]=partitionStates_INIT;
-        partitions[p] = 0;
+        _partitions[p] = 0;
         publishSystemStatus(STATUS_NOT_READY, p + 1);
         publishBeeps(0, p + 1);
       }
@@ -683,7 +683,7 @@ void vistaECPHome::setup()
     void vistaECPHome::alarm_keypress(std::string keystring)
     {
 
-      alarm_keypress_partition(keystring, defaultPartition);
+      alarm_keypress_partition(keystring, _defaultPartition);
     }
 
     void vistaECPHome::alarm_keypress_partition(std::string keystring, int32_t partition)
@@ -691,7 +691,7 @@ void vistaECPHome::setup()
       if (keystring == "R")
       {
         forceRefreshGlobal = true;
-        forceRefresh = true;
+        _forceRefresh = true;
         return;
       }
       if (keystring == "A")
@@ -726,17 +726,17 @@ void vistaECPHome::setup()
       }
 
       if (!partition)
-        partition = defaultPartition;
-      if (debug > 0)
+        partition = _defaultPartition;
+      if (_debug > 0)
 #if defined(ARDUINO_MQTT)
         Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(), partition);
 #else
     ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(), partition);
 #endif
       uint8_t addr = 0;
-      if (partition > maxPartitions || partition < 1)
+      if (partition > _maxPartitions || partition < 1)
         return;
-      addr = partitionKeypads[partition];
+      addr = _partitionKeypads[partition];
       if (addr > 0 and addr < 24)
         vista.write(keystring.c_str(), addr);
     }
@@ -760,9 +760,9 @@ void vistaECPHome::setup()
     void vistaECPHome::setDefaultKpAddr(uint8_t p)
     {
       uint8_t a;
-      if (p > maxPartitions || p < 1)
+      if (p > _maxPartitions || p < 1)
         return;
-      a = partitionKeypads[p];
+      a = _partitionKeypads[p];
       if (a > 15 && a < 24)
         vista.setKpAddr(a);
     }
@@ -899,19 +899,19 @@ void vistaECPHome::setup()
     {
 
       if (code.length() != 4 || !isInt(code, 10))
-        code = accessCode; // ensure we get a numeric 4 digit code
+        code = _accessCode; // ensure we get a numeric 4 digit code
 
       uint8_t addr = 0;
-      if (partition > maxPartitions || partition < 1)
+      if (partition > _maxPartitions || partition < 1)
         return;
-      addr = partitionKeypads[partition];
+      addr = _partitionKeypads[partition];
       if (addr < 1 || addr > 23)
         return;
 
       // Arm stay
       if (state.compare("S") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
-        if (quickArm)
+        if (_quickArm)
           vista.write("#3", addr);
         else if (code.length() == 4)
         {
@@ -923,7 +923,7 @@ void vistaECPHome::setup()
       else if ((state.compare("A") == 0 || state.compare("W") == 0) && !partitionStates[partition - 1].previousLightState.armed)
       {
 
-        if (quickArm)
+        if (_quickArm)
           vista.write("#2", addr);
         else if (code.length() == 4)
         {
@@ -933,7 +933,7 @@ void vistaECPHome::setup()
       }
       else if (state.compare("I") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
-        if (quickArm)
+        if (_quickArm)
           vista.write("#7", addr);
         else if (code.length() == 4)
         {
@@ -944,7 +944,7 @@ void vistaECPHome::setup()
       else if (state.compare("N") == 0 && !partitionStates[partition - 1].previousLightState.armed)
       {
 
-        if (quickArm)
+        if (_quickArm)
           vista.write("#33", addr);
         else if (code.length() == 4)
         {
@@ -1016,7 +1016,7 @@ void vistaECPHome::setup()
 
       for (int p = 1; p < 4; p++)
       {
-        if (partitions[p - 1])
+        if (_partitions[p - 1])
         {
           ESP_LOGD(TAG, "Assigning partition %d, to zone %d", p, zt->zone);
           zt->partition = p;
@@ -1027,21 +1027,21 @@ void vistaECPHome::setup()
 
     void vistaECPHome::getPartitionsFromMask()
     {
-      partitionTargets = 0;
-      memset(partitions, 0, maxPartitions);
-      for (uint8_t p = 1; p <= maxPartitions; p++)
+      _partitionTargets = 0;
+      memset(_partitions, 0, _maxPartitions);
+      for (uint8_t p = 1; p <= _maxPartitions; p++)
       {
         for (int8_t i = 3; i >= 0; i--)
         {
-          int8_t shift = partitionKeypads[p] - (8 * i);
+          int8_t shift = _partitionKeypads[p] - (8 * i);
           if (shift >= 0 && (vistaCmd->statusFlags.keypad[i] & (0x01 << shift)))
           {
-            partitionTargets = partitionTargets + 1;
+            _partitionTargets = _partitionTargets + 1;
             if (!partitionStates[p - 1].active) {
                 forceRefreshGlobal = true;//new partition so we update it's sensors
                 partitionStates[p - 1].active=true;
             }
-            partitions[p - 1] = 1;
+            _partitions[p - 1] = 1;
             
             break;
           }
@@ -1053,59 +1053,59 @@ void vistaECPHome::setup()
     bool vistaECPHome::sendAuiTime()
     {
       ESPTime rtc = now();
-      if (!rtc.is_valid() || vistaCmd->statusFlags.programMode || !auiAddr || (auiCmd.state != rsidle && auiCmd.state != rsdate))
+      if (!rtc.is_valid() || vistaCmd->statusFlags.programMode || !_auiAddr || (auiCmd.state != rsidle && auiCmd.state != rsdate))
         return false;
       ESP_LOGD(TAG, "Setting AUI time...");
       char bytes[] = {00, 0x68, 0x05, 0x02, 0x45, 0x43, 0xF5, 0xEC, 0x32, 0x34, 0x31, 0x31, 0x31, 0x35, 0x31, 0x31, 0x34, 0x31, 0x30, 0x35, 0x35, 0};
-      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
-      bytes[1] = 0x60 + auiSeq;
+      _auiSeq = _auiSeq == 0xf ? 8 : _auiSeq + 1;
+      bytes[1] = 0x60 + _auiSeq;
       auiCmd.state = rsdate;
       auiCmd.time = millis();
       auiCmd.pending = true;
       // dateReqStatus=0;
       snprintf(&bytes[8], 14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute, rtc.second, rtc.day_of_week - 1);
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes) - 1);
+      vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
       return true;
     }
 
     void vistaECPHome::sendZoneRequest()
     {
-      if (!auiAddr || !(auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones) || auiCmd.pending)
+      if (!_auiAddr || !(auiCmd.state == rsopenzones || auiCmd.state == rsbypasszones) || auiCmd.pending)
         return;
-      auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
+      _auiSeq = _auiSeq == 0xf ? 8 : _auiSeq + 1;
       char bytes[] = {00, 0x68, 0x62, 0x31, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x4A, 0xF5, 0x32, 0xFB, 0x45, 0x43, 0xF5, 0x31, 0xFB, 0x43, 0x6C};
-      bytes[1] = 0x60 + auiSeq;
+      bytes[1] = 0x60 + _auiSeq;
       bytes[7] = auiCmd.partition;
       bytes[12] = auiCmd.state == rsopenzones ? 0x32 : 0x35;
       auiCmd.pending = true;
       auiCmd.time = millis();
-      ESP_LOGD(TAG, "Sending zone status request %d, header %02X, auiAddr %d", auiCmd.state, bytes[1], auiAddr);
-      vista.writeDirect(bytes, auiAddr, sizeof(bytes));
+      ESP_LOGD(TAG, "Sending zone status request %d, header %02X, _auiAddr %d", auiCmd.state, bytes[1], _auiAddr);
+      vista.writeDirect(bytes, _auiAddr, sizeof(bytes));
     }
 
 #if defined(AUTOPOPULATE)
 
     // void vistaECPHome::getZoneCount()
     // {
-    //   if (!auiAddr || !auiCmd.state == rszonecount)
+    //   if (!_auiAddr || !auiCmd.state == rszonecount)
     //     return;
-    //   if (!auiCmd.partition || auiCmd.partition > (maxPartitions + 0x30))
+    //   if (!auiCmd.partition || auiCmd.partition > (_maxPartitions + 0x30))
     //   {
     //     auiCmd.state = rsidle;
     //     return;
     //   }
     //   auiCmd.pending = true;
     //   char bytes[] = {0x00, 0x68, 0x62, 0x0C, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x43, 0x61};
-    //   auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
-    //   bytes[1] = 0x60 + auiSeq;
+    //   _auiSeq = _auiSeq == 0xf ? 8 : _auiSeq + 1;
+    //   bytes[1] = 0x60 + _auiSeq;
     //   bytes[7] = auiCmd.partition;
     //   ESP_LOGD(TAG, "Sending partition %c zone count request %d", auiCmd.partition, auiCmd.state);
-    //   vista.writeDirect(bytes, auiAddr, sizeof(bytes));
+    //   vista.writeDirect(bytes, _auiAddr, sizeof(bytes));
     // }
 
     // void vistaECPHome::getZoneRecord()
     // {
-    //   if (!auiAddr || !auiCmd.state == rszoneinfo)
+    //   if (!_auiAddr || !auiCmd.state == rszoneinfo)
     //     return;
     //   if (auiCmd.record > auiCmd.records || auiCmd.records == 0)
     //   {
@@ -1114,12 +1114,12 @@ void vistaECPHome::setup()
     //   }
     //   auiCmd.pending = true;
     //   char bytes[] = {0x00, 0x68, 0x62, 0x0C, 0x45, 0x49, 0xF5, 0x31, 0xFB, 0x45, 0x43, 0xF5, 0x30, 0x30, 0x31, 0xFB, 0x43, 0x6C, 0};
-    //   auiSeq = auiSeq == 0xf ? 8 : auiSeq + 1;
-    //   bytes[1] = 0x60 + auiSeq;
+    //   _auiSeq = _auiSeq == 0xf ? 8 : _auiSeq + 1;
+    //   bytes[1] = 0x60 + _auiSeq;
     //   bytes[7] = auiCmd.partition;
     //   sprintf(&bytes[12], "%03d%c%c%c", auiCmd.record, 0xfb, 0x43, 0x6c);
     //   ESP_LOGD(TAG, "Sending partition %c zone record %d request %d,Total records: %d", auiCmd.partition, auiCmd.record, auiCmd.state, auiCmd.records);
-    //   vista.writeDirect(bytes, auiAddr, sizeof(bytes) - 1);
+    //   vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
     // }
 
     // void vistaECPHome::loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype)
@@ -1335,7 +1335,7 @@ void vistaECPHome::setup()
     // {
     //   //ensure we run vista setup on correct core
     //   vistaECPHome *_this = (vistaECPHome *)args;
-    //   vista.begin(_this->rxPin, _this->txPin, _this->keypadAddr1, _this->monitorPin, _this->invertRx, _this->invertTx, _this->invertMon, _this->inputRx, _this->inputMon);
+    //   vista.begin(_this->_rxPin, _this->_txPin, _this->_keypadAddr1, _this->_monitorPin, _this->_invertRx, _this->_invertTx, _this->_invertMon, _this->_inputRx, _this->_inputMon);
     //   vTaskDelete(NULL); //exit task as we are done
     // }
 
@@ -1344,7 +1344,7 @@ void vistaECPHome::setup()
       //ensure we run the vista interrupts on core 1 for multicore esp32 devices
       
      vistaECPHome *_this = (vistaECPHome *)args;
-     vista.begin(_this->rxPin, _this->txPin, _this->keypadAddr1, _this->monitorPin, _this->invertRx, _this->invertTx, _this->invertMon, _this->inputRx, _this->inputMon);
+     vista.begin(_this->_rxPin, _this->_txPin, _this->_keypadAddr1, _this->_monitorPin, _this->_invertRx, _this->_invertTx, _this->_invertMon, _this->_inputRx, _this->_inputMon);
      
       unsigned long checkTime = millis();
       unsigned long dataTime = millis();
@@ -1388,7 +1388,7 @@ void vistaECPHome::setup()
       
     // //test code to auto load zones from panel - future
     //       static uint8_t currentAUIPartition=0x30;
-    //       if (currentAUIPartition <= (maxPartitions+0x30)) {
+    //       if (currentAUIPartition <= (_maxPartitions+0x30)) {
     //         if (auiCmd.state==rsidle) {
     //           auiCmd.state=szonecount;
     //           auiCmd.pending=false;
@@ -1437,7 +1437,7 @@ void vistaECPHome::update()
         static bool firstRunMqtt=true;
         if (firstRunMqtt && mqtt::global_mqtt_client->is_connected())
         {
-          mqtt::global_mqtt_client->publish(topic, "{\"name\":\"command\", \"cmd_t\":\"" + topic_prefix + setalarmcommandtopic + "\"}", 0, 1);
+          mqtt::global_mqtt_client->publish(_topic, "{\"name\":\"command\", \"cmd_t\":\"" + _topicPrefix + setalarmcommandtopic + "\"}", 0, 1);
           firstRunMqtt=false;
         }
 #endif
@@ -1518,7 +1518,7 @@ void vistaECPHome::update()
           //   testtime = millis();
           // }
 
-          if (!vistaCmd->newExtCmd && !vistaCmd->newCmd && debug > 0)
+          if (!vistaCmd->newExtCmd && !vistaCmd->newCmd && _debug > 0)
           {
             // if (vistaCmd->cbuf[0] == 0xF7)
             //   printPacket("CHK", vistaCmd->cbuf, vistaCmd->size);
@@ -1532,19 +1532,19 @@ void vistaECPHome::update()
           // process ext messages for zones
           if (vistaCmd->newExtCmd)
           {
-            if (debug > 0)
+            if (_debug > 0)
             {
               // if (vistaCmd->cbuf[0] == 0xF6) {
               //   printPacket("EXT", vistaCmd->cbuf, vistaCmd->cbuf[3] + 4);
-              //   if (debug > 2)
+              //   if (_debug > 2)
               //      printPacket("RAW",vistaCmd->extbuf,vistaCmd->cbuf[3] + 2);
               // } else {
               //   printPacket("EXT", vistaCmd->cbuf, 13);
-              //   if (debug > 2)
+              //   if (_debug > 2)
               //     printPacket("RAW",vistaCmd->extbuf,13);
               // }
               printPacket("EXT", vistaCmd->cbuf, vistaCmd->size);
-              if (debug > 2)
+              if (_debug > 2)
                 printPacket("RAW", vistaCmd->extbuf, vistaCmd->rawsize);
 
               // format: [0xFA] [deviceid] [subcommand] [channel/zone] [on/off] [relaydata]
@@ -1552,10 +1552,10 @@ void vistaECPHome::update()
             if (vistaCmd->cbuf[0] == 0xFA)
             {
               int z = vistaCmd->cbuf[3];
-              if (vistaCmd->cbuf[2] == 0xf1 && z > 0 && z <= maxZones)
+              if (vistaCmd->cbuf[2] == 0xf1 && z > 0 && z <= _maxZones)
               { // we have a zone status (zone expander address range)
-                if (debug > 2)
-                  ESP_LOGD(TAG, "FA status update to zone");
+                if (_debug > 2)
+                  ESP_LOGD(TAG, "FA status update to zone %d",z);
                 zoneType *zt = getZone(z);
 
                 if (zt->active)
@@ -1571,7 +1571,7 @@ void vistaECPHome::update()
                 if (z > 0)
                 {
                   publishRelayStatus(vistaCmd->cbuf[1], z, vistaCmd->cbuf[4] ? true : false);
-                  if (debug > 0)
+                  if (_debug > 0)
 #if defined(ARDUINO_MQTT)
                     Serial.printf("Got relay address %d channel %d = %d\n", vistaCmd->cbuf[1], z, vistaCmd->cbuf[4]);
 #else
@@ -1584,7 +1584,7 @@ void vistaECPHome::update()
                 if (z > 0)
                 {
                   // relaypublishStatus(vistaCmd->cbuf[1],z,vistaCmd->cbuf[4]?true:false);
-                  if (debug > 0)
+                  if (_debug > 0)
 #if defined(ARDUINO_MQTT)
                     Serial.printf("Got relay address %d channel %d = %d. Cmd 0D. Pulsing 1sec on/ 1sec off\n", vistaCmd->cbuf[1], z, vistaCmd->cbuf[4]);
 #else
@@ -1686,7 +1686,7 @@ void vistaECPHome::update()
           }
           else
 
-              if (debug > 0 && vistaCmd->newCmd)
+              if (_debug > 0 && vistaCmd->newCmd)
           {
             // if (vistaCmd->cbuf[0] == 0xF2)
             //   printPacket("CMD", vistaCmd->cbuf, vistaCmd->cbuf[1] + 2);
@@ -1695,13 +1695,13 @@ void vistaECPHome::update()
             printPacket("CMD", vistaCmd->cbuf, vistaCmd->size);
           }
 
-          if (vistaCmd->newCmd && auiAddr && vistaCmd->cbuf[0] == 0xF2)
+          if (vistaCmd->newCmd && _auiAddr && vistaCmd->cbuf[0] == 0xF2)
           {
             if (auiCmd.state != rsidle)
               ESP_LOGD(TAG, "AUI cmd state: %d, pending: %d", auiCmd.state, auiCmd.pending);
-            // if ((vistaCmd->cbuf[2] >> 1) & auiAddr)
+            // if ((vistaCmd->cbuf[2] >> 1) & _auiAddr)
             //  activeAuiAddr=true;
-            if (((vistaCmd->cbuf[2]) & auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x60 && vistaCmd->cbuf[8] == 0x63 && vistaCmd->cbuf[9] == 0x02)
+            if (((vistaCmd->cbuf[2]) & _auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x60 && vistaCmd->cbuf[8] == 0x63 && vistaCmd->cbuf[9] == 0x02)
             { // partition update broadcast
               char *m = parseAUIMessage(vistaCmd->cbuf);
               if (m == NULL)
@@ -1734,7 +1734,7 @@ void vistaECPHome::update()
                 // exitDelay=m[5] for partition partitionRequest
               }
             }
-            else if (((vistaCmd->cbuf[2] ) & auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x50 && vistaCmd->cbuf[8] == 0xfe && vistaCmd->cbuf[10] != 0xfd)
+            else if (((vistaCmd->cbuf[2] ) & _auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x50 && vistaCmd->cbuf[8] == 0xfe && vistaCmd->cbuf[10] != 0xfd)
             { // response data from request
               char *m = parseAUIMessage(vistaCmd->cbuf);
               if (m == NULL)
@@ -1779,7 +1779,7 @@ void vistaECPHome::update()
      
 #endif
             }
-            else if (((vistaCmd->cbuf[2] ) & auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x50 && (vistaCmd->cbuf[8] == 0xfd || vistaCmd->cbuf[10] == 0xfd))
+            else if (((vistaCmd->cbuf[2] ) & _auiAddrMask) && (vistaCmd->cbuf[7] & 0xf0) == 0x50 && (vistaCmd->cbuf[8] == 0xfd || vistaCmd->cbuf[10] == 0xfd))
             {
               char *m = parseAUIMessage(vistaCmd->cbuf);
               if (m == NULL)
@@ -1807,9 +1807,9 @@ void vistaECPHome::update()
           {
             getPartitionsFromMask();
 
-            for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+            for (uint8_t partition = 1; partition <= _maxPartitions; partition++)
             {
-              if (partitions[partition - 1])
+              if (_partitions[partition - 1])
               {
 #if defined(ARDUINO_MQTT)
                 Serial.printf("Partition: %02X\n", partition);
@@ -1873,7 +1873,7 @@ void vistaECPHome::update()
           if (!vistaCmd->newCmd || vistaCmd->cbuf[0] != 0xf7 || vistaCmd->cbuf[12] == 0x77)
             return;
 
-          currentSystemState = sunavailable;
+          _currentSystemState = sunavailable;
           currentLightState.stay = false;
           currentLightState.away = false;
           currentLightState.night = false;
@@ -1893,7 +1893,7 @@ void vistaECPHome::update()
 
           if (vistaCmd->statusFlags.ready)
           {
-            currentSystemState = sdisarmed;
+            _currentSystemState = sdisarmed;
             currentLightState.ready = true;
             updateSystemState = true;
           }
@@ -1903,18 +1903,18 @@ void vistaECPHome::update()
             updateSystemState = true;
             if (vistaCmd->statusFlags.night)
             {
-              currentSystemState = sarmednight;
+              _currentSystemState = sarmednight;
               currentLightState.night = true;
               currentLightState.stay = true;
             }
             else if (vistaCmd->statusFlags.armedAway)
             {
-              currentSystemState = sarmedaway;
+              _currentSystemState = sarmedaway;
               currentLightState.away = true;
             }
             else
             {
-              currentSystemState = sarmedstay;
+              _currentSystemState = sarmedstay;
               currentLightState.stay = true;
             }
             currentLightState.armed = true;
@@ -2031,19 +2031,19 @@ void vistaECPHome::update()
           if (vistaCmd->statusFlags.lowBattery && (vistaCmd->statusFlags.systemFlag || vistaCmd->statusFlags.check))
           {
             currentLightState.bat = true;
-            lowBatteryTime = millis();
+            _lowBatteryTime = millis();
           }
           // ESP_LOGE(TAG,"ac=%d,batt status = %d,systemflag=%d,lightbat status=%d,trouble=%d", currentLightState.ac,vistaCmd->statusFlags.lowBattery,vistaCmd->statusFlags.systemFlag,currentLightState.bat,currentLightState.trouble);
 
           if (vistaCmd->statusFlags.fire)
           {
             currentLightState.fire = true;
-            currentSystemState = striggered;
+            _currentSystemState = striggered;
           }
 
           if (vistaCmd->statusFlags.inAlarm)
           {
-            currentSystemState = striggered;
+            _currentSystemState = striggered;
             alarmStatus->zone = 99;
             alarmStatus->time = millis();
             alarmStatus->state = true;
@@ -2076,23 +2076,23 @@ void vistaECPHome::update()
           if ((chkTime - fireStatus->time) > TTL)
           {
             fireStatus->state = false;
-            if (fireStatus->zone > 0 && fireStatus->zone <= maxZones)
+            if (fireStatus->zone > 0 && fireStatus->zone <= _maxZones)
               getZone(fireStatus->zone)->fire = false;
           }
           if ((chkTime - alarmStatus->time) > TTL)
           {
             alarmStatus->state = false;
-            if (alarmStatus->zone > 0 && alarmStatus->zone <= maxZones)
+            if (alarmStatus->zone > 0 && alarmStatus->zone <= _maxZones)
               getZone(alarmStatus->zone)->alarm = false;
           }
           if ((chkTime - panicStatus->time) > TTL)
           {
             panicStatus->state = false;
-            if (panicStatus->zone > 0 && panicStatus->zone <= maxZones)
+            if (panicStatus->zone > 0 && panicStatus->zone <= _maxZones)
               getZone(panicStatus->zone)->panic = false;
           }
           //  if ((millis() - systemPrompt.time) > TTL) systemPrompt.state = false;
-          if ((chkTime - lowBatteryTime) > TTL)
+          if ((chkTime - _lowBatteryTime) > TTL)
             currentLightState.bat = false;
 
           if (!currentLightState.ac || currentLightState.bat || vistaCmd->statusFlags.check)
@@ -2105,15 +2105,15 @@ void vistaECPHome::update()
           if (currentLightState.ac != previousLightState.ac || forceRefreshGlobal)
             publishStatus(SAC, currentLightState.ac);
 
-          for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+          for (uint8_t partition = 1; partition <= _maxPartitions; partition++)
           {
-            if ((partitions[partition - 1] && partitionTargets == 1) && (vistaCmd->statusFlags.systemFlag || updateSystemState))
+            if ((_partitions[partition - 1] && _partitionTargets == 1) && (vistaCmd->statusFlags.systemFlag || updateSystemState))
             {
               // system status message
-              forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
+              _forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
 
-              if (currentSystemState != partitionStates[partition - 1].previousSystemState || forceRefresh)
-                switch (currentSystemState)
+              if (_currentSystemState != partitionStates[partition - 1].previousSystemState || _forceRefresh)
+                switch (_currentSystemState)
                 {
                 case striggered:
                   publishSystemStatus(STATUS_TRIGGERED, partition);
@@ -2136,50 +2136,50 @@ void vistaECPHome::update()
                 default:
                   publishSystemStatus(STATUS_NOT_READY, partition);
                 }
-              partitionStates[partition - 1].previousSystemState = currentSystemState;
+              partitionStates[partition - 1].previousSystemState = _currentSystemState;
               partitionStates[partition - 1].refreshStatus = false;
             }
           }
 
-          for (uint8_t partition = 1; partition <= maxPartitions; partition++)
+          for (uint8_t partition = 1; partition <= _maxPartitions; partition++)
           {
-            if ((partitions[partition - 1] && partitionTargets == 1))
+            if ((_partitions[partition - 1] && _partitionTargets == 1))
             {
 
               // publish status on change only - keeps api traffic down
               previousLightState = partitionStates[partition - 1].previousLightState;
 
-              forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
+              _forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
 
-              // ESP_LOGD("test","refreshing partition statuse partitions: %d,force refresh=%d",partition,forceRefresh);
-              if (currentLightState.fire != previousLightState.fire || forceRefresh)
+              // ESP_LOGD("test","refreshing partition statuse _partitions: %d,force refresh=%d",partition,_forceRefresh);
+              if (currentLightState.fire != previousLightState.fire || _forceRefresh)
                 publishStatus(SFIRE, currentLightState.fire, partition);
-              if (currentLightState.alarm != previousLightState.alarm || forceRefresh)
+              if (currentLightState.alarm != previousLightState.alarm || _forceRefresh)
                 publishStatus(SALARM, currentLightState.alarm, partition);
-              if ((currentLightState.trouble != previousLightState.trouble || forceRefresh))
+              if ((currentLightState.trouble != previousLightState.trouble || _forceRefresh))
                 publishStatus(STROUBLE, currentLightState.trouble, partition);
-              if (currentLightState.chime != previousLightState.chime || forceRefresh)
+              if (currentLightState.chime != previousLightState.chime || _forceRefresh)
                 publishStatus(SCHIME, currentLightState.chime, partition);
-              // if (currentLightState.check != previousLightState.check || forceRefresh)
+              // if (currentLightState.check != previousLightState.check || _forceRefresh)
               //   publishStatus(scheck, currentLightState.check, partition);
 
               if (vistaCmd->statusFlags.systemFlag || updateSystemState)
               {
-                if (currentLightState.away != previousLightState.away || forceRefresh)
+                if (currentLightState.away != previousLightState.away || _forceRefresh)
                   publishStatus(SARMEDAWAY, currentLightState.away, partition);
-                if (currentLightState.stay != previousLightState.stay || forceRefresh)
+                if (currentLightState.stay != previousLightState.stay || _forceRefresh)
                   publishStatus(SARMEDSTAY, currentLightState.stay, partition);
-                if (currentLightState.night != previousLightState.night || forceRefresh)
+                if (currentLightState.night != previousLightState.night || _forceRefresh)
                   publishStatus(SARMEDNIGHT, currentLightState.night, partition);
-                if (currentLightState.instant != previousLightState.instant || forceRefresh)
+                if (currentLightState.instant != previousLightState.instant || _forceRefresh)
                   publishStatus(SINSTANT, currentLightState.instant, partition);
-                if (currentLightState.armed != previousLightState.armed || forceRefresh)
+                if (currentLightState.armed != previousLightState.armed || _forceRefresh)
                   publishStatus(SARMED, currentLightState.armed, partition);
               }
 
-              if (currentLightState.bypass != previousLightState.bypass || forceRefresh)
+              if (currentLightState.bypass != previousLightState.bypass || _forceRefresh)
                 publishStatus(SBYPASS, currentLightState.bypass, partition);
-              if (currentLightState.ready != previousLightState.ready || forceRefresh)
+              if (currentLightState.ready != previousLightState.ready || _forceRefresh)
                 publishStatus(SREADY, currentLightState.ready, partition);
 
               //  if (currentLightState.canceled != previousLightState.canceled)
@@ -2288,10 +2288,10 @@ void vistaECPHome::update()
             }
           }
 
-          if ((zoneStatusMsg != previousZoneStatusMsg || forceRefreshZones || forceRefreshGlobal))
+          if ((zoneStatusMsg != _previousZoneStatusMsg || forceRefreshZones || forceRefreshGlobal))
             publishZoneExtendedStatus(zoneStatusMsg);
 
-          previousZoneStatusMsg = zoneStatusMsg;
+          _previousZoneStatusMsg = zoneStatusMsg;
 
           //    chkTime = millis();
           /*
