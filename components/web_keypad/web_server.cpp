@@ -316,6 +316,7 @@ namespace esphome
         {
             // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
             this->setup_controller(this->include_internal_);
+            mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
             mg_mgr_init(&mgr);
 #ifdef USE_LOGGER
             if (logger::global_logger != nullptr && this->expose_log_)
@@ -362,7 +363,7 @@ namespace esphome
             {
                 char addr[50];
                 sprintf(addr, "http://0.0.0.0:%d", port_);
-                ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address().c_str(), port_);
+                ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address(), port_);
                 if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL)
                 {
                     printf("Cannot listen on address..");
@@ -375,7 +376,7 @@ namespace esphome
         void WebServer::dump_config()
         {
             ESP_LOGCONFIG(TAG, "Web Server:");
-            ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address().c_str(), port_);
+            ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address(), port_);
         }
         float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
@@ -436,7 +437,7 @@ namespace esphome
     if (((start_config) == DETAIL_ALL))                                         \
     {                                                                           \
         (root)["name"] = (obj)->get_name();                                     \
-        (root)["icon"] = (obj)->get_icon();                                     \
+        (root)["icon"] = (obj)->get_icon_ref();                                     \
         (root)["entity_category"] = (obj)->get_entity_category();               \
         if ((obj)->is_disabled_by_default())                                    \
             (root)["is_disabled_by_default"] = (obj)->is_disabled_by_default(); \
@@ -486,8 +487,8 @@ namespace esphome
       state = "NA";
     } else {
       state = value_accuracy_to_string(value, obj->get_accuracy_decimals());
-      if (!obj->get_unit_of_measurement().empty())
-        state += " " + obj->get_unit_of_measurement();
+      if (!obj->get_unit_of_measurement_ref().empty())
+        state += " " + obj->get_unit_of_measurement_ref();
     }
     //set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config); });
 
@@ -499,8 +500,8 @@ namespace esphome
           root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
         }
       }
-      if (!obj->get_unit_of_measurement().empty())
-        root["uom"] = obj->get_unit_of_measurement();
+      if (!obj->get_unit_of_measurement_ref().empty())
+        root["uom"] = obj->get_unit_of_measurement_ref();
     } });
         }
 #endif
@@ -1291,8 +1292,8 @@ namespace esphome
     // } else {
     //   root["value"] = value;
     //   std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
-    //   if (!obj->traits.get_unit_of_measurement().empty())
-    //     state += " " + obj->traits.get_unit_of_measurement();
+    //   if (!obj->traits.get_unit_of_measurement_ref().empty())
+    //     state += " " + obj->traits.get_unit_of_measurement_ref();
     //   root["state"] = state;
     // } });
        set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
@@ -1304,8 +1305,8 @@ namespace esphome
       root["step"] =
           value_accuracy_to_string(obj->traits.get_step(), step_to_accuracy_decimals(obj->traits.get_step()));
       root["mode"] = (int) obj->traits.get_mode();
-      if (!obj->traits.get_unit_of_measurement().empty())
-        root["uom"] = obj->traits.get_unit_of_measurement();
+      if (!obj->traits.get_unit_of_measurement_ref().empty())
+        root["uom"] = obj->traits.get_unit_of_measurement_ref();
       if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
         root["sorting_weight"] = this->sorting_entitys_[obj].weight;
         if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
@@ -1319,8 +1320,8 @@ namespace esphome
     } else {
       root["value"] = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
       std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
-      if (!obj->traits.get_unit_of_measurement().empty())
-        state += " " + obj->traits.get_unit_of_measurement();
+      if (!obj->traits.get_unit_of_measurement_ref().empty())
+        state += " " + obj->traits.get_unit_of_measurement_ref();
       root["state"] = state;
     } });
         }

@@ -81,6 +81,12 @@ struct upload_state {
   std::string fn;
 };
 
+#if defined (USE_ESP_IDF)
+static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+#endif
+
 #define SALT "77992288"
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 

@@ -9,12 +9,12 @@
 #include "esphome/components/switch/switch.h"
 #include <cstdlib>
 
-// #define USETASK
-// #define ASYNC_CORE 1
-//  #if defined(ESP32) && defined(USETASK)
-//  #include <esp_chip_info.h>
-//  #include <esp_task_wdt.h>
-//  #endif
+
+#define ASYNC_CORE 0
+ #if defined(USETASK)
+ #include <esp_chip_info.h>
+ #include <esp_task_wdt.h>
+ #endif
 
 
 namespace esphome
@@ -136,7 +136,6 @@ namespace esphome
                                   if (global_notify->lastMsgReceived_ != update_id)
                                   {
 
-                                    //RemoteData x;
                                     RemoteData * x = new RemoteData;
                                     if (global_notify->lastMsgReceived_ == 0)
                                       x->is_first_cmd = true;
@@ -187,8 +186,7 @@ namespace esphome
                                 {
                                   int update_id = root["result"][0]["update_id"];
                                   update_id = update_id + 1;
-                                  // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
-                 
+                                               
                                   if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
                                      std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
                                    //  global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
@@ -198,7 +196,6 @@ namespace esphome
                                   if (global_notify->lastMsgReceived_ != update_id)
                                   {
 
-                                   // RemoteData x;
                                     RemoteData * x = new RemoteData;
                                     if (global_notify->lastMsgReceived_ == 0)
                                       x->is_first_cmd = true;
@@ -294,7 +291,7 @@ namespace esphome
         ESP_LOGE(TAG, "Global telegram pointer is null");
         return;
       }
-      int *i = &((struct c_res_s *)c->fn_data)->i;
+     // int *i = &((struct c_res_s *)c->fn_data)->i;
       if (ev == MG_EV_OPEN)
       {
         c->send.c = c;
@@ -486,29 +483,31 @@ namespace esphome
       }
     }
 
-    //     #if defined(ESP32) && defined(USETASK)
+        #if  defined(USETASK)
 
-    //     void WebNotify::telegramTask(void *args)
-    //     {
+        void WebNotify::telegramTask(void *args)
+        {
+          mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
+          mg_mgr_init(&global_notify->mgr_);
 
-    //       static unsigned long checkTime = millis();
-    //       for (;;)
-    //       {
-    //               mg_mgr_poll(&(global_notify->mgr_), 1);
+          static unsigned long checkTime = millis();
+          for (;;)
+          {
+                  mg_mgr_poll(&(global_notify->mgr_), 1);
 
-    //               vTaskDelay(4 / portTICK_PERIOD_MS);
-    // #if not defined(ARDUINO_MQTT)
-    //         if (millis() - checkTime > 30000)
-    //         {
-    //           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    //           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
-    //           checkTime = millis();
-    //         }
-    // #endif
-    //       }
-    //       vTaskDelete(NULL);
-    //     }
-    // #endif
+                  vTaskDelay(4 / portTICK_PERIOD_MS);
+    #if not defined(ARDUINO_MQTT)
+            if (millis() - checkTime > 30000)
+            {
+              UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+              ESP_LOGD(TAG, "Task stack level: %5d", (uint16_t)uxHighWaterMark);
+              checkTime = millis();
+            }
+    #endif
+          }
+          vTaskDelete(NULL);
+        }
+    #endif
 
     void WebNotify::setup()
     {
@@ -532,30 +531,32 @@ namespace esphome
         }
       }
       ESP_LOGD(TAG, "chat id=[%s],bot id=[%s]", telegramUserId_.c_str(), botId_.c_str());
-
+      #if !defined(USETASK)
+      mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
       mg_mgr_init(&mgr_);
+      #endif
       // std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
       // outMessage out;
       // out.msg=msg;
       // out.type=mtSendMessage;
       // messages_.push(out);
 
-      // #if defined(ESP32) && defined(USETASK)
-      //       esp_chip_info_t info;
-      //       esp_chip_info(&info);
-      //       ESP_LOGD(TAG, "Cores: %d,arduino core=%d", info.cores, CONFIG_ARDUINO_RUNNING_CORE);
-      //       uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
-      //       xTaskCreatePinnedToCore(
-      //           this->telegramTask, // Function to implement the task
-      //           "telegramTask",     // Name of the task
-      //           16000,               // Stack size
-      //           (void *)this,       // Task input parameter
-      //           12,                 // Priority of the task
-      //           &xHandle            // Task handle.
-      //           ,
-      //           core // Core where the task should run
-      //       );
-      // #endif
+      #if defined(USETASK)
+            esp_chip_info_t info;
+            esp_chip_info(&info);
+            ESP_LOGD(TAG, "Cores: %d,main task core=%d", info.cores, xPortGetCoreID());
+            uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
+            xTaskCreatePinnedToCore(
+                this->telegramTask, // Function to implement the task
+                "telegramTask",     // Name of the task
+                8192,               // Stack size
+                (void *)this,       // Task input parameter
+                1,                 // Priority of the task
+                &xHandle            // Task handle.
+                ,
+                core // Core where the task should run
+            );
+      #endif
     }
 
     void WebNotify::loop()
@@ -580,17 +581,17 @@ namespace esphome
       }
 
       static unsigned long checkTime = millis();
-      if (millis() - checkTime > 20000)
+      if (millis() - checkTime > 60000)
       {
         checkTime = millis();
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
       taskYIELD();
-      // #if !defined(USETASK)
+       #if !defined(USETASK)
       mg_mgr_poll(&mgr_, 0);
 
-      // #endif
+       #endif
     }
 
     void WebNotify::dump_config()

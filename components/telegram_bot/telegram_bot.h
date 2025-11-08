@@ -1,5 +1,6 @@
 #pragma once
 #include "esphome/core/defines.h"
+#include "esphome/core/version.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
 #include "esphome/core/automation.h"
@@ -18,6 +19,8 @@
 #ifdef USE_ESP_IDF
 #define PSTR(s)   ((const char *)(s))
 #endif
+
+//#define USETASK
 
 namespace esphome
 {
@@ -72,6 +75,11 @@ namespace esphome
       std::string url;
     };
 
+    #if defined (USE_ESP_IDF)
+    static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+    }
+ #endif
 
     struct c_res_s
     {
@@ -236,10 +244,10 @@ namespace esphome
         msgtype type;
       };
 
-      // #ifdef ESP32
-      //       TaskHandle_t xHandle;
-      //       static void telegramTask(void *args);
-      // #endif
+      #ifdef USETASK
+      TaskHandle_t xHandle;
+      static void telegramTask(void *args);
+      #endif
 
       struct c_res_s c_res_;
 
@@ -287,7 +295,11 @@ namespace esphome
       TEMPLATABLE_VALUE(bool, one_time_keyboard)
       TEMPLATABLE_VALUE(bool, force)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
         //SendData y;
          SendData * y = new SendData;
@@ -342,7 +354,11 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, url)
       TEMPLATABLE_VALUE(int, cache_time)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
         //SendData y;
          SendData * y = new SendData;
@@ -368,8 +384,11 @@ namespace esphome
       TelegramDeleteMessageAction(WebNotify *parent) : parent_(parent) {}
       TEMPLATABLE_VALUE(std::string, chat_id)
       TEMPLATABLE_VALUE(std::string, message_id)
-
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
         //SendData y;
          SendData * y = new SendData;
@@ -399,7 +418,11 @@ namespace esphome
       TEMPLATABLE_VALUE(bool, disable_web_page_preview)
       TEMPLATABLE_VALUE(std::string, reply_markup)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
         //SendData y;
          SendData * y = new SendData;
@@ -436,7 +459,11 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, inline_keyboard)
       TEMPLATABLE_VALUE(bool, disable_web_page_preview)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
 
         //SendData y;
