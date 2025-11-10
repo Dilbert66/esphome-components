@@ -10,7 +10,6 @@
 #include "crypto.h"
 #include <map>
 
-
 #ifdef USE_ESP_IDF
 #define PSTR(s)   ((const char *)(s))
 #define ESP32
@@ -220,7 +219,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_SENSOR
-  void on_sensor_update(sensor::Sensor *obj, float state) override;
+  void on_sensor_update(sensor::Sensor *obj) override;
   /// Handle a sensor request under '/sensor/<id>'.
   void handle_sensor_request(struct mg_connection *c, JsonObject doc);
 
@@ -287,7 +286,7 @@ class WebServer : public Controller, public Component {
 
 
 #ifdef USE_SWITCH
-  void on_switch_update(switch_::Switch *obj, bool state) override;
+  void on_switch_update(switch_::Switch *obj) override;
 
   /// Handle a switch request under '/switch/<id>/</turn_on/turn_off/toggle>'.
   void handle_switch_request(struct mg_connection *c, JsonObject doc);
@@ -335,7 +334,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_TEXT_SENSOR
-  void on_text_sensor_update(text_sensor::TextSensor *obj, const std::string &state) override;
+  void on_text_sensor_update(text_sensor::TextSensor *obj) override;
 
   /// Handle a text sensor request under '/text_sensor/<id>'.
   void handle_text_sensor_request(struct mg_connection *c, JsonObject doc);
@@ -355,7 +354,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_NUMBER
-  void on_number_update(number::Number *obj, float state) override;
+  void on_number_update(number::Number *obj) override;
   /// Handle a number request under '/number/<id>'.
   void handle_number_request(struct mg_connection *c, JsonObject doc);
 
@@ -370,7 +369,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 
 
 #ifdef USE_TEXT
-  void on_text_update(text::Text *obj, const std::string &state) override;
+  void on_text_update(text::Text *obj) override;
   /// Handle a text input request under '/text/<id>'.
   void handle_text_request(struct mg_connection *c, JsonObject doc);
 
@@ -379,7 +378,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 #endif
 
 #ifdef USE_SELECT
-  void on_select_update(select::Select *obj, const std::string &state, size_t index) override;
+  void on_select_update(select::Select *obj) override;
   /// Handle a select request under '/select/<id>'.
   void handle_select_request(struct mg_connection *c, JsonObject doc);
 

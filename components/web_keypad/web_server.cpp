@@ -3,6 +3,7 @@
 #include "esphome/components/network/util.h"
 #include "esphome/core/application.h"
 #include "esphome/core/entity_base.h"
+#include "esphome/core/controller_registry.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 
@@ -34,6 +35,7 @@
 #include <Update.h>
 #endif
 #endif
+
 
 namespace esphome
 {
@@ -315,7 +317,8 @@ namespace esphome
         void WebServer::setup()
         {
             // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
-            this->setup_controller(this->include_internal_);
+           // this->setup_controller(this->include_internal_);
+            ControllerRegistry::register_controller(this);
             mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
             mg_mgr_init(&mgr);
 #ifdef USE_LOGGER
@@ -452,9 +455,11 @@ namespace esphome
     (root)["state"] = state;
 
 #ifdef USE_SENSOR
-        void WebServer::on_sensor_update(sensor::Sensor *obj, float state)
+        void WebServer::on_sensor_update(sensor::Sensor *obj)
         {
-            this->push(STATE, this->sensor_json(obj, state, DETAIL_STATE).c_str());
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
+            this->push(STATE, this->sensor_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         void WebServer::handle_sensor_request(mg_connection *c, JsonObject doc)
@@ -507,10 +512,12 @@ namespace esphome
 #endif
 
 #ifdef USE_TEXT_SENSOR
-        void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj, const std::string &state)
+        void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->text_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
-            std::string data = this->text_sensor_json(obj, state, DETAIL_STATE);
+            std::string data = this->text_sensor_json(obj, obj->state, DETAIL_STATE);
             this->push(STATE, data.c_str());
         }
 
@@ -561,10 +568,12 @@ namespace esphome
 #endif
 
 #ifdef USE_SWITCH
-        void WebServer::on_switch_update(switch_::Switch *obj, bool state)
+        void WebServer::on_switch_update(switch_::Switch *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->switch_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->switch_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->switch_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         std::string WebServer::switch_json(switch_::Switch *obj, bool value, JsonDetail start_config)
@@ -702,9 +711,10 @@ namespace esphome
 #ifdef USE_BINARY_SENSOR
         void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj)
         {
-            bool state=obj->state;
+          if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->binary_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->binary_sensor_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config)
@@ -754,6 +764,8 @@ namespace esphome
 #ifdef USE_FAN
         void WebServer::on_fan_update(fan::Fan *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->p.send(this->fan_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->fan_json(obj, DETAIL_STATE).c_str());
         }
@@ -882,6 +894,8 @@ namespace esphome
 #ifdef USE_LIGHT
         void WebServer::on_light_update(light::LightState *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->light_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->light_json(obj, DETAIL_STATE).c_str());
         }
@@ -1095,6 +1109,8 @@ namespace esphome
 #ifdef USE_COVER
         void WebServer::on_cover_update(cover::Cover *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->cover_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->cover_json(obj, DETAIL_STATE).c_str());
         }
@@ -1221,10 +1237,12 @@ namespace esphome
 #endif
 
 #ifdef USE_NUMBER
-        void WebServer::on_number_update(number::Number *obj, float state)
+        void WebServer::on_number_update(number::Number *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->number_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->number_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->number_json(obj, obj->state, DETAIL_STATE).c_str());
         }
         void WebServer::handle_number_request(mg_connection *c, JsonObject doc)
         {
@@ -1271,15 +1289,14 @@ namespace esphome
                                 { call.perform(); });
                 ws_reply(c, "", true);
                 return;
-            }
-            ws_reply(c, "", false);
+            }            ws_reply(c, "", false);
         }
 
         std::string WebServer::number_json(number::Number *obj, float value, JsonDetail start_config)
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-    // set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "                                                                                                         " + obj->get_object_id(), start_config);
     // if (start_config == DETAIL_ALL) {
     //   root["min_value"] = obj->traits.get_min_value();
     //   root["max_value"] = obj->traits.get_max_value();
@@ -1330,6 +1347,8 @@ namespace esphome
 #ifdef USE_DATETIME_DATE
         void WebServer::on_date_update(datetime::DateEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->date_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->date_json(obj, DETAIL_STATE).c_str());
         }
@@ -1436,6 +1455,8 @@ namespace esphome
 #ifdef USE_DATETIME_TIME
         void WebServer::on_time_update(datetime::TimeEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->time_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->time_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1544,6 +1565,8 @@ namespace esphome
 #ifdef USE_DATETIME_DATETIME
         void WebServer::on_datetime_update(datetime::DateTimeEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->datetime_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->datetime_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1730,6 +1753,7 @@ namespace esphome
 #ifdef USE_UPDATE
         void WebServer::on_update(update::UpdateEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
             this->push(STATE, this->update_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->update_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1829,6 +1853,8 @@ namespace esphome
 #ifdef USE_VALVE
         void WebServer::on_valve_update(valve::Valve *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->valve_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->valve_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1916,10 +1942,12 @@ namespace esphome
 #endif
 
 #ifdef USE_TEXT
-        void WebServer::on_text_update(text::Text *obj, const std::string &state)
+        void WebServer::on_text_update(text::Text *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->text_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->text_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->text_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         void WebServer::handle_text_request(mg_connection *c, JsonObject doc)
@@ -2102,10 +2130,12 @@ namespace esphome
         }
 
 #ifdef USE_SELECT
-        void WebServer::on_select_update(select::Select *obj, const std::string &state, size_t index)
+        void WebServer::on_select_update(select::Select *obj)
         {
+            f (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->select_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->select_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->select_json(obj, obj->state, DETAIL_STATE).c_str());
         }
         void WebServer::handle_select_request(mg_connection *c, JsonObject doc)
         {
@@ -2192,6 +2222,8 @@ namespace esphome
 #ifdef USE_CLIMATE
         void WebServer::on_climate_update(climate::Climate *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->climate_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->climate_json(obj, DETAIL_STATE).c_str());
         }
@@ -2460,6 +2492,8 @@ namespace esphome
 #ifdef USE_LOCK
         void WebServer::on_lock_update(lock::Lock *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->lock_json(obj, obj->state, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->lock_json(obj, obj->state, DETAIL_STATE).c_str());
         }
@@ -2537,6 +2571,8 @@ namespace esphome
 #ifdef USE_ALARM_CONTROL_PANEL
         void WebServer::on_alarm_control_panel_update(alarm_control_panel::AlarmControlPanel *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->alarm_control_panel_json(obj, obj->get_state(), DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->alarm_control_panel_json(obj, obj->get_state(), DETAIL_STATE).c_str());
         }
