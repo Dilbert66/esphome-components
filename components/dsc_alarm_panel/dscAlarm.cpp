@@ -866,8 +866,8 @@ void DSCkeybushome::setup()
   if (debug > 0)
     Serial.printf("Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d\n", keystring.c_str(), partition, dsc.disabled[partition - 1], partitionStatus[partition - 1].locked); 
 #endif
-      if (dsc.disabled[partition - 1])
-        return;
+     // if (dsc.disabled[partition - 1])
+      //  return;
       partitionStatus[partition - 1].keyPressTime = millis();
       if (keystring.length() == 1)
       {
@@ -1550,8 +1550,6 @@ void DSCkeybushome::update()
         beeps = 0;
         for (byte partition = 1; partition <= dscPartitions; partition++)
         {
-          if (dsc.disabled[partition - 1])
-            continue;
           publishBeeps("0", partition);
         }
         beepTime = millis();
@@ -1684,7 +1682,7 @@ void DSCkeybushome::update()
 
         for (byte partition = 0; partition < dscPartitions; partition++)
         {
-          if (dsc.disabled[partition] || dsc.status[partition] != 0xA0)
+           if ( dsc.status[partition] != 0xA0)
             continue;
           getBypassZones(partition + 1);
           setStatus(partition, true);
@@ -1707,8 +1705,7 @@ void DSCkeybushome::update()
             for (int x = 1; x <= maxRelays; x++)
               publishRelayStatus(x, false);
           }
-          if (dsc.disabled[partition])
-            continue;
+
           setStatus(partition, forceRefresh || dsc.status[partition] == 0xEE || dsc.status[partition] == 0xA0);
         }
 
@@ -1779,8 +1776,7 @@ void DSCkeybushome::update()
         for (byte partition = 0; partition < dscPartitions; partition++)
         {
 
-          if (dsc.disabled[partition] || partitionStatus[partition].locked)
-            continue;
+   
 
           if (lastStatus[partition] != dsc.status[partition])
           {
@@ -2915,8 +2911,10 @@ void DSCkeybushome::update()
         printPanel_0x6E();
         break;
       case 0x69:
+          printBeeps(2,1); //partition 2
+          break;
       case 0x64:
-        printBeeps(2);
+        printBeeps(2,0); //partition 1
         break;
       case 0x75: // tones 1
       case 0x7D:
@@ -2947,7 +2945,7 @@ void DSCkeybushome::update()
         case 0x1D: // ESP_LOGI(TAG, "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[4]);
           break;   // tones 3-8
         case 0x19:
-          printBeeps(4);
+          printBeeps19(4,3);
           break;
         case 0x1A:
           break;
@@ -3017,16 +3015,12 @@ void DSCkeybushome::update()
       }
     }
 
-    void DSCkeybushome::printBeeps(byte panelByte)
+    void DSCkeybushome::printBeeps(byte beepByte,byte partition)
     {
       dsc.statusChanged = true;
-      beeps = dsc.panelData[panelByte] / 2;
+      beeps = dsc.panelData[beepByte] / 2;
       char s[4];
       sprintf(s, "%d", beeps);
-      for (byte partition = 0; partition < dscPartitions; partition++)
-      {
-        if (dsc.disabled[partition] || partitionStatus[partition].locked)
-          continue;
         publishBeeps(s, partition + 1);
         if (beeps == 2 && partitionStatus[partition].digits)
         {
@@ -3035,7 +3029,32 @@ void DSCkeybushome::update()
           partitionStatus[partition].hexMode = false;
           partitionStatus[partition].newData = true;
         }
+
+      beepTime = millis();
+    }
+
+    void DSCkeybushome::printBeeps19(byte beepByte,byte partitionByte)
+    {
+      dsc.statusChanged = true;
+      beeps = dsc.panelData[beepByte] / 2;
+      char s[4];
+      sprintf(s, "%d", beeps);
+      byte bitCount = 0;
+      for (byte bit = 0; bit <= 7; bit++) {
+       if (bitRead(dsc.panelData[partitionByte], bit)) {
+        byte partition=bitCount;
+        publishBeeps(s,partition+1);
+        if (beeps == 2 && partitionStatus[partition].digits)
+        {
+          dsc.setLCDReceive(partitionStatus[partition].digits, partition);
+          partitionStatus[partition].editIdx = 0;
+          partitionStatus[partition].hexMode = false;
+          partitionStatus[partition].newData = true;
+        }
+
       }
+      bitCount++;
+     }
       beepTime = millis();
     }
 

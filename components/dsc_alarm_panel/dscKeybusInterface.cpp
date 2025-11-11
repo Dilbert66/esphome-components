@@ -733,7 +733,8 @@ dscKeybusInterface::dscClockInterrupt()
           case 0x05: pcmd=previousCmd05;bitcount=&previousCmd05BitCount;break;
           case 0x1B: pcmd=previousCmd1B;bitcount=&previousCmd1BBitCount;break;
        }
-
+       //we use the packet bit number to ensure that we don't have a dropped bit. If it doesnt match the previous one, we drop it and take that one as the next to match against
+       //this is used as a cheap way to validate that a packet is most likely ok since we don't have checksums for these
        if (pcmd!=NULL) {
           if (*bitcount!=isrPanelBitTotal || redundantPanelData(pcmd, isrPanelData, isrPanelByteCount) ) {
             

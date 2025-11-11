@@ -625,7 +625,8 @@ unsigned long micros() {
 
       void printPanelTone(byte panelByte);
 
-      void printBeeps(byte panelByte);
+      void printBeeps(byte panelByte,byte partition);
+      void printBeeps19(byte panelByte,byte beepbyte);
 
       void printPanel_0x6E();
 
