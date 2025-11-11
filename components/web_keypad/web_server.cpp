@@ -7,6 +7,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 
+
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
 
@@ -29,18 +30,28 @@
 #include "esphome/components/climate/climate.h"
 #endif
 
+#ifdef USE_WEBKEYPAD_OTA
+#include "esphome/components/ota/ota_backend.h"
+#endif
+
 #ifdef USE_ARDUINO
-#include <StreamString.h>
-#if not defined(ESP8266)
+#ifdef USE_ESP8266
+#include <Updater.h>
+#elif defined(USE_ESP32) || defined(USE_LIBRETINY)
 #include <Update.h>
 #endif
-#endif
+#endif  // USE_ARDUINO
+
+
 
 
 namespace esphome
 {
     namespace web_keypad
     {
+
+
+        
 
         static const char *const TAG = "web_server";
         void *webServerPtr;
@@ -51,6 +62,7 @@ namespace esphome
         static const char *const HEADER_CORS_REQ_PNA = "Access-Control-Request-Private-Network";
         static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
+
 
         void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
@@ -183,6 +195,7 @@ namespace esphome
                     }
                     else
                     {
+                #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (get_credentials()->crypt)
                         {
                             if (c->data[1])
@@ -193,6 +206,7 @@ namespace esphome
                             else
                                 encrypt(newdata);
                         }
+                #endif
                         //  ESP_LOGD(TAG,"sending %s",data);
                         mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", newdata.c_str());
                     }
@@ -316,6 +330,7 @@ namespace esphome
 
         void WebServer::setup()
         {
+
             // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
            // this->setup_controller(this->include_internal_);
             ControllerRegistry::register_controller(this);
@@ -2652,17 +2667,17 @@ namespace esphome
 
 
             std::string newdata=std::string(data);
-
+#ifdef USE_WEBKEYPAD_ENCRYPTION
             if (get_credentials()->crypt && strlen(data) > 0)
                 encrypt(newdata);
-
+#endif
 
             for (c = mgr.conns; c != NULL; c = c->next)
             {
-
+#ifdef USE_WEBKEYPAD_ENCRYPTION
                 if (get_credentials()->crypt && !c->data[1])
                     continue; // not authenticated with encrypted response
-
+#endif
                 if (c->data[0] == 'E')
                 {
                     // ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
@@ -2809,7 +2824,7 @@ namespace esphome
             /* None of the entries in the passwords file matched - return failure */
             return 0;
         }
-
+#ifdef USE_WEBKEYPAD_ENCRYPTION
         bool WebServer::encrypt(std::string &data)
         {
                     // const char *message="test message";
@@ -2946,7 +2961,9 @@ namespace esphome
             delete[] iv_decoded;
             return 1;
         }
+#endif
 
+#ifdef USE_WEBKEYPAD_OTA
         static void handle_uploads(struct mg_connection *c, int ev, void *ev_data)
         {
             struct upload_state *us = (struct upload_state *)c->data;
@@ -2981,6 +2998,7 @@ namespace esphome
                     c->pfn = NULL;                           // Silence HTTP protocol handler, we'll use MG_EV_READ
                 }
             }
+
             // Catch uploaded file data for both MG_EV_READ and MG_EV_HTTP_HDRS
             if (us->expected > 0 && c->recv.len > 0)
             {
@@ -2990,25 +3008,27 @@ namespace esphome
                     // Uploaded everything. Send response back
                     MG_INFO(("OTA uploaded %lu bytes from file %s", us->received + c->recv.len, us->fn.c_str()));
                     mg_http_reply(c, 200, NULL, "%lu ok\n", us->received);
-                    srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, true);
+                    srv->handleUpload(us->expected,( PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, true);
                     memset(us, 0, sizeof(*us)); // Cleanup upload state
                     c->is_draining = 1;         // Close connection when response gets sent
                 }
                 else
                 {
-                    srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, false);
+                    srv->handleUpload(us->expected,(PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, false);
                     us->received += c->recv.len;
                 }
 
                 c->recv.len = 0; // Delete received data
             }
         }
+#endif
 
         void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data)
         {
             WebServer *srv = static_cast<WebServer *>(webServerPtr);
+            #ifdef USE_WEBKEYPAD_OTA
             handle_uploads(c, ev, ev_data);
-
+            #endif
             bool final = false;
             if (ev == MG_EV_WRITE)
             {
@@ -3066,7 +3086,7 @@ namespace esphome
                 std::string buf = std::string(wm->data.buf, wm->data.len);
                 deserializeJson(doc, buf.c_str());
                 uint8_t err = 0;
-
+#ifdef USE_WEBKEYPAD_ENCRYPTION
                 if (obj["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
                 {
 
@@ -3076,6 +3096,7 @@ namespace esphome
                     if (!err)
                         deserializeJson(doc, buf.c_str());
                 }
+#endif
                 if (!err)
                 {
                     srv->handleRequest(c, obj);
@@ -3109,14 +3130,18 @@ namespace esphome
                     std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
                     srv->get_config_json(c->id,enc);
+                    #ifdef USE_WEBKEYPAD_ENCRYPTION
                     if (crypt)
                         srv->encrypt(enc);
+                    #endif
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type", "app_config", "data", enc.c_str());
                     if (strlen(srv->get_keypad_config()) > 0)
                     {
                         enc = srv->get_keypad_config();
+                        #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
                             srv->encrypt(enc);
+                        #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
                     }
                     for (auto &group : srv->sorting_groups_)
@@ -3125,8 +3150,10 @@ namespace esphome
                                                {
                    root["name"] = group.second.name;
                    root["sorting_weight"] = group.second.weight; });
+                   #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
                             srv->encrypt(enc);
+                    #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
                     }
 
@@ -3143,8 +3170,10 @@ namespace esphome
                     bool crypt = srv->get_credentials()->crypt;
                     std::string enc;
                     srv->get_config_json(c->id,enc);
+                    #ifdef USE_WEBKEYPAD_ENCRYPTION
                     if (crypt)
                         srv->encrypt(enc);
+                    #endif
                     mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
 
                     for (auto &group : srv->sorting_groups_)
@@ -3153,16 +3182,20 @@ namespace esphome
                                                {
                      root["name"] = group.second.name;
                      root["sorting_weight"] = group.second.weight; });
+                     #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
                             srv->encrypt(enc);
+                     #endif
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
 
                     if (strlen(srv->get_keypad_config()) > 0)
                     {
                         enc = srv->get_keypad_config();
-                        if (crypt)
+                        #ifdef USE_WEBKEYPAD_ENCRYPTION
+                         if (crypt)
                             srv->encrypt(enc);
+                        #endif
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
                     srv->entities_iterator_.begin(srv->include_internal_);
@@ -3235,7 +3268,7 @@ namespace esphome
 
                 std::string buf = std::string(hm->body.buf, hm->body.len);
                 DeserializationError err = deserializeJson(doc, buf.c_str());
-
+#ifdef USE_WEBKEYPAD_ENCRYPTION
                 if (!err && obj["iv"].is<JsonVariant>() && get_credentials()->password != "")
                 {
                     uint8_t e = 0;
@@ -3245,6 +3278,7 @@ namespace esphome
                     else
                         mg_http_reply(c, 403, "", "");
                 }
+#endif
             }
 
             if (!doc["domain"].is<JsonVariant>())
@@ -3459,108 +3493,134 @@ namespace esphome
 #endif
         }
 
-        void WebServer::report_ota_error()
-        {
-#ifdef USE_ARDUINO
-            StreamString ss;
-            Update.printError(ss);
-            char buf[100];
-            ESP_LOGW(TAG, "OTA Update failed! Error: %s", ss.c_str());
-            snprintf(buf, 100, "OTA Update failed! Error: %s", ss.c_str());
-            std::string ebuf;
-            escape_json(buf,ebuf);
-            this->push(OTA, ebuf.c_str());
-            this->set_timeout(2000, []()
-                              { App.safe_reboot(); });
-#endif
-        }
-#if defined(ESP32)
-        bool WebServer::handleUpload(size_t bodylen, const std::string &filename, size_t index, uint8_t *data, size_t len, bool final)
-        {
-            char buf[100];
-#ifdef USE_ARDUINO
-            bool success;
-            if (index == 0)
-            {
-                snprintf(buf, 100, "OTA Update Start: %s", filename.c_str());
+#ifdef USE_WEBKEYPAD_OTA
+
+  void WebServer::report_ota_progress_() {
+  const uint32_t now = millis();
+  if (now - this->last_ota_progress_ > 1000) {
+    float percentage = 0.0f;
+      char buf[100];
+     
+//    if (request->contentLength() != 0) {
+//      // Note: Using contentLength() for progress calculation is technically wrong as it includes
+//      // multipart headers/boundaries, but it's only off by a small amount and we don't have
+//      // access to the actual firmware size until the upload is complete. This is intentional
+//      // as it still gives the user a reasonable progress indication.
+//      percentage = (this->ota_read_length_ * 100.0f) / request->contentLength();
+//      ESP_LOGD(TAG, "OTA in progress: %0.1f%%", percentage);
+//    } else {
+      snprintf(buf,100,"OTA in progress: %" PRIu32 " bytes read", this->ota_read_length_);
+      ESP_LOGD(TAG,buf);
+      this->push(OTA,buf);
+//    }
+
+    this->last_ota_progress_ = now;
+  }
+}
+
+void WebServer::schedule_ota_reboot_() {
+  ESP_LOGI(TAG, "OTA update successful!");
+  this->set_timeout(2000, []() {
+    ESP_LOGI(TAG, "Performing OTA reboot now");
+    App.safe_reboot();
+  });
+}
+
+void WebServer::ota_init_(const char *filename) {
+  ESP_LOGI(TAG, "OTA Update Start: %s", filename);
+  this->ota_read_length_ = 0;
+  this->ota_success_ = false;
+}
+
+
+
+bool WebServer::handleUpload(size_t bodylen, const PlatformString &filename, size_t index, uint8_t *data, size_t len, bool final) {
+                                      
+    ota::OTAResponseTypes error_code = ota::OTA_RESPONSE_OK;
+char buf[100];
+  if (index == 0 && !this->ota_backend_) {
+    // Initialize OTA on first call
+    this->ota_init_(filename.c_str());
+
+ snprintf(buf, 100, "OTA Update Started: %s", filename.c_str());
                 this->push(OTA, buf);
-                ESP_LOGI(TAG, "OTA Update Start: %s", filename.c_str());
 
-                this->ota_read_length_ = 0;
-
-                if (Update.isRunning())
-                {
-                    Update.abort();
-                    return false;
-                }
-#if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
-                if (alarm_panel::alarmPanelPtr != NULL)
-                {
-                    alarm_panel::alarmPanelPtr->stop();
-                }
+    // Platform-specific pre-initialization
+#ifdef USE_ARDUINO
+// #ifdef USE_ESP8266
+//     Update.runAsync(false);
+// #endif
+#if defined(USE_ESP32) || defined(USE_LIBRETINY)
+    if (Update.isRunning()) {
+      Update.abort();
+    }
 #endif
-                success = Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH);
+#endif  // USE_ARDUINO
 
-                if (!success)
-                {
-                    report_ota_error();
-                    return false;
-                }
-            }
-            else if (Update.hasError())
-            {
-                report_ota_error();
-                return false;
-            }
+    this->ota_backend_ = ota::make_ota_backend();
+    if (!this->ota_backend_) {
+      snprintf(buf,100, "Failed to create OTA backend");
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      return false;
+    }
 
-            success = Update.write(data, len) == len;
+    error_code = this->ota_backend_->begin(bodylen);
+    if (error_code != ota::OTA_RESPONSE_OK) {
+      snprintf(buf, 100,"OTA begin failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_.reset();
+      return false;
+    }
+  }
 
-            if (!success)
-            {
-                report_ota_error();
-                return false;
-            }
-            this->ota_read_length_ += len;
+  if (!this->ota_backend_) {
+    return false;
+  }
 
-            const uint32_t now = millis();
-            if (now - this->last_ota_progress_ > 1000)
-            {
-                if (bodylen != 0)
-                {
-                    float percentage = (this->ota_read_length_ * 100.0f) / bodylen;
-                    ESP_LOGD(TAG, "OTA in progress: %0.1f%%", percentage);
-                    snprintf(buf, 100, "OTA in progress: %0.1f%%", percentage);
-                    this->push(OTA, buf);
-                }
-                else
-                {
-                    ESP_LOGD(TAG, "OTA in progress: %u bytes read", this->ota_read_length_);
-                    snprintf(buf, 100, "OTA in progress: %u bytes read", this->ota_read_length_);
-                    this->push(OTA, buf);
-                }
+  // Process data
+  if (len > 0) {
+    error_code = this->ota_backend_->write(data, len);
+    if (error_code != ota::OTA_RESPONSE_OK) {
+      snprintf(buf,100, "OTA write failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_->abort();
+      this->ota_backend_.reset();
+      return false;
+    }
+    this->ota_read_length_ += len;
+    this->report_ota_progress_();
+  }
 
-                this->last_ota_progress_ = now;
-            }
+  // Finalize
+  if (final) {
+    ESP_LOGD(TAG, "OTA final chunk: index=%zu, len=%zu, total_read=%" PRIu32 ", contentLength=%zu", index, len,
+             this->ota_read_length_, bodylen);
 
-            if (final)
-            {
-                if (Update.end(true))
-                {
-                    ESP_LOGI(TAG, "OTA update successful!");
-                    this->push(OTA, "OTA Update successful. Press F5 to reload this page.");
-                    this->set_timeout(2000, []()
-                                      { App.safe_reboot(); });
-                    return true;
-                }
-                else
-                {
-                    report_ota_error();
-                    return false;
-                }
-            }
-#endif
-            return true;
-        }
-#endif
+    // For Arduino framework, the Update library tracks expected size from firmware header
+    // If we haven't received enough data, calling end() will fail
+    // This can happen if the upload is interrupted or the client disconnects
+    error_code = this->ota_backend_->end();
+    if (error_code == ota::OTA_RESPONSE_OK) {
+      this->ota_success_ = true;
+      snprintf(buf, 100,"OTA completed");
+      this->push(OTA, buf);
+      this->schedule_ota_reboot_();
+    } else {
+      snprintf(buf, 100,"OTA end failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_.reset();
+      return false;
+    }
+    this->ota_backend_.reset();
+    
+  }
+   return true;
+ }
+#endif //web_keypad_ota
+
     } // namespace web_server
 } // namespace esphome

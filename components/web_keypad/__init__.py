@@ -245,7 +245,6 @@ async def to_code(config):
     #     cg.add_global(cg.RawStatement("#endif"))
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    #cg.add_library("intrbiz/Crypto",None)
     version = config[CONF_VERSION]
 
     cg.add(var.set_port(config[CONF_PORT]))
@@ -264,6 +263,8 @@ async def to_code(config):
     else:
         cg.add(var.set_css_url(config[CONF_CSS_URL]))
         cg.add(var.set_js_url(config[CONF_JS_URL]))
+    if CONF_OTA in config and config[CONF_OTA]:
+         cg.add_define("USE_WEBKEYPAD_OTA")
     cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
     cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
@@ -279,7 +280,9 @@ async def to_code(config):
         cg.add(var.set_certificate_key(config[CONF_CERTIFICATE_KEY]))
         
     if CONF_AUTH in config:
-        cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION]));    
+        cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION])); 
+        if config[CONF_AUTH][CONF_ENCRYPTION]:
+            cg.add_define("USE_WEBKEYPAD_ENCRYPTION")  
                
     if CONF_CSS_INCLUDE in config:
         cg.add_define("USE_WEBKEYPAD_CSS_INCLUDE")

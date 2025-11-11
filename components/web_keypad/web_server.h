@@ -6,8 +6,13 @@
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
+#ifdef USE_WEBKEYPAD_OTA
+#include "esphome/components/ota/ota_backend.h"
+#endif
 #include <vector>
+#ifdef USE_WEBKEYPAD_ENCRYPTION
 #include "crypto.h"
+#endif
 #include <map>
 
 #ifdef USE_ESP_IDF
@@ -21,7 +26,11 @@
 #include <freertos/semphr.h>
 #endif
 
-
+#if USE_ESP32
+using PlatformString = std::string;
+#elif USE_ARDUINO
+using PlatformString = String;
+#endif
 
 
 #if USE_WEBKEYPAD_VERSION >= 2
@@ -69,8 +78,12 @@ struct SortingGroup {
 struct Credentials {
   std::string username="";
   std::string password="";
+
+  #ifdef USE_WEBKEYPAD_ENCRYPTION
   uint8_t token[SHA256_SIZE];
   uint8_t hmackey[SHA256HMAC_SIZE];
+  #endif
+
   bool crypt=false;
 };
 
@@ -163,7 +176,11 @@ class WebServer : public Controller, public Component {
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
     credentials_->username = auth_username;   
     credentials_->password = auth_password;
-    std::string aeskeystring=credentials_->username + SALT + credentials_->password;
+    this->crypt_ = use_encryption;  
+    credentials_->crypt=use_encryption;
+
+    #ifdef USE_WEBKEYPAD_ENCRYPTION
+     std::string aeskeystring=credentials_->username + SALT + credentials_->password;
     const char * keystr=aeskeystring.c_str();
     SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
@@ -172,16 +189,20 @@ class WebServer : public Controller, public Component {
     SHA256HMAC hmac((const char*)keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
     hmac.doFinal((char*)credentials_->hmackey);
-  
-   this->crypt_ = use_encryption;  
-   credentials_->crypt=use_encryption;
+    #endif
+
 
    }  
    
   Credentials * get_credentials() { return credentials_;}
-  bool handleUpload(size_t bodylen,  const std::string &filename, size_t index,uint8_t *data, size_t len, bool final);
+#ifdef USE_WEBKEYPAD_OTA
+  bool handleUpload(size_t bodylen,  const PlatformString &filename, size_t index,uint8_t *data, size_t len, bool final);
+#endif
+
+  #ifdef USE_WEBKEYPAD_ENCRYPTION
   bool encrypt(std::string & data);
   bool decrypt(JsonObject doc,uint8_t* e,std::string & out);
+  #endif
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -421,7 +442,6 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
   ListEntitiesIterator entities_iterator_;
 void push(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 bool callKeyService(const char *buf,int partition);
-void report_ota_error();
 void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);
 static void ev_handler(struct mg_connection *nc, int ev, void *p);
@@ -436,8 +456,6 @@ void add_sorting_group(uint64_t group_id, const std::string &group_name, float w
  
   const char * certificate_;
   const char * certificate_key_;
-  uint32_t last_ota_progress_{0};
-  uint32_t ota_read_length_{0}; 
   void schedule_(std::function<void()> &&f);
 #ifdef ASYNCWEB 
 static void webPollTask(void * args);
@@ -467,6 +485,7 @@ static void webPollTask(void * args);
     std::string token;
     int lastseq;
   };
+
   //ESPPreferenceObject pref_;
  // KeypadConfig keypadconfig_;
   Credentials * credentials_ ;
@@ -474,6 +493,16 @@ static void webPollTask(void * args);
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;
+
+#ifdef USE_WEBKEYPAD_OTA
+  void report_ota_progress_();
+  void schedule_ota_reboot_();
+  void ota_init_(const char *filename);
+  uint32_t last_ota_progress_{0};
+  uint32_t ota_read_length_{0};
+  bool ota_success_{false};
+  std::unique_ptr<ota::OTABackend> ota_backend_{nullptr};
+#endif
 
 
 };
