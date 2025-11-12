@@ -17,6 +17,8 @@ void IRAM_ATTR rxISRHandler()
 
 
 
+
+
 #ifdef MONITORTX
 #if defined( USE_ESP_IDF ) or defined(ESP32)
 void IRAM_ATTR txISRHandler(void* args)
@@ -87,6 +89,30 @@ Vista::~Vista()
   delete[] _cmdQueue;
   delete[] _faultQueue;
   free(pointerToVistaClass);
+}
+
+#ifndef ESP32
+uint32_t Vista::m_savedPS = 0;
+#else
+portMUX_TYPE Vista::m_interruptsMux = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::disableInterrupts()
+{
+#ifndef ESP32
+   m_savedPS = xt_rsil(15);
+#else
+    taskENTER_CRITICAL(&m_interruptsMux);
+#endif
+}
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::restoreInterrupts()
+{
+#ifndef ESP32
+    xt_wsr_ps(m_savedPS);
+#else
+    taskEXIT_CRITICAL(&m_interruptsMux);
+#endif
 }
 
 expanderType Vista::peekNextFault()
@@ -1036,6 +1062,7 @@ void Vista::writeChars()
 
 void IRAM_ATTR Vista::rxHandleISR()
 {
+  disableInterrupts();
   static byte b;
   static uint8_t ackAddr;
   static uint8_t ackCount=0;
@@ -1143,14 +1170,17 @@ void IRAM_ATTR Vista::rxHandleISR()
   else // clear pending interrupts for this pin if any occur during transmission
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << _rxPin);
 #endif
+restoreInterrupts();
 }
 
 #ifdef MONITORTX
 void IRAM_ATTR Vista::txHandleISR()
 {
+  disableInterrupts();
   //if ((!sending || !_filterOwnTx) && _rxState == sNormal)
   if (_rxState == sNormal)
     vistaSerialMonitor->rxRead();
+  restoreInterrupts();
 }
 #endif
 
