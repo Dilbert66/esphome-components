@@ -2165,12 +2165,14 @@ void DSCkeybushome::update()
       partitionStatus[partition].hex = false;
       partitionStatus[partition].decimalInput = false;
 #if !defined(ARDUINO_MQTT)
-      if (debug > 1)
+      if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus ) {
         ESP_LOGI(TAG, "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force);
-#else
-  if (debug > 1)
+      }
+        #else
+  if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus) {
     Serial.printf("status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force); 
-#endif
+    }
+    #endif
       switch (dsc.status[partition])
       {
       case 0x01:

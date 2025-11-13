@@ -276,7 +276,7 @@ class dscKeybusInterface {
     bool keybusVersion1;  
     bool validCRC();    
     static byte panelBitCount, panelByteCount;
-    
+ 
   private:
 
     void processPanelStatus();
@@ -464,6 +464,7 @@ class dscKeybusInterface {
     static volatile byte moduleBitCount, moduleByteCount;
 
     static volatile byte isrPanelData[dscReadSize], isrPanelBitTotal, isrPanelBitCount, isrPanelByteCount;
+    static volatile bool skipModuleByte;
     static volatile byte isrModuleData[dscReadSize];
     
     //start expander
