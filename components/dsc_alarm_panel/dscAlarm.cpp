@@ -2165,12 +2165,14 @@ void DSCkeybushome::update()
       partitionStatus[partition].hex = false;
       partitionStatus[partition].decimalInput = false;
 #if !defined(ARDUINO_MQTT)
-      if (debug > 1)
+      if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus ) {
         ESP_LOGI(TAG, "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force);
-#else
-  if (debug > 1)
+      }
+        #else
+  if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus) {
     Serial.printf("status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force); 
-#endif
+    }
+    #endif
       switch (dsc.status[partition])
       {
       case 0x01:
@@ -2911,10 +2913,10 @@ void DSCkeybushome::update()
         printPanel_0x6E();
         break;
       case 0x69:
-          printBeeps(2,1); //partition 2
+          processBeeps(2,1); //partition 2
           break;
       case 0x64:
-        printBeeps(2,0); //partition 1
+        processBeeps(2,0); //partition 1
         break;
       case 0x75: // tones 1
       case 0x7D:
@@ -2945,7 +2947,7 @@ void DSCkeybushome::update()
         case 0x1D: // ESP_LOGI(TAG, "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[4]);
           break;   // tones 3-8
         case 0x19:
-          printBeeps19(4,3);
+          processBeeps19(4,3);
           break;
         case 0x1A:
           break;
@@ -2987,7 +2989,7 @@ void DSCkeybushome::update()
       }
     }
 
-    void DSCkeybushome::printPanelTone(byte panelByte)
+    void DSCkeybushome::processPanelTone(byte panelByte)
     {
 
       if (dsc.panelData[panelByte] == 0)
@@ -3015,7 +3017,7 @@ void DSCkeybushome::update()
       }
     }
 
-    void DSCkeybushome::printBeeps(byte beepByte,byte partition)
+    void DSCkeybushome::processBeeps(byte beepByte,byte partition)
     {
       dsc.statusChanged = true;
       beeps = dsc.panelData[beepByte] / 2;
@@ -3033,7 +3035,7 @@ void DSCkeybushome::update()
       beepTime = millis();
     }
 
-    void DSCkeybushome::printBeeps19(byte beepByte,byte partitionByte)
+    void DSCkeybushome::processBeeps19(byte beepByte,byte partitionByte)
     {
       dsc.statusChanged = true;
       beeps = dsc.panelData[beepByte] / 2;

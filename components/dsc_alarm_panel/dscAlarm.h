@@ -623,10 +623,10 @@ unsigned long micros() {
       // Processes status data not natively handled within the library
       void processStatus();
 
-      void printPanelTone(byte panelByte);
+      void processPanelTone(byte panelByte);
 
-      void printBeeps(byte panelByte,byte partition);
-      void printBeeps19(byte panelByte,byte beepbyte);
+      void processBeeps(byte panelByte,byte partition);
+      void processBeeps19(byte panelByte,byte beepbyte);
 
       void printPanel_0x6E();
 

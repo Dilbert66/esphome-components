@@ -28,6 +28,7 @@ bool dscKeybusInterface::virtualKeypad;
 bool dscKeybusInterface::processModuleData;
 byte dscKeybusInterface::panelData[dscReadSize];
 byte dscKeybusInterface::panelByteCount;
+volatile bool dscKeybusInterface::skipModuleByte;
 byte dscKeybusInterface::panelBitCount;
 volatile byte dscKeybusInterface::moduleData[dscReadSize];
 volatile bool dscKeybusInterface::moduleDataCaptured;
@@ -684,6 +685,7 @@ dscKeybusInterface::dscClockInterrupt()
 
   static unsigned long previousClockHighTime;
   static bool skipData = false;
+  skipModuleByte=false;
   
   // Panel sends data while the clock is high
   #ifdef USE_ESP_IDF
@@ -787,21 +789,20 @@ dscKeybusInterface::dscClockInterrupt()
 
       static bool writeStart = false;
 
-      if (dscWritePin == dscReadPin ) {
-
-        #if defined (USE_ESP_IDF)
-        gpio_reset_pin((gpio_num_t)dscWritePin);
-        gpio_pulldown_dis((gpio_num_t)dscWritePin);
-        gpio_pullup_dis((gpio_num_t)dscWritePin); 
-        gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
-        #else
-           pinMode(dscWritePin, OUTPUT);
-        #endif
-      }
-        
      // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
       if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
+        if (dscWritePin == dscReadPin ) {  //if bi-directional, we need to switch to write mode on the pin
+
+          #if defined (USE_ESP_IDF)
+          gpio_reset_pin((gpio_num_t)dscWritePin);
+          gpio_pulldown_dis((gpio_num_t)dscWritePin);
+          gpio_pullup_dis((gpio_num_t)dscWritePin); 
+          gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
+          #else
+            pinMode(dscWritePin, OUTPUT);
+          #endif
+       }
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) {
             #ifdef USE_ESP_IDF
@@ -811,6 +812,9 @@ dscKeybusInterface::dscClockInterrupt()
           #endif
         }
         if (isrPanelBitCount == 7) {
+  
+          isrModuleData[isrPanelByteCount] = writeBuffer[writeBufferIdx]; //save our sent byte to the module buffer for display
+          skipModuleByte=true; // skip reading this byte as we updated it manually in the buffer.  If we don't do this, we will get a 0 showing
           writeBufferIdx++;
 
           if (writeBufferIdx == writeBufferLength ) { //all bits written
@@ -907,7 +911,7 @@ bool IRAM_ATTR dscKeybusInterface::dscDataInterrupt(gptimer_handle_t timer, cons
   else {
 
     // Keypad and module data is not buffered and skipped if the panel data buffer is filling
-    if (processModuleData && isrPanelByteCount < dscReadSize && panelBufferLength <= 1) {
+    if (processModuleData && isrPanelByteCount < dscReadSize && panelBufferLength <= 1 && !skipModuleByte) {
 
       // Data is captured in each byte by shifting left by 1 bit and writing to bit 0
       if (isrPanelBitCount < 8) {
