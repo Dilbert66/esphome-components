@@ -1776,8 +1776,6 @@ void DSCkeybushome::update()
         for (byte partition = 0; partition < dscPartitions; partition++)
         {
 
-   
-
           if (lastStatus[partition] != dsc.status[partition])
           {
             lastStatus[partition] = dsc.status[partition];
@@ -2169,7 +2167,7 @@ void DSCkeybushome::update()
         ESP_LOGI(TAG, "status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force);
       }
         #else
-  if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus) {
+  if (debug > 1 &&  dsc.status[partition] != partitionStatus[partition].lastStatus ) {
     Serial.printf("status %02X, last status %02X,selection %02X,partition=%d,skip=%d,force=%d\n", dsc.status[partition], partitionStatus[partition].lastStatus, *currentSelection, partition + 1, skip, force); 
     }
     #endif
@@ -3141,8 +3139,7 @@ void DSCkeybushome::update()
         }
       }
 
-      if (options)
-        dsc.statusChanged = true;
+      dsc.statusChanged = true;
     }
 
     void DSCkeybushome::processEventBufferAA(bool showEvent)
