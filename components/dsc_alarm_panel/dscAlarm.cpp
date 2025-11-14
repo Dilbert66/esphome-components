@@ -1696,7 +1696,7 @@ void DSCkeybushome::update()
         if (dsc.powerChanged || forceRefresh)
         {
           dsc.powerChanged = false;
-          publishPanelStatus(FC(ACSTATUS), dsc.powerTrouble, 0);
+          publishPanelStatus(FC(ACSTATUS), !dsc.powerTrouble, 0);
         }
 
         if (dsc.batteryChanged || forceRefresh)
