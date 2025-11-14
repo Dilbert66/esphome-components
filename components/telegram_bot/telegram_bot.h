@@ -91,6 +91,7 @@ namespace esphome
     {
     public:
       WebNotify();
+      ~WebNotify();
 
       void setup() override;
       void loop() override;
@@ -230,7 +231,7 @@ namespace esphome
 
     private:
 
-      struct mg_mgr mgr_;
+      struct mg_mgr * mgr_;
       static void notify_fn(struct mg_connection *c, int ev, void *ev_data);
 
       bool botRequest_{};

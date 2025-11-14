@@ -146,8 +146,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
     (*it)->publish_state(*text);
-
-  
+      
 }
 
 #endif
@@ -1816,8 +1815,8 @@ void vistaECPHome::update()
 #else
           ESP_LOGI(TAG, "Partition: %02X", partition);
 #endif
-
                 updateDisplayLines(partition);
+                publishBeeps(vistaCmd->statusFlags.beeps, partition);
                 if (vistaCmd->statusFlags.systemFlag && strstr(vistaCmd->statusFlags.prompt2, HITSTAR))
                   alarm_keypress_partition("*", partition);
               }
@@ -1831,7 +1830,7 @@ void vistaECPHome::update()
             ESP_LOGI(TAG, "Prompt: %s", vistaCmd->statusFlags.prompt2);
             ESP_LOGI(TAG, "Beeps: %d", vistaCmd->statusFlags.beeps);
 #endif
-            publishBeeps(vistaCmd->statusFlags.beeps, 1);
+          
           }
 
           // publishes lrr status messages

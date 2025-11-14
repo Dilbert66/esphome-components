@@ -150,8 +150,8 @@ CONFIG_SCHEMA = cv.All(
             cv.SplitDefault(
                 CONF_OTA,
                 esp8266=False,
-                esp32_arduino=True,
-                esp32_idf=True,
+                esp32_arduino=False,
+                esp32_idf=False,
                 bk72xx=False,
                 rtl87xx=False,
             ): cv.boolean,
@@ -243,6 +243,9 @@ async def to_code(config):
     #     cg.add_global(cg.RawStatement(stack))
     #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
     #     cg.add_global(cg.RawStatement("#endif"))
+
+    # Track controller registration for StaticVector sizing
+    CORE.register_controller()
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     version = config[CONF_VERSION]

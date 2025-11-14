@@ -6,6 +6,9 @@
 #include "esphome/core/controller_registry.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
+#include "esphome/core/entity_base.h"
+#include "esphome/core/helpers.h"
+
 
 
 #if defined(USE_DSC_PANEL)
@@ -224,6 +227,7 @@ namespace esphome
 #endif
             credentials_ = new Credentials;
             webServerPtr = this;
+            mgr = new struct mg_mgr();
           //  this->pref_ = global_preferences->make_preference<KeypadConfig>(fnv1_hash(App.get_compilation_time()));
 
         }
@@ -231,6 +235,7 @@ namespace esphome
 
         WebServer::~WebServer() {
             delete credentials_;
+            delete mgr;
         }
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -335,7 +340,7 @@ namespace esphome
            // this->setup_controller(this->include_internal_);
             ControllerRegistry::register_controller(this);
             mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
-            mg_mgr_init(&mgr);
+            mg_mgr_init(mgr);
 #ifdef USE_LOGGER
             if (logger::global_logger != nullptr && this->expose_log_)
             {
@@ -382,14 +387,14 @@ namespace esphome
                 char addr[50];
                 sprintf(addr, "http://0.0.0.0:%d", port_);
                 ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address(), port_);
-                if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL)
+                if ((c = mg_http_listen(mgr, addr, ev_handler, this)) == NULL)
                 {
                     printf("Cannot listen on address..");
                     return;
                 }
                 firstrun_ = false;
             }
-            mg_mgr_poll(&mgr, 0);
+            mg_mgr_poll(mgr, 0);
         }
         void WebServer::dump_config()
         {
@@ -438,7 +443,7 @@ namespace esphome
             unsigned long timeout=millis();
             for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-              mg_mgr_poll(&mgr,0);
+              mg_mgr_poll(mgr,0);
               delay(1);
               if (millis() - timeout > 5000) break;
               if(c->send.len > 5120) continue; 
@@ -2066,7 +2071,7 @@ namespace esphome
             {
                 // cid = toInt(doc["partition"],10);
                 unsigned long ul = (unsigned long)doc["cid"];
-              for (mg_connection * cl=mgr.conns ;cl != NULL; cl = cl->next)
+              for (mg_connection * cl=mgr->conns ;cl != NULL; cl = cl->next)
                  {
                     if (cl->id == ul)
                     {
@@ -2672,7 +2677,7 @@ namespace esphome
                 encrypt(newdata);
 #endif
 
-            for (c = mgr.conns; c != NULL; c = c->next)
+            for (c = mgr->conns; c != NULL; c = c->next)
             {
 #ifdef USE_WEBKEYPAD_ENCRYPTION
                 if (get_credentials()->crypt && !c->data[1])

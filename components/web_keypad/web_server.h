@@ -3,17 +3,26 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
+#include "esphome/core/entity_base.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
+
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
 #ifdef USE_WEBKEYPAD_OTA
 #include "esphome/components/ota/ota_backend.h"
 #endif
-#include <vector>
+
 #ifdef USE_WEBKEYPAD_ENCRYPTION
 #include "crypto.h"
 #endif
-#include <map>
+
 
 #ifdef USE_ESP_IDF
 #define PSTR(s)   ((const char *)(s))
@@ -436,7 +445,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
   std::string alarm_control_panel_json(alarm_control_panel::AlarmControlPanel *obj,
                                        alarm_control_panel::AlarmControlPanelState value, JsonDetail start_config);
 #endif
-  struct mg_mgr mgr;
+  struct mg_mgr* mgr;
   struct mg_connection *c;
   friend ListEntitiesIterator;  
   ListEntitiesIterator entities_iterator_;
