@@ -211,6 +211,13 @@ public:
     // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
+#ifndef ESP32
+    static uint32_t m_savedPS;
+#else
+    static portMUX_TYPE m_interruptsMux;
+#endif
+    static void disableInterrupts();
+    static void restoreInterrupts();
     SoftwareSerial *vistaSerial, *vistaSerialMonitor;
     bool _newExtCmd, _newCmd;
     bool _filterOwnTx;
