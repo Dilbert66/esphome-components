@@ -3031,8 +3031,7 @@ void DSCkeybushome::update()
         }
       }
 
-      if (options)
-        dsc.statusChanged = true;
+      dsc.statusChanged = true;
     }
 
     void DSCkeybushome::processEventBufferAA(bool showEvent)

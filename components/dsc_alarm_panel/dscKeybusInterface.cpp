@@ -615,7 +615,7 @@ dscKeybusInterface::dscClockInterrupt() {
   // Panel sends data while the clock is high
   if (digitalRead(dscClockPin) == HIGH) {
     if (virtualKeypad ){
-        if (dscWritePin == dscReadPin && !writeDataPending)
+        if (dscWritePin == dscReadPin )
            pinMode(dscWritePin, INPUT_PULLUP);
        
         digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
