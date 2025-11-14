@@ -1573,35 +1573,27 @@ void DSCkeybushome::update()
           ESP_LOGD(TAG, "Periodic trouble flag fetch...");
           dsc.write("*2##", defaultPartition); // fetch panel troubles /zone module low battery
         }
-        /*
-    if (debug > 1)   {
-#ifdef ESP32
-      UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-      ESP_LOGD(TAG,"Free memory: %5d,freeheap: %5d,minheap: %5d,maxfree:%5d\n", (uint16_t) uxHighWaterMark,esp_get_free_heap_size(),esp_get_minimum_free_heap_size(),heap_caps_get_largest_free_block(8));
-#endif
-    }
-    */
+
       }
-      //  gptr->call();
-      //&& dsc.panelData[0]
+
       if ((dsc.loop() || forceRefresh))
       { // Processes data only when a valid Keybus command has been read
 
+           if (dsc.bufferOverflow) {
+  
 #if !defined(ARDUINO_MQTT)
-        if (dsc.bufferOverflow)
-        {
+
           ESP_LOGE(TAG, "Keybus buffer overflow");
 #else
-    if (dsc.bufferOverflow)
-    {
         Serial.printf("Keybus buffer overflow\n"); 
 #endif
           dsc.bufferOverflow = false;
         }
+
         static unsigned long errorTime = millis();
 
         // Checks if the interface is connected to the Keybus
-        if (dsc.keybusChanged || forceRefresh)
+        if ((dsc.keybusChanged) || forceRefresh)
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
           if (dsc.keybusConnected)
@@ -1620,6 +1612,10 @@ void DSCkeybushome::update()
             }
           }
         }
+
+
+
+
         if (!dsc.panelData[0])
           return; // not valid data
 
@@ -1687,17 +1683,60 @@ void DSCkeybushome::update()
           getBypassZones(partition + 1);
           setStatus(partition, true);
         }
-      }
+ 
 
       if (!forceDisconnect && (dsc.statusChanged || forceRefresh) && dsc.panelData[0])
       {                            // Processes data only when a valid Keybus command has been read and statuses were changed
         dsc.statusChanged = false; // Reset the status tracking flag
+ 
 
-        // if (debug  > 0)
-        //  printPacket("Paneldata", dsc.panelData[0], dsc.panelData, 16);
 
+
+        //Main system statuses
+        if (dsc.powerChanged || forceRefresh)
+        {
+          dsc.powerChanged = false;
+          publishPanelStatus(FC(ACSTATUS), dsc.powerTrouble, 0);
+        }
+
+        if (dsc.batteryChanged || forceRefresh)
+        {
+          dsc.batteryChanged = false;
+          publishPanelStatus(FC(BATSTATUS), dsc.batteryTrouble, 0);
+        }
+
+        // if (dsc.keypadFireAlarm)
+        // {
+        //   dsc.keypadFireAlarm = false;
+        //   // partitionMsgChangeCallback("Keypad Fire Alarm",defaultPartition);
+        // }
+
+        // if (dsc.keypadPanicAlarm)
+        // {
+        //   dsc.keypadPanicAlarm = false;
+        //   // partitionMsgChangeCallback("Keypad Panic Alarm",defaultPartition);
+        // }
+
+        if (dsc.troubleChanged || forceRefresh)
+        {
+          dsc.troubleChanged = false; // Resets the trouble status flag
+
+          publishPanelStatus(FC(TRSTATUS), dsc.trouble, 0);
+          
+          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch && (millis() - lastTroubleLightTime) > 20000)
+          {
+            partitionStatus[defaultPartition - 1].keyPressTime = millis();
+            ESP_LOGD(TAG, "Fetching troubles..");
+            dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
+            lastTroubleLightTime=millis();
+          }
+        }
+
+        // Publishes status per partition
         for (byte partition = 0; partition < dscPartitions; partition++)
         {
+
+
           if (firstrun)
           {
             publishBeeps("0", partition + 1);
@@ -1706,75 +1745,7 @@ void DSCkeybushome::update()
               publishRelayStatus(x, false);
           }
 
-          setStatus(partition, forceRefresh || dsc.status[partition] == 0xEE || dsc.status[partition] == 0xA0);
-        }
-
-        if (dsc.powerChanged || forceRefresh)
-        {
-          dsc.powerChanged = false;
-          if (dsc.powerTrouble)
-          {
-            publishPanelStatus(FC(ACSTATUS), false, 0); // no ac
-          }
-          else
-          {
-            publishPanelStatus(FC(ACSTATUS), true, 0);
-          }
-        }
-
-        if (dsc.batteryChanged || forceRefresh)
-        {
-          dsc.batteryChanged = false;
-          if (dsc.batteryTrouble)
-          {
-            publishPanelStatus(FC(BATSTATUS), true, 0);
-          }
-          else
-          {
-            publishPanelStatus(FC(BATSTATUS), false, 0);
-          }
-        }
-
-        if (dsc.keypadFireAlarm)
-        {
-          dsc.keypadFireAlarm = false;
-          // partitionMsgChangeCallback("Keypad Fire Alarm",defaultPartition);
-        }
-
-        if (dsc.keypadPanicAlarm)
-        {
-          dsc.keypadPanicAlarm = false;
-          // partitionMsgChangeCallback("Keypad Panic Alarm",defaultPartition);
-        }
-
-        // Publishes trouble status
-        if (dsc.troubleChanged || forceRefresh)
-        {
-          dsc.troubleChanged = false; // Resets the trouble status flag
-
-          if (dsc.trouble)
-          {
-            publishPanelStatus(FC(TRSTATUS), true, 0); // Trouble alarm tripped
-
-          }
-          else
-          {
-            publishPanelStatus(FC(TRSTATUS), false, 0); // Trouble alarm restored
-          }
-
-          if (!forceRefresh && !partitionStatus[defaultPartition - 1].inprogram && !dsc.armed[defaultPartition - 1] && !dsc.alarm[defaultPartition - 1] && !dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && troubleFetch && (millis() - lastTroubleLightTime) > 20000)
-          {
-            partitionStatus[defaultPartition - 1].keyPressTime = millis();
-            ESP_LOGD(TAG, "Fetching troubles..");
-            dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
-          }
-          lastTroubleLightTime=millis();
-
-        }
-
-        // Publishes status per partition
-        for (byte partition = 0; partition < dscPartitions; partition++)
-        {
+          // setStatus(partition, forceRefresh || dsc.status[partition] == 0xEE || dsc.status[partition] == 0xA0);
 
           if (lastStatus[partition] != dsc.status[partition])
           {
@@ -1783,7 +1754,12 @@ void DSCkeybushome::update()
             sprintf(msg, "%02x %s", dsc.status[partition],FC(statusText(dsc.status[partition])));
             publishPartitionMsg(msg, partition + 1);
           }
+           setStatus(partition, forceRefresh || dsc.status[partition] == 0xEE || dsc.status[partition] == 0xA0);
+          // if (partition==0)
+          //   publishPanelStatus(FC(TRSTATUS), bitRead(dsc.lights[partition],4), 0)  //also publish the general tr flag for legacy support
 
+          publishPanelStatus(FC(TRSTATUS), bitRead(dsc.lights[partition],4), partition+1);//trouble light (we have the global one set above but here we can set the per partition light)
+       
           // Publishes alarm status
           if (dsc.alarmChanged[partition] || forceRefresh)
           {
@@ -1831,13 +1807,9 @@ void DSCkeybushome::update()
             {
               publishPanelStatus(FC(RDYSTATUS), true, partition + 1);
             }
-            else if (!dsc.exitDelay[partition])
+            else if (!dsc.exitDelay[partition] && !dsc.armed[partition])
             {
-              if (!dsc.armed[partition])
-              {
-                publishPanelStatus(FC(RDYSTATUS), false, partition + 1);
-              }
-              publishPanelStatus(FC(RDYSTATUS), false, partition + 1);
+             publishPanelStatus(FC(RDYSTATUS), false, partition + 1);
             }
           }
 
@@ -1845,28 +1817,24 @@ void DSCkeybushome::update()
           if (dsc.fireChanged[partition] || forceRefresh)
           {
             dsc.fireChanged[partition] = false; // Resets the fire status flag
-            if (dsc.fire[partition])
-            {
-              publishFireStatus(true, partition + 1); // Fire alarm tripped
-            }
-            else
-            {
-              publishFireStatus(false, partition + 1); // Fire alarm restored
-            }
+             publishFireStatus(dsc.fire[partition], partition + 1); // Fire alarm restored
           }
+
           if (forceRefresh)
           {
             publishPanelStatus(FC(CHIMESTATUS), partitionStatus[partition].chime, partition + 1);
           }
 
           std::string ps;
-          const char * status=getPartitionStatus(partition,ps);
-          publishPartitionStatus(status, partition + 1);
+          getPartitionStatus(partition,ps);
+          publishPartitionStatus(ps.c_str(), partition + 1);
 
 
          // partitionStatus[partition].lastPartitionStatus = status;
 
-        }
+        } //for each partition
+
+
 
         // Publishes zones 1-64 status in a separate topic per zone
         // Zone status is stored in the openZones[] and openZonesChanged[] arrays using 1 bit per zone, up to 64 zones:
@@ -2019,7 +1987,7 @@ void DSCkeybushome::update()
           if (bitRead(system1, 7)) {
             system1Msg.append(FC("A4 "));
           }
-    */
+          */
 
           if (system0Changed)
             previousSystem0 = system0;
@@ -2059,6 +2027,12 @@ void DSCkeybushome::update()
         system0Changed = false;
         system1Changed = false;
       }
+
+
+      forceRefresh = false;
+      firstrun = false;
+
+    } //dsc.loop
 
       if (!forceDisconnect && dsc.handleModule() && dsc.moduleCmd)
       {
@@ -2114,8 +2088,6 @@ void DSCkeybushome::update()
 #endif
       }
 
-      forceRefresh = false;
-      firstrun = false;
     }
 
      const char * DSCkeybushome::getPartitionStatus(byte partition,std::string & status)

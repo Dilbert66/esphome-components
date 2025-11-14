@@ -694,7 +694,7 @@ dscKeybusInterface::dscClockInterrupt()
   if (digitalRead(dscClockPin) == HIGH) {
   #endif
     if (virtualKeypad ){
-        if (dscWritePin == dscReadPin && !writeDataPending) {
+        if (dscWritePin == dscReadPin ) {
           #if defined (USE_ESP_IDF)
           gpio_reset_pin((gpio_num_t)dscWritePin);
           gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_INPUT);
