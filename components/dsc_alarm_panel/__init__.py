@@ -69,7 +69,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_DETAILEDPARTITIONSTATE,default='false'):cv.boolean,
     cv.Optional(CONF_EVENTFORMAT,default='plain'): cv.one_of('json','plain',lower=True),  
     cv.Optional(CONF_STACK_SIZE):cv.int_, 
-    cv.Optional(CONF_USE_ESP_IDF_TIMER,default='false'):cv.boolean, 
+    cv.Optional(CONF_USE_ESP_IDF_TIMER,default='true'):cv.boolean, 
     }
 )
 
