@@ -28,7 +28,7 @@ bool dscKeybusInterface::virtualKeypad;
 bool dscKeybusInterface::processModuleData;
 byte dscKeybusInterface::panelData[dscReadSize];
 byte dscKeybusInterface::panelByteCount;
-volatile bool dscKeybusInterface::skipModuleByte;
+volatile bool dscKeybusInterface::skipModuleBit;
 byte dscKeybusInterface::panelBitCount;
 volatile byte dscKeybusInterface::moduleData[dscReadSize];
 volatile bool dscKeybusInterface::moduleDataCaptured;
@@ -685,7 +685,7 @@ dscKeybusInterface::dscClockInterrupt()
 
   static unsigned long previousClockHighTime;
   static bool skipData = false;
-  skipModuleByte=false;
+  skipModuleBit=false;
   
   // Panel sends data while the clock is high
   #ifdef USE_ESP_IDF
@@ -814,7 +814,7 @@ dscKeybusInterface::dscClockInterrupt()
         if (isrPanelBitCount == 7) {
   
           isrModuleData[isrPanelByteCount] = writeBuffer[writeBufferIdx]; //save our sent byte to the module buffer for display
-          skipModuleByte=true; // skip reading this byte as we updated it manually in the buffer.  If we don't do this, we will get a 0 showing
+          skipModuleBit=true; // skip reading this byte as we updated it manually in the buffer.  If we don't do this, we will get a 0 showing
           writeBufferIdx++;
 
           if (writeBufferIdx == writeBufferLength ) { //all bits written
@@ -911,7 +911,7 @@ bool IRAM_ATTR dscKeybusInterface::dscDataInterrupt(gptimer_handle_t timer, cons
   else {
 
     // Keypad and module data is not buffered and skipped if the panel data buffer is filling
-    if (processModuleData && isrPanelByteCount < dscReadSize && panelBufferLength <= 1 && !skipModuleByte) {
+    if (processModuleData && isrPanelByteCount < dscReadSize && panelBufferLength <= 1 && !skipModuleBit) {
 
       // Data is captured in each byte by shifting left by 1 bit and writing to bit 0
       if (isrPanelBitCount < 8) {

@@ -464,7 +464,7 @@ class dscKeybusInterface {
     static volatile byte moduleBitCount, moduleByteCount;
 
     static volatile byte isrPanelData[dscReadSize], isrPanelBitTotal, isrPanelBitCount, isrPanelByteCount;
-    static volatile bool skipModuleByte;
+    static volatile bool skipModuleBit;
     static volatile byte isrModuleData[dscReadSize];
     
     //start expander

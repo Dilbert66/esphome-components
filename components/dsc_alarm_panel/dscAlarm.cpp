@@ -1803,14 +1803,7 @@ void DSCkeybushome::update()
           if (dsc.readyChanged[partition] || forceRefresh)
           {
             dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
-            if (dsc.ready[partition] && !dsc.exitDelay[partition])
-            {
-              publishPanelStatus(FC(RDYSTATUS), true, partition + 1);
-            }
-            else if (!dsc.exitDelay[partition] && !dsc.armed[partition])
-            {
-             publishPanelStatus(FC(RDYSTATUS), false, partition + 1);
-            }
+             publishPanelStatus(FC(RDYSTATUS),dsc.ready[partition], partition + 1);
           }
 
           // Publishes fire alarm status
