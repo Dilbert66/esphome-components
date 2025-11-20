@@ -27,6 +27,12 @@ namespace esphome
     WebNotify::WebNotify()
     {
       global_notify = this;
+      mgr_ = new struct mg_mgr();
+    }
+
+    WebNotify::~WebNotify()
+    {
+      delete mgr_;
     }
 
     void WebNotify::publish(SendData &out)
@@ -488,12 +494,12 @@ namespace esphome
         void WebNotify::telegramTask(void *args)
         {
           mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
-          mg_mgr_init(&global_notify->mgr_);
+          mg_mgr_init(global_notify->mgr_);
 
           static unsigned long checkTime = millis();
           for (;;)
           {
-                  mg_mgr_poll(&(global_notify->mgr_), 1);
+                  mg_mgr_poll((global_notify->mgr_), 1);
 
                   vTaskDelay(4 / portTICK_PERIOD_MS);
     #if not defined(ARDUINO_MQTT)
@@ -533,7 +539,7 @@ namespace esphome
       ESP_LOGD(TAG, "chat id=[%s],bot id=[%s]", telegramUserId_.c_str(), botId_.c_str());
       #if !defined(USETASK)
       mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
-      mg_mgr_init(&mgr_);
+      mg_mgr_init(mgr_);
       #endif
       // std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
       // outMessage out;
@@ -567,7 +573,7 @@ namespace esphome
         if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_ || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
-          mg_http_connect(&mgr_, apiHost_.c_str(), notify_fn, &c_res_); // Create client connection
+          mg_http_connect(mgr_, apiHost_.c_str(), notify_fn, &c_res_); // Create client connection
           if (botName_ == "" && !botRequest_)
           {
             outMessage out;
@@ -589,7 +595,7 @@ namespace esphome
       }
       taskYIELD();
        #if !defined(USETASK)
-      mg_mgr_poll(&mgr_, 0);
+      mg_mgr_poll(mgr_, 0);
 
        #endif
     }

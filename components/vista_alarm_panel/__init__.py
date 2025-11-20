@@ -290,7 +290,7 @@ async def setup_alarm_sensor(var, config,is_binary_sensor=True):
         cg.add(var.set_trigger_on_initial_state(True))
     else:
         cg.add(var.publish_state(" "))
-    # cg.register_component(var,config)
+    #cg.register_component(var,config)
     if web_keypad_config := config.get(CONF_WEB_KEYPAD):
         from esphome.components import web_keypad
         await web_keypad.add_entity_config(var, web_keypad_config)

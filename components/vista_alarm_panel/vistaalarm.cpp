@@ -146,8 +146,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
                          { return ts->get_object_id() == id; });
   if (it != tMap.end() && (*it)->state != *text)
     (*it)->publish_state(*text);
-
-  
+      
 }
 
 #endif
