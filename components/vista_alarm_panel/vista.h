@@ -1,8 +1,14 @@
 #pragma once
 
+#if not defined(USE_ESP_IDF)
 #include "Arduino.h"
+#else
+#define ESP32
+#endif
+
 #include <queue>
 #include "ECPSoftwareSerial.h"
+
 
 // #define DEBUG
 
@@ -151,7 +157,7 @@ struct rfSerialQueueItem
   uint32_t serial; 
   uint8_t idx; 
 };
-const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
+//const cmdQueueItem cmdQueueItem_INIT = {.newCmd = false, .newExtCmd = false,.size=0,.rawsize=0};
 
 class Vista
 {
@@ -174,72 +180,93 @@ public:
     void writeDirect(const char *keys, uint8_t addr, size_t len);
     void writeDirect(const char key, uint8_t addr, uint8_t seq = 0);
     statusFlagType statusFlags;
-    SoftwareSerial *vistaSerial, *vistaSerialMonitor;
     void setKpAddr(char keypadAddr)
     {
         if (keypadAddr > 0)
-            kpAddr = keypadAddr;
+            _kpAddr = keypadAddr;
     }
-    void addModule(byte addr);
-    bool dataReceived;
-    void  rxHandleISR();
+    void addModule(uint8_t addr);
+    void gpioISRHandler();
+    void rxHandleISR();
+
     void txHandleISR();
     bool areEqual(char *, char *, uint8_t);
     bool keybusConnected, connected;
     int toDec(int);
     void resetStatus();
     void initSerialHandlers(int, int, int);
-    char *cbuf, *extbuf, *extcmd;
+
 
     bool lrrSupervisor;
     void setExpFault(int, bool);
     void setRFFault(uint8_t fault,uint32_t serial);
-    bool newExtCmd, newCmd;
-    bool filterOwnTx;
-    expanderType zoneExpanders[MAX_MODULES];
-    uint8_t moduleIdx;
-    char b; // used in isr
     bool charAvail();
     bool cmdAvail();
-    cmdQueueItem getNextCmd();
+    cmdQueueItem * getNextCmd();
     bool sendPending();
     void set_rf_emulation(bool emulate);
     void set_rf_addr(uint8_t addr);
     bool get_rf_emulation();
+
     // std::queue<struct cmdQueueItem> cmdQueue;
 
 private:
-    char lcbuf[14];
+#ifndef ESP32
+    static uint32_t m_savedPS;
+#else
+    static portMUX_TYPE m_interruptsMux;
+#endif
+    static void disableInterrupts();
+    static void restoreInterrupts();
+    SoftwareSerial *vistaSerial, *vistaSerialMonitor;
+    bool _newExtCmd, _newCmd;
+    bool _filterOwnTx;
+    expanderType _zoneExpanders[MAX_MODULES];
+    uint8_t _moduleIdx;
+    char *_cbuf, *_extbuf, *_extcmd;
+    char _lcbuf[14];
     uint8_t _lcbuflen;
     uint8_t _retriesf9;
-    char expectCmd;
-    keyType *outbuf;
-    char *tmpOutBuf;
-    cmdQueueItem *cmdQueue;
-    volatile uint8_t outbufIdx, inbufIdx;
-    uint8_t outcmdIdx, incmdIdx;
-    int rxPin, txPin;
-    volatile char kpAddr;
-    char monitorPin;
-    volatile char rxState;
-    volatile unsigned long lowTime, highTime;
-    uint8_t *faultQueue;
-    rfSerialQueueItem *rfSerialQueue;
+    char _expectCmd;
+    keyType *_outbuf;
+    char *_tmpOutBuf;
+    cmdQueueItem *_cmdQueue;
+    volatile uint8_t _outbufIdx, _inbufIdx;
+    uint8_t _outcmdIdx, _incmdIdx;
+    int _rxPin, _txPin;
+    volatile char _kpAddr;
+    char _monitorPin;
+    volatile char _rxState;
+    volatile unsigned long _lowTime, _highTime;
+    volatile bool _pendingAck;
+    uint8_t *_faultQueue;
+    rfSerialQueueItem *_rfSerialQueue;
+    char _expectByte;
+    volatile uint8_t _retries;
+    volatile uint8_t _retryAddr;
+    //volatile bool sending;
+    bool _emulate_rf_receiver=false;
+    uint8_t _rf_addr=0;
+    volatile uint8_t _markPulse;
+    volatile int _extIdx;
+    uint8_t _writeSeq;
+    char _expFault;
+    char _expFaultBits;
+    bool _invertRead;
+    uint8_t _outFaultIdx, _inFaultIdx,_outRfSerialIdx,_inRfSerialIdx;
+    volatile bool _is2400;
+
     void setNextFault(uint8_t);
     void setNextRfSerial(uint8_t fault,uint32_t serial);
     expanderType peekNextFault();
     expanderType getNextFault();
     rfSerialQueueItem peekNextRfSerial();
     rfSerialQueueItem getNextRfSerial();
-    expanderType currentFault;
-    uint8_t idx,outFaultIdx, inFaultIdx,rfSerialIdx,outRfSerialIdx,inRfSerialIdx;
-    int gidx;
-    volatile int extidx;
-    uint8_t write_Seq;
+
+
     void onAUI(char *, int *);
     void onDisplay(char *, int *);
     void writeChars();
-    volatile uint8_t markPulse;
     void readChars(int, char *, int *);
     bool validChksum(char *, int, int);
     void readChar(char *, int *);
@@ -248,17 +275,14 @@ private:
     void onRF(char *);
     keyType getChar();
     uint8_t peekNextKpAddr();
-    uint8_t writeSeq;
-    char expZone;
-    char haveExpMessage;
-    char expFault, expBitAddr;
-    char expFaultBits;
     size_t decodePacket();
     uint8_t getExtBytes();
+    void pushExtBuffer();
     void sendBuffer(char *lcbuf,uint8_t lcbuflen);
-    volatile bool is2400;
+    void ckSumSendBuffer(char *lcbuf,uint8_t lcbuflen);
+
     void pushCmdQueueItem(size_t cmdsize=0,size_t rawsize=0);
-    bool invertRead;
+
 
     char IRAM_ATTR addrToBitmask1(char addr)
     {
@@ -287,10 +311,34 @@ private:
     void hw_wdt_disable();
     void hw_wdt_enable();
 
-    char expectByte;
-    volatile uint8_t retries;
-    volatile uint8_t retryAddr;
-    volatile bool sending;
-    bool _emulate_rf_receiver=false;
-    uint8_t _rf_addr=0;
+
+
+#if defined (USE_ESP_IDF)
+
+unsigned long IRAM_ATTR micros() {
+  return (unsigned long)(esp_timer_get_time());
+}
+
+unsigned long millis() {
+    return (unsigned long)(esp_timer_get_time() / 1000ULL);
+ }
+
+#if not defined(NOP)
+#define NOP __asm__ __volatile__ ("nop\n\t")
+#endif
+void IRAM_ATTR delayMicroseconds(uint32_t us) {
+  uint64_t m = (uint64_t)esp_timer_get_time();
+  if (us) {
+    uint64_t e = (m + us);
+    if (m > e) {  //overflow
+      while ((uint64_t)esp_timer_get_time() > e) {
+        NOP;
+      }
+    }
+    while ((uint64_t)esp_timer_get_time() < e) {
+      NOP;
+    }
+  }
+}
+ #endif
 };

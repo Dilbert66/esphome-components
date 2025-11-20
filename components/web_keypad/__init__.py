@@ -149,6 +149,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_INCLUDE_INTERNAL, default=False): cv.boolean,
             cv.SplitDefault(
                 CONF_OTA,
+                esp32=False,
                 esp8266=False,
                 esp32_arduino=False,
                 esp32_idf=False,
@@ -181,7 +182,7 @@ async def add_entity_config(entity, config):
     web_keypad = await cg.get_variable(config[CONF_WEB_KEYPAD_ID])
     sorting_weight = config.get(CONF_SORTING_WEIGHT, 50)
     sorting_group_hash = hash(config.get(CONF_SORTING_GROUP_ID))
-
+    cg.add_define("USE_WEBSERVER_SORTING")
     cg.add(
         web_keypad.add_entity_config(
             entity,
@@ -235,17 +236,19 @@ def add_resource_as_progmem(
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    if CORE.using_arduino:
-        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
-        cg.add_global(cg.RawStatement(stack))
-        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-        cg.add_global(cg.RawStatement("#endif"))
+    # if CORE.using_arduino:
+    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
+    #     cg.add_global(cg.RawStatement(stack))
+    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+    #     cg.add_global(cg.RawStatement("#endif"))
+
+    # Track controller registration for StaticVector sizing
+    CORE.register_controller()
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    cg.add_library("intrbiz/Crypto",None)
     version = config[CONF_VERSION]
 
     cg.add(var.set_port(config[CONF_PORT]))
@@ -264,6 +267,8 @@ async def to_code(config):
     else:
         cg.add(var.set_css_url(config[CONF_CSS_URL]))
         cg.add(var.set_js_url(config[CONF_JS_URL]))
+    if CONF_OTA in config and config[CONF_OTA]:
+         cg.add_define("USE_WEBKEYPAD_OTA")
     cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
     cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
@@ -279,7 +284,9 @@ async def to_code(config):
         cg.add(var.set_certificate_key(config[CONF_CERTIFICATE_KEY]))
         
     if CONF_AUTH in config:
-        cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION]));    
+        cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION])); 
+        if config[CONF_AUTH][CONF_ENCRYPTION]:
+            cg.add_define("USE_WEBKEYPAD_ENCRYPTION")  
                
     if CONF_CSS_INCLUDE in config:
         cg.add_define("USE_WEBKEYPAD_CSS_INCLUDE")
@@ -322,6 +329,7 @@ async def to_code(config):
             cg.add_library("Update", None)     
             
     if (sorting_group_config := config.get(CONF_SORTING_GROUPS)) is not None:
+        cg.add_define("USE_WEBSERVER_SORTING")
         add_sorting_groups(var, sorting_group_config)
 
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")

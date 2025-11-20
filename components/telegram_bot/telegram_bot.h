@@ -1,5 +1,6 @@
 #pragma once
 #include "esphome/core/defines.h"
+#include "esphome/core/version.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
 #include "esphome/core/automation.h"
@@ -14,6 +15,12 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #endif
+
+#ifdef USE_ESP_IDF
+#define PSTR(s)   ((const char *)(s))
+#endif
+
+//#define USETASK
 
 namespace esphome
 {
@@ -68,6 +75,11 @@ namespace esphome
       std::string url;
     };
 
+    #if defined (USE_ESP_IDF)
+    static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+    }
+ #endif
 
     struct c_res_s
     {
@@ -79,9 +91,11 @@ namespace esphome
     {
     public:
       WebNotify();
+      ~WebNotify();
 
       void setup() override;
       void loop() override;
+      float get_setup_priority() const override { return -100.0f; }
 
       void dump_config() override;
       void publish(SendData &out);
@@ -217,7 +231,7 @@ namespace esphome
 
     private:
 
-      struct mg_mgr mgr_;
+      struct mg_mgr * mgr_;
       static void notify_fn(struct mg_connection *c, int ev, void *ev_data);
 
       bool botRequest_{};
@@ -231,10 +245,10 @@ namespace esphome
         msgtype type;
       };
 
-      // #ifdef ESP32
-      //       TaskHandle_t xHandle;
-      //       static void telegramTask(void *args);
-      // #endif
+      #ifdef USETASK
+      TaskHandle_t xHandle;
+      static void telegramTask(void *args);
+      #endif
 
       struct c_res_s c_res_;
 
@@ -282,42 +296,48 @@ namespace esphome
       TEMPLATABLE_VALUE(bool, one_time_keyboard)
       TEMPLATABLE_VALUE(bool, force)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
-        SendData y;
+        //SendData y;
+         SendData * y = new SendData;
 
         if (this->keyboard_.value(x...) != "")
           if (this->keyboard_.value(x...) == "none" || this->keyboard_.value(x...) == "false")
-            y.reply_markup = "{remove_keyboard: true}";
+            y->reply_markup = "{remove_keyboard: true}";
           else
-            y.reply_markup = "{'keyboard':" + std::move(this->keyboard_.value(x...)) + "}";
+            y->reply_markup = "{'keyboard':" + std::move(this->keyboard_.value(x...)) + "}";
         else if (this->inline_keyboard_.value(x...) != "")
-          y.reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
+          y->reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
         if (this->reply_markup_.value(x...) != "")
-          y.reply_markup = this->reply_markup_.value(x...);
+          y->reply_markup = this->reply_markup_.value(x...);
         if (this->parse_mode_.value(x...) != "")
-          y.parse_mode = this->parse_mode_.value(x...);
+          y->parse_mode = this->parse_mode_.value(x...);
         if (this->to_.value(x...) != "")
-          y.chat_id = this->to_.value(x...);
+          y->chat_id = this->to_.value(x...);
         else
-          y.chat_id = this->parent_->telegramUserId_;
+          y->chat_id = this->parent_->telegramUserId_;
 
         if (this->disable_notification_.value(x...))
-          y.disable_notification = this->disable_notification_.value(x...);
+          y->disable_notification = this->disable_notification_.value(x...);
         if (this->disable_web_page_preview_.value(x...))
-          y.disable_web_page_preview = this->disable_web_page_preview_.value(x...);
+          y->disable_web_page_preview = this->disable_web_page_preview_.value(x...);
         if (this->resize_keyboard_.value(x...))
-          y.resize_keyboard = this->resize_keyboard_.value(x...);
+          y->resize_keyboard = this->resize_keyboard_.value(x...);
         if (this->one_time_keyboard_.value(x...))
-          y.one_time_keyboard = this->one_time_keyboard_.value(x...);
+          y->one_time_keyboard = this->one_time_keyboard_.value(x...);
 
-        y.text = this->message_.value(x...);
+        y->text = this->message_.value(x...);
         if (this->title_.value(x...) != "")
-          y.text = this->title_.value(x...) + "\n" + y.text;
+          y->text = this->title_.value(x...) + "\n" + y->text;
         if (this->force_.value(x...))
-          y.force = this->force_.value(x...);
-        y.type = mtSendMessage;
-        this->parent_->publish(y);
+          y->force = this->force_.value(x...);
+        y->type = mtSendMessage;
+        this->parent_->publish(*y);
+        delete y;
       }
 
     protected:
@@ -335,17 +355,23 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, url)
       TEMPLATABLE_VALUE(int, cache_time)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
-        SendData y;
-        y.callback_id = this->callback_id_.value(x...);
+        //SendData y;
+         SendData * y = new SendData;
+        y->callback_id = this->callback_id_.value(x...);
         if (this->show_alert_.value(x...))
-          y.show_alert = this->show_alert_.value(x...);
-        y.text = this->message_.value(x...);
-        y.url = this->url_.value(x...);
-        y.cache_time = this->cache_time_.value(x...);
-        y.type = mtAnswerCallbackQuery;
-        this->parent_->publish(y);
+          y->show_alert = this->show_alert_.value(x...);
+        y->text = this->message_.value(x...);
+        y->url = this->url_.value(x...);
+        y->cache_time = this->cache_time_.value(x...);
+        y->type = mtAnswerCallbackQuery;
+        this->parent_->publish(*y);
+        delete y;
       }
 
     protected:
@@ -359,15 +385,20 @@ namespace esphome
       TelegramDeleteMessageAction(WebNotify *parent) : parent_(parent) {}
       TEMPLATABLE_VALUE(std::string, chat_id)
       TEMPLATABLE_VALUE(std::string, message_id)
-
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
-        SendData y;
-        y.chat_id = this->chat_id_.value(x...);
-        y.message_id = this->message_id_.value(x...);
+        //SendData y;
+         SendData * y = new SendData;
+        y->chat_id = this->chat_id_.value(x...);
+        y->message_id = this->message_id_.value(x...);
 
-        y.type = mtDeleteMessage;
-        this->parent_->publish(y);
+        y->type = mtDeleteMessage;
+        this->parent_->publish(*y);
+        delete y;
       }
 
     protected:
@@ -388,24 +419,30 @@ namespace esphome
       TEMPLATABLE_VALUE(bool, disable_web_page_preview)
       TEMPLATABLE_VALUE(std::string, reply_markup)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
-        SendData y;
-        y.chat_id = this->chat_id_.value(x...);
+        //SendData y;
+         SendData * y = new SendData;
+        y->chat_id = this->chat_id_.value(x...);
         if (this->inline_keyboard_.value(x...) != "")
-          y.reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
+          y->reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
         if (this->reply_markup_.value(x...) != "")
-          y.reply_markup = this->reply_markup_.value(x...);
+          y->reply_markup = this->reply_markup_.value(x...);
         if (this->parse_mode_.value(x...) != "")
-          y.parse_mode = this->parse_mode_.value(x...);
+          y->parse_mode = this->parse_mode_.value(x...);
         if (this->disable_web_page_preview_.value(x...))
-          y.disable_web_page_preview = this->disable_web_page_preview_.value(x...);
-        y.text = this->message_.value(x...);
-        y.message_id = this->message_id_.value(x...);
+          y->disable_web_page_preview = this->disable_web_page_preview_.value(x...);
+        y->text = this->message_.value(x...);
+        y->message_id = this->message_id_.value(x...);
         if (this->title_.value(x...) != "")
-          y.text = this->title_.value(x...) + "\n" + y.text;
-        y.type = mtEditMessageText;
-        this->parent_->publish(y);
+          y->text = this->title_.value(x...) + "\n" + y->text;
+        y->type = mtEditMessageText;
+        this->parent_->publish(*y);
+        delete y;
       }
 
     protected:
@@ -423,31 +460,37 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, inline_keyboard)
       TEMPLATABLE_VALUE(bool, disable_web_page_preview)
 
-      void play(Ts... x) override
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+  void play(const Ts&... x) override
+#else
+  void play(Ts... x) override
+#endif
       {
 
-        SendData y;
-        y.chat_id = this->chat_id_.value(x...);
+        //SendData y;
+         SendData * y = new SendData;
+        y->chat_id = this->chat_id_.value(x...);
         if (this->inline_keyboard_.value(x...) != "")
-          y.reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
+          y->reply_markup = "{'inline_keyboard':" + std::move(this->inline_keyboard_.value(x...)) + "}";
         if (this->reply_markup_.value(x...) != "")
-          y.reply_markup = this->reply_markup_.value(x...);
+          y->reply_markup = this->reply_markup_.value(x...);
         if (this->disable_web_page_preview_.value(x...))
-          y.disable_web_page_preview = this->disable_web_page_preview_.value(x...);
-        y.message_id = this->message_id_.value(x...);
-        y.text = this->message_.value(x...);
-        y.type = mtEditMessageReplyMarkup;
-        this->parent_->publish(y);
+          y->disable_web_page_preview = this->disable_web_page_preview_.value(x...);
+        y->message_id = this->message_id_.value(x...);
+        y->text = this->message_.value(x...);
+        y->type = mtEditMessageReplyMarkup;
+        this->parent_->publish(*y);
+        delete y;
       }
 
     protected:
       WebNotify *parent_;
     };
 
-    class TelegramMessageTrigger : public Trigger<RemoteData>
+    class TelegramMessageTrigger : public Trigger<RemoteData&>
     {
     public:
-      bool stringsEqual(std::string str1, std::string str2)
+      bool stringsEqual(std::string &str1, std::string &str2)
       {
         if (str1.length() != str2.length())
           return false;
@@ -467,8 +510,8 @@ namespace esphome
                                       {
                                         std::string s = x.cmd;
                                         // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
-
-                                        if (x.to !="" && !stringsEqual(x.to,global_notify->get_bot_name()) )
+                                        std::string bn=global_notify->get_bot_name();
+                                        if (x.to !="" && !stringsEqual(x.to,bn) )
                                           return;
 
                                         if (type == "callback")
@@ -494,7 +537,9 @@ namespace esphome
                                         if (cmd.find("," + s + ",") != std::string::npos)
                                           this->trigger(x);
                                         if (cmd.find(",*,") != std::string::npos)
-                                          this->trigger(x); });
+                                          this->trigger(x); 
+                                        
+                                        });
       };
     };
 

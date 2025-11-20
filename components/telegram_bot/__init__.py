@@ -78,8 +78,7 @@ TelegramMessageTrigger = web_notify_ns.class_(
     "TelegramMessageTrigger", automation.Trigger.template(cg.std_string)
 )
 
-RemoteData= web_notify_ns.struct(f"RemoteData")
-SendData= web_notify_ns.struct(f"SendData")
+RemoteData= web_notify_ns.namespace(f"RemoteData&")
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -305,19 +304,19 @@ async def telegram_edit_message_action_to_code(config, action_id, template_arg, 
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    if CORE.using_arduino:
-        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
-        cg.add_global(cg.RawStatement(stack))
-        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-        cg.add_global(cg.RawStatement("#endif"))
-    if CORE.using_esp_idf: 
-        stack=6
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack=config[CONF_STACK_SIZE]
-        CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
+    # if CORE.using_arduino:
+    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
+    #     cg.add_global(cg.RawStatement(stack))
+    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+    #     cg.add_global(cg.RawStatement("#endif"))
+    # if CORE.using_esp_idf: 
+    #     stack=16
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack=config[CONF_STACK_SIZE]
+    #     CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:
@@ -366,7 +365,7 @@ async def to_code(config):
     #      copy_file_if_changed(src,dst)
     
     #remove old version file
-    dst=CORE.relative_build_path("src/mongoose.c")
-    if os.path.isfile(dst):
-          os.remove(dst)
+    # dst=CORE.relative_build_path("src/mongoose.c")
+    # if os.path.isfile(dst):
+    #       os.remove(dst)
 

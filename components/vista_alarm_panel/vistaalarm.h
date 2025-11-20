@@ -15,6 +15,20 @@
 // #endif
 // #endif
 
+#if defined(USE_ESP_IDF)
+#define ESP32
+#include <cstring>
+#include <esp_attr.h>
+#include <stdio.h>
+#include <cstdlib>
+#include <string>
+
+typedef char __FlashStringHelper;
+#define PSTR(s)   ((const char *)(s))
+#define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
+#endif
+
 #if defined(USE_MQTT)
 #define ESPHOME_MQTT
 #include "esphome/components/mqtt/mqtt_client.h"
@@ -69,8 +83,6 @@
 #define LOOP_TYPE 2
 
 #define ASYNC_CORE 1
-// #define USETASK
-
 // default pins to use for serial comms to the panel
 // The pinouts below are only examples. You can choose any other gpio pin that is available and not needed for boot.
 // These have proven to work fine.
@@ -128,6 +140,11 @@ namespace esphome
       rsdate,
     };
 
+      struct serialType
+      {
+        uint16_t zone;
+        int mask;
+      };
 
 #if defined(ESPHOME_MQTT) && !defined(USE_API)
     class vistaECPHome : public time::RealTimeClock
@@ -142,24 +159,28 @@ class vistaECPHome : public api::CustomAPIDevice, public time::RealTimeClock
 class vistaECPHome : public time::RealTimeClock
 {
 #endif
+#if defined(ESP8266)
+#define FC(s) (String(FPSTR(s)).c_str())
+#else
+#define FC(s) ((const char*)(s))
+#endif
 
     public:
       vistaECPHome(char kpaddr = KP_ADDR, int receivePin = RX_PIN, int transmitPin = TX_PIN, int monitorTxPin = MONITOR_PIN, int maxzones = MAX_ZONES, int maxpartitions = MAX_PARTITIONS, bool invertrx = true, bool inverttx = true, bool invertmon = true, uint8_t inputrx = INPUT, uint8_t inputmon = INPUT);
       ~vistaECPHome();
-      void set_accessCode(const char *ac) { accessCode = ac; }
-      void set_rfSerialLookup(const char *rf) { rfSerialLookup = rf; }
-      void set_quickArm(bool qa) { quickArm = qa; }
-      void set_displaySystemMsg(bool dsm) { displaySystemMsg = dsm; }
-      void set_lrrSupervisor(bool ls) { lrrSupervisor = ls; }
+      void set_accessCode(const char *ac) { _accessCode = ac; }
+      void set_rfSerialLookup(const char *rf) { _rfSerialLookup = rf; }
+      void set_quickArm(bool qa) { _quickArm = qa; }
+      void set_lrrSupervisor(bool ls) { _lrrSupervisor = ls; }
       void set_auiaddr(uint8_t addr) { 
-        auiAddr = addr; 
+        _auiAddr = addr; 
         switch (addr)
         {
-          case 1: auiAddrMask=0x02;break;
-          case 2: auiAddrMask=0x04;break;
-          case 5: auiAddrMask=0x20;break;
-          case 6: auiAddrMask=0x40;break;
-          default: addr=0;auiAddrMask=0;
+          case 1: _auiAddrMask=0x02;break;
+          case 2: _auiAddrMask=0x04;break;
+          case 5: _auiAddrMask=0x20;break;
+          case 6: _auiAddrMask=0x40;break;
+          default: _auiAddr=0;_auiAddrMask=0;
         }};
       void set_expanderAddr(uint8_t addr)
       {
@@ -173,14 +194,14 @@ class vistaECPHome : public time::RealTimeClock
         vista.set_rf_addr(addr);
         vista.addModule(addr);
       }
-      void set_maxZones(int mz) { maxZones = mz; }
+      void set_maxZones(int mz) { _maxZones = mz; }
       void set_partitionKeypad(uint8_t idx, uint8_t addr)
       {
         if (idx && idx < 4)
-          partitionKeypads[idx] = addr;
+          _partitionKeypads[idx] = addr;
       }
-      void set_defaultPartition(uint8_t dp) { defaultPartition = dp; }
-      void set_debug(uint8_t db) { debug = db; }
+      void set_defaultPartition(uint8_t dp) { _defaultPartition = dp; }
+      void set_debug(uint8_t db) { _debug = db; }
       void set_ttl(uint32_t t) { TTL = t; };
       void set_text(uint8_t text_idx, const char *text)
       {
@@ -214,12 +235,74 @@ class vistaECPHome : public time::RealTimeClock
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
-      bool displaySystemMsg = false;
-      bool forceRefreshGlobal, forceRefreshZones, forceRefresh;
-
-      sysState currentSystemState,
-          previousSystemState;
       void stop();
+
+
+#if defined(ARDUINO_MQTT)
+      void begin()
+      {
+#else
+      void setup() override;
+#endif
+
+// float get_loop_priority() const override {
+//   return 800.0f ; 
+// }
+      void set_panel_time();
+      //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
+      void alarm_disarm(std::string code, int32_t partition);
+
+      void alarm_arm_home(int32_t partition);
+
+      void alarm_arm_night(int32_t partition);
+
+      void alarm_arm_away(int32_t partition);
+
+      void alarm_trigger_fire(std::string code, int32_t partition);
+
+      void alarm_trigger_panic(std::string code, int32_t partition);
+
+      void set_zone_fault(int32_t zone, bool fault);
+
+      void set_keypad_address(int32_t addr)
+      {
+        // if (addr > 0 and addr < 30)
+        ///  vista.setKpAddr(addr); //disabled for now
+      }
+
+      void alarm_keypress(std::string keystring);
+
+      void alarm_keypress_partition(std::string keystring, int32_t partition);
+      void send_cmd_bytes(int32_t addr, std::string hexbytes);
+      void setDefaultKpAddr(uint8_t p);
+      void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
+#if defined(ARDUINO_MQTT)
+        void loop();
+#else
+        void update() override;
+#endif
+     void disconnectVista()
+      {
+        vista.stop();
+      }
+      bool connected()
+      {
+        vista.keybusConnected = vista.connected;
+        return vista.connected;
+      }
+
+      void setExpFault(int zone, bool fault)
+      {
+        vista.setExpFault(zone, fault);
+      }
+
+#if !defined(ARDUINO_MQTT)
+      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0, uint32_t serrial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
+      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0, uint32_t serial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
+#endif
+
+     bool forceRefreshGlobal, forceRefreshZones;
+
 
     private:
       struct zoneType
@@ -312,8 +395,9 @@ class vistaECPHome : public time::RealTimeClock
       {
         publishTextState(SLINE2, partition, &msg);
       }
-      void publishBeeps(std::string beeps, uint8_t partition)
+      void publishBeeps(uint8_t beep, uint8_t partition)
       {
+        std::string beeps=std::to_string(beep);
         publishTextState(SBEEP, partition, &beeps);
       }
       void publishZoneExtendedStatus(std::string msg)
@@ -346,27 +430,45 @@ class vistaECPHome : public time::RealTimeClock
       }
 
       int TTL = 30000;
-      uint8_t debug = 0;
-      char keypadAddr1 = 0;
-      int rxPin = 0;
-      int txPin = 0;
-      int monitorPin = 0;
-      int maxZones = 0;
-      int maxPartitions = 0;
-      bool invertRx;
-      bool invertTx;
-      bool invertMon;
-      uint8_t inputRx = 0;
-      uint8_t inputMon = 0;
-      uint8_t auiAddr = 0;
-      uint8_t auiAddrMask=0;
+      uint8_t _debug = 0;
+      char _keypadAddr1 = 0;
+      int _rxPin = 0;
+      int _txPin = 0;
+      int _monitorPin = 0;
+      int _maxZones = 0;
+      int _maxPartitions = 0;
+      bool _invertRx;
+      bool _invertTx;
+      bool _invertMon;
+      uint8_t _inputRx = 0;
+      uint8_t _inputMon = 0;
+      uint8_t _auiAddr = 0;
+      uint8_t _auiAddrMask=0;
       // bool activeAuiAddr=false;
       bool sendAuiTime();
       // bool sendAuiTime(int year, int month, int day, int hour, int minute,int seconds,int dow);
-      char auiSeq = 8;
+      char _auiSeq = 8;
       void processAuiQueue();
       // int8_t dateReqStatus=0;
+      const char *_accessCode;
+      const char *_rfSerialLookup;
+      bool _quickArm;
 
+      bool _lrrSupervisor;
+      char *_partitionKeypads;
+      int _defaultPartition = DEFAULTPARTITION;
+      uint8_t *_partitions;
+      std::string _topicPrefix, _topic;
+
+      std::string _previousZoneStatusMsg;
+
+      uint8_t _partitionTargets;
+      unsigned long _lowBatteryTime;
+
+      bool  _forceRefresh;
+
+      sysState _currentSystemState;
+   
       struct auiCmdType
       {
         reqStates state = rsidle;
@@ -377,17 +479,7 @@ class vistaECPHome : public time::RealTimeClock
         bool pending = false;
       };
 
-      const char *accessCode;
-      const char *rfSerialLookup;
-      bool quickArm;
 
-      bool lrrSupervisor, vh;
-      char *partitionKeypads;
-      int defaultPartition = DEFAULTPARTITION;
-      char expanderAddr[9] = {};
-
-      uint8_t *partitions;
-      std::string topic_prefix, topic;
 
 #if defined(AUTOPOPULATE)
       // struct zoneNameType
@@ -433,7 +525,7 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t panic3 : 1;
       } otherSup;
 
-      unsigned long lowBatteryTime;
+
 
       struct alarmStatusType
       {
@@ -442,6 +534,11 @@ class vistaECPHome : public time::RealTimeClock
         uint16_t zone;
         char prompt[17];
       };
+
+
+      alarmStatusType * fireStatus;
+      alarmStatusType * panicStatus;
+      alarmStatusType * alarmStatus;
 
       // struct lrrType
       // {
@@ -509,47 +606,15 @@ class vistaECPHome : public time::RealTimeClock
       void getRFSerial(zoneType *zt);
      // void enableModuleAddr(zoneType n);
 
-    public:
-      partitionStateType *partitionStates;
+       partitionStateType *partitionStates;
 
-      void disconnectVista()
-      {
-        vista.stop();
-      }
-      bool connected()
-      {
-        vista.keybusConnected = vista.connected;
-        return vista.connected;
-      }
-
-      void setExpFault(int zone, bool fault)
-      {
-        vista.setExpFault(zone, fault);
-      }
-
-#if !defined(ARDUINO_MQTT)
-      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0, uint32_t serrial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
-      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0, uint32_t serial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
-#endif
-
-    private:
-      std::string previousMsg,
-          previousZoneStatusMsg;
-
-      alarmStatusType fireStatus,
-          panicStatus,
-          alarmStatus;
-      uint8_t partitionTargets;
-
-      struct serialType
-      {
-        uint16_t zone;
-        int mask;
-      };
-      struct cmdQueueItem vistaCmd;
+ 
+      struct cmdQueueItem * vistaCmd;
 #ifdef ESP32
       TaskHandle_t xHandle;
       static void cmdQueueTask(void *args);
+     // static void setupTask(void *args);
+      
 #endif
       void createZone(uint16_t z, uint8_t p = 0);
       int getZoneNumber(char *zid);
@@ -565,10 +630,7 @@ class vistaECPHome : public time::RealTimeClock
 
 
       zoneType *getZone(uint16_t z);
-      std::string getZoneName(uint16_t zone, bool append = false);
-
       zoneType *getZoneFromSerial(uint32_t serialCode);
-
       void zoneStatusUpdate(zoneType *zt);
       void assignPartitionToZone(zoneType *zt);
 
@@ -578,43 +640,7 @@ class vistaECPHome : public time::RealTimeClock
       static void on_json_message_callback(const std::string &topic, JsonObject payload);
 
 #endif
-    public:
-#if defined(ARDUINO_MQTT)
-      void begin()
-      {
-#else
-  void setup() override;
-#endif
 
-        void set_panel_time();
-        //  void set_panel_time_manual(int year, int month, int day, int hour, int minute, int second, int dow);
-        void alarm_disarm(std::string code, int32_t partition);
-
-        void alarm_arm_home(int32_t partition);
-
-        void alarm_arm_night(int32_t partition);
-
-        void alarm_arm_away(int32_t partition);
-
-        void alarm_trigger_fire(std::string code, int32_t partition);
-
-        void alarm_trigger_panic(std::string code, int32_t partition);
-
-        void set_zone_fault(int32_t zone, bool fault);
-
-        void set_keypad_address(int32_t addr)
-        {
-          // if (addr > 0 and addr < 30)
-          ///  vista.setKpAddr(addr); //disabled for now
-        }
-
-        void alarm_keypress(std::string keystring);
-
-        void alarm_keypress_partition(std::string keystring, int32_t partition);
-        void send_cmd_bytes(int32_t addr, std::string hexbytes);
-        void setDefaultKpAddr(uint8_t p);
-
-      private:
         bool isInt(std::string s, int base);
 
         long int toInt(std::string s, int base);
@@ -622,8 +648,8 @@ class vistaECPHome : public time::RealTimeClock
         bool areEqual(char *a1, char *a2, uint8_t len);
 
         int getZoneFromPrompt(char *p1);
-        std::string getNameFromPrompt(char *p1, char *p2);
-
+       // void getNameFromPrompt(char *p1, char *p2,std::string & out);
+        void getZoneName(uint16_t zone, std::string & out,bool append=false);
         // bool promptContains(char * p1, const char * msg, int & zone);
 
         void printPacket(const char *label, char cbuf[], int len);
@@ -632,26 +658,26 @@ class vistaECPHome : public time::RealTimeClock
 
         void updateDisplayLines(uint8_t partition);
 
-      public:
-        void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
-
-      private:
         int getZoneFromChannel(uint8_t deviceAddress, uint8_t channel);
 
         //   void translatePrompt(char * cbuf) ;
 
         void getPartitionsFromMask();
 
-      public:
-#if defined(ARDUINO_MQTT)
-        void loop();
-#else
-  void update() override;
-#endif
 
-      private:
         const __FlashStringHelper *statusText(int statusCode);
+
+    #if defined (USE_ESP_IDF)
+static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+ #endif
+
+
+
       };
+
+      
 
       extern vistaECPHome *alarmPanelPtr;
 #if !defined(ARDUINO_MQTT)

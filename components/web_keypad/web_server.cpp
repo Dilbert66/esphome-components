@@ -3,10 +3,13 @@
 #include "esphome/components/network/util.h"
 #include "esphome/core/application.h"
 #include "esphome/core/entity_base.h"
+#include "esphome/core/controller_registry.h"
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
-#include "ArduinoJson.h"
-#include <map>
+#include "esphome/core/entity_base.h"
+#include "esphome/core/helpers.h"
+
+
 
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
@@ -30,17 +33,28 @@
 #include "esphome/components/climate/climate.h"
 #endif
 
+#ifdef USE_WEBKEYPAD_OTA
+#include "esphome/components/ota/ota_backend.h"
+#endif
+
 #ifdef USE_ARDUINO
-#include <StreamString.h>
-#if not defined(ESP8266)
+#ifdef USE_ESP8266
+#include <Updater.h>
+#elif defined(USE_ESP32) || defined(USE_LIBRETINY)
 #include <Update.h>
 #endif
-#endif
+#endif  // USE_ARDUINO
+
+
+
 
 namespace esphome
 {
     namespace web_keypad
     {
+
+
+        
 
         static const char *const TAG = "web_server";
         void *webServerPtr;
@@ -52,7 +66,8 @@ namespace esphome
         static const char *const HEADER_CORS_ALLOW_PNA = "Access-Control-Allow-Private-Network";
 #endif
 
-        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl, JsonObject doc)
+
+        void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
             int ct = 0;
             char *name;
@@ -172,6 +187,7 @@ namespace esphome
 
         void WebServer::ws_reply(mg_connection *c, const char *data, bool ok)
         {
+            std::string newdata=std::string(data);
             if (c->data[0] != 'W')
             {
                 if (ok)
@@ -182,7 +198,8 @@ namespace esphome
                     }
                     else
                     {
-                        if (credentials_.crypt)
+                #ifdef USE_WEBKEYPAD_ENCRYPTION
+                        if (get_credentials()->crypt)
                         {
                             if (c->data[1])
                             {
@@ -190,10 +207,11 @@ namespace esphome
                                 return;
                             }
                             else
-                                data = encrypt(data).c_str();
+                                encrypt(newdata);
                         }
+                #endif
                         //  ESP_LOGD(TAG,"sending %s",data);
-                        mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", data);
+                        mg_http_reply(c, 200, PSTR("Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"), "%s", newdata.c_str());
                     }
                 }
                 else
@@ -207,9 +225,17 @@ namespace esphome
 #ifdef USE_ESP32
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
+            credentials_ = new Credentials;
             webServerPtr = this;
+            mgr = new struct mg_mgr();
           //  this->pref_ = global_preferences->make_preference<KeypadConfig>(fnv1_hash(App.get_compilation_time()));
 
+        }
+
+
+        WebServer::~WebServer() {
+            delete credentials_;
+            delete mgr;
         }
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -235,10 +261,10 @@ namespace esphome
         const char * WebServer::get_keypad_config()
         {
            // return (char*) &keypadconfig_.config ;
-           return json_keypad_config_.c_str();
+           return json_keypad_config_;
         }
 
-        const std::string WebServer::get_config_json(unsigned long cid)
+        void WebServer::get_config_json(unsigned long cid,std::string & out)
         {
 
             uint8_t key[16];
@@ -248,7 +274,7 @@ namespace esphome
             cd.token = token;
             cd.lastseq = 0;
             tokens_[cid] = cd;
-            return json::build_json([this, cid, token](JsonObject root)
+            out = json::build_json([this, cid, token](JsonObject root)
                                     {
                                         root["title"] = App.get_friendly_name().empty() ? App.get_name() : App.get_friendly_name();
                                         root["comment"] = App.get_comment();
@@ -262,9 +288,9 @@ namespace esphome
                                         root["token"] = token; });
         }
 
-        const std::string WebServer::escape_json(const char *input)
+        void WebServer::escape_json(const char *input,std::string & output)
         {
-            std::string output;
+
 
             for (int i = 0; i < strlen(input); i++)
             {
@@ -304,14 +330,17 @@ namespace esphome
                 }
             }
 
-            return output;
+           // return output;
         }
 
         void WebServer::setup()
         {
+
             // ESP_LOGCONFIG(TAG, PSTR("Setting up web server..."));
-            this->setup_controller(this->include_internal_);
-            mg_mgr_init(&mgr);
+           // this->setup_controller(this->include_internal_);
+            ControllerRegistry::register_controller(this);
+            mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
+            mg_mgr_init(mgr);
 #ifdef USE_LOGGER
             if (logger::global_logger != nullptr && this->expose_log_)
             {
@@ -319,7 +348,8 @@ namespace esphome
                     [this](int level, const char *tag, const char *message, size_t message_len)
                     {
                         (void) message_len;
-                        std::string msg = escape_json(message);
+                        std::string msg;
+                        escape_json(message,msg);
                         this->push(LOG, msg.c_str());
                     });
             }
@@ -356,20 +386,20 @@ namespace esphome
             {
                 char addr[50];
                 sprintf(addr, "http://0.0.0.0:%d", port_);
-                ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address().c_str(), port_);
-                if ((c = mg_http_listen(&mgr, addr, ev_handler, this)) == NULL)
+                ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address(), port_);
+                if ((c = mg_http_listen(mgr, addr, ev_handler, this)) == NULL)
                 {
                     printf("Cannot listen on address..");
                     return;
                 }
                 firstrun_ = false;
             }
-            mg_mgr_poll(&mgr, 0);
+            mg_mgr_poll(mgr, 0);
         }
         void WebServer::dump_config()
         {
             ESP_LOGCONFIG(TAG, "Web Server:");
-            ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address().c_str(), port_);
+            ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address(), port_);
         }
         float WebServer::get_setup_priority() const { return setup_priority::WIFI - 1.0f; }
 
@@ -413,7 +443,7 @@ namespace esphome
             unsigned long timeout=millis();
             for (int s = 0; s < ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE; s)
             { // we send the file in blocks of 1024 then run poll to purge the buffer out in order to keep io buffer size small
-              mg_mgr_poll(&mgr,0);
+              mg_mgr_poll(mgr,0);
               delay(1);
               if (millis() - timeout > 5000) break;
               if(c->send.len > 5120) continue; 
@@ -430,7 +460,7 @@ namespace esphome
     if (((start_config) == DETAIL_ALL))                                         \
     {                                                                           \
         (root)["name"] = (obj)->get_name();                                     \
-        (root)["icon"] = (obj)->get_icon();                                     \
+        (root)["icon"] = (obj)->get_icon_ref();                                     \
         (root)["entity_category"] = (obj)->get_entity_category();               \
         if ((obj)->is_disabled_by_default())                                    \
             (root)["is_disabled_by_default"] = (obj)->is_disabled_by_default(); \
@@ -445,9 +475,11 @@ namespace esphome
     (root)["state"] = state;
 
 #ifdef USE_SENSOR
-        void WebServer::on_sensor_update(sensor::Sensor *obj, float state)
+        void WebServer::on_sensor_update(sensor::Sensor *obj)
         {
-            this->push(STATE, this->sensor_json(obj, state, DETAIL_STATE).c_str());
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
+            this->push(STATE, this->sensor_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         void WebServer::handle_sensor_request(mg_connection *c, JsonObject doc)
@@ -480,8 +512,8 @@ namespace esphome
       state = "NA";
     } else {
       state = value_accuracy_to_string(value, obj->get_accuracy_decimals());
-      if (!obj->get_unit_of_measurement().empty())
-        state += " " + obj->get_unit_of_measurement();
+      if (!obj->get_unit_of_measurement_ref().empty())
+        state += " " + obj->get_unit_of_measurement_ref();
     }
     //set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config); });
 
@@ -493,17 +525,19 @@ namespace esphome
           root["sorting_group"] = this->sorting_groups_[this->sorting_entitys_[obj].group_id].name;
         }
       }
-      if (!obj->get_unit_of_measurement().empty())
-        root["uom"] = obj->get_unit_of_measurement();
+      if (!obj->get_unit_of_measurement_ref().empty())
+        root["uom"] = obj->get_unit_of_measurement_ref();
     } });
         }
 #endif
 
 #ifdef USE_TEXT_SENSOR
-        void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj, const std::string &state)
+        void WebServer::on_text_sensor_update(text_sensor::TextSensor *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->text_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
-            std::string data = this->text_sensor_json(obj, state, DETAIL_STATE);
+            std::string data = this->text_sensor_json(obj, obj->state, DETAIL_STATE);
             this->push(STATE, data.c_str());
         }
 
@@ -554,10 +588,12 @@ namespace esphome
 #endif
 
 #ifdef USE_SWITCH
-        void WebServer::on_switch_update(switch_::Switch *obj, bool state)
+        void WebServer::on_switch_update(switch_::Switch *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->switch_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->switch_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->switch_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         std::string WebServer::switch_json(switch_::Switch *obj, bool value, JsonDetail start_config)
@@ -695,9 +731,10 @@ namespace esphome
 #ifdef USE_BINARY_SENSOR
         void WebServer::on_binary_sensor_update(binary_sensor::BinarySensor *obj)
         {
-            bool state=obj->state;
+          if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->binary_sensor_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->binary_sensor_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->binary_sensor_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config)
@@ -747,6 +784,8 @@ namespace esphome
 #ifdef USE_FAN
         void WebServer::on_fan_update(fan::Fan *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->p.send(this->fan_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->fan_json(obj, DETAIL_STATE).c_str());
         }
@@ -875,6 +914,8 @@ namespace esphome
 #ifdef USE_LIGHT
         void WebServer::on_light_update(light::LightState *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->light_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->light_json(obj, DETAIL_STATE).c_str());
         }
@@ -1088,6 +1129,8 @@ namespace esphome
 #ifdef USE_COVER
         void WebServer::on_cover_update(cover::Cover *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->cover_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->cover_json(obj, DETAIL_STATE).c_str());
         }
@@ -1214,10 +1257,12 @@ namespace esphome
 #endif
 
 #ifdef USE_NUMBER
-        void WebServer::on_number_update(number::Number *obj, float state)
+        void WebServer::on_number_update(number::Number *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->number_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->number_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->number_json(obj, obj->state, DETAIL_STATE).c_str());
         }
         void WebServer::handle_number_request(mg_connection *c, JsonObject doc)
         {
@@ -1264,15 +1309,14 @@ namespace esphome
                                 { call.perform(); });
                 ws_reply(c, "", true);
                 return;
-            }
-            ws_reply(c, "", false);
+            }            ws_reply(c, "", false);
         }
 
         std::string WebServer::number_json(number::Number *obj, float value, JsonDetail start_config)
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-    // set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "                                                                                                         " + obj->get_object_id(), start_config);
     // if (start_config == DETAIL_ALL) {
     //   root["min_value"] = obj->traits.get_min_value();
     //   root["max_value"] = obj->traits.get_max_value();
@@ -1285,8 +1329,8 @@ namespace esphome
     // } else {
     //   root["value"] = value;
     //   std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
-    //   if (!obj->traits.get_unit_of_measurement().empty())
-    //     state += " " + obj->traits.get_unit_of_measurement();
+    //   if (!obj->traits.get_unit_of_measurement_ref().empty())
+    //     state += " " + obj->traits.get_unit_of_measurement_ref();
     //   root["state"] = state;
     // } });
        set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
@@ -1298,8 +1342,8 @@ namespace esphome
       root["step"] =
           value_accuracy_to_string(obj->traits.get_step(), step_to_accuracy_decimals(obj->traits.get_step()));
       root["mode"] = (int) obj->traits.get_mode();
-      if (!obj->traits.get_unit_of_measurement().empty())
-        root["uom"] = obj->traits.get_unit_of_measurement();
+      if (!obj->traits.get_unit_of_measurement_ref().empty())
+        root["uom"] = obj->traits.get_unit_of_measurement_ref();
       if (this->sorting_entitys_.find(obj) != this->sorting_entitys_.end()) {
         root["sorting_weight"] = this->sorting_entitys_[obj].weight;
         if (this->sorting_groups_.find(this->sorting_entitys_[obj].group_id) != this->sorting_groups_.end()) {
@@ -1313,8 +1357,8 @@ namespace esphome
     } else {
       root["value"] = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
       std::string state = value_accuracy_to_string(value, step_to_accuracy_decimals(obj->traits.get_step()));
-      if (!obj->traits.get_unit_of_measurement().empty())
-        state += " " + obj->traits.get_unit_of_measurement();
+      if (!obj->traits.get_unit_of_measurement_ref().empty())
+        state += " " + obj->traits.get_unit_of_measurement_ref();
       root["state"] = state;
     } });
         }
@@ -1323,6 +1367,8 @@ namespace esphome
 #ifdef USE_DATETIME_DATE
         void WebServer::on_date_update(datetime::DateEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->date_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->date_json(obj, DETAIL_STATE).c_str());
         }
@@ -1429,6 +1475,8 @@ namespace esphome
 #ifdef USE_DATETIME_TIME
         void WebServer::on_time_update(datetime::TimeEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->time_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->time_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1537,6 +1585,8 @@ namespace esphome
 #ifdef USE_DATETIME_DATETIME
         void WebServer::on_datetime_update(datetime::DateTimeEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->datetime_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->datetime_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1723,6 +1773,7 @@ namespace esphome
 #ifdef USE_UPDATE
         void WebServer::on_update(update::UpdateEntity *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
             this->push(STATE, this->update_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->update_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1822,6 +1873,8 @@ namespace esphome
 #ifdef USE_VALVE
         void WebServer::on_valve_update(valve::Valve *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             this->push(STATE, this->valve_json(obj, DETAIL_STATE).c_str());
             // this->events_.send(this->valve_json(obj, DETAIL_STATE).c_str(), "state");
         }
@@ -1909,10 +1962,12 @@ namespace esphome
 #endif
 
 #ifdef USE_TEXT
-        void WebServer::on_text_update(text::Text *obj, const std::string &state)
+        void WebServer::on_text_update(text::Text *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->text_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->text_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->text_json(obj, obj->state, DETAIL_STATE).c_str());
         }
 
         void WebServer::handle_text_request(mg_connection *c, JsonObject doc)
@@ -2016,8 +2071,8 @@ namespace esphome
             {
                 // cid = toInt(doc["partition"],10);
                 unsigned long ul = (unsigned long)doc["cid"];
-                for (struct mg_connection *cl = mgr.conns; cl != NULL; cl = cl->next)
-                {
+              for (mg_connection * cl=mgr->conns ;cl != NULL; cl = cl->next)
+                 {
                     if (cl->id == ul)
                     {
                         cl->data[1] = 1;
@@ -2027,9 +2082,11 @@ namespace esphome
                     }
                 }
                 ws_reply(c, "", true);
+                c->is_draining = 1;
                 return;
             }
             ws_reply(c, "", false);
+
         }
 
         bool WebServer::callKeyService(const char *buf, int partition)
@@ -2093,10 +2150,12 @@ namespace esphome
         }
 
 #ifdef USE_SELECT
-        void WebServer::on_select_update(select::Select *obj, const std::string &state, size_t index)
+        void WebServer::on_select_update(select::Select *obj)
         {
+            f (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->select_json(obj, state, DETAIL_STATE).c_str(), "state");
-            this->push(STATE, this->select_json(obj, state, DETAIL_STATE).c_str());
+            this->push(STATE, this->select_json(obj, obj->state, DETAIL_STATE).c_str());
         }
         void WebServer::handle_select_request(mg_connection *c, JsonObject doc)
         {
@@ -2183,6 +2242,8 @@ namespace esphome
 #ifdef USE_CLIMATE
         void WebServer::on_climate_update(climate::Climate *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->climate_json(obj, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->climate_json(obj, DETAIL_STATE).c_str());
         }
@@ -2451,6 +2512,8 @@ namespace esphome
 #ifdef USE_LOCK
         void WebServer::on_lock_update(lock::Lock *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->lock_json(obj, obj->state, DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->lock_json(obj, obj->state, DETAIL_STATE).c_str());
         }
@@ -2528,6 +2591,8 @@ namespace esphome
 #ifdef USE_ALARM_CONTROL_PANEL
         void WebServer::on_alarm_control_panel_update(alarm_control_panel::AlarmControlPanel *obj)
         {
+            if (!this->include_internal_ && obj->is_internal())
+                 return;
             // this->events_.send(this->alarm_control_panel_json(obj, obj->get_state(), DETAIL_STATE).c_str(), "state");
             this->push(STATE, this->alarm_control_panel_json(obj, obj->get_state(), DETAIL_STATE).c_str());
         }
@@ -2606,19 +2671,18 @@ namespace esphome
             }
 
 
-            std::string newdata;
+            std::string newdata=std::string(data);
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+            if (get_credentials()->crypt && strlen(data) > 0)
+                encrypt(newdata);
+#endif
 
-            if (credentials_.crypt && strlen(data) > 0)
-                newdata = encrypt(data);
-            else
-                newdata = std::string(data);
-
-            for (c = mgr.conns; c != NULL; c = c->next)
+            for (c = mgr->conns; c != NULL; c = c->next)
             {
-
-                if (credentials_.crypt && !c->data[1])
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+                if (get_credentials()->crypt && !c->data[1])
                     continue; // not authenticated with encrypted response
-
+#endif
                 if (c->data[0] == 'E')
                 {
                     // ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
@@ -2637,7 +2701,7 @@ namespace esphome
 
                 if (mt == PING)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type.c_str(), "data", id);
-                else if ((mt == LOG || mt == OTA) && !credentials_.crypt)
+                else if ((mt == LOG || mt == OTA) && !get_credentials()->crypt)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type.c_str(), "data", newdata.c_str());
                 else
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", type.c_str(), "data", newdata.c_str());
@@ -2765,10 +2829,11 @@ namespace esphome
             /* None of the entries in the passwords file matched - return failure */
             return 0;
         }
-
-        const std::string WebServer::encrypt(const char *message)
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+        bool WebServer::encrypt(std::string &data)
         {
                     // const char *message="test message";
+            const char * message=data.c_str();
             int i = strlen(message);
 
             if (!i)
@@ -2776,39 +2841,41 @@ namespace esphome
    
             int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
             int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
-            uint8_t encrypted[length+1];
+            //uint8_t encrypted[length+1];
+           // ESP_LOGE(TAG,"Encrypted len =%d",length+1);
+            uint8_t * encrypted = new uint8_t[length+AES_BLOCKSIZE];
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
 
             std::string eiv = base64_encode(iv, AES_IV_SIZE );
 
-            AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
+            AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
             aes.process((uint8_t *)message, encrypted, i);
-       // std::string akey=base64_encode(credentials_.token,SHA256_SIZE);
+       // std::string akey=base64_encode(credentials_->token,SHA256_SIZE);
             std::string em = base64_encode(encrypted, length);
             
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
 
             hmac.doUpdate(eiv.c_str(), eiv.length());
  
             hmac.doUpdate(em.c_str(), em.length());
   
             uint8_t authCode[SHA256HMAC_SIZE+1];
-            hmac.doFinal(authCode);
+            hmac.doFinal((char*)authCode);
 
             // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
 
-            std::string enc = "{\"iv\":\"" + eiv + "\",\"data\":\"";
-            enc.append(em);
-            enc.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
+            data = "{\"iv\":\"" + eiv + "\",\"data\":\"";
+            data.append(em);
+            data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
            // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
           // ESP_LOGD(TAG,"aeskey=%s,message size=%d,encoded=%s",akey.c_str(),enc.length(),enc.c_str());
            //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
-
-            return enc;
+            delete[] encrypted;
+            return 1;
         }
 
-        const std::string WebServer::decrypt(JsonObject doc, uint8_t *err)
+        bool WebServer::decrypt(JsonObject doc, uint8_t *err,std::string & out)
         {
             const char *iv = doc["iv"];
             const char *data = doc["data"];
@@ -2839,28 +2906,30 @@ namespace esphome
                         if (seq > 0 && seq <= *lastseq)
                         {
                             *err = 1;
-                            return "";
+                            return 0;
                         }
                     }
                     else
                     {
                         *err = 1;
-                        return "";
+                        return 0;
                     }
                 }
                 else
                 {
                     *err = 1;
-                    return "";
+                    return 0;
                 }
             }
 
-            uint8_t *key = credentials_.token;
-            uint8_t *hmackey = credentials_.hmackey;
-            uint8_t data_decoded[strlen(data)];
-            uint8_t iv_decoded[strlen(iv)];
+            uint8_t *key = get_credentials()->token;
+            uint8_t *hmackey = get_credentials()->hmackey;
+           // uint8_t data_decoded[strlen(data)];
+            uint8_t * data_decoded= new uint8_t[strlen(data)+1];
+           // uint8_t iv_decoded[strlen(iv)];
+            uint8_t * iv_decoded = new uint8_t[strlen(iv)+1];
 
-            SHA256HMAC hmac(credentials_.hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {
@@ -2873,14 +2942,15 @@ namespace esphome
 
             hmac.doUpdate(data, strlen(data));
             uint8_t authCode[SHA256HMAC_SIZE];
-            hmac.doFinal(authCode);
-
-            std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
+            hmac.doFinal((char*)authCode);
+             std::string ehm = base64_encode(authCode, SHA256HMAC_SIZE);
             if (ehm != hash)
             {
                 ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
                 *err = 1;
-                return "";
+                delete[] data_decoded;
+                delete[] iv_decoded;
+                return 0;
             }
             if (seq > 0 && lastseq != NULL)
                 *lastseq = seq;
@@ -2889,12 +2959,16 @@ namespace esphome
             base64_decode(std::string(iv), iv_decoded, strlen(iv));
             AES aes(key, iv_decoded, AES::AES_MODE_256, AES::CIPHER_DECRYPT);
             aes.process((uint8_t *)data_decoded, data_decoded, encrypted_length);
-            std::string out = std::string((char *)data_decoded);
+            out = std::string((char *)data_decoded);
              //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
-            return out;
+            delete[] data_decoded;
+            delete[] iv_decoded;
+            return 1;
         }
+#endif
 
+#ifdef USE_WEBKEYPAD_OTA
         static void handle_uploads(struct mg_connection *c, int ev, void *ev_data)
         {
             struct upload_state *us = (struct upload_state *)c->data;
@@ -2929,6 +3003,7 @@ namespace esphome
                     c->pfn = NULL;                           // Silence HTTP protocol handler, we'll use MG_EV_READ
                 }
             }
+
             // Catch uploaded file data for both MG_EV_READ and MG_EV_HTTP_HDRS
             if (us->expected > 0 && c->recv.len > 0)
             {
@@ -2938,25 +3013,27 @@ namespace esphome
                     // Uploaded everything. Send response back
                     MG_INFO(("OTA uploaded %lu bytes from file %s", us->received + c->recv.len, us->fn.c_str()));
                     mg_http_reply(c, 200, NULL, "%lu ok\n", us->received);
-                    srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, true);
+                    srv->handleUpload(us->expected,( PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, true);
                     memset(us, 0, sizeof(*us)); // Cleanup upload state
                     c->is_draining = 1;         // Close connection when response gets sent
                 }
                 else
                 {
-                    srv->handleUpload(us->expected, us->fn, us->received, c->recv.buf, c->recv.len, false);
+                    srv->handleUpload(us->expected,(PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, false);
                     us->received += c->recv.len;
                 }
 
                 c->recv.len = 0; // Delete received data
             }
         }
+#endif
 
         void WebServer::ev_handler(struct mg_connection *c, int ev, void *ev_data)
         {
             WebServer *srv = static_cast<WebServer *>(webServerPtr);
+            #ifdef USE_WEBKEYPAD_OTA
             handle_uploads(c, ev, ev_data);
-
+            #endif
             bool final = false;
             if (ev == MG_EV_WRITE)
             {
@@ -3014,16 +3091,17 @@ namespace esphome
                 std::string buf = std::string(wm->data.buf, wm->data.len);
                 deserializeJson(doc, buf.c_str());
                 uint8_t err = 0;
-
-                if (doc["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+                if (obj["iv"].is<JsonVariant>() && srv->get_credentials()->crypt)
                 {
 
-                    buf = srv->decrypt(obj, &err);
+                    srv->decrypt(obj, &err,buf);
                     if (buf == "" || err)
                         err = 1;
                     if (!err)
                         deserializeJson(doc, buf.c_str());
                 }
+#endif
                 if (!err)
                 {
                     srv->handleRequest(c, obj);
@@ -3056,15 +3134,19 @@ namespace esphome
                     c->send.c = c;
                     std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
-                    enc = srv->get_config_json(c->id);
+                    srv->get_config_json(c->id,enc);
+                    #ifdef USE_WEBKEYPAD_ENCRYPTION
                     if (crypt)
-                        enc = srv->encrypt(enc.c_str());
+                        srv->encrypt(enc);
+                    #endif
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%ul,\"%s\":%s}"), "type", "app_config", "data", enc.c_str());
                     if (strlen(srv->get_keypad_config()) > 0)
                     {
                         enc = srv->get_keypad_config();
+                        #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
+                        #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "key_config", "data", enc.c_str());
                     }
                     for (auto &group : srv->sorting_groups_)
@@ -3073,8 +3155,10 @@ namespace esphome
                                                {
                    root["name"] = group.second.name;
                    root["sorting_weight"] = group.second.weight; });
+                   #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
+                    #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, PSTR("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
                     }
 
@@ -3082,16 +3166,19 @@ namespace esphome
                 }
                 else if (mg_match(hm->uri, mg_str("/events"), NULL) && !c->is_websocket)
                 {
+  
                     mg_str *hdr = mg_http_get_header(hm, "Accept");
                     // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
                     c->data[0] = 'E';
                     mg_printf(c, PSTR("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                     c->send.c = c;
-                    std::string enc;
                     bool crypt = srv->get_credentials()->crypt;
-                    enc = srv->get_config_json(c->id);
+                    std::string enc;
+                    srv->get_config_json(c->id,enc);
+                    #ifdef USE_WEBKEYPAD_ENCRYPTION
                     if (crypt)
-                        enc = srv->encrypt(enc.c_str());
+                        srv->encrypt(enc);
+                    #endif
                     mg_printf(c, PSTR("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
 
                     for (auto &group : srv->sorting_groups_)
@@ -3100,16 +3187,20 @@ namespace esphome
                                                {
                      root["name"] = group.second.name;
                      root["sorting_weight"] = group.second.weight; });
+                     #ifdef USE_WEBKEYPAD_ENCRYPTION
                         if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                            srv->encrypt(enc);
+                     #endif
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
 
                     if (strlen(srv->get_keypad_config()) > 0)
                     {
                         enc = srv->get_keypad_config();
-                        if (crypt)
-                            enc = srv->encrypt(enc.c_str());
+                        #ifdef USE_WEBKEYPAD_ENCRYPTION
+                         if (crypt)
+                            srv->encrypt(enc);
+                        #endif
                         mg_printf(c, PSTR("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
                     srv->entities_iterator_.begin(srv->include_internal_);
@@ -3122,6 +3213,7 @@ namespace esphome
                     {
                         c->send.c = c;
                         srv->handleWebRequest(c, hm);
+
                     }
                 }
             }
@@ -3181,16 +3273,17 @@ namespace esphome
 
                 std::string buf = std::string(hm->body.buf, hm->body.len);
                 DeserializationError err = deserializeJson(doc, buf.c_str());
-
-                if (!err && doc["iv"].is<JsonVariant>() && credentials_.password != "")
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+                if (!err && obj["iv"].is<JsonVariant>() && get_credentials()->password != "")
                 {
                     uint8_t e = 0;
-                    buf = decrypt(obj, &e);
+                    decrypt(obj, &e,buf);
                     if (buf != "")
                         deserializeJson(doc, buf.c_str());
                     else
                         mg_http_reply(c, 403, "", "");
                 }
+#endif
             }
 
             if (!doc["domain"].is<JsonVariant>())
@@ -3405,107 +3498,134 @@ namespace esphome
 #endif
         }
 
-        void WebServer::report_ota_error()
-        {
-#ifdef USE_ARDUINO
-            StreamString ss;
-            Update.printError(ss);
-            char buf[100];
-            ESP_LOGW(TAG, "OTA Update failed! Error: %s", ss.c_str());
-            snprintf(buf, 100, "OTA Update failed! Error: %s", ss.c_str());
-            std::string ebuf = escape_json(buf);
-            this->push(OTA, ebuf.c_str());
-            this->set_timeout(2000, []()
-                              { App.safe_reboot(); });
-#endif
-        }
-#if defined(ESP32)
-        bool WebServer::handleUpload(size_t bodylen, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
-        {
-            char buf[100];
-#ifdef USE_ARDUINO
-            bool success;
-            if (index == 0)
-            {
-                snprintf(buf, 100, "OTA Update Start: %s", filename.c_str());
+#ifdef USE_WEBKEYPAD_OTA
+
+  void WebServer::report_ota_progress_() {
+  const uint32_t now = millis();
+  if (now - this->last_ota_progress_ > 1000) {
+    float percentage = 0.0f;
+      char buf[100];
+     
+//    if (request->contentLength() != 0) {
+//      // Note: Using contentLength() for progress calculation is technically wrong as it includes
+//      // multipart headers/boundaries, but it's only off by a small amount and we don't have
+//      // access to the actual firmware size until the upload is complete. This is intentional
+//      // as it still gives the user a reasonable progress indication.
+//      percentage = (this->ota_read_length_ * 100.0f) / request->contentLength();
+//      ESP_LOGD(TAG, "OTA in progress: %0.1f%%", percentage);
+//    } else {
+      snprintf(buf,100,"OTA in progress: %" PRIu32 " bytes read", this->ota_read_length_);
+      ESP_LOGD(TAG,buf);
+      this->push(OTA,buf);
+//    }
+
+    this->last_ota_progress_ = now;
+  }
+}
+
+void WebServer::schedule_ota_reboot_() {
+  ESP_LOGI(TAG, "OTA update successful!");
+  this->set_timeout(2000, []() {
+    ESP_LOGI(TAG, "Performing OTA reboot now");
+    App.safe_reboot();
+  });
+}
+
+void WebServer::ota_init_(const char *filename) {
+  ESP_LOGI(TAG, "OTA Update Start: %s", filename);
+  this->ota_read_length_ = 0;
+  this->ota_success_ = false;
+}
+
+
+
+bool WebServer::handleUpload(size_t bodylen, const PlatformString &filename, size_t index, uint8_t *data, size_t len, bool final) {
+                                      
+    ota::OTAResponseTypes error_code = ota::OTA_RESPONSE_OK;
+char buf[100];
+  if (index == 0 && !this->ota_backend_) {
+    // Initialize OTA on first call
+    this->ota_init_(filename.c_str());
+
+ snprintf(buf, 100, "OTA Update Started: %s", filename.c_str());
                 this->push(OTA, buf);
-                ESP_LOGI(TAG, "OTA Update Start: %s", filename.c_str());
 
-                this->ota_read_length_ = 0;
-
-                if (Update.isRunning())
-                {
-                    Update.abort();
-                    return false;
-                }
-#if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
-                if (alarm_panel::alarmPanelPtr != NULL)
-                {
-                    alarm_panel::alarmPanelPtr->stop();
-                }
+    // Platform-specific pre-initialization
+#ifdef USE_ARDUINO
+// #ifdef USE_ESP8266
+//     Update.runAsync(false);
+// #endif
+#if defined(USE_ESP32) || defined(USE_LIBRETINY)
+    if (Update.isRunning()) {
+      Update.abort();
+    }
 #endif
-                success = Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH);
+#endif  // USE_ARDUINO
 
-                if (!success)
-                {
-                    report_ota_error();
-                    return false;
-                }
-            }
-            else if (Update.hasError())
-            {
-                report_ota_error();
-                return false;
-            }
+    this->ota_backend_ = ota::make_ota_backend();
+    if (!this->ota_backend_) {
+      snprintf(buf,100, "Failed to create OTA backend");
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      return false;
+    }
 
-            success = Update.write(data, len) == len;
+    error_code = this->ota_backend_->begin(bodylen);
+    if (error_code != ota::OTA_RESPONSE_OK) {
+      snprintf(buf, 100,"OTA begin failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_.reset();
+      return false;
+    }
+  }
 
-            if (!success)
-            {
-                report_ota_error();
-                return false;
-            }
-            this->ota_read_length_ += len;
+  if (!this->ota_backend_) {
+    return false;
+  }
 
-            const uint32_t now = millis();
-            if (now - this->last_ota_progress_ > 1000)
-            {
-                if (bodylen != 0)
-                {
-                    float percentage = (this->ota_read_length_ * 100.0f) / bodylen;
-                    ESP_LOGD(TAG, "OTA in progress: %0.1f%%", percentage);
-                    snprintf(buf, 100, "OTA in progress: %0.1f%%", percentage);
-                    this->push(OTA, buf);
-                }
-                else
-                {
-                    ESP_LOGD(TAG, "OTA in progress: %u bytes read", this->ota_read_length_);
-                    snprintf(buf, 100, "OTA in progress: %u bytes read", this->ota_read_length_);
-                    this->push(OTA, buf);
-                }
+  // Process data
+  if (len > 0) {
+    error_code = this->ota_backend_->write(data, len);
+    if (error_code != ota::OTA_RESPONSE_OK) {
+      snprintf(buf,100, "OTA write failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_->abort();
+      this->ota_backend_.reset();
+      return false;
+    }
+    this->ota_read_length_ += len;
+    this->report_ota_progress_();
+  }
 
-                this->last_ota_progress_ = now;
-            }
+  // Finalize
+  if (final) {
+    ESP_LOGD(TAG, "OTA final chunk: index=%zu, len=%zu, total_read=%" PRIu32 ", contentLength=%zu", index, len,
+             this->ota_read_length_, bodylen);
 
-            if (final)
-            {
-                if (Update.end(true))
-                {
-                    ESP_LOGI(TAG, "OTA update successful!");
-                    this->push(OTA, "OTA Update successful. Press F5 to reload this page.");
-                    this->set_timeout(2000, []()
-                                      { App.safe_reboot(); });
-                    return true;
-                }
-                else
-                {
-                    report_ota_error();
-                    return false;
-                }
-            }
-#endif
-            return true;
-        }
-#endif
+    // For Arduino framework, the Update library tracks expected size from firmware header
+    // If we haven't received enough data, calling end() will fail
+    // This can happen if the upload is interrupted or the client disconnects
+    error_code = this->ota_backend_->end();
+    if (error_code == ota::OTA_RESPONSE_OK) {
+      this->ota_success_ = true;
+      snprintf(buf, 100,"OTA completed");
+      this->push(OTA, buf);
+      this->schedule_ota_reboot_();
+    } else {
+      snprintf(buf, 100,"OTA end failed: %d", error_code);
+      ESP_LOGE(TAG,buf);
+      this->push(OTA, buf);
+      this->ota_backend_.reset();
+      return false;
+    }
+    this->ota_backend_.reset();
+    
+  }
+   return true;
+ }
+#endif //web_keypad_ota
+
     } // namespace web_server
 } // namespace esphome

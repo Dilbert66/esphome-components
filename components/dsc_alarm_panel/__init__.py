@@ -41,8 +41,8 @@ CONF_SORTING_WEIGHT = "sorting_weight"
 CONF_WEB_KEYPAD_ID="web_keypad_id"
 CONF_WEB_KEYPAD="web_keypad"
 
-BINARY_SENSOR_TYPE_ID_REGEX = r"^(tr|bat|ac|rdy_\d+|arm_\d+|al_\d+|fa_\d+|chm_\d+|r\d+|z\d+)$"
-BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, bat, ac, rdy_<digits>, arm_<digits>, al_<digits>, fa_<digits>, chm_<digits>, r<digits>, z<digits>"
+BINARY_SENSOR_TYPE_ID_REGEX = r"^(tr|tr_\d+|bat|ac|rdy_\d+|arm_\d+|al_\d+|fa_\d+|chm_\d+|r\d+|z\d+)$"
+BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, tr_<digits>, bat, ac, rdy_<digits>, arm_<digits>, al_<digits>, fa_<digits>, chm_<digits>, r<digits>, z<digits>"
 TEXT_SENSOR_TYPE_ID_REGEX = r"^(ss|zs|tr_msg|evt|ps_\d+|msg_\d+|ln1_\d+|ln2_\d+|bp_\d+|za_\d+|user_\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, za_<digits>, user_<digits>"
 
@@ -111,30 +111,30 @@ def validate_id_code(value, is_binary_sensor=True):
 
 ALARM_SENSOR_SCHEMA = cv.Schema(
     {
-        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
-        cv.Optional(CONF_PARTITION,default=0): cv.int_,
         cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
+        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
+        cv.Optional(CONF_PARTITION,default=0): cv.int_
     }
 )
 
 async def to_code(config):
-    if CORE.using_arduino and CORE.is_esp32:
-        #we double usual stack size
-        stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-        if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-            stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-        cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
-        cg.add_global(cg.RawStatement(stack))
-        cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-        cg.add_global(cg.RawStatement("#endif"))
+    # if CORE.using_arduino and CORE.is_esp32:
+    #     #we double usual stack size
+    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
+    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
+    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
+    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))    
+    #     cg.add_global(cg.RawStatement(stack))
+    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
+    #     cg.add_global(cg.RawStatement("#endif"))
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
     old_dir = CORE.relative_build_path("src")
-#    if config[CONF_CLEAN] or os.path.exists(old_dir+'/dscAlarm.h'):
-#        real_clean_build()
+    # if config[CONF_CLEAN] or os.path.exists(old_dir / '/dscAlarm.h'):
+    #     real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
         cg.add_define("DISABLE_EXPANDER")
 
@@ -164,12 +164,12 @@ async def to_code(config):
        
     await cg.register_component(var, config)
 
-#def real_clean_build():
-#    import shutil
-#    build_dir = CORE.relative_build_path("")
-#    if os.path.isdir(build_dir):
-#        _LOGGER.info("Deleting %s", build_dir)
-#        shutil.rmtree(build_dir)
+# def real_clean_build():
+#     import shutil
+#     build_dir = CORE.relative_build_path("")
+#     if os.path.isdir(build_dir):
+#         _LOGGER.info("Deleting %s", build_dir)
+#         shutil.rmtree(build_dir)
 
 async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     """Set up custom properties for an alarm sensor"""

@@ -99,11 +99,12 @@ bool dscKeybusInterface::setTime(unsigned int year, byte month, byte day, byte h
 
 // Processes status commands: 0x05 (Partitions 1-4) and 0x1B (Partitions 5-8)
 void dscKeybusInterface::processPanelStatus() {
-
   // Trouble status  
-  if (panelData[3] <= 0x03) {  // Ignores trouble light status in intermittent states
-    if (bitRead(panelData[2],4)) trouble = true;
-    else trouble = false;
+ if ( panelData[3] <= 0x03 ) { //ignore statuses if backlight bit not on
+    if (bitRead(panelData[2],4)) 
+      trouble = true;
+    else 
+      trouble = false;
     if (trouble != previousTrouble) {
       previousTrouble = trouble;
       troubleChanged = true;
@@ -147,6 +148,7 @@ void dscKeybusInterface::processPanelStatus() {
     if (disabled[partitionIndex] != previousDisabled[partitionIndex]) {
       previousDisabled[partitionIndex] = disabled[partitionIndex];
       disabledChanged[partitionIndex] = true;
+     // readyChanged[partitionIndex] = true;
       if (!pauseStatus) statusChanged = true;
     }
 
@@ -166,8 +168,10 @@ void dscKeybusInterface::processPanelStatus() {
 
     // Fire status
     if (panelData[messageByte] < 0x12) {  // Ignores fire light status in intermittent states
-      if (bitRead(panelData[statusByte],6)) fire[partitionIndex] = true;
-      else fire[partitionIndex] = false;
+         if (bitRead(panelData[statusByte],6)) 
+         fire[partitionIndex] = true;
+      else 
+        fire[partitionIndex] = false;
       if (fire[partitionIndex] != previousFire[partitionIndex]) {
         previousFire[partitionIndex] = fire[partitionIndex];
         fireChanged[partitionIndex] = true;

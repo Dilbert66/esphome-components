@@ -9,61 +9,13 @@
 #include "esphome/components/switch/switch.h"
 #include <cstdlib>
 
-// #define USETASK
-// #define ASYNC_CORE 1
-//  #if defined(ESP32) && defined(USETASK)
-//  #include <esp_chip_info.h>
-//  #include <esp_task_wdt.h>
-//  #endif
 
-#ifdef USE_ARDUINO
-#include <StreamString.h>
-#else
-#define F(x) x
-#define printf_P(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define ASYNC_CORE 0
+ #if defined(USETASK)
+ #include <esp_chip_info.h>
+ #include <esp_task_wdt.h>
+ #endif
 
-class String : public std::string
-{
-public:
-  String() : std::string() {}
-  String(const char *p, size_t &s) : std::string(p, s) {}
-
-  int indexOf(char ch, unsigned int fromIndex) const
-  {
-    if (fromIndex >= this->length())
-      return -1;
-    const char *temp = strchr(this->c_str() + fromIndex, ch);
-    if (temp == NULL)
-      return -1;
-    return temp - this->c_str();
-  }
-
-  String substring(unsigned int left, unsigned int right) const
-  {
-    if (left > right)
-    {
-      unsigned int temp = right;
-      right = left;
-      left = temp;
-    }
-    unsigned int len = this->length();
-    String out;
-    if (left >= len)
-      return out;
-    if (right > len)
-      right = len;
-    out.copy(((char *)this->c_str()) + left, right - left);
-    return out;
-  }
-
-  long toInt(void) const
-  {
-    if (this->c_str())
-      return atol(this->c_str());
-    return 0;
-  }
-};
-#endif
 
 namespace esphome
 {
@@ -75,6 +27,12 @@ namespace esphome
     WebNotify::WebNotify()
     {
       global_notify = this;
+      mgr_ = new struct mg_mgr();
+    }
+
+    WebNotify::~WebNotify()
+    {
+      delete mgr_;
     }
 
     void WebNotify::publish(SendData &out)
@@ -162,7 +120,7 @@ namespace esphome
       else
         x.args = "";
 
-      ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
+    //  ESP_LOGD(TAG, " parse args: cmd=%s,to=%s,args=%s", x.cmd.c_str(), x.to.c_str(), x.args.c_str());
     }
 
     bool WebNotify::processMessage(const char *payload)
@@ -177,35 +135,36 @@ namespace esphome
                                   // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
                                   if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
                                      std::string to=root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
-                                     global_notify->publish(to,"First cmd to bot ignored after restart",1);
+                                     global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
                                      global_notify->lastMsgReceived_ = update_id;
                                   }
                                   update_id = update_id + 1;
                                   if (global_notify->lastMsgReceived_ != update_id)
                                   {
 
-                                    RemoteData x;
+                                    RemoteData * x = new RemoteData;
                                     if (global_notify->lastMsgReceived_ == 0)
-                                      x.is_first_cmd = true;
+                                      x->is_first_cmd = true;
                                     else
-                                      x.is_first_cmd = false;
+                                      x->is_first_cmd = false;
                                     global_notify->lastMsgReceived_ = update_id;
-                                    x.sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
-                                    x.text = root["result"][0]["callback_query"]["data"].as<std::string>();
-                                    x.chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
-                                    x.date = root["result"][0]["callback_query"]["message"]["date"].as<std::string>();
-                                    x.message_id = root["result"][0]["callback_query"]["message"]["message_id"].as<std::string>();
-                                    x.callback_id = root["result"][0]["callback_query"]["id"].as<std::string>();
-                                    x.is_callback = true;
-                                    x.cmd = "";
-                                    x.args = "";
-                                    if (!global_notify->isAllowed(x.chat_id))
+                                    x->sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
+                                    x->text = root["result"][0]["callback_query"]["data"].as<std::string>();
+                                    x->chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
+                                    x->date = root["result"][0]["callback_query"]["message"]["date"].as<std::string>();
+                                    x->message_id = root["result"][0]["callback_query"]["message"]["message_id"].as<std::string>();
+                                    x->callback_id = root["result"][0]["callback_query"]["id"].as<std::string>();
+                                    x->is_callback = true;
+                                    x->cmd = "";
+                                    x->args = "";
+                                    if (!global_notify->isAllowed(x->chat_id))
                                     {
-                                      ESP_LOGE(TAG,"Chat id %s not allowed to send to bot", x.chat_id.c_str());
+                                      ESP_LOGE(TAG,"Chat id %s not allowed to send to bot", x->chat_id.c_str());
                                       return true;
                                     }
-                                    global_notify->parseArgs(x);
-                                    global_notify->on_message_.call(x);
+                                    global_notify->parseArgs(*x);
+                                    global_notify->on_message_.call(*x);
+                                    delete x;
                                   }
                                   /*
                                       } else if (root["result"][0]["channel_post"]["id"]) {
@@ -233,38 +192,38 @@ namespace esphome
                                 {
                                   int update_id = root["result"][0]["update_id"];
                                   update_id = update_id + 1;
-                                  // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
-                 
+                                               
                                   if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
                                      std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
-                                     global_notify->publish(to,"First cmd to bot ignored after restart",1);
+                                   //  global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
                                   }
                                   
 
                                   if (global_notify->lastMsgReceived_ != update_id)
                                   {
 
-                                    RemoteData x;
+                                    RemoteData * x = new RemoteData;
                                     if (global_notify->lastMsgReceived_ == 0)
-                                      x.is_first_cmd = true;
+                                      x->is_first_cmd = true;
                                     else
-                                      x.is_first_cmd = false;
+                                      x->is_first_cmd = false;
                                     global_notify->lastMsgReceived_ = update_id;
-                                    x.sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
-                                    x.text = root["result"][0]["message"]["text"].as<std::string>();
-                                    x.chat_id = root["result"][0]["message"]["chat"]["id"].as<std::string>();
-                                    x.date = root["result"][0]["message"]["date"].as<std::string>();
-                                    x.message_id = root["result"][0]["message"]["message_id"].as<std::string>();
-                                    x.is_callback = false;
-                                    x.cmd = "";
-                                    x.args = "";
-                                    if (!global_notify->isAllowed(x.chat_id))
+                                    x->sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
+                                    x->text = root["result"][0]["message"]["text"].as<std::string>();
+                                    x->chat_id = root["result"][0]["message"]["chat"]["id"].as<std::string>();
+                                    x->date = root["result"][0]["message"]["date"].as<std::string>();
+                                    x->message_id = root["result"][0]["message"]["message_id"].as<std::string>();
+                                    x->is_callback = false;
+                                    x->cmd = "";
+                                    x->args = "";
+                                    if (!global_notify->isAllowed(x->chat_id))
                                     {
-                                      ESP_LOGE("Chat id %s not allowed to send to bot", x.chat_id.c_str());
+                                      ESP_LOGE("Chat id %s not allowed to send to bot", x->chat_id.c_str());
                                       return true;
                                     }
-                                    global_notify->parseArgs(x);
-                                    global_notify->on_message_.call(x);
+                                    global_notify->parseArgs(*x);
+                                    global_notify->on_message_.call(*x);
+                                    delete x;
                                   }
                                 }
                                 else if (root["result"]["message_id"])
@@ -338,7 +297,7 @@ namespace esphome
         ESP_LOGE(TAG, "Global telegram pointer is null");
         return;
       }
-      int *i = &((struct c_res_s *)c->fn_data)->i;
+     // int *i = &((struct c_res_s *)c->fn_data)->i;
       if (ev == MG_EV_OPEN)
       {
         c->send.c = c;
@@ -478,6 +437,7 @@ namespace esphome
           mg_printf(c,"Host: %.*s\r\n",host.len,host.buf);
           mg_printf(c,"Content-Type: application/json\r\n");
           mg_printf(c,"Content-Length: %d\r\n\r\n%s\r\n",outmsg.msg.length(),outmsg.msg.c_str());
+
           // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
         } else if ( global_notify->enableBot_) {
           global_notify->sending_=false;
@@ -496,7 +456,7 @@ namespace esphome
         struct mg_http_message *hm = (struct mg_http_message *)ev_data;
         // printf("\r\nresponse message from telegram: %.*s\r\n", (int) hm->message.len, hm->message.buf);
 
-        String payload = String(hm->body.buf, hm->body.len);
+        std::string payload = std::string(hm->body.buf, hm->body.len);
         //  printf("\r\nresponse body from telegram: %s\r\n", payload.c_str());
         if (!payload.length() || !global_notify->processMessage(payload.c_str()))
         {
@@ -506,13 +466,15 @@ namespace esphome
           int update_id_last_digit = 0;
           for (int a = 0; a < 3; a++)
           {
-            update_id_first_digit = payload.indexOf(':', update_id_first_digit + 1);
+            //update_id_first_digit = payload.indexOf(':', update_id_first_digit + 1);
+            update_id_first_digit = payload.find(':', update_id_first_digit + 1);
           }
           for (int a = 0; a < 2; a++)
           {
-            update_id_last_digit = payload.indexOf(',', update_id_last_digit + 1);
+            update_id_last_digit = payload.find(',', update_id_last_digit + 1);
           }
-          global_notify->lastMsgReceived_ = payload.substring(update_id_first_digit + 1, update_id_last_digit).toInt() + 1;
+         // global_notify->lastMsgReceived_ = payload.substring(update_id_first_digit + 1, update_id_last_digit).toInt() + 1;
+           global_notify->lastMsgReceived_ = std::stoi(payload.substr(update_id_first_digit + 1, update_id_last_digit)) + 1;
         }
         global_notify->sending_ = false;
         c->is_closing = 1; // Tell mongoose to close this connection
@@ -523,32 +485,35 @@ namespace esphome
         global_notify->connectError_ = true;
         global_notify->connectErrorMessage_= std::string((char *)ev_data);
         ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.", c->id, c->fd, (char *)ev_data, global_notify->delayTime_ / 1000);
+
       }
     }
 
-    //     #if defined(ESP32) && defined(USETASK)
+        #if  defined(USETASK)
 
-    //     void WebNotify::telegramTask(void *args)
-    //     {
+        void WebNotify::telegramTask(void *args)
+        {
+          mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
+          mg_mgr_init(global_notify->mgr_);
 
-    //       static unsigned long checkTime = millis();
-    //       for (;;)
-    //       {
-    //               mg_mgr_poll(&(global_notify->mgr_), 1);
+          static unsigned long checkTime = millis();
+          for (;;)
+          {
+                  mg_mgr_poll((global_notify->mgr_), 1);
 
-    //               vTaskDelay(4 / portTICK_PERIOD_MS);
-    // #if not defined(ARDUINO_MQTT)
-    //         if (millis() - checkTime > 30000)
-    //         {
-    //           UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    //           ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
-    //           checkTime = millis();
-    //         }
-    // #endif
-    //       }
-    //       vTaskDelete(NULL);
-    //     }
-    // #endif
+                  vTaskDelay(4 / portTICK_PERIOD_MS);
+    #if not defined(ARDUINO_MQTT)
+            if (millis() - checkTime > 30000)
+            {
+              UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+              ESP_LOGD(TAG, "Task stack level: %5d", (uint16_t)uxHighWaterMark);
+              checkTime = millis();
+            }
+    #endif
+          }
+          vTaskDelete(NULL);
+        }
+    #endif
 
     void WebNotify::setup()
     {
@@ -572,30 +537,32 @@ namespace esphome
         }
       }
       ESP_LOGD(TAG, "chat id=[%s],bot id=[%s]", telegramUserId_.c_str(), botId_.c_str());
-
-      mg_mgr_init(&mgr_);
+      #if !defined(USETASK)
+      mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
+      mg_mgr_init(mgr_);
+      #endif
       // std::string msg="{\"chat_id\":"+std::string(telegramUserId_.c_str())+",\"text\":\"Esphome Telegram client started.\"}";
       // outMessage out;
       // out.msg=msg;
       // out.type=mtSendMessage;
       // messages_.push(out);
 
-      // #if defined(ESP32) && defined(USETASK)
-      //       esp_chip_info_t info;
-      //       esp_chip_info(&info);
-      //       ESP_LOGD(TAG, "Cores: %d,arduino core=%d", info.cores, CONFIG_ARDUINO_RUNNING_CORE);
-      //       uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
-      //       xTaskCreatePinnedToCore(
-      //           this->telegramTask, // Function to implement the task
-      //           "telegramTask",     // Name of the task
-      //           16000,               // Stack size
-      //           (void *)this,       // Task input parameter
-      //           12,                 // Priority of the task
-      //           &xHandle            // Task handle.
-      //           ,
-      //           core // Core where the task should run
-      //       );
-      // #endif
+      #if defined(USETASK)
+            esp_chip_info_t info;
+            esp_chip_info(&info);
+            ESP_LOGD(TAG, "Cores: %d,main task core=%d", info.cores, xPortGetCoreID());
+            uint8_t core = info.cores > 1 ? ASYNC_CORE : 0;
+            xTaskCreatePinnedToCore(
+                this->telegramTask, // Function to implement the task
+                "telegramTask",     // Name of the task
+                8192,               // Stack size
+                (void *)this,       // Task input parameter
+                1,                 // Priority of the task
+                &xHandle            // Task handle.
+                ,
+                core // Core where the task should run
+            );
+      #endif
     }
 
     void WebNotify::loop()
@@ -606,7 +573,7 @@ namespace esphome
         if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_ || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
-          mg_http_connect(&mgr_, apiHost_.c_str(), notify_fn, &c_res_); // Create client connection
+          mg_http_connect(mgr_, apiHost_.c_str(), notify_fn, &c_res_); // Create client connection
           if (botName_ == "" && !botRequest_)
           {
             outMessage out;
@@ -620,17 +587,17 @@ namespace esphome
       }
 
       static unsigned long checkTime = millis();
-      if (millis() - checkTime > 20000)
+      if (millis() - checkTime > 60000)
       {
         checkTime = millis();
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
       taskYIELD();
-      // #if !defined(USETASK)
-      mg_mgr_poll(&mgr_, 0);
+       #if !defined(USETASK)
+      mg_mgr_poll(mgr_, 0);
 
-      // #endif
+       #endif
     }
 
     void WebNotify::dump_config()

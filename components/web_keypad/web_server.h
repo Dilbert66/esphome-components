@@ -3,13 +3,31 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/controller.h"
+#include "esphome/core/entity_base.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
-//#include "esphome/core/preferences.h"
-#include <vector>
-#include <Crypto.h>
 
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#ifdef USE_WEBKEYPAD_OTA
+#include "esphome/components/ota/ota_backend.h"
+#endif
+
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+#include "crypto.h"
+#endif
+
+
+#ifdef USE_ESP_IDF
+#define PSTR(s)   ((const char *)(s))
+#define ESP32
+#endif
 
 #ifdef USE_ESP32
 #include <deque>
@@ -17,19 +35,28 @@
 #include <freertos/semphr.h>
 #endif
 
+#if USE_ESP32
+using PlatformString = std::string;
+#elif USE_ARDUINO
+using PlatformString = String;
+#endif
+
 
 #if USE_WEBKEYPAD_VERSION >= 2
-extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
-extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_JS_INCLUDE
-extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
+extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[];
+//extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 #endif
 
@@ -38,15 +65,7 @@ namespace esphome {
 namespace web_keypad {
 
 extern void * webServerPtr;
-/// Internal helper struct that is used to parse incoming URLs
-/*
-struct UrlMatch {
-  std::string domain;  ///< The domain of the component, for example "sensor"
-  std::string id;      ///< The id of the device that's being accessed, for example "living_room_fan"
-  std::string method;  ///< The method that's being called, for example "turn_on"
-  bool valid;          ///< Whether this match is valid
-};
-*/
+
 enum msgType {
   STATE = 0,
   LOG,
@@ -60,11 +79,6 @@ struct SortingComponents {
   uint64_t group_id;
 };
  
-// struct KeypadConfig {
-//   uint8_t config[2500];
-//   uint8_t version;
-// };
-
 struct SortingGroup {
   std::string name;
   float weight;
@@ -73,16 +87,26 @@ struct SortingGroup {
 struct Credentials {
   std::string username="";
   std::string password="";
+
+  #ifdef USE_WEBKEYPAD_ENCRYPTION
   uint8_t token[SHA256_SIZE];
   uint8_t hmackey[SHA256HMAC_SIZE];
+  #endif
+
   bool crypt=false;
 };
 
 struct upload_state {
   size_t expected;  // POST data length, bytes
   size_t received;  // Already received bytes
-  String fn;
+  std::string fn;
 };
+
+#if defined (USE_ESP_IDF)
+static unsigned long millis() {
+     return esp_timer_get_time() / 1000;
+ }
+#endif
 
 #define SALT "77992288"
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
@@ -99,6 +123,7 @@ enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 class WebServer : public Controller, public Component {
  public:
   WebServer();
+  ~WebServer();
 
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -134,8 +159,7 @@ class WebServer : public Controller, public Component {
    */
 
  // std::map<mg_connection *,std::string> sessionTokens;
-  Credentials credentials_;
-  using key_service_t = std::function<void(std::string,int)>;
+   using key_service_t = std::function<void(std::string,int)>;
   optional<key_service_t> key_service_func_{}; 
   
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
@@ -159,27 +183,35 @@ class WebServer : public Controller, public Component {
   }
 
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
-    credentials_.username = auth_username;   
-    credentials_.password = auth_password;
-    std::string aeskeystring=credentials_.username + SALT + credentials_.password;
+    credentials_->username = auth_username;   
+    credentials_->password = auth_password;
+    this->crypt_ = use_encryption;  
+    credentials_->crypt=use_encryption;
+
+    #ifdef USE_WEBKEYPAD_ENCRYPTION
+     std::string aeskeystring=credentials_->username + SALT + credentials_->password;
     const char * keystr=aeskeystring.c_str();
-    SHA256HMAC aeskey((const byte*)keystr,strlen(keystr));
+    SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
-    aeskey.doFinal(credentials_.token);
+    aeskey.doFinal((char*)credentials_->token);
     
-    SHA256HMAC hmac((const byte*)keystr,strlen(keystr));
+    SHA256HMAC hmac((const char*)keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
-    hmac.doFinal(credentials_.hmackey);
-  
-   this->crypt_ = use_encryption;  
-   credentials_.crypt=use_encryption;
+    hmac.doFinal((char*)credentials_->hmackey);
+    #endif
+
 
    }  
    
-  Credentials * get_credentials() { return &credentials_;}
-  bool handleUpload(size_t bodylen,  const String &filename, size_t index,uint8_t *data, size_t len, bool final);
-  const std::string encrypt(const char * message);
-  const std::string decrypt(JsonObject doc,uint8_t* e);
+  Credentials * get_credentials() { return credentials_;}
+#ifdef USE_WEBKEYPAD_OTA
+  bool handleUpload(size_t bodylen,  const PlatformString &filename, size_t index,uint8_t *data, size_t len, bool final);
+#endif
+
+  #ifdef USE_WEBKEYPAD_ENCRYPTION
+  bool encrypt(std::string & data);
+  bool decrypt(JsonObject doc,uint8_t* e,std::string & out);
+  #endif
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -196,8 +228,8 @@ class WebServer : public Controller, public Component {
   void handle_index_request(struct mg_connection *c);
 
   /// Return the webserver configuration as JSON.
-  const std::string get_config_json(unsigned long c=0);
-  const std::string escape_json(const char *s);
+  void get_config_json(unsigned long c, std::string & out);
+  void escape_json(const char *s,std::string & out);
   
   long int toInt(const std::string &s, int base); 
 
@@ -217,7 +249,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_SENSOR
-  void on_sensor_update(sensor::Sensor *obj, float state) override;
+  void on_sensor_update(sensor::Sensor *obj) override;
   /// Handle a sensor request under '/sensor/<id>'.
   void handle_sensor_request(struct mg_connection *c, JsonObject doc);
 
@@ -284,7 +316,7 @@ class WebServer : public Controller, public Component {
 
 
 #ifdef USE_SWITCH
-  void on_switch_update(switch_::Switch *obj, bool state) override;
+  void on_switch_update(switch_::Switch *obj) override;
 
   /// Handle a switch request under '/switch/<id>/</turn_on/turn_off/toggle>'.
   void handle_switch_request(struct mg_connection *c, JsonObject doc);
@@ -332,7 +364,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_TEXT_SENSOR
-  void on_text_sensor_update(text_sensor::TextSensor *obj, const std::string &state) override;
+  void on_text_sensor_update(text_sensor::TextSensor *obj) override;
 
   /// Handle a text sensor request under '/text_sensor/<id>'.
   void handle_text_sensor_request(struct mg_connection *c, JsonObject doc);
@@ -352,7 +384,7 @@ class WebServer : public Controller, public Component {
 #endif
 
 #ifdef USE_NUMBER
-  void on_number_update(number::Number *obj, float state) override;
+  void on_number_update(number::Number *obj) override;
   /// Handle a number request under '/number/<id>'.
   void handle_number_request(struct mg_connection *c, JsonObject doc);
 
@@ -367,7 +399,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 
 
 #ifdef USE_TEXT
-  void on_text_update(text::Text *obj, const std::string &state) override;
+  void on_text_update(text::Text *obj) override;
   /// Handle a text input request under '/text/<id>'.
   void handle_text_request(struct mg_connection *c, JsonObject doc);
 
@@ -376,7 +408,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 #endif
 
 #ifdef USE_SELECT
-  void on_select_update(select::Select *obj, const std::string &state, size_t index) override;
+  void on_select_update(select::Select *obj) override;
   /// Handle a select request under '/select/<id>'.
   void handle_select_request(struct mg_connection *c, JsonObject doc);
 
@@ -413,22 +445,19 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
   std::string alarm_control_panel_json(alarm_control_panel::AlarmControlPanel *obj,
                                        alarm_control_panel::AlarmControlPanelState value, JsonDetail start_config);
 #endif
-  struct mg_mgr mgr;
+  struct mg_mgr* mgr;
   struct mg_connection *c;
   friend ListEntitiesIterator;  
   ListEntitiesIterator entities_iterator_;
 void push(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 bool callKeyService(const char *buf,int partition);
-void report_ota_error();
-#define MATCH_BUF_SIZE 60
-static char matchBuf[MATCH_BUF_SIZE];
-static uint8_t matchIndex;
 void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);
 static void ev_handler(struct mg_connection *nc, int ev, void *p);
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
-void parseUrlParams(char *queryString, int resultsMaxCt, boolean decodeUrl,JsonObject doc);
+void parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
+
 void add_entity_config(EntityBase *entity, float weight, uint64_t group);
 void add_sorting_group(uint64_t group_id, const std::string &group_name, float weight);
 
@@ -436,14 +465,12 @@ void add_sorting_group(uint64_t group_id, const std::string &group_name, float w
  
   const char * certificate_;
   const char * certificate_key_;
-  uint32_t last_ota_progress_{0};
-  uint32_t ota_read_length_{0}; 
   void schedule_(std::function<void()> &&f);
 #ifdef ASYNCWEB 
 static void webPollTask(void * args);
 #endif
   bool firstrun_{true};
-  std::string json_keypad_config_;
+  const char * json_keypad_config_;
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   const char *css_include_{nullptr};
@@ -467,12 +494,26 @@ static void webPollTask(void * args);
     std::string token;
     int lastseq;
   };
+
   //ESPPreferenceObject pref_;
  // KeypadConfig keypadconfig_;
+  Credentials * credentials_ ;
 
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;
+
+#ifdef USE_WEBKEYPAD_OTA
+  void report_ota_progress_();
+  void schedule_ota_reboot_();
+  void ota_init_(const char *filename);
+  uint32_t last_ota_progress_{0};
+  uint32_t ota_read_length_{0};
+  bool ota_success_{false};
+  std::unique_ptr<ota::OTABackend> ota_backend_{nullptr};
+#endif
+
+
 };
 
 
