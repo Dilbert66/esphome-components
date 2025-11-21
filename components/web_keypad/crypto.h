@@ -17,9 +17,9 @@
 #include "math.h"
 
 
-// #if defined ESP8266
-// #include <osapi.h>
-// #endif
+#if defined ESP8266
+#include "Arduino.h"
+#endif
 
 #define SHA256_SIZE             32
 #define SHA256HMAC_SIZE         32
