@@ -17,7 +17,7 @@
 #include "math.h"
 
 
-#if defined ESP8266
+#ifdef USE_ARDUINO
 #include "Arduino.h"
 #endif
 
