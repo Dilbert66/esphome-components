@@ -1803,7 +1803,8 @@ void DSCkeybushome::update()
           if (dsc.readyChanged[partition] || forceRefresh)
           {
             dsc.readyChanged[partition] = false; // Resets the partition alarm status flag
-             publishPanelStatus(FC(RDYSTATUS),dsc.ready[partition], partition + 1);
+            publishPanelStatus(FC(RDYSTATUS),dsc.ready[partition], partition + 1);
+            
           }
 
           // Publishes fire alarm status
@@ -1820,7 +1821,8 @@ void DSCkeybushome::update()
 
           std::string ps;
           getPartitionStatus(partition,ps);
-          publishPartitionStatus(ps.c_str(), partition + 1);
+          if (ps!="")
+            publishPartitionStatus(ps.c_str(), partition + 1);
 
 
          // partitionStatus[partition].lastPartitionStatus = status;
@@ -2106,11 +2108,10 @@ void DSCkeybushome::update()
         status = FC(STATUS_READY);
       else if (dsc.status[partition] != 0x9f && !(dsc.status[partition] > 0x03 && dsc.status[partition] < 0x0e))
         status = FC(STATUS_NOT_READY);
-#else
-  else
-    status = FC(STATUS_DISARMED);
 #endif
-        return status.c_str();
+      else
+        status = FC(STATUS_DISARMED);
+      return status.c_str();
     }
 
     void DSCkeybushome::setStatus(byte partition, bool force, bool skip)
