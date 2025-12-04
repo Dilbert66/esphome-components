@@ -44,13 +44,14 @@ namespace esphome
         return;
       }
 
-      std::string outmsg = json::build_json([out, this](JsonObject root)
-                                            {
+    json::JsonBuilder builder;
+    JsonObject root = builder.root(); 
+    
     if (out.reply_markup.length() > 0 ) {
-      json::parse_json(out.reply_markup,  [&root](JsonObject x) -> bool {
+      JsonDocument doc=json::parse_json((const uint8_t*)out.reply_markup.c_str(),out.reply_markup.length());
+      JsonObject x = doc.as<JsonObject>();
       root["reply_markup"]=x;
-      return true;
-      });
+
     }
     if (out.callback_id.length()>0) {
       root["callback_query_id"]=out.callback_id.c_str();
@@ -77,10 +78,10 @@ namespace esphome
     if (out.cache_time)
       root["cache_time"]=out.cache_time;
     if(out.selective)
-      root["selective"]=out.selective; });
+      root["selective"]=out.selective; 
 
       outMessage omsg;
-      omsg.msg = outmsg;
+      omsg.msg = builder.serialize();
       omsg.type = out.type;
       messages_.push(omsg);
     }
@@ -126,167 +127,169 @@ namespace esphome
     bool WebNotify::processMessage(const char *payload)
     {
 
-      return json::parse_json(payload, [payload](JsonObject root) -> bool
-                              {
-                                if (root["result"][0]["callback_query"]["id"])
-                                {
 
-                                  int update_id = root["result"][0]["update_id"];
-                                  // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
-                                  if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
-                                     std::string to=root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
-                                     global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
-                                     global_notify->lastMsgReceived_ = update_id;
-                                  }
-                                  update_id = update_id + 1;
-                                  if (global_notify->lastMsgReceived_ != update_id)
-                                  {
+        JsonDocument doc=json::parse_json((const uint8_t*) payload,strlen(payload));
+        JsonObject root = doc.as<JsonObject>();
 
-                                    RemoteData * x = new RemoteData;
-                                    if (global_notify->lastMsgReceived_ == 0)
-                                      x->is_first_cmd = true;
-                                    else
-                                      x->is_first_cmd = false;
-                                    global_notify->lastMsgReceived_ = update_id;
-                                    x->sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
-                                    x->text = root["result"][0]["callback_query"]["data"].as<std::string>();
-                                    x->chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
-                                    x->date = root["result"][0]["callback_query"]["message"]["date"].as<std::string>();
-                                    x->message_id = root["result"][0]["callback_query"]["message"]["message_id"].as<std::string>();
-                                    x->callback_id = root["result"][0]["callback_query"]["id"].as<std::string>();
-                                    x->is_callback = true;
-                                    x->cmd = "";
-                                    x->args = "";
-                                    if (!global_notify->isAllowed(x->chat_id))
-                                    {
-                                      ESP_LOGE(TAG,"Chat id %s not allowed to send to bot", x->chat_id.c_str());
-                                      return true;
-                                    }
-                                    global_notify->parseArgs(*x);
-                                    global_notify->on_message_.call(*x);
-                                    delete x;
-                                  }
-                                  /*
-                                      } else if (root["result"][0]["channel_post"]["id"]) {
-                                        int update_id = root["result"][0]["update_id"];
-                                        update_id = update_id + 1;
-                                        //we ignore the first message on initial start to avoid a reboot loop
-                                        if (global_notify->lastMsgReceived_ == 0) global_notify->lastMsgReceived_ = update_id;
+        if (root["result"][0]["callback_query"]["id"])
+        {
 
-                                        if (global_notify->lastMsgReceived_ != update_id) {
-                                          std::string sender = root["result"][0]["channel_post"]["message"]["from"]["username"];
-                                          std::string text = root["result"][0]["channel_post"]["message"]["text"];
-                                          std::string chat_id = root["result"][0]["channel_post"]["message"]["chat"]["id"];
-                                          std::string date = root["result"][0]["channel_post"]["message"]["date"];
+          int update_id = root["result"][0]["update_id"];
+          // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
+          if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
+              std::string to=root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
+              global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
+              global_notify->lastMsgReceived_ = update_id;
+          }
+          update_id = update_id + 1;
+          if (global_notify->lastMsgReceived_ != update_id)
+          {
 
-                                          // m.sender = sender;
-                                          // m.text = text;
-                                          // m.chat_id = chat_id;
-                                          //m.date = date;
-                                          // m.is_callback=false;
-                                          global_notify->lastMsgReceived_ = update_id;
-                                        }
-                                  */
-                                }
-                                else if (root["result"][0]["message"]["text"])
-                                {
-                                  int update_id = root["result"][0]["update_id"];
-                                  update_id = update_id + 1;
-                                               
-                                  if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
-                                     std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
-                                   //  global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
-                                  }
-                                  
+            RemoteData * x = new RemoteData;
+            if (global_notify->lastMsgReceived_ == 0)
+              x->is_first_cmd = true;
+            else
+              x->is_first_cmd = false;
+            global_notify->lastMsgReceived_ = update_id;
+            x->sender = root["result"][0]["callback_query"]["message"]["from"]["username"].as<std::string>();
+            x->text = root["result"][0]["callback_query"]["data"].as<std::string>();
+            x->chat_id = root["result"][0]["callback_query"]["message"]["chat"]["id"].as<std::string>();
+            x->date = root["result"][0]["callback_query"]["message"]["date"].as<std::string>();
+            x->message_id = root["result"][0]["callback_query"]["message"]["message_id"].as<std::string>();
+            x->callback_id = root["result"][0]["callback_query"]["id"].as<std::string>();
+            x->is_callback = true;
+            x->cmd = "";
+            x->args = "";
+            if (!global_notify->isAllowed(x->chat_id))
+            {
+              ESP_LOGE(TAG,"Chat id %s not allowed to send to bot", x->chat_id.c_str());
+              return true;
+            }
+            global_notify->parseArgs(*x);
+            global_notify->on_message_.call(*x);
+            delete x;
+          }
+          /*
+              } else if (root["result"][0]["channel_post"]["id"]) {
+                int update_id = root["result"][0]["update_id"];
+                update_id = update_id + 1;
+                //we ignore the first message on initial start to avoid a reboot loop
+                if (global_notify->lastMsgReceived_ == 0) global_notify->lastMsgReceived_ = update_id;
 
-                                  if (global_notify->lastMsgReceived_ != update_id)
-                                  {
+                if (global_notify->lastMsgReceived_ != update_id) {
+                  std::string sender = root["result"][0]["channel_post"]["message"]["from"]["username"];
+                  std::string text = root["result"][0]["channel_post"]["message"]["text"];
+                  std::string chat_id = root["result"][0]["channel_post"]["message"]["chat"]["id"];
+                  std::string date = root["result"][0]["channel_post"]["message"]["date"];
 
-                                    RemoteData * x = new RemoteData;
-                                    if (global_notify->lastMsgReceived_ == 0)
-                                      x->is_first_cmd = true;
-                                    else
-                                      x->is_first_cmd = false;
-                                    global_notify->lastMsgReceived_ = update_id;
-                                    x->sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
-                                    x->text = root["result"][0]["message"]["text"].as<std::string>();
-                                    x->chat_id = root["result"][0]["message"]["chat"]["id"].as<std::string>();
-                                    x->date = root["result"][0]["message"]["date"].as<std::string>();
-                                    x->message_id = root["result"][0]["message"]["message_id"].as<std::string>();
-                                    x->is_callback = false;
-                                    x->cmd = "";
-                                    x->args = "";
-                                    if (!global_notify->isAllowed(x->chat_id))
-                                    {
-                                      ESP_LOGE("Chat id %s not allowed to send to bot", x->chat_id.c_str());
-                                      return true;
-                                    }
-                                    global_notify->parseArgs(*x);
-                                    global_notify->on_message_.call(*x);
-                                    delete x;
-                                  }
-                                }
-                                else if (root["result"]["message_id"])
-                                {
-                                  bool ok = root["ok"];
-                                  // if (root["result"]["from"]["is_bot"]) {
-                                  //   std::string botname=root["result"]["from"]["username"];
-                                  //   global_notify->set_bot_name(botname);
-                                  //   ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
-                                  // }
-                                  if (ok)
-                                  {
-                                    // pop last sent message from queue as it was successful
-                                    global_notify->messages_.pop();
-                                  }
-                                  else 
-                                  {
-                                    global_notify->retryDelay_ = millis();
-                                     ESP_LOGE(TAG, "Error response from server on last send: %s", payload);
-                                  }
-                                } 
-                                else if (root["result"]["is_bot"]) 
-                                {
-                                  if (root["result"]["username"]) {
-                                    std::string botname=root["result"]["username"];
-                                    global_notify->set_bot_name(botname);
-                                    ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
-                                    global_notify->messages_.pop();
-                                    global_notify->botRequest_=false;
-                                  }
+                  // m.sender = sender;
+                  // m.text = text;
+                  // m.chat_id = chat_id;
+                  //m.date = date;
+                  // m.is_callback=false;
+                  global_notify->lastMsgReceived_ = update_id;
+                }
+          */
+        }
+        else if (root["result"][0]["message"]["text"])
+        {
+          int update_id = root["result"][0]["update_id"];
+          update_id = update_id + 1;
+                        
+          if (global_notify->skipFirst_ && global_notify->lastMsgReceived_ == 0) {
+              std::string to=root["result"][0]["message"]["chat"]["id"].as<std::string>();
+            //  global_notify->publish(to,PSTR("First cmd to bot ignored after restart"),1);
+          }
+          
 
-                                } 
-                                else if (global_notify->sending_)
-                                {
-                                  bool ok = root["ok"];
-                                  if (!ok)
-                                  {
-                                    global_notify->retryDelay_ = millis();
-                                    ESP_LOGE(TAG, "Error response from server: %s", payload);
-                                    outMessage om=global_notify->messages_.front();
-                                    global_notify->messages_.pop();
-                                    if (om.type==mtGetMe) {
-                                      global_notify->botRequest_=false;
-                                      ESP_LOGD(TAG,"removed pending bot name request");
-                                    } else
-                                      ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
-                                  }
-                                }
-                                else if (root["result"][0]["update_id"])
-                                {
-                                  int update_id = root["result"][0]["update_id"];
-                                  global_notify->lastMsgReceived_ = update_id + 1;
-                                }
-                                else
-                                {
-                                  bool ok = root["ok"];
-                                  if (!ok)
-                                  {
-                                    global_notify->retryDelay_ = millis();
-                                    ESP_LOGE(TAG, "Error response from server: %s", payload);
-                                  }
-                                }
-                                return true; });
+          if (global_notify->lastMsgReceived_ != update_id)
+          {
+
+            RemoteData * x = new RemoteData;
+            if (global_notify->lastMsgReceived_ == 0)
+              x->is_first_cmd = true;
+            else
+              x->is_first_cmd = false;
+            global_notify->lastMsgReceived_ = update_id;
+            x->sender = root["result"][0]["message"]["from"]["username"].as<std::string>();
+            x->text = root["result"][0]["message"]["text"].as<std::string>();
+            x->chat_id = root["result"][0]["message"]["chat"]["id"].as<std::string>();
+            x->date = root["result"][0]["message"]["date"].as<std::string>();
+            x->message_id = root["result"][0]["message"]["message_id"].as<std::string>();
+            x->is_callback = false;
+            x->cmd = "";
+            x->args = "";
+            if (!global_notify->isAllowed(x->chat_id))
+            {
+              ESP_LOGE("Chat id %s not allowed to send to bot", x->chat_id.c_str());
+              return true;
+            }
+            global_notify->parseArgs(*x);
+            global_notify->on_message_.call(*x);
+            delete x;
+          }
+        }
+        else if (root["result"]["message_id"])
+        {
+          bool ok = root["ok"];
+          // if (root["result"]["from"]["is_bot"]) {
+          //   std::string botname=root["result"]["from"]["username"];
+          //   global_notify->set_bot_name(botname);
+          //   ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
+          // }
+          if (ok)
+          {
+            // pop last sent message from queue as it was successful
+            global_notify->messages_.pop();
+          }
+          else 
+          {
+            global_notify->retryDelay_ = millis();
+              ESP_LOGE(TAG, "Error response from server on last send: %s", payload);
+          }
+        } 
+        else if (root["result"]["is_bot"]) 
+        {
+          if (root["result"]["username"]) {
+            std::string botname=root["result"]["username"];
+            global_notify->set_bot_name(botname);
+            ESP_LOGD(TAG,"Set bot name to %s",botname.c_str());
+            global_notify->messages_.pop();
+            global_notify->botRequest_=false;
+          }
+
+        } 
+        else if (global_notify->sending_)
+        {
+          bool ok = root["ok"];
+          if (!ok)
+          {
+            global_notify->retryDelay_ = millis();
+            ESP_LOGE(TAG, "Error response from server: %s", payload);
+            outMessage om=global_notify->messages_.front();
+            global_notify->messages_.pop();
+            if (om.type==mtGetMe) {
+              global_notify->botRequest_=false;
+              ESP_LOGD(TAG,"removed pending bot name request");
+            } else
+              ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
+          }
+        }
+        else if (root["result"][0]["update_id"])
+        {
+          int update_id = root["result"][0]["update_id"];
+          global_notify->lastMsgReceived_ = update_id + 1;
+        }
+        else
+        {
+          bool ok = root["ok"];
+          if (!ok)
+          {
+            global_notify->retryDelay_ = millis();
+            ESP_LOGE(TAG, "Error response from server: %s", payload);
+          }
+        }
+        return true;
     }
 
     void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data)

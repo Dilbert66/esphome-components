@@ -30,6 +30,14 @@ namespace esphome
   namespace alarm_panel
   {
 
+#if defined(ESP8266)
+#define FC(s) (String(FPSTR(s)).c_str())
+#else
+#define FC(s) ((const char*)(s))
+#endif
+
+
+
 
 #endif
     DSCkeybushome *alarmPanelPtr;
@@ -200,7 +208,7 @@ void DSCkeybushome::setup()
       mqtt::global_mqtt_client->subscribe_json(topic_prefix + setalarmcommandtopic, mqtt_callback);
 #endif
 #if defined(USE_API)
- #if defined(USE_API_SERVICES)
+ #if defined(USE_API_CUSTOM_SERVICES) or defined(USE_API_SERVICES)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
       #if defined(USE32)
@@ -211,12 +219,12 @@ void DSCkeybushome::setup()
 #endif
 #endif
       register_service(&DSCkeybushome::alarm_arm_home, "alarm_arm_home");
-      register_service(&DSCkeybushome::alarm_arm_night, "alarm_arm_night", {"code"});
+      register_service(&DSCkeybushome::alarm_arm_night,"alarm_arm_night", {"code"});
       register_service(&DSCkeybushome::alarm_arm_away, "alarm_arm_away");
       register_service(&DSCkeybushome::alarm_trigger_panic, "alarm_trigger_panic");
       register_service(&DSCkeybushome::alarm_trigger_fire, "alarm_trigger_fire");
       register_service(&DSCkeybushome::alarm_keypress, "alarm_keypress", {"keys"});
-     register_service(&DSCkeybushome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
+      register_service(&DSCkeybushome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&DSCkeybushome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
      // register_service(&DSCkeybushome::set_default_partition, "set_default_partition", {"partition"});
       #else
@@ -428,14 +436,14 @@ void DSCkeybushome::setup()
       */
       if (partitionStatus[partition - 1].digits > 0)
       { // program mode data input
-        std::string tpl =FC("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+        std::string tpl =PSTR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
         if (dsc.status[partition - 1] == 0xAA)
         { // time entry
-          tpl = FC("XXXX    XXXXXX  XXXXXXXXXXXXXXXX");
+          tpl = PSTR("XXXX    XXXXXX  XXXXXXXXXXXXXXXX");
         }
         if (dsc.status[partition - 1] == 0xAB)
         { // time entry
-          tpl = FC("XXXX                            ");
+          tpl = PSTR("XXXX                            ");
         }
 
         if (key == '#')
@@ -2140,377 +2148,377 @@ void DSCkeybushome::update()
       switch (dsc.status[partition])
       {
       case 0x01:
-        lcdLine1 = FC("Partition ready");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Partition ready");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x02:
-        lcdLine1 = FC("Stay");
-        lcdLine2 = FC("zones open");
+        lcdLine1 = PSTR("Stay");
+        lcdLine2 = PSTR("zones open");
         break;
       case 0x03:
-        lcdLine1 = FC("Zones open  <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Zones open  <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x04:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Stay");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Stay");
         break;
       case 0x05:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Away");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Away");
         break;
       case 0x06:
-        lcdLine1 = FC("Armed Stay");
-        lcdLine2 = FC("No entry delay");
+        lcdLine1 = PSTR("Armed Stay");
+        lcdLine2 = PSTR("No entry delay");
         break;
       case 0x07:
-        lcdLine1 = FC("Failed");
-        lcdLine2 = FC("to arm");
+        lcdLine1 = PSTR("Failed");
+        lcdLine2 = PSTR("to arm");
         break;
       case 0x08:
-        lcdLine1 = FC("Exit delay");
-        lcdLine2 = FC("in progress");
+        lcdLine1 = PSTR("Exit delay");
+        lcdLine2 = PSTR("in progress");
         break;
       case 0x09:
-        lcdLine1 = FC("Arming");
-        lcdLine2 = FC("No entry delay");
+        lcdLine1 = PSTR("Arming");
+        lcdLine2 = PSTR("No entry delay");
         break;
       case 0x0B:
-        lcdLine1 = FC("Quick exit");
-        lcdLine2 = FC("in progress");
+        lcdLine1 = PSTR("Quick exit");
+        lcdLine2 = PSTR("in progress");
         break;
       case 0x0C:
-        lcdLine1 = FC("Entry delay");
-        lcdLine2 = FC("in progress");
+        lcdLine1 = PSTR("Entry delay");
+        lcdLine2 = PSTR("in progress");
         break;
       case 0x0D:
-        lcdLine1 = FC("Entry delay");
-        lcdLine2 = FC("after alarm");
+        lcdLine1 = PSTR("Entry delay");
+        lcdLine2 = PSTR("after alarm");
         break;
       case 0x0E:
-        lcdLine1 = FC("Not");
-        lcdLine2 = FC("available");
+        lcdLine1 = PSTR("Not");
+        lcdLine2 = PSTR("available");
         break;
       case 0x10:
-        lcdLine1 = FC("Keypad");
-        lcdLine2 = FC("lockout");
+        lcdLine1 = PSTR("Keypad");
+        lcdLine2 = PSTR("lockout");
         break;
       case 0x11:
-        lcdLine1 = FC("Partition in alarm");
-        lcdLine2 = FC("  ");
+        lcdLine1 = PSTR("Partition in alarm");
+        lcdLine2 = PSTR("  ");
         break;
       case 0x12:
-        lcdLine1 = FC("Battery check");
-        lcdLine2 = FC("in progress");
+        lcdLine1 = PSTR("Battery check");
+        lcdLine2 = PSTR("in progress");
         break;
       case 0x14:
-        lcdLine1 = FC("Auto-arm");
-        lcdLine2 = FC("in progress");
+        lcdLine1 = PSTR("Auto-arm");
+        lcdLine2 = PSTR("in progress");
         break;
       case 0x15:
-        lcdLine1 = FC("Arming with");
-        lcdLine2 = FC("bypass zones");
+        lcdLine1 = PSTR("Arming with");
+        lcdLine2 = PSTR("bypass zones");
         break;
       case 0x16:
-        lcdLine1 = FC("Armed away");
-        lcdLine2 = FC("No entry delay");
+        lcdLine1 = PSTR("Armed away");
+        lcdLine2 = PSTR("No entry delay");
         break;
       case 0x17:
-        lcdLine1 = FC("Keypad blanked");
-        lcdLine2 = FC("Enter access code");
+        lcdLine1 = PSTR("Keypad blanked");
+        lcdLine2 = PSTR("Enter access code");
         break;
       case 0x19:
-        lcdLine1 = FC("Alarm");
-        lcdLine2 = FC("occurred");
+        lcdLine1 = PSTR("Alarm");
+        lcdLine2 = PSTR("occurred");
         break;
       case 0x22:
-        lcdLine1 = FC("Alarms occurred");
-        lcdLine2 = FC("Press # to exit");
+        lcdLine1 = PSTR("Alarms occurred");
+        lcdLine2 = PSTR("Press # to exit");
         break;
       case 0x2F:
-        lcdLine1 = FC("Keypad LCD");
-        lcdLine2 = FC("test");
+        lcdLine1 = PSTR("Keypad LCD");
+        lcdLine2 = PSTR("test");
         break;
       case 0x33:
-        lcdLine1 = FC("Command");
-        lcdLine2 = FC("output active");
+        lcdLine1 = PSTR("Command");
+        lcdLine2 = PSTR("output active");
         break;
       case 0x3D:
-        lcdLine1 = FC("Alarm");
-        lcdLine2 = FC("occurred");
+        lcdLine1 = PSTR("Alarm");
+        lcdLine2 = PSTR("occurred");
         break;
       case 0x3E:
-        lcdLine1 = FC("Disarmed");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Disarmed");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x40:
-        lcdLine1 = FC("Keypad blanked");
-        lcdLine2 = FC("Enter access code");
+        lcdLine1 = PSTR("Keypad blanked");
+        lcdLine2 = PSTR("Enter access code");
         break;
       case 0x80:
-        lcdLine1 = FC("Invalid entry");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Invalid entry");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x8A:
-        lcdLine1 = FC("Activate");
-        lcdLine2 = FC("stay/away zones ");
+        lcdLine1 = PSTR("Activate");
+        lcdLine2 = PSTR("stay/away zones ");
         break;
       case 0x8B:
-        lcdLine1 = FC("Quick exit");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Quick exit");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x8E:
-        lcdLine1 = FC("Invalid");
-        lcdLine2 = FC("option");
+        lcdLine1 = PSTR("Invalid");
+        lcdLine2 = PSTR("option");
         break;
       case 0x8F:
-        lcdLine1 = FC("Invalid");
-        lcdLine2 = FC("Access_code");
+        lcdLine1 = PSTR("Invalid");
+        lcdLine2 = PSTR("Access_code");
         break;
       case 0x9E:
-        lcdLine1 = FC("Press (*) for <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Press (*) for <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x9F:
-        lcdLine1 = FC("Enter");
-        lcdLine2 = FC("Access_code");
+        lcdLine1 = PSTR("Enter");
+        lcdLine2 = PSTR("Access_code");
         break;
       case 0xA0:
-        lcdLine1 = FC("Zone bypass <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Zone bypass <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xA1:
-        lcdLine1 = FC("Trouble menu <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Trouble menu <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xA2:
-        lcdLine1 = FC("Alarm memory <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Alarm memory <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xA3:
-        lcdLine1 = FC("Door");
-        lcdLine2 = FC("chime enabled");
+        lcdLine1 = PSTR("Door");
+        lcdLine2 = PSTR("chime enabled");
         partitionStatus[partition].chime = true;
         publishPanelStatus(FC(CHIMESTATUS), true, partition + 1);
         break;
       case 0xA4:
-        lcdLine1 = FC("Door");
-        lcdLine2 = FC("chime disabled  ");
+        lcdLine1 = PSTR("Door");
+        lcdLine2 = PSTR("chime disabled  ");
         partitionStatus[partition].chime = false;
         publishPanelStatus(FC(CHIMESTATUS), false, partition + 1);
         break;
       case 0xA5:
-        lcdLine1 = FC("Enter");
-        lcdLine2 = FC("Master code");
+        lcdLine1 = PSTR("Enter");
+        lcdLine2 = PSTR("Master code");
         break;
       case 0xA6:
-        lcdLine1 = FC("*5:  Access code");
-        lcdLine2 = FC("code? (2 digits)");
+        lcdLine1 = PSTR("*5:  Access code");
+        lcdLine2 = PSTR("code? (2 digits)");
         // digits = 2;
         break;
       case 0xA7:
-        lcdLine1 = FC("*5 Enter new");
-        lcdLine2 = FC("4-digit code");
+        lcdLine1 = PSTR("*5 Enter new");
+        lcdLine2 = PSTR("4-digit code");
         partitionStatus[partition].digits = 4;
         break;
       case 0xA9:
-        lcdLine1 = FC("*6: User functions");
-        lcdLine2 = FC("function?");
+        lcdLine1 = PSTR("*6: User functions");
+        lcdLine2 = PSTR("function?");
         break;
       case 0xAA:
-        lcdLine1 = FC(" HHMM    MMDDYY");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR(" HHMM    MMDDYY");
+        lcdLine2 = PSTR("");
         partitionStatus[partition].digits = 16;
         break;
       case 0xAB:
-        lcdLine1 = FC(" HHMM");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR(" HHMM");
+        lcdLine2 = PSTR("");
         partitionStatus[partition].digits = 4;
         break;
       case 0xAC:
-        lcdLine1 = FC("*6");
-        lcdLine2 = FC("Auto-arm on");
+        lcdLine1 = PSTR("*6");
+        lcdLine2 = PSTR("Auto-arm on");
         break;
       case 0xAD:
-        lcdLine1 = FC("*6");
-        lcdLine2 = FC("Auto-arm off");
+        lcdLine1 = PSTR("*6");
+        lcdLine2 = PSTR("Auto-arm off");
         break;
       case 0xAF:
-        lcdLine1 = FC("*6");
-        lcdLine2 = FC("System test");
+        lcdLine1 = PSTR("*6");
+        lcdLine2 = PSTR("System test");
         break;
       case 0xB0:
-        lcdLine1 = FC("*6");
-        lcdLine2 = FC("Enable DLS");
+        lcdLine1 = PSTR("*6");
+        lcdLine2 = PSTR("Enable DLS");
         break;
       case 0xB1:
-        lcdLine1 = FC("*6");
-        lcdLine2 = FC("b1 command");
+        lcdLine1 = PSTR("*6");
+        lcdLine2 = PSTR("b1 command");
         break;
       case 0xB2:
       case 0xB3:
-        lcdLine1 = FC("*7");
-        lcdLine2 = FC("Command output");
+        lcdLine1 = PSTR("*7");
+        lcdLine2 = PSTR("Command output");
         break;
       case 0xB7:
-        lcdLine1 = FC("Enter");
-        lcdLine2 = FC("installer code");
+        lcdLine1 = PSTR("Enter");
+        lcdLine2 = PSTR("installer code");
         break;
       case 0xB8:
-        lcdLine1 = FC("Enter *");
-        lcdLine2 = FC("function code");
+        lcdLine1 = PSTR("Enter *");
+        lcdLine2 = PSTR("function code");
         break;
       case 0xB9:
-        lcdLine1 = FC("Zone Tamper <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Zone Tamper <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xBA:
-        lcdLine1 = FC("Zones low battery <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Zones low battery <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xBC:
-        lcdLine1 = FC("*5 Enter new");
-        lcdLine2 = FC("6-digit code");
+        lcdLine1 = PSTR("*5 Enter new");
+        lcdLine2 = PSTR("6-digit code");
         partitionStatus[partition].digits = 6;
         break;
       case 0xBF:
-        lcdLine1 = FC("Select day:");
-        lcdLine2 = FC("Sun=1,Tue=2,Sat=7");
+        lcdLine1 = PSTR("Select day:");
+        lcdLine2 = PSTR("Sun=1,Tue=2,Sat=7");
         break;
       case 0xC6:
-        lcdLine1 = FC(" Zone faults  <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR(" Zone faults  <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xC7:
-        lcdLine1 = FC("Partition");
-        lcdLine2 = FC("disabled        ");
+        lcdLine1 = PSTR("Partition");
+        lcdLine2 = PSTR("disabled        ");
         break;
       case 0xC8:
-        lcdLine1 = FC("Service req. <>");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Service req. <>");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xCD:
-        lcdLine1 = FC("Downloading in progress");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Downloading in progress");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xCE:
-        lcdLine1 = FC("Active camera");
-        lcdLine2 = FC("monitor select. ");
+        lcdLine1 = PSTR("Active camera");
+        lcdLine2 = PSTR("monitor select. ");
         break;
       case 0xD0:
-        lcdLine1 = FC("*2: Keypads");
-        lcdLine2 = FC("low battery");
+        lcdLine1 = PSTR("*2: Keypads");
+        lcdLine2 = PSTR("low battery");
         break;
       case 0xD1:
-        lcdLine1 = FC("*2: Keyfobs");
-        lcdLine2 = FC("low battery");
+        lcdLine1 = PSTR("*2: Keyfobs");
+        lcdLine2 = PSTR("low battery");
         break;
       case 0xD4:
-        lcdLine1 = FC("*2: Sensors");
-        lcdLine2 = FC("RF Delinquency");
+        lcdLine1 = PSTR("*2: Sensors");
+        lcdLine2 = PSTR("RF Delinquency");
         break;
       case 0xE4:
-        lcdLine1 = FC("Section:");
-        lcdLine2 = FC("(3 digits)");
+        lcdLine1 = PSTR("Section:");
+        lcdLine2 = PSTR("(3 digits)");
         break;
       case 0xE5:
-        lcdLine1 = FC("Keypad");
-        lcdLine2 = FC("slot assignmen");
+        lcdLine1 = PSTR("Keypad");
+        lcdLine2 = PSTR("slot assignmen");
         break;
       case 0xE6:
-        lcdLine1 = FC("Input:");
-        lcdLine2 = FC("(2 digits)");
+        lcdLine1 = PSTR("Input:");
+        lcdLine2 = PSTR("(2 digits)");
         partitionStatus[partition].digits = 2;
         break;
       case 0xE7:
-        lcdLine1 = FC("Input:");
+        lcdLine1 = PSTR("Input:");
         partitionStatus[partition].digits = 3;
-        lcdLine2 = FC("(3 digits)");
+        lcdLine2 = PSTR("(3 digits)");
         partitionStatus[partition].decimalInput = true;
         break;
       case 0xE8:
-        lcdLine1 = FC("Input:");
+        lcdLine1 = PSTR("Input:");
         partitionStatus[partition].digits = 4;
-        lcdLine2 = FC("(4 digits)");
+        lcdLine2 = PSTR("(4 digits)");
         break;
       case 0xE9:
-        lcdLine1 = FC("Input:");
+        lcdLine1 = PSTR("Input:");
         partitionStatus[partition].digits = 5;
-        lcdLine2 = FC("(5 digits)");
+        lcdLine2 = PSTR("(5 digits)");
         break;
       case 0xEA:
-        lcdLine1 = FC("Input hex:");
+        lcdLine1 = PSTR("Input hex:");
         partitionStatus[partition].digits = 2;
         partitionStatus[partition].hex = true;
-        lcdLine2 = FC("(2 digits)");
+        lcdLine2 = PSTR("(2 digits)");
         break;
       case 0xEB:
-        lcdLine1 = FC("Input hex:");
+        lcdLine1 = PSTR("Input hex:");
         partitionStatus[partition].digits = 4;
         partitionStatus[partition].hex = true;
-        lcdLine2 = FC("(4 digits)");
+        lcdLine2 = PSTR("(4 digits)");
         break;
       case 0xEC:
-        lcdLine1 = FC("Input hex:");
+        lcdLine1 = PSTR("Input hex:");
         partitionStatus[partition].digits = 6;
         partitionStatus[partition].hex = true;
-        lcdLine2 = FC("(6 digits)");
+        lcdLine2 = PSTR("(6 digits)");
         break;
       case 0xED:
-        lcdLine1 = FC("Input hex:");
+        lcdLine1 = PSTR("Input hex:");
         partitionStatus[partition].digits = 32;
         partitionStatus[partition].hex = true;
-        lcdLine2 = FC("(32 digits)  ");
+        lcdLine2 = PSTR("(32 digits)  ");
         break;
       case 0xEE:
-        lcdLine1 = FC("options:");
+        lcdLine1 = PSTR("options:");
         options = true;
-        lcdLine2 = FC("option per zone ");
+        lcdLine2 = PSTR("option per zone ");
         break;
       case 0xEF:
-        lcdLine1 = FC("Module");
-        lcdLine2 = FC("supervision");
+        lcdLine1 = PSTR("Module");
+        lcdLine2 = PSTR("supervision");
         break;
       case 0xF0:
-        lcdLine1 = FC("Function");
-        lcdLine2 = FC("key 1");
+        lcdLine1 = PSTR("Function");
+        lcdLine2 = PSTR("key 1");
         break;
       case 0xF1:
-        lcdLine1 = FC("Function");
-        lcdLine2 = FC("key 2");
+        lcdLine1 = PSTR("Function");
+        lcdLine2 = PSTR("key 2");
         break;
       case 0xF2:
-        lcdLine1 = FC("Function");
-        lcdLine2 = FC("key 3");
+        lcdLine1 = PSTR("Function");
+        lcdLine2 = PSTR("key 3");
         break;
       case 0xF3:
-        lcdLine1 = FC("Function");
-        lcdLine2 = FC("key 4");
+        lcdLine1 = PSTR("Function");
+        lcdLine2 = PSTR("key 4");
         break;
       case 0xF4:
-        lcdLine1 = FC("Function");
-        lcdLine2 = FC("key 5");
+        lcdLine1 = PSTR("Function");
+        lcdLine2 = PSTR("key 5");
         break;
       case 0xF5:
-        lcdLine1 = FC("Wireless mod.");
-        lcdLine2 = FC("placement test");
+        lcdLine1 = PSTR("Wireless mod.");
+        lcdLine2 = PSTR("placement test");
         break;
       case 0xF6:
-        lcdLine1 = FC("Activate");
-        lcdLine2 = FC("device for test");
+        lcdLine1 = PSTR("Activate");
+        lcdLine2 = PSTR("device for test");
         break;
       case 0xF7:
-        lcdLine1 = FC("Sub-section:");
-        lcdLine2 = FC("(2 digits)");
+        lcdLine1 = PSTR("Sub-section:");
+        lcdLine2 = PSTR("(2 digits)");
         break;
       case 0xF8:
-        lcdLine1 = FC("Keypad");
-        lcdLine2 = FC("programming");
+        lcdLine1 = PSTR("Keypad");
+        lcdLine2 = PSTR("programming");
         break;
       case 0xFA:
-        lcdLine1 = FC("Input:");
+        lcdLine1 = PSTR("Input:");
         partitionStatus[partition].digits = 6;
-        lcdLine2 = FC("(6 digits) ");
+        lcdLine2 = PSTR("(6 digits) ");
         break;
       default:
         lcdLine2 = std::to_string(dsc.status[partition]);
@@ -2590,15 +2598,15 @@ void DSCkeybushome::update()
               c = decimalInputBuffer[x] - 48;
             else
               c = x % 2 ? dsc.pgmBuffer.data[y] & 0x0F : (dsc.pgmBuffer.data[y] & 0xF0) >> 4;
-            std::string tpl = FC("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+            std::string tpl = PSTR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 
             if (dsc.status[partition] == 0xAA)
             {
-              tpl = FC("XXXX    XXXXXX  XXXXXXXXXXXXXXXX");
+              tpl = PSTR("XXXX    XXXXXX  XXXXXXXXXXXXXXXX");
             }
             if (dsc.status[partition] == 0xAB)
             {
-              tpl = FC("XXXX");
+              tpl = PSTR("XXXX");
             }
             if (tpl[x] == 'X')
             {
@@ -2716,8 +2724,8 @@ void DSCkeybushome::update()
           }
           else if (!force)
           {
-            lcdLine1 = FC("No alarms");
-            lcdLine2 = FC("in memory");
+            lcdLine1 = PSTR("No alarms");
+            lcdLine2 = PSTR("in memory");
           }
         }
         else if (dsc.status[partition] == 0xBA)
@@ -2738,8 +2746,8 @@ void DSCkeybushome::update()
           }
           else
           {
-            lcdLine1 = FC("There are no");
-            lcdLine2 = FC("low battery zones");
+            lcdLine1 = PSTR("There are no");
+            lcdLine2 = PSTR("low battery zones");
           }
         }
         else if (dsc.status[partition] == 0x9E)
@@ -3411,157 +3419,157 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x49:
-        lcdLine1 = FC("Duress alarm");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Duress alarm");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x4A:
-        lcdLine1 = FC("Disarmed");
-        lcdLine2 = FC("Alarm mem");
+        lcdLine1 = PSTR("Disarmed");
+        lcdLine2 = PSTR("Alarm mem");
         break;
       case 0x4B:
-        lcdLine1 = FC("Recent");
-        lcdLine2 = FC("closing alarm");
+        lcdLine1 = PSTR("Recent");
+        lcdLine2 = PSTR("closing alarm");
         break;
       case 0x4C:
-        lcdLine1 = FC("Zone exp");
-        lcdLine2 = FC("suprvis. alarm");
+        lcdLine1 = PSTR("Zone exp");
+        lcdLine2 = PSTR("suprvis. alarm");
         break;
       case 0x4D:
-        lcdLine1 = FC("Zone exp");
-        lcdLine2 = FC("suprvis. rest");
+        lcdLine1 = PSTR("Zone exp");
+        lcdLine2 = PSTR("suprvis. rest");
         break;
       case 0x4E:
-        lcdLine1 = FC("Keypad Fire");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Keypad Fire");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x4F:
-        lcdLine1 = FC("Keypad Aux");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Keypad Aux");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x50:
-        lcdLine1 = FC("Keypad Panic");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Keypad Panic");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x51:
-        lcdLine1 = FC("Aux input");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Aux input");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x52:
-        lcdLine1 = FC("Keypad Fire");
-        lcdLine2 = FC("alarm rest");
+        lcdLine1 = PSTR("Keypad Fire");
+        lcdLine2 = PSTR("alarm rest");
         break;
       case 0x53:
-        lcdLine1 = FC("Keypad Aux");
-        lcdLine2 = FC("alarm rest");
+        lcdLine1 = PSTR("Keypad Aux");
+        lcdLine2 = PSTR("alarm rest");
         break;
       case 0x54:
-        lcdLine1 = FC("Keypad Panic");
-        lcdLine2 = FC("alarm rest");
+        lcdLine1 = PSTR("Keypad Panic");
+        lcdLine2 = PSTR("alarm rest");
         break;
       case 0x55:
-        lcdLine1 = FC("Aux input");
-        lcdLine2 = FC("alarm rest");
+        lcdLine1 = PSTR("Aux input");
+        lcdLine2 = PSTR("alarm rest");
         break;
         // 0x56 - 0x75: Zone tamper, zones 1-32
         // 0x76 - 0x95: Zone tamper restored, zones 1-32
       case 0x98:
-        lcdLine1 = FC("Keypad");
-        lcdLine2 = FC("lockout");
+        lcdLine1 = PSTR("Keypad");
+        lcdLine2 = PSTR("lockout");
         break;
         // 0x99 - 0xBD: Armed: Access_codes 1-34, 40-42
       case 0xBE:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Partial");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Partial");
         break;
       case 0xBF:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Special");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Special");
         publishUserArmingDisarming("<quick arm>", partition);
         break;
         // 0xC0 - 0xE4: Disarmed: Access_codes 1-34, 40-42
       case 0xE5:
-        lcdLine1 = FC("Auto-arm");
-        lcdLine2 = FC("canc");
+        lcdLine1 = PSTR("Auto-arm");
+        lcdLine2 = PSTR("canc");
         break;
       case 0xE6:
-        lcdLine1 = FC("Disarmed");
-        lcdLine2 = FC("Special");
+        lcdLine1 = PSTR("Disarmed");
+        lcdLine2 = PSTR("Special");
         break;
       case 0xE7:
-        lcdLine1 = FC("Panel bat");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Panel bat");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xE8:
-        lcdLine1 = FC("Panel AC");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Panel AC");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xE9:
-        lcdLine1 = FC("Bell trble");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Bell trble");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xEA:
-        lcdLine1 = FC("Fire zone");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Fire zone");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xEB:
-        lcdLine1 = FC("Panel aux sup");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Panel aux sup");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xEC:
-        lcdLine1 = FC("Tel line");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Tel line");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xEF:
-        lcdLine1 = FC("Panel bat");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Panel bat");
+        lcdLine2 = PSTR("rest");
         break;
       case 0xF0:
-        lcdLine1 = FC("Panel AC");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Panel AC");
+        lcdLine2 = PSTR("rest");
         break;
       case 0xF1:
-        lcdLine1 = FC("Bell rest");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Bell rest");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xF2:
-        lcdLine1 = FC("Fire zone");
-        lcdLine2 = FC("trble rest");
+        lcdLine1 = PSTR("Fire zone");
+        lcdLine2 = PSTR("trble rest");
         break;
       case 0xF3:
-        lcdLine1 = FC("Panel aux sup");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Panel aux sup");
+        lcdLine2 = PSTR("rest");
         break;
       case 0xF4:
-        lcdLine1 = FC("Tel line");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Tel line");
+        lcdLine2 = PSTR("rest");
         break;
       case 0xF7:
-        lcdLine1 = FC("Phone 1 FTC");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Phone 1 FTC");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xF8:
-        lcdLine1 = FC("Phone 2 FTC");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Phone 2 FTC");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xF9:
-        lcdLine1 = FC("Event buffer");
-        lcdLine2 = FC("threshold");
+        lcdLine1 = PSTR("Event buffer");
+        lcdLine2 = PSTR("threshold");
         break;
       case 0xFA:
-        lcdLine1 = FC("DLS lead-in");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("DLS lead-in");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xFB:
-        lcdLine1 = FC("DLS lead-out");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("DLS lead-out");
+        lcdLine2 = PSTR(" ");
         break;
       case 0xFE:
-        lcdLine1 = FC("Periodic test");
-        lcdLine2 = FC("trans");
+        lcdLine1 = PSTR("Periodic test");
+        lcdLine2 = PSTR("trans");
         break;
       case 0xFF:
-        lcdLine1 = FC("System test");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("System test");
+        lcdLine2 = PSTR(" ");
         break;
       default:
         decoded = false;
@@ -3571,7 +3579,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x09 && dsc.panelData[panelByte] <= 0x28)
       {
-        lcdLine1 = FC("Zone alarm on");
+        lcdLine1 = PSTR("Zone alarm on");
         byte zone = dsc.panelData[panelByte] - 8;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->alarm = true;
@@ -3585,7 +3593,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x29 && dsc.panelData[panelByte] <= 0x48)
       {
-        lcdLine1 = FC("Zone alarm off");
+        lcdLine1 = PSTR("Zone alarm off");
         byte zone = dsc.panelData[panelByte] - 40;
         // if (zone > 0 && zone < maxZones)
         // zoneStatus[zone-1].alarm=false;
@@ -3598,7 +3606,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x56 && dsc.panelData[panelByte] <= 0x75)
       {
-        lcdLine1 = FC("Zone tamper ON");
+        lcdLine1 = PSTR("Zone tamper ON");
         byte zone = dsc.panelData[panelByte] - 0x55;
         // if (zone > 0 && zone < maxZones)
         //   getZone(zone - 1)->tamper = true;
@@ -3611,7 +3619,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x76 && dsc.panelData[panelByte] <= 0x95)
       {
-        lcdLine1 = FC("Zone tamper OFF");
+        lcdLine1 = PSTR("Zone tamper OFF");
         byte zone = dsc.panelData[panelByte] - 0x75;
         // if (zone > 0 && zone < maxZones)
         //   getZone(zone - 1)->tamper = false;
@@ -3624,7 +3632,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x99 && dsc.panelData[panelByte] <= 0xBD)
       {
-        lcdLine1 = FC("Armed by");
+        lcdLine1 = PSTR("Armed by");
         byte dscCode = dsc.panelData[panelByte] - 0x98;
         if (dscCode >= 35)
           dscCode += 5;
@@ -3637,7 +3645,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xC0 && dsc.panelData[panelByte] <= 0xE4)
       {
-        lcdLine1 = FC("Disarmed by");
+        lcdLine1 = PSTR("Disarmed by");
         byte dscCode = dsc.panelData[panelByte] - 0xBF;
         if (dscCode >= 35)
           dscCode += 5;
@@ -3650,7 +3658,7 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown_data0");
+        lcdLine1 = PSTR("Unknown_data0");
         lcdLine2 = " ";
         eventstr = "unknown data";
       }
@@ -3682,62 +3690,62 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x03:
-        lcdLine1 = FC("Cross zone");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Cross zone");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x04:
-        lcdLine1 = FC("Delinquency");
-        lcdLine2 = FC("alarm");
+        lcdLine1 = PSTR("Delinquency");
+        lcdLine2 = PSTR("alarm");
         break;
       case 0x05:
-        lcdLine1 = FC("Late to close");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Late to close");
+        lcdLine2 = PSTR(" ");
         break;
         // 0x24 - 0x28: Access codes 33-34, 40-42
       case 0x29:
-        lcdLine1 = FC("Download");
-        lcdLine2 = FC("forced ans");
+        lcdLine1 = PSTR("Download");
+        lcdLine2 = PSTR("forced ans");
         break;
       case 0x2B:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Auto-arm");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Auto-arm");
         break;
         // 0x2C - 0x4B: Zone battery restored, zones 1-32
         // 0x4C - 0x6B: Zone battery low, zones 1-32
         // 0x6C - 0x8B: Zone fault restored, zones 1-32
         // 0x8C - 0xAB: Zone fault, zones 1-32
       case 0xAC:
-        lcdLine1 = FC("Exit inst");
-        lcdLine2 = FC("prog");
+        lcdLine1 = PSTR("Exit inst");
+        lcdLine2 = PSTR("prog");
         break;
       case 0xAD:
-        lcdLine1 = FC("Enter inst");
-        lcdLine2 = FC("prog");
+        lcdLine1 = PSTR("Enter inst");
+        lcdLine2 = PSTR("prog");
         break;
       case 0xAE:
-        lcdLine1 = FC("Walk test");
-        lcdLine2 = FC("end");
+        lcdLine1 = PSTR("Walk test");
+        lcdLine2 = PSTR("end");
         break;
       case 0xAF:
-        lcdLine1 = FC("Walk test");
-        lcdLine2 = FC("begin");
+        lcdLine1 = PSTR("Walk test");
+        lcdLine2 = PSTR("begin");
         break;
         // 0xB0 - 0xCF: Zones bypassed, zones 1-32
       case 0xD0:
-        lcdLine1 = FC("Command");
-        lcdLine2 = FC("output 4");
+        lcdLine1 = PSTR("Command");
+        lcdLine2 = PSTR("output 4");
         break;
       case 0xD1:
-        lcdLine1 = FC("Exit fault");
-        lcdLine2 = FC("pre-alert");
+        lcdLine1 = PSTR("Exit fault");
+        lcdLine2 = PSTR("pre-alert");
         break;
       case 0xD2:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Entry delay");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Entry delay");
         break;
       case 0xD3:
-        lcdLine1 = FC("Downlook rem");
-        lcdLine2 = FC("trig");
+        lcdLine1 = PSTR("Downlook rem");
+        lcdLine2 = PSTR("trig");
         break;
       default:
         decoded = false;
@@ -3750,7 +3758,7 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] - 0x03;
         if (dscCode >= 35)
           dscCode += 5;
-        lcdLine1 = FC("User ");
+        lcdLine1 = PSTR("User ");
         userstr = getUserName(dscCode, false, true);
         lcdLine2 = userstr.c_str();
         ;
@@ -3760,7 +3768,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x2C && dsc.panelData[panelByte] <= 0x4B)
       {
-        lcdLine1 = FC("Zone bat OK");
+        lcdLine1 = PSTR("Zone bat OK");
         byte zone = dsc.panelData[panelByte] - 43;
         getZone(zone - 1)->battery_low = false;
         zonestr = getZoneName(zone, false);
@@ -3771,7 +3779,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x4C && dsc.panelData[panelByte] <= 0x6B)
       {
-        lcdLine1 = FC("Zone bat LOW");
+        lcdLine1 = PSTR("Zone bat LOW");
         byte zone = dsc.panelData[panelByte] - 75;
         getZone(zone - 1)->battery_low = true;
         zonestr = getZoneName(zone, false);
@@ -3783,7 +3791,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x6C && dsc.panelData[panelByte] <= 0x8B)
       {
-        lcdLine1 = FC("Zone fault OFF");
+        lcdLine1 = PSTR("Zone fault OFF");
         byte zone = dsc.panelData[panelByte] - 107;
         // zoneStatus[zone-1].open=false;
         zonestr = getZoneName(zone, false);
@@ -3795,7 +3803,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x8C && dsc.panelData[panelByte] <= 0xAB)
       {
-        lcdLine1 = FC("Zone fault ON");
+        lcdLine1 = PSTR("Zone fault ON");
         byte zone = dsc.panelData[panelByte] - 139;
         // zoneStatus[zone-1].open=true;
         zonestr = getZoneName(zone, false);
@@ -3807,7 +3815,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xB0 && dsc.panelData[panelByte] <= 0xCF)
       {
-        lcdLine1 = FC("Zone bypass ON");
+        lcdLine1 = PSTR("Zone bypass ON");
         byte zone = dsc.panelData[panelByte] - 175;
         // zoneStatus[zone-1].bypassed=true;
         zonestr = getZoneName(zone, false);
@@ -3819,8 +3827,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data1");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Unknown data1");
+        lcdLine2 = PSTR(" ");
         eventstr = "unknown data";
       }
 
@@ -3850,80 +3858,80 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x2A:
-        lcdLine1 = FC("Quick exit");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Quick exit");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x63:
-        lcdLine1 = FC("Keybus fault");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Keybus fault");
+        lcdLine2 = PSTR("rest");
         break;
       case 0x64:
-        lcdLine1 = FC("Keybus fault");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Keybus fault");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x66:
-        lcdLine1 = FC("Zone bypass");
-        lcdLine2 = FC("program");
+        lcdLine1 = PSTR("Zone bypass");
+        lcdLine2 = PSTR("program");
         break;
       case 0x67:
-        lcdLine1 = FC("Command");
-        lcdLine2 = FC("output 1");
+        lcdLine1 = PSTR("Command");
+        lcdLine2 = PSTR("output 1");
         break;
       case 0x68:
-        lcdLine1 = FC("Command");
-        lcdLine2 = FC("output 2");
+        lcdLine1 = PSTR("Command");
+        lcdLine2 = PSTR("output 2");
         break;
       case 0x69:
-        lcdLine1 = FC("Command");
-        lcdLine2 = FC("output 3");
+        lcdLine1 = PSTR("Command");
+        lcdLine2 = PSTR("output 3");
         break;
       case 0x8C:
-        lcdLine1 = FC("Cold start");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Cold start");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x8D:
-        lcdLine1 = FC("Warm start");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Warm start");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x8E:
-        lcdLine1 = FC("Panel factory");
-        lcdLine2 = FC("default");
+        lcdLine1 = PSTR("Panel factory");
+        lcdLine2 = PSTR("default");
         break;
       case 0x91:
-        lcdLine1 = FC("Swinger shutdown");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Swinger shutdown");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x93:
-        lcdLine1 = FC("Disarmed");
-        lcdLine2 = FC("Keyswitch");
+        lcdLine1 = PSTR("Disarmed");
+        lcdLine2 = PSTR("Keyswitch");
         break;
       case 0x96:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Keyswitch");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Keyswitch");
         break;
       case 0x97:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Keypad away");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Keypad away");
         break;
       case 0x98:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Quick-arm");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Quick-arm");
         break;
       case 0x99:
-        lcdLine1 = FC("Activate");
-        lcdLine2 = FC("stay/away zones");
+        lcdLine1 = PSTR("Activate");
+        lcdLine2 = PSTR("stay/away zones");
         break;
       case 0x9A:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Stay");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Stay");
         break;
       case 0x9B:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("Away");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("Away");
         break;
       case 0x9C:
-        lcdLine1 = FC("Armed");
-        lcdLine2 = FC("No ent del");
+        lcdLine1 = PSTR("Armed");
+        lcdLine2 = PSTR("No ent del");
         break;
         // 0x9E - 0xC2: *1: Access_codes 1-34, 40-42
         // 0xC3 - 0xC5: *5: Access_codes 40-42
@@ -3933,8 +3941,8 @@ void DSCkeybushome::update()
         // 0xF1 - 0xF8: Keypad trouble: Slots 1-8
         // 0xF9 - 0xFE: Zone expander restored: 1-6
       case 0xFF:
-        lcdLine1 = FC("Zone exp");
-        lcdLine2 = FC("trble:1");
+        lcdLine1 = PSTR("Zone exp");
+        lcdLine2 = PSTR("trble:1");
         break;
       default:
         decoded = false;
@@ -3945,7 +3953,7 @@ void DSCkeybushome::update()
       char charBuffer[5];
       if (dsc.panelData[panelByte] >= 0x67 && dsc.panelData[panelByte] <= 0x69)
       {
-        lcdLine1 = FC("Cmd O/P");
+        lcdLine1 = PSTR("Cmd O/P");
         byte zone = dsc.panelData[panelByte] - 0x66;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
@@ -3956,7 +3964,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x9E && dsc.panelData[panelByte] <= 0xC2)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9D;
-        lcdLine1 = FC("[*1] by");
+        lcdLine1 = PSTR("[*1] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr = getUserName(dscCode, false, true);
@@ -3968,7 +3976,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xC3 && dsc.panelData[panelByte] <= 0xC5)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xA0;
-        lcdLine1 = FC("[*5] by");
+        lcdLine1 = PSTR("[*5] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr = getUserName(dscCode, false, true);
@@ -3982,7 +3990,7 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] - 0xC5;
         if (dscCode >= 35)
           dscCode += 5;
-        lcdLine1 = FC("User");
+        lcdLine1 = PSTR("User");
         userstr = getUserName(dscCode, false, true);
         lcdLine2 = userstr.c_str();
         decoded = true;
@@ -3992,7 +4000,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xE6 && dsc.panelData[panelByte] <= 0xE8)
       {
         byte dscCode = dsc.panelData[panelByte] - 0xC3;
-        lcdLine1 = FC("[*6] by");
+        lcdLine1 = PSTR("[*6] by");
         if (dscCode >= 35)
           dscCode += 5;
         userstr = getUserName(dscCode, false, true);
@@ -4003,7 +4011,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xE9 && dsc.panelData[panelByte] <= 0xF0)
       {
-        lcdLine1 = FC("Keypad slot ok");
+        lcdLine1 = PSTR("Keypad slot ok");
         itoa(dsc.panelData[panelByte] - 232, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4013,7 +4021,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xF1 && dsc.panelData[panelByte] <= 0xF8)
       {
-        lcdLine1 = FC("Keypad slot trbl");
+        lcdLine1 = PSTR("Keypad slot trbl");
         itoa(dsc.panelData[panelByte] - 240, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4023,7 +4031,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0xF9 && dsc.panelData[panelByte] <= 0xFE)
       {
-        lcdLine1 = FC("Zone exp ok");
+        lcdLine1 = PSTR("Zone exp ok");
         itoa(dsc.panelData[panelByte] - 248, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4033,7 +4041,7 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data2");
+        lcdLine1 = PSTR("Unknown data2");
         lcdLine2 = " ";
         eventstr = "unknown data";
       }
@@ -4064,92 +4072,92 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x05:
-        lcdLine1 = FC("PC/RF5132:");
-        lcdLine2 = FC("Suprvis. rest");
+        lcdLine1 = PSTR("PC/RF5132:");
+        lcdLine2 = PSTR("Suprvis. rest");
         break;
       case 0x06:
-        lcdLine1 = FC("PC/RF5132:");
-        lcdLine2 = FC("Suprvis. trble");
+        lcdLine1 = PSTR("PC/RF5132:");
+        lcdLine2 = PSTR("Suprvis. trble");
         break;
       case 0x09:
-        lcdLine1 = FC("PC5204:");
-        lcdLine2 = FC("Suprvis. rest");
+        lcdLine1 = PSTR("PC5204:");
+        lcdLine2 = PSTR("Suprvis. rest");
         break;
       case 0x0A:
-        lcdLine1 = FC("PC5204:");
-        lcdLine2 = FC("Suprvis. trble");
+        lcdLine1 = PSTR("PC5204:");
+        lcdLine2 = PSTR("Suprvis. trble");
         break;
       case 0x17:
-        lcdLine1 = FC("Zone exp 7");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("Zone exp 7");
+        lcdLine2 = PSTR("rest");
         break;
       case 0x18:
-        lcdLine1 = FC("Zone exp 7");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Zone exp 7");
+        lcdLine2 = PSTR("trble");
         break;
         // 0x25 - 0x2C: Keypad tamper restored, slots 1-8
         // 0x2D - 0x34: Keypad tamper, slots 1-8
         // 0x35 - 0x3A: Module tamper restored, slots 9-14
         // 0x3B - 0x40: Module tamper, slots 9-14
       case 0x41:
-        lcdLine1 = FC("PC/RF5132:");
-        lcdLine2 = FC("Tamper rest");
+        lcdLine1 = PSTR("PC/RF5132:");
+        lcdLine2 = PSTR("Tamper rest");
         break;
       case 0x42:
-        lcdLine1 = FC("PC/RF5132: Tamper");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("PC/RF5132: Tamper");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x43:
-        lcdLine1 = FC("PC5208: Tamper");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("PC5208: Tamper");
+        lcdLine2 = PSTR("rest");
         break;
       case 0x44:
-        lcdLine1 = FC("PC5208: Tamper");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("PC5208: Tamper");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x45:
-        lcdLine1 = FC("PC5204: Tamper");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("PC5204: Tamper");
+        lcdLine2 = PSTR("rest");
         break;
       case 0x46:
-        lcdLine1 = FC("PC5204: Tamper");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("PC5204: Tamper");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x51:
-        lcdLine1 = FC("Zone exp 7");
-        lcdLine2 = FC("tamper rest");
+        lcdLine1 = PSTR("Zone exp 7");
+        lcdLine2 = PSTR("tamper rest");
         break;
       case 0x52:
-        lcdLine1 = FC("Zone exp 7");
-        lcdLine2 = FC("tamper");
+        lcdLine1 = PSTR("Zone exp 7");
+        lcdLine2 = PSTR("tamper");
         break;
       case 0xB3:
-        lcdLine1 = FC("PC5204:");
-        lcdLine2 = FC("Bat rest");
+        lcdLine1 = PSTR("PC5204:");
+        lcdLine2 = PSTR("Bat rest");
         break;
       case 0xB4:
-        lcdLine1 = FC("PC5204:");
-        lcdLine2 = FC("Bat trble");
+        lcdLine1 = PSTR("PC5204:");
+        lcdLine2 = PSTR("Bat trble");
         break;
       case 0xB5:
-        lcdLine1 = FC("PC5204: Aux");
-        lcdLine2 = FC("sup rest");
+        lcdLine1 = PSTR("PC5204: Aux");
+        lcdLine2 = PSTR("sup rest");
         break;
       case 0xB6:
-        lcdLine1 = FC("PC5204: Aux");
-        lcdLine2 = FC("sup trble");
+        lcdLine1 = PSTR("PC5204: Aux");
+        lcdLine2 = PSTR("sup trble");
         break;
       case 0xB7:
-        lcdLine1 = FC("PC5204: Out 1");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("PC5204: Out 1");
+        lcdLine2 = PSTR("rest");
         break;
       case 0xB8:
-        lcdLine1 = FC("PC5204: Out 1");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("PC5204: Out 1");
+        lcdLine2 = PSTR("trble");
         break;
       case 0xFF:
-        lcdLine1 = FC("Ext status");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Ext status");
+        lcdLine2 = PSTR(" ");
         break;
       default:
         decoded = false;
@@ -4161,7 +4169,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] <= 0x04)
       {
-        lcdLine1 = FC("Zone exp trouble");
+        lcdLine1 = PSTR("Zone exp trouble");
         itoa(dsc.panelData[panelByte] + 2, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4170,7 +4178,7 @@ void DSCkeybushome::update()
       }
       if (dsc.panelData[panelByte] >= 0x25 && dsc.panelData[panelByte] <= 0x2C)
       {
-        lcdLine1 = FC("keypad tamper off");
+        lcdLine1 = PSTR("keypad tamper off");
         itoa(dsc.panelData[panelByte] - 0x24, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4179,7 +4187,7 @@ void DSCkeybushome::update()
       }
       if (dsc.panelData[panelByte] >= 0x2D && dsc.panelData[panelByte] <= 0x34)
       {
-        lcdLine1 = FC("keypad tamper on");
+        lcdLine1 = PSTR("keypad tamper on");
         itoa(dsc.panelData[panelByte] - 0x2c, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4189,7 +4197,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x35 && dsc.panelData[panelByte] <= 0x3A)
       {
-        lcdLine1 = FC("Zone exp tamper off");
+        lcdLine1 = PSTR("Zone exp tamper off");
         itoa(dsc.panelData[panelByte] - 52, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4199,7 +4207,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x3B && dsc.panelData[panelByte] <= 0x40)
       {
-        lcdLine1 = FC("Zone exp tamper on");
+        lcdLine1 = PSTR("Zone exp tamper on");
         itoa(dsc.panelData[panelByte] - 58, charBuffer, 10);
         lcdLine2 = charBuffer;
         decoded = true;
@@ -4209,8 +4217,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data3");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Unknown data3");
+        lcdLine2 = PSTR(" ");
         eventstr = "unknown data";
       }
 
@@ -4240,16 +4248,16 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x86:
-        lcdLine1 = FC("Period test");
-        lcdLine2 = FC("trble");
+        lcdLine1 = PSTR("Period test");
+        lcdLine2 = PSTR("trble");
         break;
       case 0x87:
-        lcdLine1 = FC("Exit fault");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Exit fault");
+        lcdLine2 = PSTR(" ");
         break;
       case 0x89:
-        lcdLine1 = FC("Alarm cancel");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Alarm cancel");
+        lcdLine2 = PSTR(" ");
         break;
       default:
         decoded = false;
@@ -4260,7 +4268,7 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] <= 0x1F)
       {
-        lcdLine1 = FC("Zone alarm on");
+        lcdLine1 = PSTR("Zone alarm on");
         byte zone = dsc.panelData[panelByte] + 33;
         if (zone > 0 && zone < maxZones)
           getZone(zone - 1)->alarm = true;
@@ -4273,7 +4281,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x20 && dsc.panelData[panelByte] <= 0x3F)
       {
-        lcdLine1 = FC("Zone alarm off");
+        lcdLine1 = PSTR("Zone alarm off");
         byte zone = dsc.panelData[panelByte] + 1;
         //   if (zone > 0 && zone < maxZones)
         //    zoneStatus[zone-1].alarm=false;
@@ -4284,7 +4292,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x40 && dsc.panelData[panelByte] <= 0x5F)
       {
-        lcdLine1 = FC("Zone tamper on");
+        lcdLine1 = PSTR("Zone tamper on");
         byte zone = dsc.panelData[panelByte] - 31;
         // if (zone > 0 && zone < maxZones)
         // getZone(zone - 1)->tamper = true;
@@ -4296,7 +4304,7 @@ void DSCkeybushome::update()
       }
       else if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
-        lcdLine1 = FC("Tamper zone off");
+        lcdLine1 = PSTR("Tamper zone off");
         byte zone = dsc.panelData[panelByte] - 63;
         //   if (zone > 0 && zone < maxZones)
         // getZone(zone - 1)->tamper = false;
@@ -4309,8 +4317,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data4");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Unknown data4");
+        lcdLine2 = PSTR(" ");
         eventstr = "unknown data";
       }
 
@@ -4341,7 +4349,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] <= 0x39)
       {
         byte dscCode = dsc.panelData[panelByte] + 0x23;
-        lcdLine1 = FC("Armed by");
+        lcdLine1 = PSTR("Armed by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4354,7 +4362,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x73)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x17;
-        lcdLine1 = FC("Disarmed by");
+        lcdLine1 = PSTR("Disarmed by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4366,8 +4374,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data5");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Unknown data5");
+        lcdLine2 = PSTR(" ");
         eventstr = "unknown data";
       }
 
@@ -4401,23 +4409,23 @@ void DSCkeybushome::update()
       // 0x60 - 0x7F: Zone fault, zones 33-64
       // 0x80 - 0x9F: Zone bypassed, zones 33-64
       case 0xC0:
-        lcdLine1 = FC("TLink");
-        lcdLine2 = FC("com fault");
+        lcdLine1 = PSTR("TLink");
+        lcdLine2 = PSTR("com fault");
         decoded = true;
         break;
       case 0xC2:
-        lcdLine1 = FC("Tlink");
-        lcdLine2 = FC("net fault");
+        lcdLine1 = PSTR("Tlink");
+        lcdLine2 = PSTR("net fault");
         decoded = true;
         break;
       case 0xC4:
-        lcdLine1 = FC("TLink rec");
-        lcdLine2 = FC("trouble");
+        lcdLine1 = PSTR("TLink rec");
+        lcdLine2 = PSTR("trouble");
         decoded = true;
         break;
       case 0xC5:
-        lcdLine1 = FC("TLink receiver");
-        lcdLine2 = FC("restored");
+        lcdLine1 = PSTR("TLink receiver");
+        lcdLine2 = PSTR("restored");
         decoded = true;
         break;
       default:
@@ -4429,7 +4437,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x40 && dsc.panelData[panelByte] <= 0x5F)
       {
         byte dscCode = dsc.panelData[panelByte] - 31;
-        lcdLine1 = FC("Zone restored");
+        lcdLine1 = PSTR("Zone restored");
         zonestr = getZoneName(dscCode, true);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -4445,7 +4453,7 @@ void DSCkeybushome::update()
        */
       if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
-        lcdLine1 = FC("Zone fault on");
+        lcdLine1 = PSTR("Zone fault on");
         byte dscCode = dsc.panelData[panelByte] - 63;
         zonestr = getZoneName(dscCode, true);
         lcdLine2 = zonestr.c_str();
@@ -4463,7 +4471,7 @@ void DSCkeybushome::update()
        */
       if (dsc.panelData[panelByte] >= 0x80 && dsc.panelData[panelByte] <= 0x9F)
       {
-        lcdLine1 = FC("Zone bypass on");
+        lcdLine1 = PSTR("Zone bypass on");
         byte dscCode = dsc.panelData[panelByte] - 95;
         zonestr = getZoneName(dscCode, true);
         lcdLine2 = zonestr.c_str();
@@ -4473,8 +4481,8 @@ void DSCkeybushome::update()
       }
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data14");
-        lcdLine2 = FC(" ");
+        lcdLine1 = PSTR("Unknown data14");
+        lcdLine2 = PSTR(" ");
         eventstr = "unknown data";
       }
 
@@ -4513,17 +4521,17 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0x80:
-        lcdLine1 = FC("Trouble");
-        lcdLine2 = FC("ack");
+        lcdLine1 = PSTR("Trouble");
+        lcdLine2 = PSTR("ack");
         break;
       case 0x81:
-        lcdLine1 = FC("RF delin");
-        lcdLine2 = FC("trouble");
+        lcdLine1 = PSTR("RF delin");
+        lcdLine2 = PSTR("trouble");
 
         break;
       case 0x82:
-        lcdLine1 = FC("RF delin");
-        lcdLine2 = FC("rest");
+        lcdLine1 = PSTR("RF delin");
+        lcdLine2 = PSTR("rest");
 
         break;
       default:
@@ -4534,8 +4542,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data16");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR("Unknown data16");
+        lcdLine2 = PSTR("");
         eventstr = "unknown data";
       }
 
@@ -4566,7 +4574,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x4A && dsc.panelData[panelByte] <= 0x83)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x27;
-        lcdLine1 = FC("[*1] by");
+        lcdLine1 = PSTR("[*1] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4579,7 +4587,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] <= 0x24)
       {
         byte dscCode = dsc.panelData[panelByte] + 1;
-        lcdLine1 = FC("[*2] by");
+        lcdLine1 = PSTR("[*2] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4591,7 +4599,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x84 && dsc.panelData[panelByte] <= 0xBD)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x61;
-        lcdLine1 = FC("[*2] by");
+        lcdLine1 = PSTR("[*2] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4603,7 +4611,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x25 && dsc.panelData[panelByte] <= 0x49)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x24;
-        lcdLine1 = FC("[*3] by");
+        lcdLine1 = PSTR("[*3] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4615,7 +4623,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0xBE && dsc.panelData[panelByte] <= 0xF7)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x9B;
-        lcdLine1 = FC("[*3] by");
+        lcdLine1 = PSTR("[*3] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4626,8 +4634,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data17");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR("Unknown data17");
+        lcdLine2 = PSTR("");
         eventstr = "unknown data";
       }
 
@@ -4661,7 +4669,7 @@ void DSCkeybushome::update()
         byte dscCode = dsc.panelData[panelByte] + 0x23;
         if (dscCode >= 40)
           dscCode += 3;
-        lcdLine1 = FC("User ");
+        lcdLine1 = PSTR("User ");
         userstr = getUserName(dscCode, false, true);
         lcdLine2 = userstr.c_str();
         decoded = true;
@@ -4671,7 +4679,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x3A && dsc.panelData[panelByte] <= 0x95)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x39;
-        lcdLine1 = FC("[*5] by");
+        lcdLine1 = PSTR("[*5] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4683,7 +4691,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x96 && dsc.panelData[panelByte] <= 0xF1)
       {
         byte dscCode = dsc.panelData[panelByte] - 0x95;
-        lcdLine1 = FC("[*6] by");
+        lcdLine1 = PSTR("[*6] by");
         if (dscCode >= 40)
           dscCode += 3;
         userstr = getUserName(dscCode, false, true);
@@ -4694,8 +4702,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data18");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR("Unknown data18");
+        lcdLine2 = PSTR("");
         eventstr = "unknown data";
       }
 
@@ -4726,8 +4734,8 @@ void DSCkeybushome::update()
       switch (dsc.panelData[panelByte])
       {
       case 0xF1:
-        lcdLine1 = FC("System reset ");
-        lcdLine2 = FC("trans");
+        lcdLine1 = PSTR("System reset ");
+        lcdLine2 = PSTR("trans");
         break;
       default:
         decoded = false;
@@ -4736,8 +4744,8 @@ void DSCkeybushome::update()
 
       if (!decoded)
       {
-        lcdLine1 = FC("Unknown data1b");
-        lcdLine2 = FC("");
+        lcdLine1 = PSTR("Unknown data1b");
+        lcdLine2 = PSTR("");
         eventstr = "unknown data";
       }
 

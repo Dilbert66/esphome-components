@@ -105,7 +105,7 @@ CONFIG_SCHEMA = cv.All(
             ),
         }
     ).extend(cv.COMPONENT_SCHEMA),
-    cv.only_on([PLATFORM_ESP32]),
+    #cv.only_on([PLATFORM_ESP32]),
 )
 
 

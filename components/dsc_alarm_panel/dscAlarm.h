@@ -295,12 +295,6 @@ unsigned long micros() {
 
  #endif
 
-#if defined(ESP8266)
-#define FC(s) (String(FPSTR(s)).c_str())
-#else
-#define FC(s) ((const char*)(s))
-#endif
-
 
 
       struct zoneType
