@@ -63,10 +63,6 @@ typedef char byte;
 #define IRAM_ATTR
 #endif
 
-#if defined(USE_RP2040) && not defined(ESP)
-#define ESP rp2040
-#endif
-
 // If only one tx or rx wanted then use this as parameter for the unused pin
 constexpr int SW_SERIAL_UNUSED_PIN = -1;
 
@@ -181,7 +177,7 @@ private:
     {
         // return (ESP.getCpuFreqMHz() * micros) << 1;
        // return ((esp_clk_cpu_freq()/1000000) * micros) << 1;
-       #ifdef USE_ARDUINO
+       #if defined(USE_ARDUINO) && not defined(USE_RP2040)
        return (ESP.getCpuFreqMHz() * micros) ;
        #else
        return micros << 1;
@@ -194,7 +190,7 @@ private:
 
     static inline unsigned long IRAM_ATTR ticks()  ALWAYS_INLINE_ATTR
     {
-#ifdef USE_ARDUINO
+#if defined(USE_ARDUINO) && not defined(USE_RP2040)
 return ESP.getCycleCount() ;
 #else
 
