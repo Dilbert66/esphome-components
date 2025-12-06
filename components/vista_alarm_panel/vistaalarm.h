@@ -44,10 +44,6 @@ typedef char __FlashStringHelper;
 #include "paneltext.h"
 #include "Regexp.h"
 
-#if defined(USE_RP2040) && not defined(ESP)
-#define ESP rp2040
-#endif
-
 // for documentation see project at https://github.com/Dilbert66/esphome-vistaecp
 
 #define KP_ADDR 17 // only used as a default if not set in the yaml

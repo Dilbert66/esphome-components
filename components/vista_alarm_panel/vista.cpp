@@ -99,19 +99,27 @@ portMUX_TYPE Vista::m_interruptsMux = portMUX_INITIALIZER_UNLOCKED;
 
 ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::disableInterrupts()
 {
-#ifndef ESP32
+#ifdef ESP8266
    m_savedPS = xt_rsil(15);
-#else
+#endif
+#ifdef ESP32
     taskENTER_CRITICAL(&m_interruptsMux);
+#endif
+#ifdef USE_RP2040
+    m_savedPS = save_and_disable_interrupts();
 #endif
 }
 
 ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::restoreInterrupts()
 {
-#ifndef ESP32
+#ifdef ESP8266
     xt_wsr_ps(m_savedPS);
-#else
+#endif
+#ifdef ESP32
     taskEXIT_CRITICAL(&m_interruptsMux);
+#endif
+#ifdef USE_RP2040
+    restore_interrupts(m_savedPS);
 #endif
 }
 
