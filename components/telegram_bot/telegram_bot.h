@@ -507,39 +507,39 @@ namespace esphome
       explicit TelegramMessageTrigger(const std::string &cmd, const std::string &type)
       {
         global_notify->set_on_message([cmd, type, this](RemoteData &x)
-                                      {
-                                        std::string s = x.cmd;
-                                        // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
-                                        std::string bn=global_notify->get_bot_name();
-                                        if (x.to !="" && !stringsEqual(x.to,bn) )
-                                          return;
+        {
+          std::string s = x.cmd;
+          // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
+          std::string bn=global_notify->get_bot_name();
+          if (x.to !="" && !stringsEqual(x.to,bn) )
+            return;
 
-                                        if (type == "callback")
-                                        {
-                                          if (!x.is_callback)
-                                            return;
-                                          s = x.text;
-                                        }
-                                        if (type == "cmd")
-                                        {
-                                          if (x.cmd == "" || x.is_callback)
-                                            return;
-                                        }
+          if (type == "callback")
+          {
+            if (!x.is_callback)
+              return;
+            s = x.text;
+          }
+          if (type == "cmd")
+          {
+            if (x.cmd == "" || x.is_callback)
+              return;
+          }
 
-                                        if (type == "text")
-                                        {
-                                          if (x.cmd != "" || x.is_callback)
-                                            return;
-                                          s = x.text;
-                                        }
-                                        
+          if (type == "text")
+          {
+            if (x.cmd != "" || x.is_callback)
+              return;
+            s = x.text;
+          }
+          
 
-                                        if (cmd.find("," + s + ",") != std::string::npos)
-                                          this->trigger(x);
-                                        if (cmd.find(",*,") != std::string::npos)
-                                          this->trigger(x); 
-                                        
-                                        });
+          if (cmd.find("," + s + ",") != std::string::npos)
+            this->trigger(x);
+          if (cmd.find(",*,") != std::string::npos)
+            this->trigger(x); 
+          
+          });
       };
     };
 

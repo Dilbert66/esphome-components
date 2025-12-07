@@ -305,11 +305,12 @@ void SHA256::doFinal(char *digest)
   #endif
 }
 
+
 bool SHA256::matches(const char *expected)
 {
     char theDigest[SHA256_SIZE];
     doFinal(theDigest);
-    for (char i = 0; i < SHA256_SIZE; i++)
+    for (unsigned char i = 0; i < SHA256_SIZE; i++)
     {
         if (expected[i] != theDigest[i])
             return false;
@@ -973,7 +974,7 @@ bool SHA256HMAC::matches(const char *expected)
 {
     char theDigest[SHA256_SIZE];
     doFinal(theDigest);
-    for (char i = 0; i < SHA256_SIZE; i++)
+    for (unsigned char i = 0; i < SHA256_SIZE; i++)
     {
         if (expected[i] != theDigest[i])
             return false;
@@ -983,8 +984,9 @@ bool SHA256HMAC::matches(const char *expected)
 
 void SHA256HMAC::blockXor(const char *in, char *out, char val, char len)
 {
-    for (char i = 0; i < len; i++)
+    for (unsigned char i = 0; i < len; i++)
     {
         out[i] = in[i] ^ val;
     }
 }
+

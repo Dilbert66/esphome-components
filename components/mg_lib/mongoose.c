@@ -19,6 +19,7 @@
 
 #include "mongoose.h"
 
+
 #ifdef MG_ENABLE_LINES
 #line 1 "src/base64.c"
 #endif
@@ -747,15 +748,21 @@ size_t mg_xprintf(void (*out)(char, void *), void *ptr, const char *fmt, ...) {
 
 size_t mg_vxprintf(void (*out)(char, void *), void *param, const char *fmt,
                    va_list *ap) {
-  size_t i = 0, n = 0;
+
+   size_t i = 0, n = 0;
+
   while (fmt[i] != '\0') {
+
+
     if (fmt[i] == '%') {
       size_t j, k, x = 0, is_long = 0, w = 0 /* width */, pr = ~0U /* prec */;
       char pad = ' ', minus = 0, c = fmt[++i];
       if (c == '#') x++, c = fmt[++i];
       if (c == '-') minus++, c = fmt[++i];
       if (c == '0') pad = '0', c = fmt[++i];
+
       while (is_digit(c)) w *= 10, w += (size_t) (c - '0'), c = fmt[++i];
+
       if (c == '.') {
         c = fmt[++i];
         if (c == '*') {
@@ -827,9 +834,11 @@ size_t mg_vxprintf(void (*out)(char, void *), void *param, const char *fmt,
       }
       i++;
     } else {
+
       out(fmt[i], param), n++, i++;
     }
   }
+
   return n;
 }
 
@@ -1461,18 +1470,7 @@ struct mg_fs mg_fs_posix = {p_stat,  p_list, p_open,   p_close,  p_read,
 #endif
 
 
-
-
-
-
-
-
-
-
-
-
-
-static int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
+int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   int diff = 0;
   if (len > 0) do {
       int c = *s1++, d = *s2++;
@@ -1841,6 +1839,9 @@ void mg_http_write_chunk(struct mg_connection *c, const char *buf, size_t len) {
 
 // clang-format off
 static const char *mg_http_status_code_str(int status_code) {
+  #ifdef ESP8266
+  return""; //dilbert66 we avoid using about 3 to 4k of ram .  Since we don't use arduino here, we don't use the F macros
+  #else
   switch (status_code) {
     case 100: return "Continue";
     case 101: return "Switching Protocols";
@@ -1907,17 +1908,22 @@ static const char *mg_http_status_code_str(int status_code) {
     case 599: return "Network Connect Timeout Error";
     default: return "";
   }
+  #endif
 }
 // clang-format on
+
 
 void mg_http_reply(struct mg_connection *c, int code, const char *headers,
                    const char *fmt, ...) {
   va_list ap;
   size_t len;
+
   mg_printf(c, "HTTP/1.1 %d %s\r\n%sContent-Length:            \r\n\r\n", code,
             mg_http_status_code_str(code), headers == NULL ? "" : headers);
   len = c->send.len;
+ 
   va_start(ap, fmt);
+
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, &ap);
   va_end(ap);
   if (c->send.len > 16) {
@@ -1927,6 +1933,7 @@ void mg_http_reply(struct mg_connection *c, int code, const char *headers,
   }
   c->is_resp = 0;
 }
+
 
 static void http_cb(struct mg_connection *, int, void *);
 static void restore_http_cb(struct mg_connection *c) {
@@ -2481,6 +2488,7 @@ static int skip_chunk(const char *buf, int len, int *pl, int *dl) {
 }
 
 static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
+
   if (ev == MG_EV_READ || ev == MG_EV_CLOSE ||
       (ev == MG_EV_POLL && c->is_accepted && !c->is_draining &&
        c->recv.len > 0)) {  // see #2796
@@ -2488,6 +2496,7 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
     size_t ofs = 0;  // Parsing offset
     while (c->is_resp == 0 && ofs < c->recv.len) {
       const char *buf = (char *) c->recv.buf + ofs;
+
       int n = mg_http_parse(buf, c->recv.len - ofs, &hm);
       struct mg_str *te;  // Transfer - encoding header
       bool is_chunked = false;
@@ -2502,6 +2511,7 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
         return;
       }
       if (n == 0) break;                 // Request is not buffered yet
+
       mg_call(c, MG_EV_HTTP_HDRS, &hm);  // Got all HTTP headers
       if (c->recv.len != old_len) {
         // User manipulated received data. Wash our hands
@@ -2538,11 +2548,13 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
           int status = mg_http_status(&hm);
           require_content_len = status >= 200 && status != 204 && status != 304;
         }
+          
         if (require_content_len) {
           if (!c->is_client) mg_http_reply(c, 411, "", "");
           MG_ERROR(("Content length missing from %s",
                     is_response ? "response" : "request"));
         }
+
       }
 
       if (is_chunked) {
@@ -2572,18 +2584,21 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
         if (hm.body.len > len) break;  // Buffer more data
         ofs += (size_t) n + hm.body.len;
       }
-
       if (c->is_accepted) c->is_resp = 1;  // Start generating response
+
       mg_call(c, MG_EV_HTTP_MSG, &hm);     // User handler can clear is_resp
       if (c->is_accepted && !c->is_resp) {
         struct mg_str *cc = mg_http_get_header(&hm, "Connection");
+
         if (cc != NULL && mg_strcasecmp(*cc, mg_str("close")) == 0) {
           c->is_draining = 1;  // honor "Connection: close"
           break;
         }
       }
+ 
     }
     if (ofs > 0) mg_iobuf_del(&c->recv, 0, ofs);  // Delete processed data
+
   }
   (void) ev_data;
 }
@@ -2605,22 +2620,20 @@ struct mg_connection *mg_http_listen(struct mg_mgr *mgr, const char *url,
 #endif
 
 
-
-
-
 static size_t roundup(size_t size, size_t align) {
   return align == 0 ? size : (size + align - 1) / align * align;
 }
 
 int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
   int ok = 1;
+  
   new_size = roundup(new_size, io->align);
   if (new_size == 0) {
     mg_bzero(io->buf, io->size);
     mg_free(io->buf);
     io->buf = NULL;
     io->len = io->size = 0;
-  } else if (new_size != io->size) {
+    } else if (new_size != io->size) {
     // NOTE(lsm): do not use realloc here. Use mg_calloc/mg_free only
     void *p = mg_calloc(1, new_size);
     if (p != NULL) {
@@ -4040,10 +4053,12 @@ struct mg_connection *mg_alloc_conn(struct mg_mgr *mgr) {
     c->id = ++mgr->nextid;
     MG_PROF_INIT(c);
   }
+
   return c;
 }
 
 void mg_close_conn(struct mg_connection *c) {
+
   mg_resolve_cancel(c);  // Close any pending DNS query
   LIST_DELETE(struct mg_connection, &c->mgr->conns, c);
   if (c == c->mgr->dns4.c) c->mgr->dns4.c = NULL;
@@ -4059,6 +4074,7 @@ void mg_close_conn(struct mg_connection *c) {
   mg_iobuf_free(&c->recv);
   mg_iobuf_free(&c->send);
   mg_iobuf_free(&c->rtls);
+  c->send.c=NULL; //dilbert66
   mg_bzero((unsigned char *) c, sizeof(*c));
   mg_free(c);
 }
@@ -4095,6 +4111,7 @@ struct mg_connection *mg_connect(struct mg_mgr *mgr, const char *url,
 
 struct mg_connection *mg_listen(struct mg_mgr *mgr, const char *url,
                                 mg_event_handler_t fn, void *fn_data) {
+  // printf(" alloc1 %d\n",xPortGetFreeHeapSize());
   struct mg_connection *c = NULL;
   if ((c = mg_alloc_conn(mgr)) == NULL) {
     MG_ERROR(("OOM %s", url));
@@ -4109,10 +4126,11 @@ struct mg_connection *mg_listen(struct mg_mgr *mgr, const char *url,
     LIST_ADD_HEAD(struct mg_connection, &mgr->conns, c);
     c->fn = fn;
     c->fn_data = fn_data;
-    c->is_tls = (mg_url_is_ssl(url) != 0);
-    mg_call(c, MG_EV_OPEN, NULL);
-    MG_DEBUG(("%lu %ld %s", c->id, c->fd, url));
+   c->is_tls = (mg_url_is_ssl(url) != 0);
+   mg_call(c, MG_EV_OPEN, NULL);
+   MG_DEBUG(("%lu %ld %s", c->id, c->fd, url));
   }
+  //printf(" alloc2 %d\n",xPortGetFreeHeapSize());
   return c;
 }
 
@@ -8423,6 +8441,7 @@ size_t mg_queue_printf(struct mg_queue *q, const char *fmt, ...) {
 }
 
 static void mg_pfn_iobuf_private(char ch, void *param, bool expand) {
+
   struct mg_iobuf *io = (struct mg_iobuf *) param;
   if (expand && io->len + 2 > io->size) {
         size_t res=  mg_iobuf_resize(io, io->len + 2);

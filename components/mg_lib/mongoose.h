@@ -239,21 +239,15 @@ extern "C" {
 //dilbert66
 #define MG_ENABLE_DIRLIST 0
 
-#ifndef MG_ENABLE_DIRLIST
-#define MG_ENABLE_DIRLIST 1
-#endif
-
 #endif
 
 
 #if MG_ARCH == MG_ARCH_ESP8266
 
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <netdb.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -265,9 +259,15 @@ extern "C" {
 #include <sys/types.h>
 #include <time.h>
 
-#include <esp_system.h>
+//dilbert66 defines to disable uneeded items
+#define MG_PATH_MAX 64
+#define MG_ENABLE_SOCKET 0
+#define MG_ENABLE_DIRLIST 0
+#define MG_ENABLE_PROFILE 0
+#define MG_ENABLE_POSIX_FS 0
+#define MG_ENABLE_TCPIP 0 
+#define MG_DATA_SIZE 8
 
-#define MG_PATH_MAX 128
 
 #endif
 
@@ -1202,7 +1202,7 @@ bool mg_span(struct mg_str s, struct mg_str *a, struct mg_str *b, char delim);
 bool mg_str_to_num(struct mg_str, int base, void *val, size_t val_len);
 
 //dilbert66
-static int mg_ncasecmp(const char *s1, const char *s2, size_t len);
+int mg_ncasecmp(const char *s1, const char *s2, size_t len);
 int mg_vcasecmp(const struct mg_str *str1, const char *str2);
 char *mg_hex(const void *buf, size_t len, char *to) ;
 
@@ -1230,8 +1230,6 @@ typedef size_t (*mg_pm_t)(mg_pfn_t, void *, va_list *);  // %M printer
 
 size_t mg_vxprintf(void (*)(char, void *), void *, const char *fmt, va_list *);
 size_t mg_xprintf(void (*fn)(char, void *), void *, const char *fmt, ...);
-
-
 
 
 
@@ -1627,8 +1625,7 @@ void mg_sha384(uint8_t dst[48], uint8_t *data, size_t datasz);
 
 
 struct mg_connection;
-typedef void (*mg_event_handler_t)(struct mg_connection *, int ev,
-                                   void *ev_data);
+typedef void (*mg_event_handler_t)(struct mg_connection *, int ev,void *ev_data);
 void mg_call(struct mg_connection *c, int ev, void *ev_data);
 void mg_error(struct mg_connection *c, const char *fmt, ...);
 
@@ -1738,6 +1735,10 @@ struct mg_connection {
   unsigned is_resp : 1;           // Response is still being generated
   unsigned is_readable : 1;       // Connection is ready to read
   unsigned is_writable : 1;       // Connection is ready to write
+  unsigned is_ota: 1;  //dilbert66
+  unsigned is_sending: 1;    //dilbert66
+  unsigned is_event: 1;     //dilbert66
+  unsigned is_authenticated: 1; //dilbert66
 };
 
 void mg_mgr_poll(struct mg_mgr *, int ms);

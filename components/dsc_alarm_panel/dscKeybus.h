@@ -70,6 +70,9 @@ typedef char __FlashStringHelper;
 
 
 #if defined(ESP8266)
+
+
+
 const byte dscPartitions = 4;
 const byte dscZones = 8;
 const byte dscBufferSize = 50;

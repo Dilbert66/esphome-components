@@ -15,7 +15,7 @@
 #include "esphome/components/mqtt/mqtt_client.h"
 #endif
 
-#if defined(USE_API) || defined(USE_API_SERVICES)
+#if defined(USE_API) ||  defined(USE_API_CUSTOM_SERVICES)
 #include "esphome/components/api/custom_api_device.h"
 #endif
 
@@ -294,12 +294,6 @@ unsigned long micros() {
  }
 
  #endif
-
-#if defined(ESP8266)
-#define FC(s) (String(FPSTR(s)).c_str())
-#else
-#define FC(s) ((const char*)(s))
-#endif
 
 
 

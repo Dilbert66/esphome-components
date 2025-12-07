@@ -646,9 +646,57 @@ bool dscKeybusInterface::validCRC() {
   return false;
 }
 
-// Called as an interrupt when the DSC clock changes to write data for virtual keypad and setup timers to read
-// data after an interval.
-
+#ifdef ESP8266
+//Pinmode is NOT isr compliant due to missing iram_attr so we copy it here
+void IRAM_ATTR _pinModeISR(uint8_t pin, uint8_t mode) {
+if(pin < 16){
+    if(mode == SPECIAL){
+      GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+      GPEC = (1 << pin); //Disable
+      GPF(pin) = GPFFS(GPFFS_BUS(pin));//Set mode to BUS (RX0, TX0, TX1, SPI, HSPI or CLK depending in the pin)
+      if(pin == 3) GPF(pin) |= (1 << GPFPU);//enable pullup on RX
+    } else if(mode & FUNCTION_0){
+      GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+      GPEC = (1 << pin); //Disable
+      GPF(pin) = GPFFS((mode >> 4) & 0x07);
+      if(pin == 13 && mode == FUNCTION_4) GPF(pin) |= (1 << GPFPU);//enable pullup on RX
+    }  else if(mode == OUTPUT || mode == OUTPUT_OPEN_DRAIN){
+      GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+      GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+      if(mode == OUTPUT_OPEN_DRAIN) GPC(pin) |= (1 << GPCD);
+      GPES = (1 << pin); //Enable
+    } else if(mode == INPUT || mode == INPUT_PULLUP){
+      GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+      GPEC = (1 << pin); //Disable
+      GPC(pin) = (GPC(pin) & (0xF << GPCI)) | (1 << GPCD); //SOURCE(GPIO) | DRIVER(OPEN_DRAIN) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+      if(mode == INPUT_PULLUP) {
+          GPF(pin) |= (1 << GPFPU);  // Enable  Pullup
+      }
+    } else if(mode == WAKEUP_PULLUP || mode == WAKEUP_PULLDOWN){
+      GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+      GPEC = (1 << pin); //Disable
+      if(mode == WAKEUP_PULLUP) {
+          GPF(pin) |= (1 << GPFPU);  // Enable  Pullup
+          GPC(pin) = (1 << GPCD) | (4 << GPCI) | (1 << GPCWE); //SOURCE(GPIO) | DRIVER(OPEN_DRAIN) | INT_TYPE(LOW) | WAKEUP_ENABLE(ENABLED)
+      } else {
+          GPF(pin) |= (1 << GPFPD);  // Enable  Pulldown
+          GPC(pin) = (1 << GPCD) | (5 << GPCI) | (1 << GPCWE); //SOURCE(GPIO) | DRIVER(OPEN_DRAIN) | INT_TYPE(HIGH) | WAKEUP_ENABLE(ENABLED)
+      }
+    }
+  } else if(pin == 16){
+    GPF16 = GP16FFS(GPFFS_GPIO(pin));//Set mode to GPIO
+    GPC16 = 0;
+    if(mode == INPUT || mode == INPUT_PULLDOWN_16){
+      if(mode == INPUT_PULLDOWN_16){
+        GPF16 |= (1 << GP16FPD);//Enable Pulldown
+      }
+      GP16E &= ~1;
+    } else if(mode == OUTPUT){
+      GP16E |= 1;
+    }
+  }
+}
+#endif
 
 #if defined (USE_ESP_IDF)
 void
@@ -685,6 +733,7 @@ dscKeybusInterface::dscClockInterrupt()
 
   static unsigned long previousClockHighTime;
   static bool skipData = false;
+  static bool inInputMode=false;
   skipModuleBit=false;
   
   // Panel sends data while the clock is high
@@ -694,20 +743,28 @@ dscKeybusInterface::dscClockInterrupt()
   if (digitalRead(dscClockPin) == HIGH) {
   #endif
     if (virtualKeypad ){
-        if (dscWritePin == dscReadPin ) {
-          #if defined (USE_ESP_IDF)
+
+        if (dscWritePin == dscReadPin && !inInputMode {
+          inInputMode=true;
+          #if defined (USE_ESP_IDF) or defined(ESP32)
           gpio_reset_pin((gpio_num_t)dscWritePin);
           gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_INPUT);
           gpio_pulldown_dis((gpio_num_t)dscWritePin);
           gpio_pullup_en((gpio_num_t)dscWritePin);
           #else
+            #ifdef ESP8266
+            _pinModeISR(dscWritePin, INPUT_PULLUP);
+            #else
             pinMode(dscWritePin, INPUT_PULLUP);
-          #endif
+            #endif
+            #endif
         }
     #ifdef USE_ESP_IDF
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
     #else
-        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
+      // gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
+       //GPIO_OUTPUT_SET(dscWritePin,(uint8_t)(!invertWrite));
+       digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     #endif
     }
     previousClockHighTime = micros();
@@ -792,15 +849,19 @@ dscKeybusInterface::dscClockInterrupt()
      // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
       if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
-        if (dscWritePin == dscReadPin ) {  //if bi-directional, we need to switch to write mode on the pin
-
-          #if defined (USE_ESP_IDF)
+        if (dscWritePin == dscReadPin && inInputMode ) {  //if bi-directional, we need to switch to write mode on the pin
+          inInputMode=false;
+          #if defined (USE_ESP_IDF) or defined(ESP32)
           gpio_reset_pin((gpio_num_t)dscWritePin);
           gpio_pulldown_dis((gpio_num_t)dscWritePin);
           gpio_pullup_dis((gpio_num_t)dscWritePin); 
           gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
           #else
+            #ifdef ESP8266
+            _pinModeISR(dscWritePin, OUTPUT);
+            #else
             pinMode(dscWritePin, OUTPUT);
+            #endif
           #endif
        }
         
