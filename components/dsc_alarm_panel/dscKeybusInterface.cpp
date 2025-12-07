@@ -744,7 +744,7 @@ dscKeybusInterface::dscClockInterrupt()
   #endif
     if (virtualKeypad ){
 
-        if (dscWritePin == dscReadPin && !inInputMode {
+        if (dscWritePin == dscReadPin && !inInputMode) {
           inInputMode=true;
           #if defined (USE_ESP_IDF) or defined(ESP32)
           gpio_reset_pin((gpio_num_t)dscWritePin);
