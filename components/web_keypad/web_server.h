@@ -507,6 +507,7 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
   bool show_keypad_{true};
   bool crypt_{false};
   void percentDecode(char *src);
+  void push_log(const char *message);
 #ifdef USE_ESP32
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;

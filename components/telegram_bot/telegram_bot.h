@@ -81,12 +81,6 @@ namespace esphome
     }
  #endif
 
-    struct c_res_s
-    {
-      int i = 0;
-      struct mg_connection *c;
-    };
-
     class WebNotify : public Controller, public Component
     {
     public:
@@ -228,11 +222,11 @@ namespace esphome
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
-
+      void notify_fn(struct mg_connection *c, int ev, void *ev_data);
     private:
 
-      struct mg_mgr * mgr_;
-      static void notify_fn(struct mg_connection *c, int ev, void *ev_data);
+      struct mg_mgr  mgr_;
+     
 
       bool botRequest_{};
       bool skipFirst_{};
@@ -250,8 +244,7 @@ namespace esphome
       static void telegramTask(void *args);
       #endif
 
-      struct c_res_s c_res_;
-
+   
       std::string apiHost_ = "https://api.telegram.org/";
       int lastMsgReceived_ = 0;
       std::string botId_ = "";

@@ -227,7 +227,6 @@ namespace esphome
 
         WebServer::~WebServer() {
             delete credentials_;
-            //delete mgr;
         }
 
 // #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -276,8 +275,6 @@ namespace esphome
 
         void WebServer::escape_json(const char *input,std::string & output)
         {
-
-
             for (int i = 0; i < strlen(input); i++)
             {
 
@@ -318,6 +315,8 @@ namespace esphome
 
         }
 
+        
+
 void WebServer::setup()
 {
 
@@ -349,8 +348,8 @@ void WebServer::setup()
 }
 
 static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    WebServer *srv = static_cast<WebServer *>(webServerPtr);
-    // WebServer *srv = (WebServer *)(c->fn_data);
+    //WebServer *srv = static_cast<WebServer *>(webServerPtr);
+    WebServer *srv = (WebServer *)(c->fn_data);
     if (srv != NULL)
             srv->ev_handler(c,ev,ev_data);
 
@@ -400,8 +399,10 @@ void WebServer::on_log(uint8_t level, const char *tag, const char *message, size
   (void) level;
   (void) tag;
   (void) message_len;
-    this->push(LOG, message);
-}
+                std::string msg;
+                escape_json(message,msg);
+                this->push(LOG, msg.c_str());
+   }
 #endif
 #endif
 void WebServer::dump_config()
@@ -479,9 +480,11 @@ void WebServer::handle_css_request(struct mg_connection *c)
 // }
 
 
+
+//large file so we send in 1k blocks on every loop iteration
 void WebServer::send_js_include(mg_connection *c){
     const size_t BS=1024;       
-    uint32_t  index= *(uint32_t *) c->data;
+    uint32_t  index= *(uint32_t *) c->data;  //use connection data array to store curent index
     const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
     size_t blocksize = index + BS <= ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE ? BS : ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE - index;
     if (c->send.len < blocksize  && mg_send(c, &buf[index],blocksize)) {
@@ -2163,7 +2166,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 // Longest: HORIZONTAL
 #define PSTR_LOCAL(mode_s) strncpy_P(buf, (PGM_P)((mode_s)), 15)
-//#define PSTR_LOCAL(s) (String(FPSTR(s)).c_str())
 #ifdef USE_CLIMATE
         void WebServer::on_climate_update(climate::Climate *obj)
         {
@@ -2587,7 +2589,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 encrypt(newdata);
                 data=newdata.c_str();
             }
-                      
 #endif
 
             for (  struct mg_connection *c = mgr.conns; c != NULL; c = c->next)
