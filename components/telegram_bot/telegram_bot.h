@@ -222,7 +222,7 @@ namespace esphome
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
-      void notify_fn(struct mg_connection *c, int ev, void *ev_data);
+      void ev_handler(struct mg_connection *c, int ev, void *ev_data);
     private:
 
       struct mg_mgr  mgr_;
