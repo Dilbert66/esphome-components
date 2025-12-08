@@ -290,7 +290,7 @@ namespace esphome
         return true;
     }
 
-    void WebNotify::notify_fn(struct mg_connection *c, int ev, void *ev_data)
+    void WebNotify::ev_handler(struct mg_connection *c, int ev, void *ev_data)
     {
 
        if (ev == MG_EV_OPEN)
@@ -560,10 +560,10 @@ namespace esphome
       #endif
     }
 
-static void notify_fn_cb(struct mg_connection *c, int ev, void *ev_data) {
+static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
     WebNotify *ptr =  (WebNotify *)(c->fn_data);
     if (ptr != NULL)
-            ptr->notify_fn(c,ev,ev_data);
+            ptr->ev_handler(c,ev,ev_data);
 
 }
 
@@ -575,7 +575,7 @@ static void notify_fn_cb(struct mg_connection *c, int ev, void *ev_data) {
         if (!connected_ && ((enableBot_ && botId_.length() > 0) || (messages_.size() && enableSend_)) && ((millis() - retryDelay_) > delayTime_ || firstRun))
         {
           ESP_LOGD(TAG, "Connecting to telegram...");
-          mg_http_connect(&mgr_, apiHost_.c_str(), notify_fn_cb, this); // Create client connection
+          mg_http_connect(&mgr_, apiHost_.c_str(),ev_handler_cb, this); // Create client connection
           if (botName_ == "" && !botRequest_)
           {
             outMessage out;
