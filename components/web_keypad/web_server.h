@@ -472,7 +472,7 @@ void push(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 bool callKeyService(const char *buf,int partition);
 void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);
-void ev_handler(struct mg_connection *nc, int ev, void *p);
+
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
 void parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
@@ -486,7 +486,8 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 
 
  protected:
- 
+ void ev_handler(struct mg_connection *nc, int ev, void *p);
+ static void ev_handler_cb(struct mg_connection *nc, int ev, void *p);
   const char * certificate_;
   const char * certificate_key_;
   void schedule_(std::function<void()> &&f);

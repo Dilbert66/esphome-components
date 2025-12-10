@@ -10,14 +10,11 @@ void IRAM_ATTR rxISRHandler(void* args)
 #else
 void IRAM_ATTR rxISRHandler()
 #endif
-{                                     // define global handler
-  pointerToVistaClass->rxHandleISR(); // calls class member handler
+{             
+  if (pointToVistaClass != NULL)                        // define global handler
+   pointerToVistaClass->rxHandleISR(); // calls class member handler
   
 }
-
-
-
-
 
 #ifdef MONITORTX
 #if defined( USE_ESP_IDF ) or defined(ESP32)
@@ -25,8 +22,9 @@ void IRAM_ATTR txISRHandler(void* args)
 #else
 void  IRAM_ATTR txISRHandler()
 #endif
-{                                     // define global handler
-  pointerToVistaClass->txHandleISR(); // calls class member handler
+{         
+   if (pointToVistaClass != NULL)                               // define global handler
+       pointerToVistaClass->txHandleISR(); // calls class member handler
 }
 #endif
 
@@ -1823,7 +1821,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
       #if defined (USE_ESP_IDF)  or defined(ESP32)
        gpio_install_isr_service(0);
        gpio_set_intr_type((gpio_num_t)_rxPin, GPIO_INTR_ANYEDGE);
-       gpio_isr_handler_add((gpio_num_t)_rxPin, rxISRHandler, (void*)(gpio_num_t)_rxPin);
+       gpio_isr_handler_add((gpio_num_t)_rxPin, rxISRHandler, this);
 
     //gpio_set_intr_type((gpio_num_t)_rxPin, GPIO_INTR_ANYEDGE);
    // esp_err_t err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, rxISRHandler, NULL, NULL);
@@ -1854,7 +1852,7 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
       #if defined (USE_ESP_IDF) or defined(ESP32)
        //gpio_install_isr_service(0);
        gpio_set_intr_type((gpio_num_t)_monitorPin, GPIO_INTR_ANYEDGE);
-       gpio_isr_handler_add((gpio_num_t)_monitorPin, txISRHandler, (void*)(gpio_num_t)_monitorPin);
+       gpio_isr_handler_add((gpio_num_t)_monitorPin, txISRHandler, this);
       //  gpio_intr_enable((gpio_num_t) _monitorPin);
 
          //  gpio_set_intr_type((gpio_num_t)_monitorPin, GPIO_INTR_ANYEDGE);

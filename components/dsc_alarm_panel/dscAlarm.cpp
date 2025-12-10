@@ -33,7 +33,6 @@ namespace esphome
 #if defined(ESP8266)
 #define FC(s) (String(FPSTR(s)).c_str())
 #define FCS(s) (String(PSTR(s)).c_str()) 
-// used to differentiate std::string assignements.  Testing PROGMEM stuff
 #else
 #define FC(s) ((const char*)(s))
 #define FCS(s) ((const char*)(s))
@@ -111,6 +110,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 
     std::string DSCkeybushome::getZoneName(int zone, bool append)
     {
+     if (zone < 1 || zone > maxZones) return "";
 #if !defined(ARDUINO_MQTT)
       std::string c = "z" + std::to_string(zone);
       auto bMap=App.get_binary_sensors();
@@ -4998,6 +4998,17 @@ void DSCkeybushome::update()
 
     /*
     #if defined(AUTOPOPULATE)
+
+  // z1 = new binary_sensor::BinarySensor();
+  // App.register_binary_sensor(z1);
+  // z1->set_name_and_object_id("Front door (z1)", "front_door__z1_");
+  // z1->set_device_class("door");
+  // z1->set_trigger_on_initial_state(false);
+  // z1->set_object_id("z1");
+  // DSCAlarm->createZoneFromObj(z1, 1);
+  // z1->publish_state(false);
+  // z1->set_trigger_on_initial_state(true);
+
     void DSCkeybushome::loadZone(int z) {
         std::string n=std::to_string(z);
         std::string type_id="z" + n;
@@ -5005,26 +5016,16 @@ void DSCkeybushome::update()
         auto it = std::find_if(bMap.begin(), bMap.end(),  [&type_id](binary_sensor::BinarySensor* f){ return f->get_object_id() == type_id; } );
         if (it != bMap.end()) return;
 
-        template_alarm_::TemplateBinarySensor * ptr = new template_alarm_::TemplateBinarySensor();
+        binary_sensor_:BinarySensor * ptr = new binary_sensor_::BinarySensor();
         App.register_binary_sensor(ptr);
-
         ptr->set_name("Zone 19");
         ptr->set_object_id("z19");
-
     //ESP_LOGD(TAG,"get name=%s,get object_id=%s, get typeid=%s,",ptr->get_name().c_str(),ptr->get_object_id().c_str(),ptr->get_type_id().c_str());
-
        // bst->ptr->set_device_class("window");
-        ptr->set_publish_initial_state(true);
-        ptr->set_disabled_by_default(false);
+        ptr->set_trigger_on_initial_state(true)
     #if defined(ESPHOME_MQTT)
         mqtt::MQTTBinarySensorComponent * mqptr=new mqtt::MQTTBinarySensorComponent(ptr);
-        mqptr->set_component_source("mqtt");
-        App.register_component(mqptr);
-        mqptr->call();
     #endif
-        ptr->set_component_source("template_alarm.binary_sensor");
-        App.register_component(ptr);
-        ptr->call();
         gptr=ptr;
 
     }

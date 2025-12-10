@@ -610,7 +610,7 @@ unsigned long micros() {
 }
 #endif
 
-      std::string getZoneName(int zone, bool append = false);
+
 
       void setStatus(byte partition, bool force = false, bool skip = false);
 
@@ -657,6 +657,8 @@ unsigned long micros() {
       void printPanelStatus1B(byte panelByte, byte partition, bool showEvent = false);
 
       const __FlashStringHelper *statusText(uint8_t statusCode);
+      
+      std::string getZoneName(int zone, bool append = false);
     };
 
     extern DSCkeybushome *alarmPanelPtr;

@@ -24,9 +24,12 @@ namespace esphome
     uint64_t t1;
     static const char *const TAG = "telegram";
 
+
+    WebNotify *WebNotifyPtr = nullptr;
+
     WebNotify::WebNotify()
     {
-      global_notify = this;
+     WebNotifyPtr = this;
     }
 
     WebNotify::~WebNotify()
@@ -288,6 +291,13 @@ namespace esphome
           }
         }
         return true;
+    }
+
+    void WebNotify::ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
+    WebNotify *ptr =  (WebNotify *)(c->fn_data);
+    if (ptr != NULL)
+            ptr->ev_handler(c,ev,ev_data);
+
     }
 
     void WebNotify::ev_handler(struct mg_connection *c, int ev, void *ev_data)
@@ -560,12 +570,6 @@ namespace esphome
       #endif
     }
 
-static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    WebNotify *ptr =  (WebNotify *)(c->fn_data);
-    if (ptr != NULL)
-            ptr->ev_handler(c,ev,ev_data);
-
-}
 
     void WebNotify::loop()
     {
@@ -595,7 +599,7 @@ static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
       }
-      taskYIELD();
+
        #if !defined(USETASK)
       mg_mgr_poll(&mgr_, 0);
 
@@ -611,7 +615,6 @@ static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
     void WebNotify::set_bot_id_f(std::function<optional<std::string>()> &&f) { this->bot_id_f_ = f; }
     void WebNotify::set_chat_id_f(std::function<optional<std::string>()> &&f) { this->chat_id_f_ = f; }
 
-    WebNotify *global_notify = nullptr;
 
   } // namespace web_notify
 } // namespace esphome

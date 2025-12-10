@@ -222,8 +222,10 @@ namespace esphome
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
-      void ev_handler(struct mg_connection *c, int ev, void *ev_data);
+     
     private:
+      void ev_handler(struct mg_connection *c, int ev, void *ev_data);
+      static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data);
 
       struct mg_mgr  mgr_;
      
@@ -269,7 +271,7 @@ namespace esphome
       optional<std::function<optional<std::string>()>> bot_id_f_{};
     };
 
-    extern WebNotify *global_notify;
+    extern WebNotify *WebNotifyPtr;
 
     template <typename... Ts>
     class TelegramPublishAction : public Action<Ts...>
@@ -499,11 +501,11 @@ namespace esphome
 
       explicit TelegramMessageTrigger(const std::string &cmd, const std::string &type)
       {
-        global_notify->set_on_message([cmd, type, this](RemoteData &x)
+        WebNotifyPtr->set_on_message([cmd, type, this](RemoteData &x)
         {
           std::string s = x.cmd;
           // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
-          std::string bn=global_notify->get_bot_name();
+          std::string bn=WebNotifyPtr->get_bot_name();
           if (x.to !="" && !stringsEqual(x.to,bn) )
             return;
 

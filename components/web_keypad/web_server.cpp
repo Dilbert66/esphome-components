@@ -48,7 +48,6 @@ namespace esphome
 #if defined(ESP8266)
 #define FC(s) (String(PSTR(s)).c_str())
 #define FCS(s) (String(PSTR(s)).c_str()) 
-// used to differentiate std::string assignements.  Testing PROGMEM stuff
 #else
 #define FC(s) ((const char*)(s))
 #define FCS(s) ((const char*)(s))
@@ -59,9 +58,6 @@ namespace esphome
         static const char *const TAG = "web_server";
         void *webServerPtr;
 
-
-
-
         void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
             int ct = 0;
@@ -69,18 +65,13 @@ namespace esphome
             char *value;
             if (decodeUrl)
                 percentDecode(queryString);
-            // MG_INFO(("query=%s",queryString));
             while (queryString && *queryString && ct < resultsMaxCt)
             {
                 name = strsep(&queryString, "&");
                 value = strchrnul(name, '=');
-
                 if (*value)
                     *value++ = '\0';
-                std::string n = std::string(name);
-                std::string v = std::string(value);
-                doc[n] = v;
-                // MG_INFO(("parameter %s = %s",n.c_str(),v.c_str()));
+                doc[name] = value;
                 ct++;
             }
         }
@@ -176,8 +167,6 @@ namespace esphome
             doc["oid"] = url.substr(id_begin, id_end - id_begin);
             size_t method_begin = id_end + 1;
             doc["action"] = url.substr(method_begin, url.length() - method_begin);
-            std::string a = doc["domain"];
-            // MG_INFO(("in parseurl domain=%s",a.c_str()));
         }
        
         void WebServer::ws_reply(mg_connection *c, const char *data, bool ok)
@@ -347,8 +336,7 @@ void WebServer::setup()
   this->set_interval(10000, [this](){ this->push(PING, "", millis(), 30000); });
 }
 
-static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    //WebServer *srv = static_cast<WebServer *>(webServerPtr);
+void WebServer::ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
     WebServer *srv = (WebServer *)(c->fn_data);
     if (srv != NULL)
             srv->ev_handler(c,ev,ev_data);
@@ -452,39 +440,11 @@ void WebServer::handle_css_request(struct mg_connection *c)
 
 
 #ifdef USE_WEBKEYPAD_JS_INCLUDE
-//Since the js include is very large, we break it up in blocks of 512 bytes and send one on every loop() iteration until complete
-//we keep track of the block index and flag in the data[] array of the connection structure.
-// void WebServer::send_js_include(mg_connection *c){
-            
-//     uint32_t  index= *(uint32_t *) c->data;
-//     const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
-//     size_t blocksize = index + 512 <= ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE ? 512 : ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE - index;
-//     uint8_t buf1[512];
-//     #ifdef USE_ESP8266
-//     memcpy_P(buf1, &buf[index], blocksize);
-//     #else
-//     memcpy(buf1, &buf[index], blocksize);
-//     #endif
-//     if (c->send.len < 1024  && mg_send(c, buf1,blocksize)) {
-//         index=index+blocksize;
-//         *(uint32_t *) c->data=(uint32_t) index;
-//     }
-
-//     if (index >= ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE) {
-//         c->is_resp = 0;
-//         c->is_sending=0; 
-//         *(uint32_t *) c->data=(uint32_t)0;
-//         c->is_draining=1;
-//     }
-                
-// }
-
-
 
 //large file so we send in 1k blocks on every loop iteration
 void WebServer::send_js_include(mg_connection *c){
     const size_t BS=1024;       
-    uint32_t  index= *(uint32_t *) c->data;  //use connection data array to store curent index
+    uint32_t  index = *(uint32_t *) c->data;  //use connection data array to store curent index
     const char *buf = (const char *)ESPHOME_WEBKEYPAD_JS_INCLUDE;
     size_t blocksize = index + BS <= ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE ? BS : ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE - index;
     if (c->send.len < blocksize  && mg_send(c, &buf[index],blocksize)) {
@@ -494,9 +454,9 @@ void WebServer::send_js_include(mg_connection *c){
 
     if (index >= ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE) {
         c->is_resp = 0;
-        c->is_sending=0; 
-        *(uint32_t *) c->data=(uint32_t)0;
-        c->is_draining=1;
+        c->is_sending = 0; 
+        *(uint32_t *) c->data = (uint32_t)0;
+        c->is_draining = 1;
     }
                 
 }
@@ -505,8 +465,8 @@ void WebServer::send_js_include(mg_connection *c){
 void WebServer::handle_js_request(struct mg_connection *c)
 {
         mg_printf(c,FC("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE);
-        c->is_sending=1; 
-        *(uint32_t *) c->data=(uint32_t)0;
+        c->is_sending  =1; 
+        *(uint32_t *) c->data = (uint32_t)0;
         send_js_include(c);
 }
 #endif
@@ -2584,8 +2544,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 
 #ifdef USE_WEBKEYPAD_ENCRYPTION
-            std::string newdata=std::string(data);
+            std::string newdata;
             if (get_credentials()->crypt && strlen(data) > 0) {
+                newdata=std::string(data);
                 encrypt(newdata);
                 data=newdata.c_str();
             }
