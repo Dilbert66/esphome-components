@@ -423,6 +423,8 @@ class dscKeybusInterface {
     #if defined(ESP32)
 #if not defined(USE_ESP_IDF_TIMER)
      hw_timer_t * timer1;
+#else
+    gptimer_handle_t gptimer;
  #endif
      portMUX_TYPE timer1Mux;
     #endif
@@ -503,19 +505,5 @@ class dscKeybusInterface {
     byte getWriteBitFromPartition(byte partition);
     //end new command handling    
 
-
-     #if defined(ESP32)
-
-// portMUX_TYPE timer1Mux;
-
- #if not defined(USE_ESP_IDF_TIMER)
-// hw_timer_t * timer1;// = NULL;
-  #else // ESP-IDF 5+
-gptimer_handle_t gptimer;
-gptimer_config_t timer_config;
-gptimer_alarm_config_t alarm_config;
-  #endif // ESP_IDF_VERSION_MAJOR
- #endif // ESP32
- 
 };
 #endif // dscKeybus_h

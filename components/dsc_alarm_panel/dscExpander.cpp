@@ -1,6 +1,7 @@
 #include "dscKeybus.h"
 
 #if not defined(DISABLE_EXPANDER)
+
 void dscKeybusInterface::setSupervisorySlot(byte address, bool set = true) {
   //set our response data for the 0x11 supervisory request
   if (panelVersion < 3) {
@@ -293,87 +294,6 @@ dscKeybusInterface::prepareModuleResponse(byte address, int bit) {
   
 }
 #endif //expander
-
-unsigned int dscKeybusInterface::dec2bcd(unsigned int num)
-{
-    unsigned int ones = 0;
-    unsigned int tens = 0;
-    unsigned int temp = 0;
-    ones = num%10;
-    temp = num/10;
-    tens = temp<<4;
-    return (tens + ones);
-}
-
-void dscKeybusInterface::setDateTime(unsigned int year,byte month,byte day,byte hour,byte minute) {
-
-  int dataSum = 0;
-  cmdD0buffer[0] = dec2bcd(year%100);
-  cmdD0buffer[1] = month;  
-  cmdD0buffer[2] = day;
-  cmdD0buffer[3] = dec2bcd(hour);
-  cmdD0buffer[4] = dec2bcd(minute);  
-  for (byte x = 0; x < 5; x++) {
-    dataSum += cmdD0buffer[x];
-  }
-  cmdD0buffer[5] = dataSum % 256;
-  pendingD0=true;
-  byte zoneupdate[6];
-  memset(zoneupdate, 0xFF, 6); //set update slots to 1's. Only zero bits indicate a request
-  zoneupdate[3] &= 0xfd; //set update slot for cmd d0
-  writeCharsToQueue(zoneupdate, 1, 6);
-}
-
-void
-IRAM_ATTR 
-dscKeybusInterface::processCmd70() {
-  if (pgmBuffer.idx + 5 > pgmBuffer.len) return;
-  updateWriteBuffer((byte*) &pgmBuffer.data[pgmBuffer.idx], 9,1,5);
-  pgmBuffer.idx += 5;    
-  byte key = 0;
-  if (pgmBuffer.sendhash) key=0x2D; //'#' // setup to send final # cmd to complete write update to panel
-  if (pgmBuffer.idx < pgmBuffer.len) {
-    pending70 = true;
-    key = 0xAA; //more data available so set up also for next group send request
-  }
-  if (key) writeCharsToQueue( & key, pgmBuffer.partition);
-
-}
-
-void dscKeybusInterface::setLCDReceive(byte digits,byte partition) {
-  if (!partition) partition=currentDefaultPartition;
-  pgmBuffer.idx = 0;
-  byte b = (digits / 2) + (digits % 2); //full bytes
-  b+=b/4;//checksum bytes
-  b += b % 5 ? 5 - b % 5 : 0; //round up to next 5 bytes as thats the size of cmds70/6e including chksum
-  pgmBuffer.len = b;
-  pgmBuffer.partition=partition;
-  pending6E=true;
-  pgmBuffer.dataPending=false;
-  byte key = 0xa5;
-  writeCharsToQueue( & key,partition);
-}
-
-void dscKeybusInterface::setLCDSend(byte partition,bool sendhash) {
-  if (!partition) partition=currentDefaultPartition;
-  int dataSum;
-  pgmBuffer.idx = 0;
-  pending70 = true;
-  byte key = 0xAA;
-  pgmBuffer.sendhash=sendhash;
-  pgmBuffer.dataPending=false;
-  
-  for (int y=0;y<pgmBuffer.len;y=y+5) { //calculate checksums for all groups of 4 bytes
-    dataSum = 0;        
-    for (int x = 0; x < 4; x++) {
-        dataSum += pgmBuffer.data[x+y];
-    }
-    pgmBuffer.data[y+4]=dataSum%256;
-  }
-
-  writeCharsToQueue( & key, partition);
-
-}
 
 
 

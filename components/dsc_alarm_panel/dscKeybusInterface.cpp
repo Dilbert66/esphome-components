@@ -22,7 +22,7 @@
 
 dscKeybusInterface * dscKeybusInterfacePtr; // there is only ever going to be one instance so we can use a global pointer
 
-//Callback functions to the gpio and timer interrupts.  For the esp32 i prefer to send the class instance pointer via the available argument for the callback 
+//Callback functions to the gpio and timer interrupts.  I prefer to send the class instance pointer  when possible via the available argument for the callback 
 //which saves using a global pointer back to the class.  It's a moot effort since we only ever instantiate one class instance but what the heck..
 
 void IRAM_ATTR dscClockInterrupt_cb(void *args) {
@@ -48,7 +48,7 @@ void IRAM_ATTR dscDataInterrupt_cb(void * args) {
 }
 #else
 void IRAM_ATTR dscDataInterrupt_cb() {
-      if (dscKeybusInterfacePtr != NULL)  //use a global pointer to the class as arduino does not support passing args to isr callbacks
+      if (dscKeybusInterfacePtr != NULL)  //use a global pointer to the class as the ESP8266 timers do not support passing args to isr callbacks
         dscKeybusInterfacePtr->dscDataInterrupt();
 }
 #endif 
@@ -85,26 +85,8 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
   //end expander
 
 
-  #if defined(ESP32)
-
+#if defined(ESP32)
 timer1Mux = portMUX_INITIALIZER_UNLOCKED;
-
-#if not defined(USE_ESP_IDF_TIMER)
-timer1 = NULL;
- #else // ESP-IDF 5+
-
-gptimer = NULL;
-timer_config = {
-      .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
-      .direction = GPTIMER_COUNT_UP,      // Counting direction is up
-      .resolution_hz = 1000000,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
-    };
-
-alarm_config = {
-    .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 250 is 250us
-};
-
-  #endif // ESP_IDF_VERSION_MAJOR
 #endif // ESP32
 
 }
@@ -169,30 +151,37 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
     }
   }
   
-  
-
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
-
   #if defined(ESP8266)
     timer1_isr_init();
     timer1_attachInterrupt(dscDataInterrupt_cb);
     timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-
-  // esp32 timer1 calls dscDataInterrupt() from dscClockInterrupt()
   #elif defined(ESP32)
-    #if not defined(USE_ESP_IDF_TIMER)
-      timer1 = timerBegin(1000000);
-      timerAttachInterruptArg(timer1, & dscDataInterrupt_cb,this);
-    #else // IDF5+
-      gptimer_new_timer(&timer_config, &gptimer);
-      gptimer_set_alarm_action(gptimer, &alarm_config);
-      gptimer_event_callbacks_t cbs = {
-        .on_alarm = dscDataInterrupt_cb, // Call the user callback function when the alarm event occurs
-      };
-      gptimer_register_event_callbacks(gptimer, &cbs, this);
-      gptimer_enable(gptimer);
-    #endif // ESP_IDF_VERSION_MAJOR
+    #if defined(USE_ESP_IDF_TIMER)
+    gptimer_config_t timer_config = {
+      .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
+      .direction = GPTIMER_COUNT_UP,      // Counting direction is up
+      .resolution_hz = 1000000,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
+    };
+
+    gptimer_alarm_config_t alarm_config = {
+    .alarm_count = 250, // Set the actual alarm period, since the resolution is 1us, 250 is 250us
+    };
+
+    gptimer_event_callbacks_t cbs = {
+      .on_alarm = dscDataInterrupt_cb, // Call the user callback function when the alarm event occurs
+    };
+
+    gptimer_new_timer(&timer_config, &gptimer);
+    gptimer_set_alarm_action(gptimer, &alarm_config);
+    gptimer_register_event_callbacks(gptimer, &cbs, this);
+    gptimer_enable(gptimer);
+    #else
+    timer1 = timerBegin(1000000);
+    timerAttachInterruptArg(timer1, & dscDataInterrupt_cb,this);
+    #endif 
   #endif // ESP32
+
   // Generates an interrupt when the Keybus clock rises or falls - requires a hardware interrupt pin on Arduino/AVR
   #if defined (USE_ESP_IDF) or defined(ESP32)
     gpio_install_isr_service(0);
@@ -201,6 +190,7 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
   #else
     attachInterruptArg(digitalPinToInterrupt(dscClockPin), dscClockInterrupt_cb, this, CHANGE);
   #endif
+
 #if not defined(DISABLE_EXPANDER)  
   if (maxZones > 32) {
     maxFields05 = 6;
@@ -219,17 +209,14 @@ void dscKeybusInterface::stop() {
   #if defined(ESP8266)
   timer1_disable();
   timer1_detachInterrupt();
-
-  // Disables esp32 timer0
   #elif defined(ESP32)
-#if not defined(USE_ESP_IDF_TIMER)
-  if (timer1 != NULL)  {  
+    #if defined(USE_ESP_IDF_TIMER)
+    gptimer_del_timer(gptimer);
+   #else
     timerEnd(timer1);
-  }
-   #else // ESP-IDF 5+
-  gptimer_del_timer(gptimer);
-   #endif // ESP_IDF_VERSION_MAJOR
+   #endif 
   #endif // ESP32
+
 #if defined(USE_ESP_IDF)
   gpio_intr_disable((gpio_num_t) dscClockPin);
   gpio_isr_handler_remove((gpio_num_t) dscClockPin);
@@ -237,6 +224,7 @@ void dscKeybusInterface::stop() {
   // Disables the Keybus clock pin interrupt
   detachInterrupt(digitalPinToInterrupt(dscClockPin));
 #endif
+
   // Resets the panel capture data and counters
   panelBufferLength = 0;
   for (byte i = 0; i < dscReadSize; i++) isrPanelData[i] = 0;
@@ -265,7 +253,7 @@ bool dscKeybusInterface::loop() {
 
   #if defined(ESP32)
 
-  portEXIT_CRITICAL( & timer1Mux);
+  portEXIT_CRITICAL( &timer1Mux);
 
   #else
   interrupts();
@@ -293,7 +281,7 @@ bool dscKeybusInterface::loop() {
   // Resets counters when the buffer is cleared
   #if defined(ESP32)
 
-  portENTER_CRITICAL( & timer1Mux);
+  portENTER_CRITICAL( &timer1Mux);
 
   #else
   noInterrupts();
@@ -306,7 +294,7 @@ bool dscKeybusInterface::loop() {
 
   #if defined(ESP32)
 
-  portEXIT_CRITICAL( & timer1Mux);
+  portEXIT_CRITICAL( &timer1Mux);
 
   #else
   interrupts();
@@ -665,18 +653,15 @@ dscKeybusInterface::dscClockInterrupt()
 
   #if defined(ESP8266)
   timer1_write(1250);
-  // esp32 timer1 calls dscDataInterrupt() in 250us
   #elif defined(ESP32)
-  #if not defined(USE_ESP_IDF_TIMER)
-  timerAlarm(timer1, 250, false,0);
-  timerStart(timer1);
-   #else // IDF5+
-   //esp_timer_start_once(timer,200);
+  #if defined(USE_ESP_IDF_TIMER)
   gptimer_set_raw_count(gptimer,0); 
   gptimer_start(gptimer);
+  #else
+  timerAlarm(timer1, 250, false,0);
+  timerStart(timer1);
    #endif
   portENTER_CRITICAL_ISR( & timer1Mux);
-
   #endif
 
    static unsigned long previousClockHighTime;
@@ -849,14 +834,12 @@ dscKeybusInterface::dscClockInterrupt()
   void IRAM_ATTR dscKeybusInterface::dscDataInterrupt() {
    
   #if defined(ESP32)
-   #if not defined(USE_ESP_IDF_TIMER)
+   #if defined(USE_ESP_IDF_TIMER)
+     gptimer_stop(gptimer);
+   #else 
      timerStop(timer1);
-   #else // IDF 5+
-  gptimer_stop(gptimer);
    #endif
-
   portENTER_CRITICAL_ISR( & timer1Mux);
-
   #endif
 
   // Panel sends data while the clock is high
@@ -1056,5 +1039,86 @@ dscKeybusInterface::processPendingResponses_0xE6(byte subcmd) {
     return;
   }
   prepareModuleResponse(addr,17);
+
+}
+
+unsigned int dscKeybusInterface::dec2bcd(unsigned int num)
+{
+    unsigned int ones = 0;
+    unsigned int tens = 0;
+    unsigned int temp = 0;
+    ones = num%10;
+    temp = num/10;
+    tens = temp<<4;
+    return (tens + ones);
+}
+
+void dscKeybusInterface::setDateTime(unsigned int year,byte month,byte day,byte hour,byte minute) {
+
+  int dataSum = 0;
+  cmdD0buffer[0] = dec2bcd(year%100);
+  cmdD0buffer[1] = month;  
+  cmdD0buffer[2] = day;
+  cmdD0buffer[3] = dec2bcd(hour);
+  cmdD0buffer[4] = dec2bcd(minute);  
+  for (byte x = 0; x < 5; x++) {
+    dataSum += cmdD0buffer[x];
+  }
+  cmdD0buffer[5] = dataSum % 256;
+  pendingD0=true;
+  byte zoneupdate[6];
+  memset(zoneupdate, 0xFF, 6); //set update slots to 1's. Only zero bits indicate a request
+  zoneupdate[3] &= 0xfd; //set update slot for cmd d0
+  writeCharsToQueue(zoneupdate, 1, 6);
+}
+
+void
+IRAM_ATTR 
+dscKeybusInterface::processCmd70() {
+  if (pgmBuffer.idx + 5 > pgmBuffer.len) return;
+  updateWriteBuffer((byte*) &pgmBuffer.data[pgmBuffer.idx], 9,1,5);
+  pgmBuffer.idx += 5;    
+  byte key = 0;
+  if (pgmBuffer.sendhash) key=0x2D; //'#' // setup to send final # cmd to complete write update to panel
+  if (pgmBuffer.idx < pgmBuffer.len) {
+    pending70 = true;
+    key = 0xAA; //more data available so set up also for next group send request
+  }
+  if (key) writeCharsToQueue( & key, pgmBuffer.partition);
+
+}
+
+void dscKeybusInterface::setLCDReceive(byte digits,byte partition) {
+  if (!partition) partition=currentDefaultPartition;
+  pgmBuffer.idx = 0;
+  byte b = (digits / 2) + (digits % 2); //full bytes
+  b+=b/4;//checksum bytes
+  b += b % 5 ? 5 - b % 5 : 0; //round up to next 5 bytes as thats the size of cmds70/6e including chksum
+  pgmBuffer.len = b;
+  pgmBuffer.partition=partition;
+  pending6E=true;
+  pgmBuffer.dataPending=false;
+  byte key = 0xa5;
+  writeCharsToQueue( & key,partition);
+}
+
+void dscKeybusInterface::setLCDSend(byte partition,bool sendhash) {
+  if (!partition) partition=currentDefaultPartition;
+  int dataSum;
+  pgmBuffer.idx = 0;
+  pending70 = true;
+  byte key = 0xAA;
+  pgmBuffer.sendhash=sendhash;
+  pgmBuffer.dataPending=false;
+  
+  for (int y=0;y<pgmBuffer.len;y=y+5) { //calculate checksums for all groups of 4 bytes
+    dataSum = 0;        
+    for (int x = 0; x < 4; x++) {
+        dataSum += pgmBuffer.data[x+y];
+    }
+    pgmBuffer.data[y+4]=dataSum%256;
+  }
+
+  writeCharsToQueue( & key, partition);
 
 }
