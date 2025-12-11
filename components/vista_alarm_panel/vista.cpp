@@ -5,13 +5,14 @@
 #endif
 
 Vista *pointerToVistaClass;
+
 #if defined(USE_ESP_IDF) or defined(ESP32)
 void IRAM_ATTR rxISRHandler(void* args)
 #else
 void IRAM_ATTR rxISRHandler()
 #endif
 {             
-  if (pointToVistaClass != NULL)                        // define global handler
+  if (pointerToVistaClass != NULL)                        // define global handler
    pointerToVistaClass->rxHandleISR(); // calls class member handler
   
 }
@@ -23,7 +24,7 @@ void IRAM_ATTR txISRHandler(void* args)
 void  IRAM_ATTR txISRHandler()
 #endif
 {         
-   if (pointToVistaClass != NULL)                               // define global handler
+   if (pointerToVistaClass != NULL)                               // define global handler
        pointerToVistaClass->txHandleISR(); // calls class member handler
 }
 #endif
@@ -1822,12 +1823,6 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
        gpio_install_isr_service(0);
        gpio_set_intr_type((gpio_num_t)_rxPin, GPIO_INTR_ANYEDGE);
        gpio_isr_handler_add((gpio_num_t)_rxPin, rxISRHandler, this);
-
-    //gpio_set_intr_type((gpio_num_t)_rxPin, GPIO_INTR_ANYEDGE);
-   // esp_err_t err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, rxISRHandler, NULL, NULL);
-   //  gpio_isr_register(rxISRHandler, NULL, ESP_INTR_FLAG_LOWMED, NULL);
-     //gpio_intr_enable((gpio_num_t) _rxPin);
-
         #else
     attachInterrupt(digitalPinToInterrupt(_rxPin), rxISRHandler, CHANGE);
     #endif
@@ -1853,10 +1848,6 @@ void Vista::begin(int receivePin, int transmitPin, char keypadAddr, int monitorT
        //gpio_install_isr_service(0);
        gpio_set_intr_type((gpio_num_t)_monitorPin, GPIO_INTR_ANYEDGE);
        gpio_isr_handler_add((gpio_num_t)_monitorPin, txISRHandler, this);
-      //  gpio_intr_enable((gpio_num_t) _monitorPin);
-
-         //  gpio_set_intr_type((gpio_num_t)_monitorPin, GPIO_INTR_ANYEDGE);
-   // esp_err_t err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, txISRHandler, NULL, NULL);
         #else
     attachInterrupt(digitalPinToInterrupt(_monitorPin), txISRHandler, CHANGE);
     #endif
