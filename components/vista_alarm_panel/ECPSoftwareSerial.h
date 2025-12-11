@@ -181,7 +181,7 @@ private:
     {
         // return (ESP.getCpuFreqMHz() * micros) << 1;
        // return ((esp_clk_cpu_freq()/1000000) * micros) << 1;
-       #ifdef USE_ARDUINO
+       #if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
        return (ESP.getCpuFreqMHz() * micros) ;
        #else
        return micros << 1;
@@ -194,7 +194,7 @@ private:
 
     static inline unsigned long IRAM_ATTR ticks()  ALWAYS_INLINE_ATTR
     {
-#ifdef USE_ARDUINO
+#if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
 return ESP.getCycleCount() ;
 #else
 
