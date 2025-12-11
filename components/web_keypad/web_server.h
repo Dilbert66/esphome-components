@@ -482,10 +482,10 @@ void send_js_include(struct mg_connection * c);
 void handle_auth_request(mg_connection *c,JsonObject doc);
 void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 
+void ev_handler(struct mg_connection *nc, int ev, void *p);
 
  protected:
- void ev_handler(struct mg_connection *nc, int ev, void *p);
- static void ev_handler_cb(struct mg_connection *nc, int ev, void *p);
+
   const char * certificate_;
   const char * certificate_key_;
   void schedule_(std::function<void()> &&f);

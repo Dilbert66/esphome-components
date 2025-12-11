@@ -53,7 +53,12 @@ namespace esphome
 #define FCS(s) ((const char*)(s))
 #endif
 
+void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
+    WebServer *srv = (WebServer *)(c->fn_data);
+    if (srv != NULL)
+            srv->ev_handler(c,ev,ev_data);
 
+}
 
         static const char *const TAG = "web_server";
    
@@ -334,12 +339,6 @@ void WebServer::setup()
   this->set_interval(10000, [this](){ this->push(PING, "", millis(), 30000); });
 }
 
-void WebServer::ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    WebServer *srv = (WebServer *)(c->fn_data);
-    if (srv != NULL)
-            srv->ev_handler(c,ev,ev_data);
-
-}
 
 
 void WebServer::loop()

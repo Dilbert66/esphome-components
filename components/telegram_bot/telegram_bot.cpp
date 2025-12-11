@@ -32,6 +32,14 @@ namespace esphome
     {
     }
 
+
+  void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
+    WebNotify *ptr =  (WebNotify *)(c->fn_data);
+    if (ptr != NULL)
+            ptr->ev_handler(c,ev,ev_data);
+
+    }
+
     void WebNotify::publish(SendData &out)
     {
 
@@ -289,12 +297,7 @@ namespace esphome
         return true;
     }
 
-    void WebNotify::ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    WebNotify *ptr =  (WebNotify *)(c->fn_data);
-    if (ptr != NULL)
-            ptr->ev_handler(c,ev,ev_data);
 
-    }
 
     void WebNotify::ev_handler(struct mg_connection *c, int ev, void *ev_data)
     {

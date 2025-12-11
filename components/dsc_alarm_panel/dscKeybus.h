@@ -273,6 +273,12 @@ class dscKeybusInterface {
     bool validCRC();    
      byte panelBitCount, panelByteCount;
  
+
+    void dscClockInterrupt();
+
+      // Timer interrupt function to capture data - declared as public for use by AVR Timer1
+    void dscDataInterrupt();
+    
   private:
 
     void processPanelStatus();
@@ -412,20 +418,6 @@ class dscKeybusInterface {
 
     void writeKeys(const char * writeKeysArray);
 
-    #if defined(USE_ESP_IDF)
-    static void dscClockInterrupt_cb(void * args); 
-    #else
-     static void dscClockInterrupt_cb();
-    #endif
-    void dscClockInterrupt();
-
-      // Timer interrupt function to capture data - declared as public for use by AVR Timer1
-    #if defined(USE_ESP_IDF_TIMER) // use arduino timers. esp_idf high res timers don't work right on esphome 
-     static bool dscDataInterrupt_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data); 
-    #else
-     static void dscDataInterrupt_cb();
-    #endif
-     void dscDataInterrupt();
 
      bool redundantPanelData(byte   previousCmd[], volatile byte   currentCmd[], byte checkedBytes = dscReadSize);
     #if defined(ESP32)

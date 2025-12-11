@@ -222,10 +222,11 @@ namespace esphome
 
       void set_bot_id_f(std::function<optional<std::string>()> &&f);
       void set_chat_id_f(std::function<optional<std::string>()> &&f);
+
+      void ev_handler(struct mg_connection *c, int ev, void *ev_data);
      
     private:
-      void ev_handler(struct mg_connection *c, int ev, void *ev_data);
-      static void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data);
+
 
       struct mg_mgr  mgr_;
      
@@ -530,7 +531,7 @@ namespace esphome
 
           if (cmd.find("," + s + ",") != std::string::npos)
             this->trigger(x);
-            
+
           if (cmd.find(",*,") != std::string::npos)
             this->trigger(x); 
           

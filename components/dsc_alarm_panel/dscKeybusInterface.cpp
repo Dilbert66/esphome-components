@@ -22,32 +22,36 @@
 
 dscKeybusInterface * dscKeybusInterfacePtr; // there is only ever going to be one instance so we can use a global pointer
 
+//Callback functions to the gpio and timer interrupts.  For the esp32 i prefer to send the class instance pointer via the available argument for the callback 
+//which saves using a global pointer back to the class.  It's a moot effort since we only ever instantiate one class instance but what the heck..
 
-#if defined (USE_ESP_IDF)
-void IRAM_ATTR dscKeybusInterface::dscClockInterrupt_cb(void *args) {
+void IRAM_ATTR dscClockInterrupt_cb(void *args) {
   dscKeybusInterface * ptr = (dscKeybusInterface *) args;  //use class pointer passed as argument since we can
     if (ptr != NULL)
       ptr->dscClockInterrupt();
 }
-#else
-void IRAM_ATTR dscKeybusInterface::dscClockInterrupt_cb() {
-      if (dscKeybusInterfacePtr != NULL)   //use a global pointer since arduino does not support passing argments to isr callbacks
-        dscKeybusInterfacePtr->dscClockInterrupt();
-}
-#endif
+
 
 #if defined(USE_ESP_IDF_TIMER)
-bool  IRAM_ATTR dscKeybusInterface::dscDataInterrupt_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)  {
+bool  IRAM_ATTR dscDataInterrupt_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)  {
     dscKeybusInterface * ptr = (dscKeybusInterface *) user_data; //use class pointer passed as argument since we can
     if (ptr != NULL)
       ptr->dscDataInterrupt();  
     return true;
 }
 #else
-void IRAM_ATTR dscKeybusInterface::dscDataInterrupt_cb() {
+#if defined(ESP32)
+void IRAM_ATTR dscDataInterrupt_cb(void * args) {
+  dscKeybusInterface * ptr = (dscKeybusInterface *) args;  //use class pointer passed as argument since we can
+    if (ptr != NULL)
+        dscKeybusInterfacePtr->dscDataInterrupt();
+}
+#else
+void IRAM_ATTR dscDataInterrupt_cb() {
       if (dscKeybusInterfacePtr != NULL)  //use a global pointer to the class as arduino does not support passing args to isr callbacks
         dscKeybusInterfacePtr->dscDataInterrupt();
 }
+#endif 
 #endif
 
 
@@ -169,42 +173,34 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
 
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
 
-  // Arduino/AVR Timer1 calls ISR(TIMER1_OVF_vect) from dscClockInterrupt() and is disabled in the ISR for a one-shot timer
   #if defined(ESP8266)
-  timer1_isr_init();
-  timer1_attachInterrupt(dscDataInterrupt_cb);
-  timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+    timer1_isr_init();
+    timer1_attachInterrupt(dscDataInterrupt_cb);
+    timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
 
   // esp32 timer1 calls dscDataInterrupt() from dscClockInterrupt()
   #elif defined(ESP32)
-#if not defined(USE_ESP_IDF_TIMER)
-  timer1 = timerBegin(1000000);
-  timerAttachInterrupt(timer1, & dscDataInterrupt_cb);
-   #else // IDF5+
-  // const esp_timer_create_args_t timer_args = {
-  //     .callback = &dscDataInterrupt
-  //     };
-  // esp_timer_create(&timer_args, &timer);
- 
-  gptimer_new_timer(&timer_config, &gptimer);
-  gptimer_set_alarm_action(gptimer, &alarm_config);
-  gptimer_event_callbacks_t cbs = {
-    .on_alarm = dscDataInterrupt_cb, // Call the user callback function when the alarm event occurs
-  };
-  gptimer_register_event_callbacks(gptimer, &cbs,this);
-  gptimer_enable(gptimer);
-   #endif // ESP_IDF_VERSION_MAJOR
+    #if not defined(USE_ESP_IDF_TIMER)
+      timer1 = timerBegin(1000000);
+      timerAttachInterruptArg(timer1, & dscDataInterrupt_cb,this);
+    #else // IDF5+
+      gptimer_new_timer(&timer_config, &gptimer);
+      gptimer_set_alarm_action(gptimer, &alarm_config);
+      gptimer_event_callbacks_t cbs = {
+        .on_alarm = dscDataInterrupt_cb, // Call the user callback function when the alarm event occurs
+      };
+      gptimer_register_event_callbacks(gptimer, &cbs, this);
+      gptimer_enable(gptimer);
+    #endif // ESP_IDF_VERSION_MAJOR
   #endif // ESP32
   // Generates an interrupt when the Keybus clock rises or falls - requires a hardware interrupt pin on Arduino/AVR
-  
-
-        #if defined (USE_ESP_IDF)
-       gpio_install_isr_service(0);
-       gpio_set_intr_type((gpio_num_t)dscClockPin, GPIO_INTR_ANYEDGE);
-       gpio_isr_handler_add((gpio_num_t)dscClockPin, dscClockInterrupt_cb, this);
-        #else
-          attachInterrupt(digitalPinToInterrupt(dscClockPin), dscClockInterrupt_cb, CHANGE);
-        #endif
+  #if defined (USE_ESP_IDF) or defined(ESP32)
+    gpio_install_isr_service(0);
+    gpio_set_intr_type((gpio_num_t)dscClockPin, GPIO_INTR_ANYEDGE);
+    gpio_isr_handler_add((gpio_num_t)dscClockPin, dscClockInterrupt_cb, this);
+  #else
+    attachInterruptArg(digitalPinToInterrupt(dscClockPin), dscClockInterrupt_cb, this, CHANGE);
+  #endif
 #if not defined(DISABLE_EXPANDER)  
   if (maxZones > 32) {
     maxFields05 = 6;
@@ -714,8 +710,6 @@ dscKeybusInterface::dscClockInterrupt()
     #ifdef USE_ESP_IDF
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
     #else
-      // gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
-       //GPIO_OUTPUT_SET(dscWritePin,(uint8_t)(!invertWrite));
        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
     #endif
     }
