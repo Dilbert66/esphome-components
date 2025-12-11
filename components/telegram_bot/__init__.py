@@ -346,13 +346,13 @@ async def to_code(config):
 
     for conf in config.get(CONF_ON_MESSAGE, []):
         if CONF_CMD in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CMD]+",","cmd")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CMD]+",","cmd",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
         if CONF_TEXT in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_TEXT]+",","text")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_TEXT]+",","text",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
         if CONF_CALLBACK in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
 
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")

@@ -271,8 +271,6 @@ namespace esphome
       optional<std::function<optional<std::string>()>> bot_id_f_{};
     };
 
-    extern WebNotify *WebNotifyPtr;
-
     template <typename... Ts>
     class TelegramPublishAction : public Action<Ts...>
     {
@@ -499,13 +497,14 @@ namespace esphome
         return true;
       }
 
-      explicit TelegramMessageTrigger(const std::string &cmd, const std::string &type)
+      explicit TelegramMessageTrigger(const std::string &cmd, const std::string &type,WebNotify * parent)
       {
-        WebNotifyPtr->set_on_message([cmd, type, this](RemoteData &x)
+                 //  ESP_LOGE("test","type=%s,cmd=%s",type.c_str(),cmd.c_str());
+        parent->set_on_message([cmd, type, this,parent](RemoteData &x)
         {
           std::string s = x.cmd;
-          // ESP_LOGD("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
-          std::string bn=WebNotifyPtr->get_bot_name();
+           //ESP_LOGE("test","callback is %d, type=%s,cmd=%s",x.is_callback,type.c_str(),cmd.c_str());
+          std::string bn=parent->get_bot_name();
           if (x.to !="" && !stringsEqual(x.to,bn) )
             return;
 
@@ -531,6 +530,7 @@ namespace esphome
 
           if (cmd.find("," + s + ",") != std::string::npos)
             this->trigger(x);
+            
           if (cmd.find(",*,") != std::string::npos)
             this->trigger(x); 
           

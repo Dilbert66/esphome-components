@@ -72,8 +72,6 @@ extern const size_t ESPHOME_WEBKEYPAD_CONFIG_INCLUDE_SIZE;
 namespace esphome {
 namespace web_keypad {
 
-extern void * webServerPtr;
-
 enum msgType {
   STATE = 0,
   LOG,

@@ -526,5 +526,4 @@ gptimer_alarm_config_t alarm_config;
  #endif // ESP32
  
 };
-extern dscKeybusInterface * dscKeybusInterfacePtr;
 #endif // dscKeybus_h

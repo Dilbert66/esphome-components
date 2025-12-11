@@ -56,8 +56,7 @@ namespace esphome
 
 
         static const char *const TAG = "web_server";
-        void *webServerPtr;
-
+   
         void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
             int ct = 0;
@@ -210,7 +209,6 @@ namespace esphome
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
             credentials_ = new Credentials;
-            webServerPtr = this;
         }
 
 

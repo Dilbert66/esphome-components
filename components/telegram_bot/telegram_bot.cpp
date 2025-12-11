@@ -21,15 +21,11 @@ namespace esphome
 {
   namespace web_notify
   {
-    uint64_t t1;
     static const char *const TAG = "telegram";
 
 
-    WebNotify *WebNotifyPtr = nullptr;
-
     WebNotify::WebNotify()
     {
-     WebNotifyPtr = this;
     }
 
     WebNotify::~WebNotify()
