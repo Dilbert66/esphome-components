@@ -150,7 +150,7 @@ namespace esphome
       {
         SendData out;
         out.text = message;
-        out.message_id = callback_id;
+        out.callback_id = callback_id;
         out.show_alert = show_alert;
         out.url = url;
         out.cache_time = cache_time;
@@ -498,10 +498,11 @@ namespace esphome
         return true;
       }
 
-      void checkMessage(const std::string &cmd, const std::string &type,WebNotify * parent, RemoteData &x)
+      void processMessage(const std::string &cmd, const std::string &type,WebNotify * parent, RemoteData &x)
       {
           std::string s = x.cmd;
           std::string bn=parent->get_bot_name();
+         // printf("Processing cmd %s, type %s, s %s\n",cmd.c_str(),type.c_str(),s.c_str());
           if (x.to !="" && !stringsEqual(x.to,bn) )
             return;
 
@@ -509,6 +510,8 @@ namespace esphome
           {
             if (!x.is_callback)
               return;
+              //printf("Answering callback to id %s\n",x.callback_id.c_str());
+              //parent->answerCallbackQuery("", x.callback_id);
             s = x.text;
           }
           if (type == "cmd")
@@ -538,7 +541,7 @@ namespace esphome
       {
         parent->set_on_message([cmd, type, this, parent](RemoteData &x)
         {
-            checkMessage(cmd,type,parent,x);
+            processMessage(cmd,type,parent,x);
           
         });
       };

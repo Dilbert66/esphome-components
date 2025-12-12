@@ -40,7 +40,7 @@ namespace esphome
 
     }
 
-    void WebNotify::publish(SendData &out)
+      void WebNotify::publish(SendData &out)
     {
 
       if (!enableSend_ && !out.force)
@@ -52,22 +52,16 @@ namespace esphome
     json::JsonBuilder builder;
     JsonObject root = builder.root(); 
     
-    if (out.reply_markup.length() > 0 ) {
-      JsonDocument doc=json::parse_json((const uint8_t*)out.reply_markup.c_str(),out.reply_markup.length());
-      JsonObject x = doc.as<JsonObject>();
-      root["reply_markup"]=x;
-
-    }
     if (out.callback_id.length()>0) {
-      root["callback_query_id"]=out.callback_id.c_str();
-      root["cache_time"]=1;
+      root["callback_query_id"]=out.callback_id;
+      root["cache_time"]=0;
     }
-    if (out.message_id.length() > 0)
-      root["message_id"]=out.message_id.c_str();
+    if (out.message_id.length() > 0) 
+      root["message_id"]=out.message_id;
     if (out.chat_id.length() > 0)
-      root["chat_id"] = out.chat_id.c_str();
+      root["chat_id"] = out.chat_id;
     if (out.parse_mode.length()>0)
-      root["parse_mode"] = out.parse_mode.c_str();
+      root["parse_mode"] = out.parse_mode;
     if(out.disable_notification)
       root["disable_notification"]=out.disable_notification;
     if(out.disable_web_page_preview)
@@ -77,7 +71,7 @@ namespace esphome
     if(out.one_time_keyboard)
       root["one_time_keyboard"]=out.one_time_keyboard;
     if (out.text.length()>0)
-      root["text"] = out.text.c_str();
+      root["text"] = out.text;
     if(out.url.length() > 0)
       root["url"]=out.url;
     if (out.cache_time)
@@ -85,10 +79,20 @@ namespace esphome
     if(out.selective)
       root["selective"]=out.selective; 
 
+    if (out.reply_markup.length() > 0 ) {
+     //ESP_LOGE("test","keyboard=%s\n",out.reply_markup.c_str());
+      JsonDocument doc=json::parse_json((const uint8_t*)out.reply_markup.c_str(),out.reply_markup.length());
+      JsonObject x = doc.as<JsonObject>();
+      root["reply_markup"]=x;
+    }   
+
+
       outMessage omsg;
       omsg.msg = builder.serialize();
+      //printf("out=%s\n",omsg.msg.c_str());
       omsg.type = out.type;
       messages_.push(omsg);
+
     }
 
     bool WebNotify::isAllowed(std::string chat_id)
@@ -135,10 +139,9 @@ namespace esphome
 
         JsonDocument doc=json::parse_json((const uint8_t*) payload,strlen(payload));
         JsonObject root = doc.as<JsonObject>();
-
+         // ESP_LOGE("test","sending=%d,payload=%s\n",sending_,payload);
         if (root["result"][0]["callback_query"]["id"])
         {
-
           int update_id = root["result"][0]["update_id"];
           // we ignore the first message on initial start to avoid a reboot loop if ignore_first flag is set
           if (skipFirst_ && lastMsgReceived_ == 0) {
@@ -196,6 +199,8 @@ namespace esphome
                 }
           */
         }
+        //{"ok":true,"result":true}
+
         else if (root["result"][0]["message"]["text"])
         {
           int update_id = root["result"][0]["update_id"];
@@ -269,16 +274,15 @@ namespace esphome
           bool ok = root["ok"];
           if (!ok)
           {
-            retryDelay_ = millis();
             ESP_LOGE(TAG, "Error response from server: %s", payload);
             outMessage om=messages_.front();
-            messages_.pop();
             if (om.type==mtGetMe) {
               botRequest_=false;
               ESP_LOGD(TAG,"removed pending bot name request");
             } else
-              ESP_LOGD(TAG,"Removed message %s",om.msg.c_str());
+              ESP_LOGD(TAG,"Removed errored message %s",om.msg.c_str());
           }
+          messages_.pop();
         }
         else if (root["result"][0]["update_id"])
         {
@@ -403,7 +407,7 @@ namespace esphome
             mg_printf(c, "Host: %.*s\r\n", host.len, host.buf);
             mg_printf(c, "Content-Type: application/json\r\n");
             mg_printf(c, "Content-Length: %d\r\n\r\n%s\r\n", outmsg.msg.length(), outmsg.msg.c_str());
-            // printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
+           //printf("\r\nsent telegram msg %s\r\n",outmsg.msg.c_str());
           }
         }
         else if (enableBot_)
