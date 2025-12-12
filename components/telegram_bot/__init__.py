@@ -232,7 +232,7 @@ async def telegram_delete_message_action_to_code(config, action_id, template_arg
 TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.use_id(WebNotify),
-        cv.Required(CONF_CHAT_ID): cv.templatable(cv.string),
+        cv.Optional(CONF_CHAT_ID): cv.templatable(cv.string),
         cv.Required(CONF_MESSAGE_ID): cv.templatable(cv.string),
         cv.Optional(CONF_INLINE_KEYBOARD): cv.templatable(cv.string),
         cv.Optional(CONF_DISABLE_WEB_PREVIEW): cv.templatable(cv.boolean),
@@ -247,7 +247,8 @@ async def telegram_edit_reply_markup_action_to_code(config, action_id, template_
     paren = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, paren)
     #args_ = args + [(cg.JsonObject, "root")]
-    template_ = await cg.templatable(config[CONF_CHAT_ID], args, cg.std_string)
+    if CONF_CHAT_ID:
+        template_ = await cg.templatable(config[CONF_CHAT_ID], args, cg.std_string)
     cg.add(var.set_chat_id(template_))
     template_ = await cg.templatable(config[CONF_MESSAGE_ID], args, cg.std_string)
     cg.add(var.set_message_id(template_))
@@ -346,13 +347,13 @@ async def to_code(config):
 
     for conf in config.get(CONF_ON_MESSAGE, []):
         if CONF_CMD in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CMD]+",","cmd")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CMD]+",","cmd",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
         if CONF_TEXT in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_TEXT]+",","text")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_TEXT]+",","text",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
         if CONF_CALLBACK in conf:
-            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback")
+            trig = cg.new_Pvariable(conf[CONF_TRIGGER_ID],","+conf[CONF_CALLBACK]+",","callback",var)
             await automation.build_automation(trig, [(RemoteData,'x')], conf)
 
     # src=os.path.join(pathlib.Path(__file__).parent.resolve(),"mongoose/mongoose.h")
