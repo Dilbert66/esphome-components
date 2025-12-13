@@ -7,6 +7,11 @@
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/mg_lib/mongoose.h"
+#include "esphome/core/version.h"
+
+#ifdef USE_LOGGER
+#include "esphome/components/logger/logger.h"
+#endif
 
 #include <functional>
 #include <list>
@@ -25,7 +30,6 @@
 
 
 #ifdef USE_ESP_IDF
-#define PSTR(s)   ((const char *)(s))
 #define ESP32
 #endif
 
@@ -35,6 +39,10 @@
 #include <freertos/semphr.h>
 #endif
 
+#ifdef ESP8266
+#include <ESPAsyncTCP.h>
+#endif
+
 #if USE_ESP32
 using PlatformString = std::string;
 #elif USE_ARDUINO
@@ -42,29 +50,27 @@ using PlatformString = String;
 #endif
 
 
+
 #if USE_WEBKEYPAD_VERSION >= 2
 extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[];
-//extern const uint8_t ESPHOME_WEBKEYPAD_INDEX_HTML[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
 extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[];
-//extern const uint8_t ESPHOME_WEBKEYPAD_CSS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE;
 #endif
 
 #ifdef USE_WEBKEYPAD_JS_INCLUDE
 extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[];
-//extern const uint8_t ESPHOME_WEBKEYPAD_JS_INCLUDE[] PROGMEM;
 extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
-#endif
 
+extern const uint8_t ESPHOME_WEBKEYPAD_CONFIG_INCLUDE[];
+extern const size_t ESPHOME_WEBKEYPAD_CONFIG_INCLUDE_SIZE;
+#endif
 
 namespace esphome {
 namespace web_keypad {
-
-extern void * webServerPtr;
 
 enum msgType {
   STATE = 0,
@@ -91,6 +97,7 @@ struct Credentials {
   #ifdef USE_WEBKEYPAD_ENCRYPTION
   uint8_t token[SHA256_SIZE];
   uint8_t hmackey[SHA256HMAC_SIZE];
+  #define SALT "77992288"
   #endif
 
   bool crypt=false;
@@ -108,7 +115,7 @@ static unsigned long millis() {
  }
 #endif
 
-#define SALT "77992288"
+
 enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
 
 /** This class allows users to create a web server with their ESP nodes.
@@ -120,7 +127,14 @@ enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
  * under the '/light/...', '/sensor/...', ... URLs. A full documentation for this API
  * can be found under https://esphome.io/web-api/index.html.
  */
-class WebServer : public Controller, public Component {
+class WebServer : public Controller, public Component
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 12, 0)
+#ifdef USE_LOGGER
+    ,
+                  public logger::LogListener
+#endif
+#endif
+{
  public:
   WebServer();
   ~WebServer();
@@ -165,8 +179,8 @@ class WebServer : public Controller, public Component {
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
-  void set_keypad_config(const char *  json_keypad_config,uint8_t version=1);
-  const char * get_keypad_config();
+  //void set_keypad_config(const char *  json_keypad_config,uint8_t version=1);
+  void get_keypad_config(std::string &out);
   void set_port(uint8_t port) { this->port_=port;}
   
   void set_certificate(const char * cert) { certificate_ = cert;
@@ -185,10 +199,10 @@ class WebServer : public Controller, public Component {
   void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
     credentials_->username = auth_username;   
     credentials_->password = auth_password;
+     #ifdef USE_WEBKEYPAD_ENCRYPTION
     this->crypt_ = use_encryption;  
     credentials_->crypt=use_encryption;
 
-    #ifdef USE_WEBKEYPAD_ENCRYPTION
      std::string aeskeystring=credentials_->username + SALT + credentials_->password;
     const char * keystr=aeskeystring.c_str();
     SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
@@ -220,7 +234,11 @@ class WebServer : public Controller, public Component {
   void loop() override;
 
   void dump_config() override;
-
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 12, 0)
+ #ifdef USE_LOGGER
+  void on_log(uint8_t level, const char *tag, const char *message, size_t message_len);
+  #endif
+  #endif
   /// MQTT setup priority.
   float get_setup_priority() const override;
 
@@ -232,6 +250,10 @@ class WebServer : public Controller, public Component {
   void escape_json(const char *s,std::string & out);
   
   long int toInt(const std::string &s, int base); 
+
+#ifdef USE_WEBKEYPAD_OTA
+void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
+#endif
 
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   /// Handle included css request under '/0.css'.
@@ -338,7 +360,6 @@ class WebServer : public Controller, public Component {
 
   /// Handle a binary sensor request under '/binary_sensor/<id>'.
   void handle_binary_sensor_request(struct mg_connection *c, JsonObject doc);
-
   /// Dump the binary sensor state with its value as a JSON string.
   std::string binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config);
 #endif
@@ -392,12 +413,6 @@ class WebServer : public Controller, public Component {
   std::string number_json(number::Number *obj, float value, JsonDetail start_config);
 #endif
 
-
-
-void handle_auth_request(mg_connection *c,JsonObject doc);
-void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
-
-
 #ifdef USE_TEXT
   void on_text_update(text::Text *obj) override;
   /// Handle a text input request under '/text/<id>'.
@@ -445,7 +460,9 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
   std::string alarm_control_panel_json(alarm_control_panel::AlarmControlPanel *obj,
                                        alarm_control_panel::AlarmControlPanelState value, JsonDetail start_config);
 #endif
-  struct mg_mgr* mgr;
+
+struct mg_mgr mgr;
+
   struct mg_connection *c;
   friend ListEntitiesIterator;  
   ListEntitiesIterator entities_iterator_;
@@ -453,31 +470,34 @@ void push(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 bool callKeyService(const char *buf,int partition);
 void handleRequest(struct mg_connection *c,JsonObject doc) ;
 void handleWebRequest(struct mg_connection *c,mg_http_message *hm);
-static void ev_handler(struct mg_connection *nc, int ev, void *p);
+
 void parseUrl(mg_http_message *hm,JsonObject doc) ;
 void parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl,JsonObject doc);
 void ws_reply(mg_connection *c,const char * data,bool ok);
 
+void add_sorting_info_(JsonObject &root, EntityBase *entity);
 void add_entity_config(EntityBase *entity, float weight, uint64_t group);
 void add_sorting_group(uint64_t group_id, const std::string &group_name, float weight);
+void send_js_include(struct mg_connection * c);
+void handle_auth_request(mg_connection *c,JsonObject doc);
+void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
+
+void ev_handler(struct mg_connection *nc, int ev, void *p);
 
  protected:
- 
+
   const char * certificate_;
   const char * certificate_key_;
   void schedule_(std::function<void()> &&f);
-#ifdef ASYNCWEB 
-static void webPollTask(void * args);
-#endif
-  bool firstrun_{true};
-  const char * json_keypad_config_;
 
-#ifdef USE_WEBKEYPAD_CSS_INCLUDE
-  const char *css_include_{nullptr};
-#endif
-#ifdef USE_WEBKEYPAD_JS_INCLUDE
-  const char *js_include_{nullptr};
-#endif
+  bool firstrun_{true};
+
+// #ifdef USE_WEBKEYPAD_CSS_INCLUDE
+//   const char *css_include_{nullptr};
+// #endif
+// #ifdef USE_WEBKEYPAD_JS_INCLUDE
+//   const char *js_include_{nullptr};
+// #endif
   bool include_internal_{false};
   bool allow_ota_{false};
   bool expose_log_{false};
@@ -486,6 +506,7 @@ static void webPollTask(void * args);
   bool show_keypad_{true};
   bool crypt_{false};
   void percentDecode(char *src);
+  void push_log(const char *message);
 #ifdef USE_ESP32
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;
@@ -495,8 +516,6 @@ static void webPollTask(void * args);
     int lastseq;
   };
 
-  //ESPPreferenceObject pref_;
- // KeypadConfig keypadconfig_;
   Credentials * credentials_ ;
 
   std::map<EntityBase *, SortingComponents> sorting_entitys_;

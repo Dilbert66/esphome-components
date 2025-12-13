@@ -565,7 +565,7 @@ void vistaECPHome::setup()
 
 #endif
 #if defined(USE_API)
-      #if defined(USE_API_SERVICES)
+ #if defined(USE_API_CUSTOM_SERVICES) or defined(USE_API_SERVICES)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
       register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata"});
@@ -1852,7 +1852,7 @@ void vistaECPHome::update()
               qual = (q == 1) ? " is Restored" : " ";
             if (c)
             {
-              std::string lrrString = FC(statusText(c));
+              std::string lrrString = statusText(c);
               std::string zn = std::to_string(z);
               std::string uf = "by user";
               if (lrrString[0] == 'Z')

@@ -143,7 +143,7 @@ CONFIG_SCHEMA = cv.All(
                     cv.Required(CONF_PASSWORD): cv.All(
                         cv.string_strict, cv.Length(min=1)
                     ),
-                    cv.Optional(CONF_ENCRYPTION, default=False):cv.boolean,                     
+                    cv.Optional(CONF_ENCRYPTION, default=False):cv.boolean,                    
                     },
             ),
             cv.Optional(CONF_INCLUDE_INTERNAL, default=False): cv.boolean,
@@ -236,14 +236,6 @@ def add_resource_as_progmem(
 
 @coroutine_with_priority(40.0)
 async def to_code(config):
-    # if CORE.using_arduino:
-    #     stack =f"SET_LOOP_TASK_STACK_SIZE(16 * 1024);"
-    #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
-    #         stack =f"SET_LOOP_TASK_STACK_SIZE({config[CONF_STACK_SIZE]} * 1024);"
-    #     cg.add_global(cg.RawStatement("#if not defined(USE_STACK_SIZE)"))
-    #     cg.add_global(cg.RawStatement(stack))
-    #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
-    #     cg.add_global(cg.RawStatement("#endif"))
 
     # Track controller registration for StaticVector sizing
     CORE.register_controller()
@@ -284,8 +276,12 @@ async def to_code(config):
         cg.add(var.set_certificate_key(config[CONF_CERTIFICATE_KEY]))
         
     if CONF_AUTH in config:
+        if config[CONF_AUTH][CONF_ENCRYPTION] and CORE.is_esp8266:
+            raise cv.Invalid(
+                "Encryption is not supported on the ESP8266 due to memory constraints."
+            )
         cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION])); 
-        if config[CONF_AUTH][CONF_ENCRYPTION]:
+        if config[CONF_AUTH][CONF_ENCRYPTION] and CORE.is_esp32:  
             cg.add_define("USE_WEBKEYPAD_ENCRYPTION")  
                
     if CONF_CSS_INCLUDE in config:
@@ -310,20 +306,20 @@ async def to_code(config):
         path = CORE.relative_config_path(config[CONF_JS_INCLUDE])
         with open(file=path, encoding="utf-8") as js_file:
             add_resource_as_progmem("JS_INCLUDE", js_file.read())
-           
+
+    if CONF_CONFIG in config and config[CONF_CONFIG]:
+        with open( CORE.relative_config_path(config[CONF_CONFIG]),'r') as file:
+            configuration = yaml.safe_load(file)
+        add_resource_as_progmem("CONFIG_INCLUDE", json.dumps(configuration), False)
+          
     cg.add(var.set_include_internal(config[CONF_INCLUDE_INTERNAL]))
        
     if CONF_KEYPAD_URL in config and config[CONF_KEYPAD_URL]:
         response = requests.get(config[CONF_KEYPAD_URL])
         configuration = yaml.safe_load(response.text)
-        output = json.dumps(configuration)
-        cg.add(var.set_keypad_config(output))        
+        add_resource_as_progmem("CONFIG_INCLUDE", json.dumps(configuration), False)        
        
-    if CONF_CONFIG in config and config[CONF_CONFIG]:
-        with open( CORE.relative_config_path(config[CONF_CONFIG]),'r') as file:
-            configuration = yaml.safe_load(file)
-        output = json.dumps(configuration)
-        cg.add(var.set_keypad_config(output))
+
     if CORE.using_arduino:
         if CORE.is_esp32:        
             cg.add_library("Update", None)     

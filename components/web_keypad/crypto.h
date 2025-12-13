@@ -225,6 +225,5 @@ class RNG
     private:
 };
 #endif
-
-
 #endif
+
