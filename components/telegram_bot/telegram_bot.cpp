@@ -78,6 +78,8 @@ namespace esphome
       root["cache_time"]=out.cache_time;
     if(out.selective)
       root["selective"]=out.selective; 
+    if (out.inline_message_id.length() > 0)
+      root["inline_message_id"]=out.inline_message_id;
 
     if (out.reply_markup.length() > 0 ) {
      //ESP_LOGE("test","keyboard=%s\n",out.reply_markup.c_str());
@@ -139,7 +141,7 @@ namespace esphome
 
         JsonDocument doc=json::parse_json((const uint8_t*) payload,strlen(payload));
         JsonObject root = doc.as<JsonObject>();
-         // ESP_LOGE("test","sending=%d,payload=%s\n",sending_,payload);
+        // ESP_LOGE("test","sending=%d,payload=%s\n",sending_,payload);
         if (root["result"][0]["callback_query"]["id"])
         {
           int update_id = root["result"][0]["update_id"];
