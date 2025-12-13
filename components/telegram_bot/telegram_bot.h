@@ -48,6 +48,7 @@ namespace esphome
       std::string args;
       bool is_callback;
       std::string message_id;
+      std::string inline_message_id;
       std::string callback_id;
       bool is_first_cmd;
       std::string to;
@@ -64,6 +65,7 @@ namespace esphome
       std::string reply_markup = "";
       std::string callback_id = "";
       std::string parse_mode = "";
+      std::string inline_message_id="";
       bool disable_notification = false;
       bool disable_web_page_preview = false;
       bool resize_keyboard = false;
@@ -160,10 +162,15 @@ namespace esphome
         publish(out);
       }
 
-      void editMessageText(const std::string &chat_id, const std::string &message, const std::string &message_id, const std::string &inline_keyboard = "", const std::string &parse_mode = "html", bool disable_web_page_preview = false)
+
+      void editMessageText(const std::string &message,  const std::string &message_id, const std::string &chat_id ="", const std::string &inline_keyboard = "", const std::string &parse_mode = "html", bool disable_web_page_preview = false)
       {
+        if (message_id=="") return;
         SendData out;
-        out.chat_id = chat_id;
+        if (chat_id.length() > 0)
+          out.chat_id = chat_id;
+        else
+          out.chat_id=this->telegramUserId_;
         out.text = message;
         out.message_id = message_id;
         out.reply_markup = "{'inline_keyboard':" + inline_keyboard + "}";
@@ -173,7 +180,7 @@ namespace esphome
         publish(out);
       }
 
-      void editMessageReplyMarkup(const std::string &chat_id, const std::string &message_id, const std::string &inline_keyboard = "", bool disable_web_page_preview = false)
+      void editMessageReplyMarkup(const std::string &message_id, const std::string &chat_id = "", const std::string &inline_keyboard = "", bool disable_web_page_preview = false)
       {
         SendData out;
         out.chat_id = chat_id;
