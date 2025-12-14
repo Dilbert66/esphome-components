@@ -1852,7 +1852,7 @@ void vistaECPHome::update()
               qual = (q == 1) ? " is Restored" : " ";
             if (c)
             {
-              std::string lrrString = statusText(c);
+              std::string lrrString = FC(statusText(c));
               std::string zn = std::to_string(z);
               std::string uf = "by user";
               if (lrrString[0] == 'Z')
