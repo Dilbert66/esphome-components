@@ -163,7 +163,7 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config)
             pinMode(m_txPin, OUTPUT);
         #endif
 
-        digitalWriteByte(m_txPin, !m_invert_tx);
+        digitalWriteBit(m_txPin, !m_invert_tx);
     }
 
     if (!m_rxEnabled)
@@ -192,7 +192,7 @@ void SoftwareSerial::enableTx(bool on)
             #else
             pinMode(m_txPin, OUTPUT);
             #endif
-            digitalWriteByte(m_txPin, !m_invert_tx);
+            digitalWriteBit(m_txPin, !m_invert_tx);
         }
         else
         {
@@ -323,20 +323,20 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     if (interrupt) disableInterrupts();
     // Start bit;
     if (m_invert_tx)
-        digitalWriteByte(m_txPin, HIGH);
+        digitalWriteBit(m_txPin, HIGH);
     else
-        digitalWriteByte(m_txPin, LOW);
+        digitalWriteBit(m_txPin, LOW);
     WAIT;
     for (int i = 0; i < m_dataBits; i++)
     {
         if (b & 1)
         {
-            digitalWriteByte(m_txPin, HIGH);
+            digitalWriteBit(m_txPin, HIGH);
             parity = parity ^ 0x01;
         }
         else
         {
-            digitalWriteByte(m_txPin, LOW);
+            digitalWriteBit(m_txPin, LOW);
             parity = parity ^ 0x00;
         }
         WAIT;
@@ -349,22 +349,22 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWriteByte(m_txPin, HIGH);
+                digitalWriteBit(m_txPin, HIGH);
             }
             else
             {
-                digitalWriteByte(m_txPin, LOW);
+                digitalWriteBit(m_txPin, LOW);
             }
         }
         else
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWriteByte(m_txPin, LOW);
+                digitalWriteBit(m_txPin, LOW);
             }
             else
             {
-                digitalWriteByte(m_txPin, HIGH);
+                digitalWriteBit(m_txPin, HIGH);
             }
         }
         WAIT;
@@ -373,11 +373,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     // restore pin to natural state
     if (m_invert_tx)
     {
-        digitalWriteByte(m_txPin, LOW);
+        digitalWriteBit(m_txPin, LOW);
     }
     else
     {
-        digitalWriteByte(m_txPin, HIGH);
+        digitalWriteBit(m_txPin, HIGH);
     }
     WAIT;                // 1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
