@@ -197,12 +197,20 @@ private:
 // #if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
 // return ESP.getCycleCount() ;
 // #else
+
+#if defined(ESP32)
+    //return esp_cpu_get_cycle_count() << 1;
+       return (unsigned long) esp_timer_get_time()  << 1;
+
+#else
         return micros() << 1;
        
+#endif
+
 //#endif
     }
 
-void IRAM_ATTR digitalWriteBit(int pin, int val) {
+void IRAM_ATTR digitalWritePin(int pin, int val) {
     #if defined(USE_ESP_IDF) or defined(ESP32)
         gpio_set_level((gpio_num_t)pin, val);
     #else
