@@ -202,7 +202,7 @@ private:
 //#endif
     }
 
-void IRAM_ATTR digitalWriteByte(int pin, int val) {
+void IRAM_ATTR digitalWriteBit(int pin, int val) {
     #if defined(USE_ESP_IDF) or defined(ESP32)
         gpio_set_level((gpio_num_t)pin, val);
     #else

@@ -77,24 +77,8 @@ bool SoftwareSerial::isValidGPIOpin(int pin)
     return (pin >= 0 && pin <= 5) || (pin >= 12 && pin <= 15);
 #endif
 #ifdef ESP32
-#if CONFIG_IDF_TARGET_ESP32
-	// Datasheet https://documentation.espressif.com/esp32_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/_images/esp32_devkitC_v4_pinlayout.png
-    return pin == 1 || (pin >= 3 && pin <= 5) || (pin >= 12 && pin <= 15) ||
-		(pin >= 18 && pin <= 19) || (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 33);
-#elif CONFIG_IDF_TARGET_ESP32S2
-	// Datasheet https://documentation.espressif.com/esp32-s2_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s2/_images/esp32-s2-devkitm-1-v1-pin-layout.png
-	return (pin >= 1 && pin <= 21) || (pin >= 33 && pin <= 44);
-#elif CONFIG_IDF_TARGET_ESP32S3
-	// Datasheet https://documentation.espressif.com/esp32-s3_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout_v1.1.jpg
-	return (pin >= 1 && pin <= 2) || (pin >= 4 && pin <= 21) || pin == 26 || (pin >= 33 && pin <= 44);
-#elif CONFIG_IDF_TARGET_ESP32C3
-	// Datasheet https://documentation.espressif.com/esp32-c3_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/_images/esp32-c3-devkitm-1-v1-pinout.png
-    return (pin >= 0 && pin <= 1) || (pin >= 3 && pin <= 7) || pin == 10 || (pin >= 18 && pin <= 21);
-#endif
+    return pin == 0 || (pin >= 2 && pin <= 8) || (pin >= 12 && pin <= 19) ||
+           (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 36) || pin == 39;
 #endif
 #ifdef USE_RP2040
     return (pin >= 0 && pin <= 21) || (pin >=26 && pin <= 27);
@@ -179,7 +163,7 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config)
             pinMode(m_txPin, OUTPUT);
         #endif
 
-        digitalWriteByte(m_txPin, !m_invert_tx);
+        digitalWriteBit(m_txPin, !m_invert_tx);
     }
 
     if (!m_rxEnabled)
@@ -208,7 +192,7 @@ void SoftwareSerial::enableTx(bool on)
             #else
             pinMode(m_txPin, OUTPUT);
             #endif
-            digitalWriteByte(m_txPin, !m_invert_tx);
+            digitalWriteBit(m_txPin, !m_invert_tx);
         }
         else
         {
@@ -339,20 +323,20 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     if (interrupt) disableInterrupts();
     // Start bit;
     if (m_invert_tx)
-        digitalWriteByte(m_txPin, HIGH);
+        digitalWriteBit(m_txPin, HIGH);
     else
-        digitalWriteByte(m_txPin, LOW);
+        digitalWriteBit(m_txPin, LOW);
     WAIT;
     for (int i = 0; i < m_dataBits; i++)
     {
         if (b & 1)
         {
-            digitalWriteByte(m_txPin, HIGH);
+            digitalWriteBit(m_txPin, HIGH);
             parity = parity ^ 0x01;
         }
         else
         {
-            digitalWriteByte(m_txPin, LOW);
+            digitalWriteBit(m_txPin, LOW);
             parity = parity ^ 0x00;
         }
         WAIT;
@@ -365,22 +349,22 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWriteByte(m_txPin, HIGH);
+                digitalWriteBit(m_txPin, HIGH);
             }
             else
             {
-                digitalWriteByte(m_txPin, LOW);
+                digitalWriteBit(m_txPin, LOW);
             }
         }
         else
         {
             if (m_invert_tx && m_dataBits != 5)
             {
-                digitalWriteByte(m_txPin, LOW);
+                digitalWriteBit(m_txPin, LOW);
             }
             else
             {
-                digitalWriteByte(m_txPin, HIGH);
+                digitalWriteBit(m_txPin, HIGH);
             }
         }
         WAIT;
@@ -389,11 +373,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     // restore pin to natural state
     if (m_invert_tx)
     {
-        digitalWriteByte(m_txPin, LOW);
+        digitalWriteBit(m_txPin, LOW);
     }
     else
     {
-        digitalWriteByte(m_txPin, HIGH);
+        digitalWriteBit(m_txPin, HIGH);
     }
     WAIT;                // 1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
