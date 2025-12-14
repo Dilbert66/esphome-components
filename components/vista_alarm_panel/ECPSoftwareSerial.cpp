@@ -41,9 +41,12 @@ SoftwareSerial::SoftwareSerial(
     {
         m_rxPin = receivePin;
         m_bufSize = bufSize;
-        m_buffer = (uint8_t *)malloc(m_bufSize);
+       
+        m_buffer = new uint8_t[m_bufSize];
+        // m_buffer = (uint8_t *)malloc(m_bufSize);
         m_isrBufSize = isrBufSize ? isrBufSize : 10 * bufSize;
-        m_isrBuffer = static_cast<std::atomic<uint32_t> *>(malloc(m_isrBufSize * sizeof(uint32_t)));
+        m_isrBuffer = new  std::atomic<uint32_t>[m_isrBufSize];
+        // m_isrBuffer = static_cast<std::atomic<uint32_t> *>(malloc(m_isrBufSize * sizeof(uint32_t)));
     }
     if (isValidGPIOpin(transmitPin)
 #ifdef ESP8266
@@ -61,13 +64,13 @@ SoftwareSerial::SoftwareSerial(
 SoftwareSerial::~SoftwareSerial()
 {
     end();
-    if (m_buffer)
-    {
-        free(m_buffer);
-    }
+     if (m_buffer)
+     {
+         delete[] m_buffer;
+     }
     if (m_isrBuffer)
     {
-        free(m_isrBuffer);
+       delete[] m_isrBuffer;
     }
 }
 

@@ -198,7 +198,7 @@ private:
 // return ESP.getCycleCount() ;
 // #else
 
-#if defined(ESP32)
+#if defined(ESP32) or defined(USE_ESP_IDF)
     //return esp_cpu_get_cycle_count() << 1;
        return (unsigned long) esp_timer_get_time()  << 1;
 
