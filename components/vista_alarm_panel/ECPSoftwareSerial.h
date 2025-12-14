@@ -181,11 +181,11 @@ private:
     {
         // return (ESP.getCpuFreqMHz() * micros) << 1;
        // return ((esp_clk_cpu_freq()/1000000) * micros) << 1;
-       #if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
-       return (ESP.getCpuFreqMHz() * micros) ;
-       #else
+    //    #if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
+    //    return (ESP.getCpuFreqMHz() * micros) ;
+    //    #else
        return micros << 1;
-       #endif
+    //    #endif
     }
    static inline unsigned long ticksToMicros(unsigned long ticks) ALWAYS_INLINE_ATTR
     {
@@ -194,20 +194,12 @@ private:
 
     static inline unsigned long IRAM_ATTR ticks()  ALWAYS_INLINE_ATTR
     {
-#if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
-return ESP.getCycleCount() ;
-#else
-
-#if defined(ESP32)
-    //return esp_cpu_get_cycle_count() << 1;
-       return (unsigned long) esp_timer_get_time()  << 1;
-
-#else
+// #if defined(USE_ARDUINO) && defined(CONFIG_IDF_TARGET_ESP32)
+// return ESP.getCycleCount() ;
+// #else
         return micros() << 1;
        
-#endif
-
-#endif
+//#endif
     }
 
 void IRAM_ATTR digitalWriteByte(int pin, int val) {
