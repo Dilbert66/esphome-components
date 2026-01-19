@@ -71,12 +71,11 @@ void DSCkeybushome::publishBinaryState(const std::string &idstr, uint8_t num, bo
   {
     id += "_" + std::to_string(num);
   }
-  auto bMap=App.get_binary_sensors();
-  auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
-                         { return bs->get_object_id() == id; });
-
-  if (it != bMap.end() && (*it)->state != open)
-    (*it)->publish_state(open);
+  auto s=getSensorObj(id.c_str());
+  if (s != nullptr && s->sensorPtr != nullptr  && s->is_binary) {
+    binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (s->sensorPtr);
+    bs->publish_state(open);
+  }
 }
 
 void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
@@ -86,11 +85,12 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
   {
     id += "_" + std::to_string(num);
   }
-  auto tMap=App.get_text_sensors();
-  auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
-                         { return ts->get_object_id() == id; });
-  if (it != tMap.end() && (*it)->state != *text)
-    (*it)->publish_state(*text);
+  auto s=getSensorObj(id.c_str());
+  if (s != nullptr && s->sensorPtr != nullptr && !s->is_binary) {
+    text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor*>(s->sensorPtr);
+    ts->publish_state(*text);
+  }
+
 }
 #endif
 
@@ -112,18 +112,27 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     {
      if (zone < 1 || zone > maxZones) return "";
 #if !defined(ARDUINO_MQTT)
-      std::string c = "z" + std::to_string(zone);
-      auto bMap=App.get_binary_sensors();
-      auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
-                             { return bs->get_object_id() == c; });
-      if (it != bMap.end())
-      {
-        if (append)
-          // return std::to_string(zone).append(" (").append((*it)->get_name()).append(")");
-          return std::string((*it)->get_name()).append(" (").append(std::to_string(zone)).append(")");
-        else
-          return (*it)->get_name();
+
+      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [zone](sensorObjType &f)
+                             { return f.zone == zone + 1; });
+      if (it != zoneStatus.end()) {
+                sensorObjType s = (*it);
+                if (s.sensorPtr != nullptr) {
+                const char * name;
+                if (s.is_binary) {
+                  name = reinterpret_cast<binary_sensor::BinarySensor *>(s.sensorPtr)->get_name().c_str();
+                } else {
+                  name = reinterpret_cast<text_sensor::TextSensor *>(s.sensorPtr)->get_name().c_str();
+                }
+
+                   if (append)
+                  return std::string(name).append(" (").append(std::to_string(zone)).append(")");
+                  else
+                  return  std::string(name);
+                }
+            
       }
+      
 #endif
       return "";
     }
@@ -173,17 +182,44 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
         troubleFetch = false;
     }
 
-    DSCkeybushome::zoneType *DSCkeybushome::getZone(byte z,bool create)
+    DSCkeybushome::sensorObjType *DSCkeybushome::getZone(byte z,bool create)
     {
       // zone=0 to maxZones-1
-      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [&z](zoneType &f)
+      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [&z](sensorObjType &f)
                              { return f.zone == z + 1; });
       if (it != zoneStatus.end())
         return &(*it);
       else {
-        return create?createZone(z+1):&zonetype_INIT;
+        return create?createZone(z+1):&sensorObjType_INIT;
       }
 
+    }
+
+    DSCkeybushome::sensorObjType *DSCkeybushome::getSensorObj(const char *id_type)
+    {
+ 
+      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [id_type](sensorObjType &f)
+                             { return strcmp(f.id_type,id_type) == 0; });
+      if (it != zoneStatus.end())
+        return &(*it);
+      else {
+        return nullptr;
+      }
+
+    }
+
+    const char * DSCkeybushome::getIdType(uint32_t hash)
+    {
+
+       if (hash==0) return "";
+      auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [hash](sensorObjType &f)
+                             { return f.hash==hash; });
+
+      if (it != zoneStatus.end())
+        return (*it).id_type;
+      else 
+        return "";
+       
     }
 
 #if defined(ARDUINO_MQTT)
@@ -199,9 +235,7 @@ void DSCkeybushome::setup()
        if (debug > 2)
          Serial.begin(115200);
       #endif
-#if !defined(ARDUINO_MQTT)
-      loadZones();
-#endif
+
 #if defined(ESPHOME_MQTT)
 
       topic_prefix = mqtt::global_mqtt_client->get_topic_prefix();
@@ -1018,9 +1052,9 @@ void DSCkeybushome::setup()
       char s1[4];
 
       std::string s = "";
-
-#if !defined(ARDUINO_MQTT)
       char s2[25];
+#if !defined(ARDUINO_MQTT) && defined(USE_TIME)
+    
       ESPTime rtc = now();
       sprintf(s2, "[%02d-%02d-%02d %02d:%02d]", rtc.year, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute);
 #endif
@@ -1860,7 +1894,7 @@ void DSCkeybushome::update()
                 zone = zoneBit + (zoneGroup * 8);
                 if (zone >= maxZones)
                   continue;
-                zoneType *zt = getZone(zone);
+                sensorObjType *zt = getZone(zone);
                 if (bitRead(dsc.openZones[zoneGroup], zoneBit))
                 {
 
@@ -4788,58 +4822,63 @@ void DSCkeybushome::update()
     }
 
 #if !defined(ARDUINO_MQTT)
-    void DSCkeybushome::loadZones()
-    {
 
-      for (binary_sensor::BinarySensor *obj : App.get_binary_sensors())
-      {
-        createZoneFromObj(obj);
-      }
-    }
-
-    void DSCkeybushome::createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p)
+void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type,  bool is_binary)
     {
       MatchState ms;
       char buf[20];
       char res;
-      ms.Target((char *)obj->get_object_id().c_str());
-      res = ms.Match("^[zZ](%d+)$");
-      if (res == REGEXP_MATCHED)
-      {
-        ms.GetCapture(buf, 0);
-        int z = toInt(buf, 10);
-        if (!z)
-          return;
-        zoneType *zt = getZone(z - 1);
-        if (zt->zone == z) {
-          if (zt->binary_sensor==NULL)
-            zt->binary_sensor=obj;
-          if (!zt->partition)
-            zt->partition=p;
-          return;
-        }
-        zoneType n = zonetype_INIT;
-        n.zone = z;
-        n.binary_sensor = obj;
-        n.enabled = true;
-        n.partition = p;
-        zoneStatus.push_back(n);
-        ESP_LOGD(TAG, "CreatefromOjb: added zone %d", zoneStatus.back().zone);
-      }
+      int z = 0;
+      if (strcmp(id_type,"" )==0) return;
 
-    }
+        ms.Target((char *)id_type);
+        res = ms.Match("^[zZ](%d+)$");
+        if (res == REGEXP_MATCHED && is_binary)
+        {
+          ms.GetCapture(buf, 0);
+          z = toInt(buf, 10);
+        }
+
+          if (z ) {
+            sensorObjType * n = getZone(z);
+            if (n->zone == z) {
+              if (n->sensorPtr==NULL)
+                n->sensorPtr=obj;
+              if (!n->partition)
+                n->partition=p;
+              return;  //already exists
+            }
+         }
+        sensorObjType s = sensorObjType_INIT;
+        s.zone = z;
+        s.sensorPtr = obj;
+        s.enabled = true;
+        s.partition = p;
+        s.is_binary=is_binary;
+        s.id_type=id_type;
+        if (is_binary) {
+          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
+        } else {
+          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
+        }
+        zoneStatus.push_back(s);
+       
+        ESP_LOGD(TAG, "CreateSensorFromOjb: added zone %d with id_code: %s", zoneStatus.back().zone,s.id_type);
+
+  }
 
 #endif
 
- DSCkeybushome::zoneType * DSCkeybushome::createZone(uint16_t z, uint8_t p)
+ DSCkeybushome::sensorObjType * DSCkeybushome::createZone(uint16_t z, uint8_t p)
 {
 
   if (!z)
-    return &zonetype_INIT;
-  zoneType n = zonetype_INIT;
+    return &sensorObjType_INIT;
+  sensorObjType n = sensorObjType_INIT;
   n.zone = z;
   n.enabled = true;
   n.partition = p;
+
 
   zoneStatus.push_back(n);
   ESP_LOGD(TAG, "createzone: added zone %d", zoneStatus.back().zone);

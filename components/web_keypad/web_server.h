@@ -20,6 +20,10 @@
 #include <utility>
 #include <vector>
 
+#if defined(USE_RP2040) && not defined(ESP)
+#define ESP rp2040
+#endif
+
 #ifdef USE_WEBKEYPAD_OTA
 #include "esphome/components/ota/ota_backend.h"
 #endif
@@ -39,11 +43,11 @@
 #include <freertos/semphr.h>
 #endif
 
-#ifdef ESP8266
-#include <ESPAsyncTCP.h>
-#endif
+// #if defined(ESP8266) && !defined(USE_ESPHOME_SOCKETS)
+// #include <ESPAsyncTCP.h>
+// #endif
 
-#if USE_ESP32
+#if defined(USE_ESP32) or defined(USE_RP2040)
 using PlatformString = std::string;
 #elif USE_ARDUINO
 using PlatformString = String;
@@ -68,6 +72,7 @@ extern const size_t ESPHOME_WEBKEYPAD_JS_INCLUDE_SIZE;
 extern const uint8_t ESPHOME_WEBKEYPAD_CONFIG_INCLUDE[];
 extern const size_t ESPHOME_WEBKEYPAD_CONFIG_INCLUDE_SIZE;
 #endif
+#define SALT "77992288"
 
 namespace esphome {
 namespace web_keypad {
@@ -91,23 +96,18 @@ struct SortingGroup {
 };
 
 struct Credentials {
-  std::string username="";
-  std::string password="";
+  const char * username;
+  const char * password;
 
   #ifdef USE_WEBKEYPAD_ENCRYPTION
   uint8_t token[SHA256_SIZE];
   uint8_t hmackey[SHA256HMAC_SIZE];
-  #define SALT "77992288"
   #endif
 
   bool crypt=false;
 };
 
-struct upload_state {
-  size_t expected;  // POST data length, bytes
-  size_t received;  // Already received bytes
-  std::string fn;
-};
+
 
 #if defined (USE_ESP_IDF)
 static unsigned long millis() {
@@ -139,7 +139,12 @@ class WebServer : public Controller, public Component
   WebServer();
   ~WebServer();
 
-
+struct upload_state {
+  size_t expected;  // POST data length, bytes
+  size_t received;  // Already received bytes
+  PlatformString filename;
+  uint32_t filesize;
+} upl ;
 #ifdef USE_WEBKEYPAD_CSS_INCLUDE
   /** Set local path to the script that's embedded in the index page. Defaults to
    *
@@ -196,20 +201,20 @@ class WebServer : public Controller, public Component
    this->key_service_func_ = lambda;
   }
 
-  void set_auth(const std::string & auth_username,const std::string & auth_password,bool use_encryption) { 
+  void set_auth(const char * auth_username,const char * auth_password,bool use_encryption) { 
     credentials_->username = auth_username;   
     credentials_->password = auth_password;
      #ifdef USE_WEBKEYPAD_ENCRYPTION
     this->crypt_ = use_encryption;  
     credentials_->crypt=use_encryption;
 
-     std::string aeskeystring=credentials_->username + SALT + credentials_->password;
+     std::string aeskeystring=std::string(credentials_->username) + SALT + std::string(credentials_->password);
     const char * keystr=aeskeystring.c_str();
-    SHA256HMAC aeskey((const char*)keystr,strlen(keystr));
+    SHA256HMAC aeskey(keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
     aeskey.doFinal((char*)credentials_->token);
     
-    SHA256HMAC hmac((const char*)keystr,strlen(keystr));
+    SHA256HMAC hmac(keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
     hmac.doFinal((char*)credentials_->hmackey);
     #endif
@@ -250,7 +255,7 @@ class WebServer : public Controller, public Component
   void escape_json(const char *s,std::string & out);
   
   long int toInt(const std::string &s, int base); 
-
+ void handle_wifisave(struct mg_connection *c, JsonObject doc);
 #ifdef USE_WEBKEYPAD_OTA
 void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
@@ -484,8 +489,14 @@ void handle_alarm_panel_request(struct mg_connection *c, JsonObject doc);
 
 void ev_handler(struct mg_connection *nc, int ev, void *p);
 
- protected:
+std::string get_object_id(EntityBase * entity);
 
+
+bool match_object(EntityBase *entity, JsonObject doc);
+
+ protected:
+  PlatformString ota_filename_;
+  size_t ota_filesize_;
   const char * certificate_;
   const char * certificate_key_;
   void schedule_(std::function<void()> &&f);
@@ -517,7 +528,7 @@ void ev_handler(struct mg_connection *nc, int ev, void *p);
   };
 
   Credentials * credentials_ ;
-
+  bool is_ap_active_{false};
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;
   std::map<unsigned long,c_data> tokens_;

@@ -24,6 +24,7 @@
 #define dscKeybus_h
 
 
+
 #if defined(USE_ESP_IDF_TIMER) or defined(USE_ESP_IDF) or defined(ESP32)
 #define USE_ESP_IDF_TIMER
 #ifndef ESP32
@@ -69,26 +70,23 @@ typedef char __FlashStringHelper;
 
 
 
-#if defined(ESP8266)
-
-
-
+#if defined(ESP32)
+const byte dscPartitions = 8;
+const byte dscZones = 8;
+const byte dscBufferSize = 50;
+const byte dscReadSize = 16;
+#else
 const byte dscPartitions = 4;
 const byte dscZones = 8;
 const byte dscBufferSize = 50;
 const byte dscReadSize = 16;
-#elif defined(ESP32)
-const byte dscPartitions = 8;
-const byte dscZones = 8;
-const DRAM_ATTR byte dscBufferSize = 50;
-const DRAM_ATTR byte dscReadSize = 16;
 #endif
 
 
-#if defined(ESP8266)
+#if defined(ESP32) 
 const byte maxModules = 4;
 const byte writeQueueSize=20; //zone pending update queue
-#elif defined(ESP32) 
+#else
 const byte maxModules = 4;
 const byte writeQueueSize=20; //zone pending update queue
 #endif

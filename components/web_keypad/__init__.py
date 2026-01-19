@@ -20,6 +20,7 @@ from esphome.const import (
     CONF_LOG,
     CONF_VERSION,
     CONF_LOCAL,
+    PLATFORM_RP2040,
     PLATFORM_ESP32,
     PLATFORM_ESP8266,
     PLATFORM_BK72XX,
@@ -155,6 +156,7 @@ CONFIG_SCHEMA = cv.All(
                 esp32_idf=False,
                 bk72xx=False,
                 rtl87xx=False,
+                rp2040=False
             ): cv.boolean,
             cv.Optional(CONF_LOG, default=False): cv.boolean,
             cv.Optional(CONF_LOCAL, default=True): cv.boolean,
@@ -276,12 +278,12 @@ async def to_code(config):
         cg.add(var.set_certificate_key(config[CONF_CERTIFICATE_KEY]))
         
     if CONF_AUTH in config:
-        if config[CONF_AUTH][CONF_ENCRYPTION] and CORE.is_esp8266:
-            raise cv.Invalid(
-                "Encryption is not supported on the ESP8266 due to memory constraints."
-            )
+        # if config[CONF_AUTH][CONF_ENCRYPTION] and CORE.is_esp8266:
+        #     raise cv.Invalid(
+        #         "Encryption is not supported on the ESP8266 due to memory constraints."
+        #     )
         cg.add(var.set_auth(config[CONF_AUTH][CONF_USERNAME],config[CONF_AUTH][CONF_PASSWORD],config[CONF_AUTH][CONF_ENCRYPTION])); 
-        if config[CONF_AUTH][CONF_ENCRYPTION] and CORE.is_esp32:  
+        if config[CONF_AUTH][CONF_ENCRYPTION]: # and (CORE.is_esp32 or CORE.is_rp2040 or CORE.is_esp8266):  
             cg.add_define("USE_WEBKEYPAD_ENCRYPTION")  
                
     if CONF_CSS_INCLUDE in config:

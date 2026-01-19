@@ -1,11 +1,12 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID,CONF_NAME
 from esphome.core import CORE
 import re
 import os
 import logging
 from esphome.helpers import sanitize, snake_case
+
 
     
 _LOGGER = logging.getLogger(__name__)
@@ -132,7 +133,7 @@ async def to_code(config):
     cg.add_define("USE_DSC_PANEL")   
     if config[CONF_DETAILEDPARTITIONSTATE]:
         cg.add_define("DETAILED_PARTITION_STATE")
-    old_dir = CORE.relative_build_path("src")
+    #old_dir = CORE.relative_build_path("src")
     # if config[CONF_CLEAN] or os.path.exists(old_dir / '/dscAlarm.h'):
     #     real_clean_build()
     if not config[CONF_EXPANDER1] and not config[CONF_EXPANDER2]:
@@ -174,15 +175,10 @@ async def to_code(config):
 async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     """Set up custom properties for an alarm sensor"""
     paren = await cg.get_variable(config[CONF_ALARM_ID])
-
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
-        if is_binary_sensor:
-            cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
+        cg.add(paren.createSensorFromObj(var,config[CONF_PARTITION],config[CONF_TYPE_ID],is_binary_sensor))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-        if is_binary_sensor:
-            cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION]))
+        cg.add(paren.createSensorFromObj(var,config[CONF_PARTITION],config[CONF_ID].id,is_binary_sensor))
     if is_binary_sensor:
         cg.add(var.publish_state(False))
         cg.add(var.set_trigger_on_initial_state(True))

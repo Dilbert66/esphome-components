@@ -221,13 +221,7 @@ void SHA256::SHA256_Process(const char digest[64])
     state[5] += F;
     state[6] += G;
     state[7] += H;
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 /**
@@ -296,13 +290,7 @@ void SHA256::doFinal(char *digest)
     PUT_UINT32(state[5], digest, 20);
     PUT_UINT32(state[6], digest, 24);
     PUT_UINT32(state[7], digest, 28);
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 
@@ -316,13 +304,7 @@ bool SHA256::matches(const char *expected)
             return false;
     }
 
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
     return true;
 }
 
@@ -503,14 +485,10 @@ void AES::encrypt(uint32_t *data)
            the MixColumn operation, which must be atomic...*/ 
         for (row = 0; row < 4; row++)
             data[row] = tmp[row] ^ *(k++);
+
+
     }
-      #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 /**
@@ -567,13 +545,7 @@ void AES::decrypt(uint32_t *data)
         for (row = 4; row > 0; row--)
             data[row-1] = tmp[row-1] ^ *(--k);
     }
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE cipherMode)
@@ -669,13 +641,7 @@ AES::AES(const uint8_t *key, const uint8_t *iv, AES_MODE mode, CIPHER_MODE ciphe
     {
         convertKey();
     }
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 int AES::getSize()
@@ -789,13 +755,7 @@ void AES::encryptCBC(const uint8_t *in, uint8_t *out, int length)
     for (i = 0; i < 4; i++)
         iv[i] = crypto_htonl(tout[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
@@ -837,13 +797,7 @@ void AES::decryptCBC(const uint8_t *in, uint8_t *out, int length)
         iv[i] = crypto_htonl(bufxor[i]);
     memcpy(_iv, iv, AES_IV_SIZE);
 
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 void AES::convertKey()
@@ -878,13 +832,7 @@ void RNG::fill(uint8_t *dst, unsigned int length)
     {
         dst[i] = get();
     }
-  #if defined(ESP8266) || defined(ESP32)
-  #if defined(USE_ESP_IDF)
-  taskYIELD ();
-  #else
-  yield();
-  #endif
-  #endif
+
 }
 
 char RNG::get()

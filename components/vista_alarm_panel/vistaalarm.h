@@ -297,19 +297,18 @@ class vistaECPHome : public time::RealTimeClock
       }
 
 #if !defined(ARDUINO_MQTT)
-      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0, uint32_t serrial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
-      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0, uint32_t serial = 0, uint8_t loop = 0, uint8_t device_type=0, bool emulated=false);
+   void createSensorFromObj(void *obj, uint8_t p, uint32_t serial, uint8_t loop, uint8_t type, bool emulated,const char *id_type, bool is_binary);
+  const char * getIdType(uint32_t hash);
 #endif
 
      bool forceRefreshGlobal, forceRefreshZones;
 
 
     private:
-      struct zoneType
+      struct sensorObjType
       {
 #if !defined(ARDUINO_MQTT)
-        binary_sensor::BinarySensor *binarysensor;
-        text_sensor::TextSensor *textsensor;
+        void * sensorPtr;
 #endif
         uint16_t zone;
         unsigned long time;
@@ -329,6 +328,9 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t loopmask;
         uint8_t type; 
         bool emulated;
+        bool is_binary;
+        uint32_t hash;
+        const char * id_type;
      };
 
 #if defined(ARDUINO_MQTT)
@@ -344,30 +346,61 @@ class vistaECPHome : public time::RealTimeClock
       }
 #endif
 
-      void publishZoneStatus(zoneType *zt, const char *open)
+      void publishZoneStatus(sensorObjType *zt, const char *open)
       {
         if (zt == NULL)
           return;
 #if defined(ARDUINO_MQTT)
         publishTextState(SZONE, zt->zone, open);
 #else
-      std::string s = open;
-      if (zt->textsensor != NULL && s != zt->textsensor->state)
-        zt->textsensor->publish_state(s);
-   #endif
+    if (zt->sensorPtr != nullptr && !zt->is_binary) {
+      text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor *> (zt->sensorPtr);
+       ts->publish_state(open);
+    }
+   
+#endif
       }
 
-      void publishZoneStatus(zoneType *zt, bool open)
+         void publishZoneStatus(sensorObjType *zt,bool open)
       {
         if (zt == NULL)
           return;
 #if defined(ARDUINO_MQTT)
         publishBinaryState(SZONE, zt->zone, open);
 #else
-        if (zt->binarysensor != NULL && open != zt->binarysensor->state)
-          zt->binarysensor->publish_state(open);
+    if (zt->sensorPtr != nullptr && zt->is_binary) {
+       binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (zt->sensorPtr);
+       bs->publish_state(open);
+    }
+   
 #endif
       }
+
+
+//       void publishZoneStatus(sensorObjType *zt, const char *open)
+//       {
+//         if (zt == NULL)
+//           return;
+// #if defined(ARDUINO_MQTT)
+//         publishTextState(SZONE, zt->zone, open);
+// #else
+//       std::string s = open;
+//       if (zt->textsensor != NULL && s != zt->textsensor->state)
+//         zt->textsensor->publish_state(s);
+//    #endif
+//       }
+
+//       void publishZoneStatus(sensorObjType *zt, bool open)
+//       {
+//         if (zt == NULL)
+//           return;
+// #if defined(ARDUINO_MQTT)
+//         publishBinaryState(SZONE, zt->zone, open);
+// #else
+//         if (zt->binarysensor != NULL && open != zt->binarysensor->state)
+//           zt->binarysensor->publish_state(open);
+// #endif
+//       }
 
       void publishStatus(const char *sensor, bool open, uint8_t partition = 0)
       {
@@ -491,9 +524,8 @@ class vistaECPHome : public time::RealTimeClock
       // };
 #endif
 
-      zoneType zonetype_INIT = {
-          .binarysensor = NULL,
-          .textsensor = NULL,
+      sensorObjType sensorObjType_INIT = {
+          .sensorPtr = NULL,
           .zone = 0,
           .time = 0,
           .partition = 0,
@@ -509,7 +541,10 @@ class vistaECPHome : public time::RealTimeClock
           .serial = 0,
           .loopmask = 0x80,
           .type=0,
-          .emulated=0
+          .emulated=0,
+          .is_binary=0,
+          .hash=0,
+          .id_type="",
 
         };
 
@@ -594,17 +629,17 @@ class vistaECPHome : public time::RealTimeClock
           .active=false,
       };
 
-      void updateZoneState(zoneType *zt, int p, bool state, unsigned long t);
+      void updateZoneState(sensorObjType *zt, int p, bool state, unsigned long t);
       char *parseAUIMessage(char *cmd);
       void processZoneList(char *list);
       void sendZoneRequest();
       //void loadZones();
-      void loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype);
+      void loadZone(int zone, std::string &&name, uint8_t sensorObjType, uint8_t devicetype);
       void getZoneCount();
       void getZoneRecord();
       void processZoneInfo(char *list);
-      void getRFSerial(zoneType *zt);
-     // void enableModuleAddr(zoneType n);
+      void getRFSerial(sensorObjType *zt);
+     // void enableModuleAddr(sensorObjType n);
 
        partitionStateType *partitionStates;
 
@@ -620,7 +655,7 @@ class vistaECPHome : public time::RealTimeClock
       int getZoneNumber(char *zid);
 
       auiCmdType auiCmd;
-      std::vector<zoneType> extZones{};
+      std::vector<sensorObjType> extZones{};
       std::queue<auiCmdType> auiQueue{};
 
 #if defined(AUTOPOPULATE)
@@ -629,10 +664,11 @@ class vistaECPHome : public time::RealTimeClock
 #endif
 
 
-      zoneType *getZone(uint16_t z);
-      zoneType *getZoneFromSerial(uint32_t serialCode);
-      void zoneStatusUpdate(zoneType *zt);
-      void assignPartitionToZone(zoneType *zt);
+      sensorObjType *getZone(uint16_t z);
+      sensorObjType *getZoneFromSerial(uint32_t serialCode);
+      sensorObjType *getSensorObj(const char *id_type);
+      void zoneStatusUpdate(sensorObjType *zt);
+      void assignPartitionToZone(sensorObjType *zt);
 
 #if defined(ESPHOME_MQTT)
 
@@ -650,6 +686,7 @@ class vistaECPHome : public time::RealTimeClock
         int getZoneFromPrompt(char *p1);
        // void getNameFromPrompt(char *p1, char *p2,std::string & out);
         void getZoneName(uint16_t zone, std::string & out,bool append=false);
+ 
         // bool promptContains(char * p1, const char * msg, int & zone);
 
         void printPacket(const char *label, char cbuf[], int len);

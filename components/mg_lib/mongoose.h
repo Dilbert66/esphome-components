@@ -83,7 +83,6 @@ extern "C" {
 
 
 
-
 #if MG_ARCH == MG_ARCH_ARMCGT
 
 #include <ctype.h>
@@ -1740,7 +1739,7 @@ struct mg_connection {
   unsigned is_event: 1;     //dilbert66
   unsigned is_authenticated: 1; //dilbert66
 };
-
+void mg_print_msg(char *buf) ;
 void mg_mgr_poll(struct mg_mgr *, int ms);
 void mg_mgr_init(struct mg_mgr *);
 void mg_mgr_free(struct mg_mgr *);
@@ -1879,6 +1878,8 @@ void mg_tls_ctx_free(struct mg_mgr *);
 enum { MG_IO_ERR = -1, MG_IO_WAIT = -2, MG_IO_RESET = -3 };
 long mg_io_send(struct mg_connection *c, const void *buf, size_t len);
 long mg_io_recv(struct mg_connection *c, void *buf, size_t len);
+
+
 #ifndef TLS_X15519_H
 #define TLS_X15519_H
 

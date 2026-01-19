@@ -280,11 +280,9 @@ async def setup_alarm_sensor(var, config,is_binary_sensor=True):
     if config[CONF_DEVICE_TYPE] =="LOOP":
         device_type=2
     if config.get(CONF_TYPE_ID):
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_TYPE_ID]))))
-        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED]))
+        cg.add(paren.createSensorFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED],config[CONF_TYPE_ID],is_binary_sensor))
     elif config[CONF_ID] and config[CONF_ID].is_manual:
-        cg.add(var.set_object_id(sanitize(snake_case(config[CONF_ID].id))))
-        cg.add(paren.createZoneFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED]))
+        cg.add(paren.createSensorFromObj(var,config[CONF_PARTITION],config[CONF_DEVICE_SERIAL],config[CONF_DEVICE_LOOP],device_type,config[CONF_EMULATED],config[CONF_ID].id,is_binary_sensor))
     if is_binary_sensor:
         cg.add(var.publish_state(False))
         cg.add(var.set_trigger_on_initial_state(True))

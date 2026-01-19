@@ -91,7 +91,7 @@ vistaECPHome::~vistaECPHome()
 
 }
 
-    void vistaECPHome::zoneStatusUpdate(zoneType *zt)
+    void vistaECPHome::zoneStatusUpdate(sensorObjType *zt)
     {
 
       std::string msg, zs1, lb;
@@ -110,82 +110,126 @@ vistaECPHome::~vistaECPHome()
     }
 
 #if defined(ARDUINO_MQTT)
-    void DSCkeybushome::publishBinaryState(const std::string *idstr, uint8_t num, bool open)
+
+
+    void vistaECPHome::publishBinaryState(const std::string *idstr, uint8_t num, bool open)
     {
       if (binarySensorCallback != NULL)
         binarySensorCallback(idstr, num, open);
     }
 
-    void DSCkeybushome::publishTextState(const std::string *idstr, uint8_t num, std::string *text)
+    void vistaECPHome::publishTextState(const std::string *idstr, uint8_t num, std::string *text)
     {
       if (textSensorCallback != NULL)
         textSensorCallback(idstr, num, text);
     }
 
 #else
+// void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t num, bool open)
+// {
+//   std::string id = idstr;
+//   if (num)
+//     id += "_" + std::to_string(num);
+//   auto bMap=App.get_binary_sensors();
+//   auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
+//                          { return bs->get_object_id() == id; });
+//   if (it != bMap.end() && (*it)->state != open)
+//     (*it)->publish_state(open);
+// }
+
+// void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
+// {
+//   std::string id = idstr;
+//   if (num)
+//     id += "_" + std::to_string(num);
+//   auto tMap=App.get_text_sensors();
+
+//   auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
+//                          { return ts->get_object_id() == id; });
+//   if (it != tMap.end() && (*it)->state != *text)
+//     (*it)->publish_state(*text);
+      
+// }
+
 void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t num, bool open)
 {
   std::string id = idstr;
   if (num)
+  {
     id += "_" + std::to_string(num);
-  auto bMap=App.get_binary_sensors();
-  auto it = std::find_if(bMap.begin(), bMap.end(), [id](binary_sensor::BinarySensor *bs)
-                         { return bs->get_object_id() == id; });
-  if (it != bMap.end() && (*it)->state != open)
-    (*it)->publish_state(open);
+  }
+  auto s=getSensorObj(id.c_str());
+  if (s != nullptr && s->sensorPtr != nullptr  && s->is_binary) {
+    binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (s->sensorPtr);
+    bs->publish_state(open);
+  }
 }
 
 void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::string *text)
 {
   std::string id = idstr;
   if (num)
+  {
     id += "_" + std::to_string(num);
-  auto tMap=App.get_text_sensors();
+  }
+  auto s=getSensorObj(id.c_str());
+  if (s != nullptr && s->sensorPtr != nullptr && !s->is_binary) {
+    text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor*>(s->sensorPtr);
+    ts->publish_state(*text);
+  }
 
-  auto it = std::find_if(tMap.begin(), tMap.end(), [id](text_sensor::TextSensor *ts)
-                         { return ts->get_object_id() == id; });
-  if (it != tMap.end() && (*it)->state != *text)
-    (*it)->publish_state(*text);
-      
 }
 
+    const char * vistaECPHome::getIdType(uint32_t hash)
+    {
+
+       if (hash == 0) return "";
+      auto it = std::find_if(extZones.begin(), extZones.end(), [hash](sensorObjType &f)
+                             { return f.hash == hash; });
+
+      if (it != extZones.end())
+        return (*it).id_type;
+      else 
+        return "";
+       
+    }
 #endif
 
-// #if !defined(ARDUINO_MQTT)
-//     void vistaECPHome::loadZones()
-//     {
+    vistaECPHome::sensorObjType *vistaECPHome::getSensorObj(const char *id_type)
+    {
+ 
+      auto it = std::find_if(extZones.begin(), extZones.end(), [id_type](sensorObjType &f)
+                             { return strcmp(f.id_type,id_type) == 0; });
+      if (it != extZones.end())
+        return &(*it);
+      else {
+        return nullptr;
+      }
 
-//       for (auto obj : App.get_binary_sensors())
-//       {
-//         createZoneFromObj(obj);
-//       }
+    }
 
-//       for (auto obj : App.get_text_sensors())
-//       {
-//         createZoneFromObj(obj);
-//       }
-//     }
-// #endif
+
+
 
 #if !defined(ARDUINO_MQTT)
 
-    int vistaECPHome::getZoneNumber(char *zid)
-    {
-      MatchState ms;
-      char buf[20];
-      char res;
-      ms.Target((char *)zid);
-      res = ms.Match("^[zZ](%d+)$");
-      if (res == REGEXP_MATCHED)
-      {
-        ms.GetCapture(buf, 0);
-        int z = toInt(buf, 10);
-        zoneType *zt = getZone(z);
-        if (zt->zone != z)
-          return z;
-      }
-      return 0;
-    }
+    // int vistaECPHome::getZoneNumber(char *zid)
+    // {
+    //   MatchState ms;
+    //   char buf[20];
+    //   char res;
+    //   ms.Target((char *)zid);
+    //   res = ms.Match("^[zZ](%d+)$");
+    //   if (res == REGEXP_MATCHED)
+    //   {
+    //     ms.GetCapture(buf, 0);
+    //     int z = toInt(buf, 10);
+    //     sensorObjType *zt = getZone(z);
+    //     if (zt->zone != z)
+    //       return z;
+    //   }
+    //   return 0;
+    // }
 
     // int vistaECPHome::getSensorMatch(char * oid)
     // {
@@ -211,7 +255,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     //   return 0;
     // }
 
-    // void vistaECPHome::enableModuleAddr(zoneType n){
+    // void vistaECPHome::enableModuleAddr(sensorObjType n){
     //    if ( n.serial > 0) return; //rf emulation
     //      uint8_t addr = 0;
     //      uint8_t zone=n.zone;
@@ -241,67 +285,72 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   
     // }
 
-
-    void vistaECPHome::createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p, uint32_t serial, uint8_t loop, uint8_t type, bool emulated)
+    void vistaECPHome::createSensorFromObj(void *obj, uint8_t p, uint32_t serial, uint8_t loop, uint8_t type, bool emulated,const char *id_type, bool is_binary)
     {
 
-      int z = getZoneNumber((char *)obj->get_object_id().c_str());
-      if (!z)
-        return;
+      MatchState ms;
+      char buf[20];
+      char res;
+      int z = 0;
+      if (strcmp(id_type,"")==0 ) return;
 
-      zoneType n = zonetype_INIT;
-      n.zone = z;
-      n.binarysensor = obj;
-      n.active = true;
-      n.partition = p;
-      n.type=type;
-      n.emulated=emulated;
+        ms.Target((char *)id_type);
+        res = ms.Match("^[zZ](%d+)$");
+        if (res == REGEXP_MATCHED)
+        {
+          ms.GetCapture(buf, 0);
+          z = toInt(buf, 10);
+        }
+
+          if (z ) {
+            sensorObjType * n = getZone(z);
+            if (n->zone == z) {
+              if (n->sensorPtr==NULL)
+                n->sensorPtr=obj;
+              if (!n->partition)
+                n->partition=p;
+              return;  //already exists
+            }
+         }
+
+      sensorObjType s = sensorObjType_INIT;
+      s.zone = z;
+      s.sensorPtr = obj;
+      s.active = true;
+      s.partition = p;
+      s.type=type;
+      s.emulated=emulated;
+      s.is_binary=is_binary;
+      s.id_type=id_type;
+        if (is_binary) 
+        {
+          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
+        } else {
+          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
+        }
       if (serial == 0 ) 
-        getRFSerial(&n);
-
+        getRFSerial(&s);
       else
       {
-        n.serial = serial;
-        n.loopmask=getLoopMask(loop,type);
+        s.serial = serial;
+        s.loopmask=getLoopMask(loop,type);
       }
-      extZones.push_back(n);
-      ESP_LOGD(TAG, "added  binary zone %d, serial=%d", extZones.back().zone,n.serial);
+      extZones.push_back(s);
+      if (!is_binary) publishZoneStatus(&s, "C");
+      ESP_LOGD(TAG, "added  binary zone %d, serial=%d", extZones.back().zone,s.serial);
     }
 
-    void vistaECPHome::createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p, uint32_t serial, uint8_t loop, uint8_t type, bool emulated)
-    {
-      int z = getZoneNumber((char *)obj->get_object_id().c_str());
-      if (!z)
-        return;
-      zoneType n = zonetype_INIT;
-      n.zone = z;
-      n.textsensor = obj;
-      n.active = true;
-      n.partition = p;
-      n.type=type;
-      n.emulated=emulated;
-      if (serial == 0 )
-        getRFSerial(&n);
-      else
-      {
-        n.serial = serial;
-        n.loopmask=getLoopMask(loop,type);
-      }
-      extZones.push_back(n);
-      ESP_LOGD(TAG, "added text zone %d", extZones.back().zone);
-      publishZoneStatus(&n, "C");
-    }
 
 #else
 
     void vistaECPHome::createZone(uint16_t z, uint8_t p)
     {
 
-      zoneType *zt = getZone(z);
+      sensorObjType *zt = getZone(z);
       if (zt->zone == z)
         return;
 
-      zoneType n = zonetype_INIT;
+      sensorObjType n = sensorObjType_INIT;
       n.zone = z;
       n.active = true;
       n.partition = p;
@@ -314,50 +363,62 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
     }
 #endif
 
-    void vistaECPHome::getZoneName(uint16_t zone, std::string & out,bool append)
+
+    void vistaECPHome::getZoneName(uint16_t zone, std::string &out,  bool append)
     {
+     out = std::to_string(zone);
 #if !defined(ARDUINO_MQTT)
-      std::string c = "z" + std::to_string(zone);
-      auto bMap=App.get_binary_sensors();
-      auto it = std::find_if(bMap.begin(), bMap.end(), [c](binary_sensor::BinarySensor *bs)
-                             { return bs->get_object_id() == c; });
-      if (it != bMap.end())
-      {
-        if (append)
-          out = std::string((*it)->get_name()).append(" (").append(std::to_string(zone)).append(")");
-        else
-          out = (*it)->get_name();
+
+      auto it = std::find_if(extZones.begin(), extZones.end(), [zone](sensorObjType &f)
+                             { return f.zone == zone + 1; });
+      if (it != extZones.end()) {
+                sensorObjType s = (*it);
+                if (s.sensorPtr != nullptr) {
+                  const char * name;
+                  if (s.is_binary) {
+                    name = reinterpret_cast<binary_sensor::BinarySensor *>(s.sensorPtr)->get_name().c_str();
+                  } else {
+                    name = reinterpret_cast<text_sensor::TextSensor *>(s.sensorPtr)->get_name().c_str();
+                  }
+                   if (append) {
+                    out= std::string(name).append(" (").append(std::to_string(zone)).append(")");
+                   } else {
+                    out = std::string(name);
+                   }
+                }
       }
+      
 #endif
-      out = std::to_string(zone);
+     
+
     }
 
-    vistaECPHome::zoneType *vistaECPHome::getZone(uint16_t z)
+    vistaECPHome::sensorObjType *vistaECPHome::getZone(uint16_t z)
     {
 
-      auto it = std::find_if(extZones.begin(), extZones.end(), [&z](zoneType &f)
+      auto it = std::find_if(extZones.begin(), extZones.end(), [&z](sensorObjType &f)
                              { return f.zone == z; });
       if (it != extZones.end())
         return &(*it);
 #if defined(ARDUINO_MQTT)
       return createZone(z);
 #else
-  return &zonetype_INIT;
+  return &sensorObjType_INIT;
 #endif
     }
 
-    vistaECPHome::zoneType *vistaECPHome::getZoneFromSerial(uint32_t serialCode)
+    vistaECPHome::sensorObjType *vistaECPHome::getZoneFromSerial(uint32_t serialCode)
     {
-      auto it = std::find_if(extZones.begin(), extZones.end(), [serialCode](zoneType &f)
+      auto it = std::find_if(extZones.begin(), extZones.end(), [serialCode](sensorObjType &f)
                              { return f.serial == serialCode; });
       if (it != extZones.end())
       {
         return &(*it);
       }
-      return &zonetype_INIT;
+      return &sensorObjType_INIT;
     }
 
-    void vistaECPHome::getRFSerial(zoneType *zt)
+    void vistaECPHome::getRFSerial(sensorObjType *zt)
     {
 
       if (_rfSerialLookup != NULL && *_rfSerialLookup)
@@ -671,7 +732,7 @@ void vistaECPHome::setup()
 
     void vistaECPHome::set_zone_fault(int32_t zone, bool fault)
     {
-      zoneType *z = getZone(zone);
+      sensorObjType *z = getZone(zone);
        ESP_LOGD(TAG,"Setting fault %d to zone %d",fault,zone);
       if (z->zone > 0 &&  z->serial > 0  && z->emulated) {
         vista.setRFFault(fault?z->loopmask:0,z->serial);
@@ -1010,7 +1071,7 @@ void vistaECPHome::setup()
       }
     }
 
-    void vistaECPHome::assignPartitionToZone(zoneType *zt)
+    void vistaECPHome::assignPartitionToZone(sensorObjType *zt)
     {
 
       for (int p = 1; p < 4; p++)
@@ -1121,17 +1182,17 @@ void vistaECPHome::setup()
     //   vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
     // }
 
-    // void vistaECPHome::loadZone(int zone, std::string &&name, uint8_t zonetype, uint8_t devicetype)
+    // void vistaECPHome::loadZone(int zone, std::string &&name, uint8_t sensorObjType, uint8_t devicetype)
     // {
 
     //   zoneNameType nz;
     //   nz.name = name;
     //   nz.zone = zone;
-    //   nz.zone_type = zonetype;
+    //   nz.zone_type = sensorObjType;
     //   nz.device_type = devicetype;
     //   autoZones.push_back(nz);
 
-    //   ESP_LOGD(TAG, "got name=%s,zone=%d,zt=%d,dt=%d", name.c_str(), zone, zonetype, devicetype);
+    //   ESP_LOGD(TAG, "got name=%s,zone=%d,zt=%d,dt=%d", name.c_str(), zone, sensorObjType, devicetype);
     // }
 
     // // 31 00 31 00 31 00 46 52 4F 4E 54 20 44 4F 4F 52 44
@@ -1249,7 +1310,7 @@ void vistaECPHome::setup()
       return NULL;
     }
 
-    void vistaECPHome::updateZoneState(zoneType *zt, int p, bool state, unsigned long t)
+    void vistaECPHome::updateZoneState(sensorObjType *zt, int p, bool state, unsigned long t)
     {
       zt->partition = p;
       zt->time = t;
@@ -1313,7 +1374,7 @@ void vistaECPHome::setup()
       }
 
       // clear  bypass/open zones for partition p that were not set above
-      auto it = std::find_if(extZones.begin(), extZones.end(), [&p, &t](zoneType &f)
+      auto it = std::find_if(extZones.begin(), extZones.end(), [&p, &t](sensorObjType &f)
                              { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
 
       while (it != extZones.end())
@@ -1321,7 +1382,7 @@ void vistaECPHome::setup()
 
         updateZoneState(&(*it), p, false, millis());
 
-        it = std::find_if(++it, extZones.end(), [&p, &t](zoneType &f)
+        it = std::find_if(++it, extZones.end(), [&p, &t](sensorObjType &f)
                           { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
       }
 
@@ -1333,7 +1394,7 @@ void vistaECPHome::setup()
     // void vistaECPHome::setupTask(void *args)
     // {
     //   //ensure we run vista setup on correct core
-    //   vistaECPHome *_this = (vistaECPHome *)args;
+    //   vistaECPHome *_this =  reinterpret_cast<vistaECPHome *> (args);
     //   vista.begin(_this->_rxPin, _this->_txPin, _this->_keypadAddr1, _this->_monitorPin, _this->_invertRx, _this->_invertTx, _this->_invertMon, _this->_inputRx, _this->_inputMon);
     //   vTaskDelete(NULL); //exit task as we are done
     // }
@@ -1342,7 +1403,7 @@ void vistaECPHome::setup()
     {
       //ensure we run the vista interrupts on core 1 for multicore esp32 devices
       
-     vistaECPHome *_this = (vistaECPHome *)args;
+     vistaECPHome *_this = reinterpret_cast<vistaECPHome *> (args);
      vista.begin(_this->_rxPin, _this->_txPin, _this->_keypadAddr1, _this->_monitorPin, _this->_invertRx, _this->_invertTx, _this->_invertMon, _this->_inputRx, _this->_inputMon);
      
       unsigned long checkTime = millis();
@@ -1555,7 +1616,7 @@ void vistaECPHome::update()
               { // we have a zone status (zone expander address range)
                 if (_debug > 2)
                   ESP_LOGD(TAG, "FA status update to zone %d",z);
-                zoneType *zt = getZone(z);
+                sensorObjType *zt = getZone(z);
 
                 if (zt->active)
                 {
@@ -1601,7 +1662,7 @@ void vistaECPHome::update()
                     continue;
                   bool zs = faults & 1 ? true : false; // check first bit . lower bit = channel 8. High bit= channel 1
                   faults = faults >> 1;                // get next zone status bit from field
-                  zoneType *zt = getZone(z);
+                  sensorObjType *zt = getZone(z);
                   if (zt->open != zs && zt->active)
                   {
                     zt->open = zs;
@@ -1622,7 +1683,7 @@ void vistaECPHome::update()
               // vistaCmd->cbuf[5] is loop and battery is bit 1
 
               // snprintf(rf_serial_char, 14, "%03d%04d", device_serial / 10000, device_serial % 10000);
-              zoneType *zt = getZoneFromSerial(device_serial);
+              sensorObjType *zt = getZoneFromSerial(device_serial);
               {
 #if defined(ARDUINO_MQTT)
                 Serial.printf("RFX: %d,%02x\n", device_serial, vistaCmd->cbuf[5]);
@@ -1661,7 +1722,7 @@ void vistaECPHome::update()
             {
                //f0 xx C8 87 00 xx xx xx 00 00 A9
               uint32_t device_serial = (vistaCmd->cbuf[5] << 16) + (vistaCmd->cbuf[6] << 8) + vistaCmd->cbuf[7];
-              zoneType *zt = getZoneFromSerial(device_serial);
+              sensorObjType *zt = getZoneFromSerial(device_serial);
               {
 #if defined(ARDUINO_MQTT)
                 Serial.printf("LOOP: %d,%02x\n", device_serial, vistaCmd->cbuf[5]);
@@ -1937,7 +1998,7 @@ void vistaECPHome::update()
             if (vistaCmd->cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
             // if (promptContains(p1,ALARM,tz) && !vistaCmd->statusFlags.systemFlag) {
-            zoneType *zt = getZone(vistaCmd->statusFlags.zone);
+            sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
             if (!zt->alarm && zt->active)
             {
               zt->alarm = true;
@@ -1957,7 +2018,7 @@ void vistaECPHome::update()
             updateSystemState = true; // we also get system flags when a device has a check flag
             if (vistaCmd->cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
-            zoneType *zt = getZone(vistaCmd->statusFlags.zone);
+            sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
             // ESP_LOGD("test", "check found for zone %d,status=%d", vistaCmd->statusFlags.zone, zt->check);
             if (!zt->check && zt->active)
             {
@@ -1980,7 +2041,7 @@ void vistaECPHome::update()
             if (vistaCmd->cbuf[5] > 0x90)
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
 
-            zoneType *zt = getZone(vistaCmd->statusFlags.zone);
+            sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
             if (vistaCmd->statusFlags.lowBattery)
             {
               zt->lowbat = vistaCmd->statusFlags.lowBattery;
@@ -2007,7 +2068,7 @@ void vistaECPHome::update()
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
             // if (promptContains(p1,BYPAS,tz) && !vistaCmd->statusFlags.systemFlag) {
 
-            zoneType *zt = getZone(vistaCmd->statusFlags.zone);
+            sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
 
             if (!zt->bypass && zt->active)
             {

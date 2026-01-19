@@ -6,7 +6,9 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include "ArduinoJson.h"
+#ifdef USE_ESP32
 #include "esphome/components/switch/switch.h"
+#endif
 #include <cstdlib>
 
 
@@ -324,7 +326,7 @@ namespace esphome
 
           if (!sending_ && !c->is_draining && !c->is_closing)
           {
-            if (millis() > *(uint64_t *)&c->data[2])
+            if (millis() > currentPollTime_)
             {
               ESP_LOGE(TAG, "Long poll timeout. Retrying...");
               c->is_closing=1;
@@ -356,10 +358,12 @@ namespace esphome
         // MG_INFO(("got ev connect"));
         // Connected to server. Extract host name from URL
         struct mg_str host = mg_url_host(apiHost_.c_str());
-
+   //     unsigned long ms=millis();
         if (mg_url_is_ssl(apiHost_.c_str()))
         {
+          #if defined(USE_ESP32)
           ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+         #endif
           struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
           if (c->tls == NULL)
@@ -368,15 +372,17 @@ namespace esphome
             return;
           }
         }
+      //   mg_mgr_poll(&mgr_, 0);
+      // ESP_LOGD(TAG,"TLS init time: %d ms",millis()-ms);
         c->data[0] = 'T';
         connected_ = true;
         connectError_ = false;
         connectErrorMessage_= "Connected";
 
-        *(uint64_t *)&c->data[2] = millis() + (pollTimeout_ * 1000); // set  long poll timeout
-
+       currentPollTime_ = millis() + (pollTimeout_ * 1000); // set  long poll timeout
+        #if defined(USE_ESP32)
         ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
-
+        #endif
         if (messages_.size())
         {
           sending_ = true; // we are connecting so flag connection as open
@@ -386,10 +392,12 @@ namespace esphome
           if (outmsg.type == mtSwitch)
           {
             messages_.pop();
+              #if defined(USE_ESP32)
             if (outmsg.state)
               static_cast<switch_::Switch *>(outmsg.f)->turn_on();
             else
               static_cast<switch_::Switch *>(outmsg.f)->turn_off();
+              #endif
           }
           else
           {
@@ -422,6 +430,9 @@ namespace esphome
           mg_printf(c, "Cache-Control: no-cache\r\n\r\n");
           // ESP_LOGD("test","sent post data lastmessage=%d",lastMsgReceived_);
         }
+
+        //mg_mgr_poll(&mgr_, 0);
+      //  ESP_LOGD(TAG,"TLS after fetch time: %d ms",millis()-ms);
       }
       /*
       else if (ev == MG_EV_POLL && *i != 0) {
@@ -515,8 +526,10 @@ namespace esphome
     #if not defined(ARDUINO_MQTT)
             if (millis() - checkTime > 30000)
             {
+              #if defined(USE_ESP32)
               UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
               ESP_LOGD(TAG, "Task stack level: %5d", (uint16_t)uxHighWaterMark);
+              #endif
               checkTime = millis();
             }
     #endif
@@ -601,8 +614,10 @@ namespace esphome
       if (millis() - checkTime > 60000)
       {
         checkTime = millis();
+        #if defined(USE_ESP32)
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGD(TAG, "Stack high water mark: %5d", (uint16_t)uxHighWaterMark);
+        #endif
       }
 
        #if !defined(USETASK)
