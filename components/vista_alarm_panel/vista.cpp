@@ -8,7 +8,7 @@ Vista *pointerToVistaClass;
 
 void IRAM_ATTR rxISRHandler(void* args)
 {             
-    Vista * ptr = (Vista *) args;  //use class pointer passed as argument since we can
+    Vista * ptr = reinterpret_cast<Vista *> (args);  //use class pointer passed as argument since we can
     if (ptr != NULL)
       ptr->rxHandleISR(); // calls class member handler
   
@@ -17,7 +17,7 @@ void IRAM_ATTR rxISRHandler(void* args)
 #ifdef MONITORTX
 void IRAM_ATTR txISRHandler(void* args)
 {         
-    Vista * ptr = (Vista *) args;  //use class pointer passed as argument since we can
+    Vista * ptr = reinterpret_cast<Vista *> (args);  //use class pointer passed as argument since we can
     if (ptr != NULL)
       ptr->txHandleISR(); // calls class member handler
 }
@@ -623,7 +623,7 @@ void Vista::setExpFault(int zone, bool fault)
   int z = zone & 0x07;                                                            // convert zone to range of 1 - 7,0 (last zone is 0)
   _expFault = z << 5 | (fault ? 0x8 : 0);                                          // 0 = terminated(eol resistor), 0x08=open, 0x10 = closed (shorted)  - convert to bitfield for F1 response
   z = (zone - 1) & 0x07;                                                          // now convert to 0 - 7 for F7 poll response
-  _expFaultBits = fault ? _expFaultBits | (0x80 >> z) : _expFaultBits ^ (0x80 >> z); // setup bit fields for return response with fault values for each zone
+  _expFaultBits = fault ? _expFaultBits | (0x80 >> z) : _expFaultBits & ~(0x80 >> z); // setup bit fields for return response with fault values for each zone
   expanderType lastFault = peekNextFault();
   if (lastFault.expansionAddr != _zoneExpanders[idx].expansionAddr || lastFault.expFault != _expFault || lastFault.expFaultBits != _expFaultBits)
   {

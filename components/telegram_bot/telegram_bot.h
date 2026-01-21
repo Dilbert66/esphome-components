@@ -20,6 +20,10 @@
 #define PSTR(s)   ((const char *)(s))
 #endif
 
+#if defined(USE_RP2040) && not defined(ESP)
+#define ESP rp2040
+#endif
+
 //#define USETASK
 
 namespace esphome
@@ -269,6 +273,7 @@ namespace esphome
       unsigned long retryDelay_ = 0;
       int delayTime_ = 15000; // ms
       uint8_t pollTimeout_=120; //seconds
+      uint64_t currentPollTime_=0; //millis
       std::queue<outMessage> messages_;
       std::vector<std::string> allowed_chat_ids_;
       bool isAllowed(std::string chat_id);

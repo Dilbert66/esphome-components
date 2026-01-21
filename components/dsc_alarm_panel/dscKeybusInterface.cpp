@@ -18,23 +18,31 @@
   */
 
 #include "dscKeybus.h"
-
+#if not defined(IRAM_ATTR)
+#define IRAM_ATTR
+#endif
 
 dscKeybusInterface * dscKeybusInterfacePtr; // there is only ever going to be one instance so we can use a global pointer
 
 //Callback functions to the gpio and timer interrupts.  I prefer to send the class instance pointer  when possible via the available argument for the callback 
 //which saves using a global pointer back to the class.  It's a moot effort since we only ever instantiate one class instance but what the heck..
-
+#ifdef USE_RP2040
+void IRAM_ATTR dscClockInterrupt_cb() {
+  
+    if (dscKeybusInterfacePtr != NULL)
+      dscKeybusInterfacePtr->dscClockInterrupt();
+}
+#else
 void IRAM_ATTR dscClockInterrupt_cb(void *args) {
-  dscKeybusInterface * ptr = (dscKeybusInterface *) args;  //use class pointer passed as argument since we can
+  dscKeybusInterface * ptr =reinterpret_cast<dscKeybusInterface *> (args); 
     if (ptr != NULL)
       ptr->dscClockInterrupt();
 }
-
+#endif
 
 #if defined(USE_ESP_IDF_TIMER)
 bool  IRAM_ATTR dscDataInterrupt_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)  {
-    dscKeybusInterface * ptr = (dscKeybusInterface *) user_data; //use class pointer passed as argument since we can
+    dscKeybusInterface * ptr = reinterpret_cast<dscKeybusInterface *> (user_data); //use class pointer passed as argument since we can
     if (ptr != NULL)
       ptr->dscDataInterrupt();  
     return true;
@@ -42,13 +50,13 @@ bool  IRAM_ATTR dscDataInterrupt_cb(gptimer_handle_t timer, const gptimer_alarm_
 #else
 #if defined(ESP32)
 void IRAM_ATTR dscDataInterrupt_cb(void * args) {
-  dscKeybusInterface * ptr = (dscKeybusInterface *) args;  //use class pointer passed as argument since we can
+  dscKeybusInterface * ptr = reinterpret_cast<dscKeybusInterface *> (args);  //use class pointer passed as argument since we can
     if (ptr != NULL)
         dscKeybusInterfacePtr->dscDataInterrupt();
 }
 #else
 void IRAM_ATTR dscDataInterrupt_cb() {
-      if (dscKeybusInterfacePtr != NULL)  //use a global pointer to the class as the ESP8266 timers do not support passing args to isr callbacks
+      if (dscKeybusInterfacePtr != NULL)  //use a global pointer to the class as the Arduino timers do not support passing args to isr callbacks
         dscKeybusInterfacePtr->dscDataInterrupt();
 }
 #endif 
@@ -178,7 +186,11 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
     gptimer_enable(gptimer);
     #else
     timer1 = timerBegin(1000000);
+    // #ifdef USE_RP2040
+    // timerAttachInterrupt(timer1, & dscDataInterrupt_cb);
+    // #else
     timerAttachInterruptArg(timer1, & dscDataInterrupt_cb,this);
+//    #endif
     #endif 
   #endif // ESP32
 
@@ -188,7 +200,11 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
     gpio_set_intr_type((gpio_num_t)dscClockPin, GPIO_INTR_ANYEDGE);
     gpio_isr_handler_add((gpio_num_t)dscClockPin, dscClockInterrupt_cb, this);
   #else
+    #ifdef USE_RP2040
+    attachInterrupt(digitalPinToInterrupt(dscClockPin), dscClockInterrupt_cb, CHANGE);
+    #else
     attachInterruptArg(digitalPinToInterrupt(dscClockPin), dscClockInterrupt_cb, this, CHANGE);
+    #endif
   #endif
 
 #if not defined(DISABLE_EXPANDER)  
@@ -612,7 +628,7 @@ if(pin < 16){
     if(mode == OUTPUT || mode == OUTPUT_OPEN_DRAIN){
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
       GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
-      if(mode == OUTPUT_OPEN_DRAIN) GPC(pin) |= (1 << GPCD);
+     // if(mode == OUTPUT_OPEN_DRAIN) GPC(pin) |= (1 << GPCD);
       GPES = (1 << pin); //Enable
     } else if(mode == INPUT || mode == INPUT_PULLUP){
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO

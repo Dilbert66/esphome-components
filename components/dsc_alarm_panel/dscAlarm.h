@@ -7,6 +7,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/version.h"
 #include <string.h>
 
 
@@ -295,13 +296,9 @@ unsigned long micros() {
 
  #endif
 
-
-
-      struct zoneType
+      struct sensorObjType
       {
-#if !defined(ARDUINO_MQTT)
-        binary_sensor::BinarySensor *binary_sensor;
-#endif
+        void * sensorPtr;
         byte partition;
         byte zone;
         byte tamper : 1;
@@ -310,17 +307,23 @@ unsigned long micros() {
         byte alarm : 1;
         byte enabled : 1;
         byte bypassed : 1;
+        byte is_binary: 1;
+        uint32_t hash;
+        const char * id_type;
       };
 
-      void publishZoneStatus(zoneType *zt)
+
+      void publishZoneStatus(sensorObjType *zt)
       {
         if (zt == NULL)
           return;
 #if defined(ARDUINO_MQTT)
         publishBinaryState(ZONE, zt->zone, zt->open);
 #else
-    if (zt->binary_sensor != NULL)
-      zt->binary_sensor->publish_state(zt->open);
+    if (zt->sensorPtr != nullptr && zt->is_binary) {
+       binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (zt->sensorPtr);
+       bs->publish_state(zt->open);
+    }
    
 #endif
       }
@@ -405,10 +408,10 @@ unsigned long micros() {
       void set_refresh_time(uint8_t rt);
       void set_trouble_fetch(bool fetch);
       void set_trouble_fetch_cmd(const char *cmd);
-      zoneType* createZone(uint16_t z, uint8_t p = 0);
+      sensorObjType* createZone(uint16_t z, uint8_t p = 0);
 #if !defined(ARDUINO_MQTT)
-      void createZoneFromObj(binary_sensor::BinarySensor *obj, uint8_t p = 0);
-      void createZoneFromObj(text_sensor::TextSensor *obj, uint8_t p = 0);
+      void createSensorFromObj(void *obj, uint8_t p = 0,const char * id_type="", bool is_binary=true);
+      const char * getIdType(uint32_t hash);
 #endif
       void stop();
 
@@ -462,8 +465,8 @@ unsigned long micros() {
         byte chime : 1;
       };
 
-      zoneType zonetype_INIT = {
-          .binary_sensor = NULL,
+      sensorObjType sensorObjType_INIT = {
+          .sensorPtr = NULL,
           .partition = 0,
           .zone = 0,
           .tamper = false,
@@ -471,13 +474,19 @@ unsigned long micros() {
           .open = false,
           .alarm = false,
           .enabled = false,
-          .bypassed = false};
+          .bypassed = false,
+          .is_binary = false,
+          .hash=0,
+          .id_type ="",
+        };
+          
 
-      zoneType *getZone(byte z,bool create=false);
+      sensorObjType *getZone(byte z,bool create=false);
+      sensorObjType *getSensorObj(const char * id_type);
       partitionType partitionStatus[dscPartitions];
       bool forceRefresh;
       std::string previousZoneStatusMsg, eventStatusMsg;
-      std::vector<zoneType> zoneStatus{};
+      std::vector<sensorObjType> zoneStatus{};
       byte lastStatus[dscPartitions];
       bool relayStatus[16],
           previousRelayStatus[16];
@@ -531,7 +540,6 @@ unsigned long micros() {
       void alarm_trigger_panic();
 
     private:
-      void loadZones();
 
       void processMenu(byte key, byte partition = -1);
 

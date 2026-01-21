@@ -1,5 +1,7 @@
 #include "dscKeybus.h"
-
+#if not defined(IRAM_ATTR)
+#define IRAM_ATTR
+#endif
 #if not defined(DISABLE_EXPANDER)
 
 void dscKeybusInterface::setSupervisorySlot(byte address, bool set = true) {

@@ -9,6 +9,10 @@
 #include "esphome/core/entity_base.h"
 #include "esphome/core/helpers.h"
 
+#ifdef USE_WIFI
+#include "esphome/components/wifi/wifi_component.h"
+#endif
+
 
 #if defined(USE_DSC_PANEL)
 #include "esphome/components/dsc_alarm_panel/dscAlarm.h"
@@ -33,12 +37,24 @@
 #endif
 
 #ifdef USE_ARDUINO
-#ifdef USE_ESP8266
+#if defined(USE_ESP8266) || defined(USE_RP2040)
 #include <Updater.h>
 #elif defined(USE_ESP32) || defined(USE_LIBRETINY)
 #include <Update.h>
 #endif
 #endif  // USE_ARDUINO
+
+#ifdef USE_RP2040
+char * strchrnul(const char * s, int c)
+{
+   while(*s)
+   {
+      if (c == *s) break;
+      s++;
+   }
+   return const_cast<char *>(s);
+}
+#endif
 
 namespace esphome
 {
@@ -52,13 +68,14 @@ namespace esphome
 #define FC(s) ((const char*)(s))
 #define FCS(s) ((const char*)(s))
 #endif
-
+ 
 void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
-    WebServer *srv = (WebServer *)(c->fn_data);
+    WebServer *srv = reinterpret_cast<WebServer *>(c->fn_data);
     if (srv != NULL)
             srv->ev_handler(c,ev,ev_data);
 
 }
+
 
         static const char *const TAG = "web_server";
    
@@ -159,18 +176,18 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
             size_t domain_end = url.find('/', 1);
             if (domain_end == std::string::npos)
                 return;
-            doc["domain"] = url.substr(1, domain_end - 1);
+           doc[FC("domain")] = url.substr(1, domain_end - 1);
             if (url.length() == domain_end - 1)
                 return;
             size_t id_begin = domain_end + 1;
             size_t id_end = url.find('/', id_begin);
             if (id_end == std::string::npos)
             {
-                doc["oid"] = url.substr(id_begin, url.length() - id_begin);
+                doc[FC("oid")] = url.substr(id_begin, url.length() - id_begin);
             }
-            doc["oid"] = url.substr(id_begin, id_end - id_begin);
+            doc[FC("oid")] = url.substr(id_begin, id_end - id_begin);
             size_t method_begin = id_end + 1;
-            doc["action"] = url.substr(method_begin, url.length() - method_begin);
+            doc[FC("action")] = url.substr(method_begin, url.length() - method_begin);
         }
        
         void WebServer::ws_reply(mg_connection *c, const char *data, bool ok)
@@ -207,7 +224,24 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
             }
         }
 
-        WebServer::WebServer()
+std::string WebServer::get_object_id(EntityBase * entity) {
+     const StringRef &name = entity->get_name();
+ #if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
+  //ESP_LOGD("test","checking  name: %s,hash: %d",entity->get_name().c_str(),entity->get_object_id_hash());
+  const char *  oid = alarm_panel::alarmPanelPtr->getIdType(entity->get_object_id_hash());
+  if (strcmp(oid,"") != 0)  return std::string(oid);
+ #endif
+ 
+  #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 1, 0)
+  return  entity->get_object_id();
+  #else
+  char object_id_buf[128];
+  return std::string(entity->get_object_id_to(object_id_buf));
+  #endif
+ }
+
+
+       WebServer::WebServer()
             : entities_iterator_(ListEntitiesIterator(this))
         {
 #ifdef USE_ESP32
@@ -252,16 +286,16 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
             tokens_[cid] = cd;
             json::JsonBuilder builder;
             JsonObject root = builder.root(); 
-            root["title"] = App.get_friendly_name().empty() ? App.get_name() : App.get_friendly_name();
-            root["comment"] = App.get_comment();
-            root["ota"] = this->allow_ota_;
-            root["log"] = this->expose_log_;
-            root["lang"] = "en";
-            root["partitions"] = this->partitions_;
-            root["keypad"] = this->show_keypad_;
-            root["crypt"] = this->crypt_;
-            root["cid"] = cid;
-            root["token"] = token;
+            root[FC("title")] = App.get_friendly_name().empty() ? App.get_name() : App.get_friendly_name();
+            root[FC("comment")] = App.get_comment();
+            root[FC("ota")] = this->allow_ota_;
+            root[FC("log")] = this->expose_log_;
+            root[FC("lang")] = "en";
+            root[FC("partitions")] = this->partitions_;
+            root[FC("keypad")] = this->show_keypad_;
+            root[FC("crypt")] = this->crypt_;
+            root[FC("cid")] = cid;
+            root[FC("token")] = token;
             out=builder.serialize();
         }
 
@@ -337,6 +371,8 @@ void WebServer::setup()
 #endif
 #endif
   this->set_interval(10000, [this](){ this->push(PING, "", millis(), 30000); });
+
+  ESP_LOGD(TAG,"Web keypad setup completed");
 }
 
 
@@ -364,14 +400,18 @@ void WebServer::loop()
     if (!this->entities_iterator_.completed())
         this->entities_iterator_.advance();
 
-    if (firstrun_ && network::is_connected())
+   #if defined(USE_WIFI) && !defined(USE_CAPTIVE_PORTAL)
+   is_ap_active_ = wifi::global_wifi_component->is_ap_active();
+   #endif
+
+    if (firstrun_ && ( network::is_connected() || is_ap_active_ ))
     {
-        //  printf("heap 1= %d\n",ESP.getFreeHeap());
         char addr[30];
-        sprintf(addr, "http://0.0.0.0:%d", port_);
+        snprintf(addr,30, "http://0.0.0.0:%d", port_);
         ESP_LOGD(TAG, "Starting web server on %s:%d", network::get_use_address(), port_);
         struct mg_connection *c = mg_http_listen(&mgr, addr,&ev_handler_cb,this);
         firstrun_ = false;
+        
     }
     
     mg_mgr_poll(&mgr, 0);
@@ -469,24 +509,25 @@ void WebServer::handle_js_request(struct mg_connection *c)
 #endif
 
 #define set_json_id(root, obj, sensor, start_config)                            \
-    (root)["id"] = sensor;                                                      \
+    (root)["id"] = std::string(sensor) + "-" + get_object_id(obj);              \
     if (((start_config) == DETAIL_ALL))                                         \
     {                                                                           \
-        (root)["name"] = (obj)->get_name();                                     \
-        (root)["icon"] = (obj)->get_icon_ref();                                     \
-        (root)["entity_category"] = (obj)->get_entity_category();               \
+        (root)[FC("name")] = (obj)->get_name();                                     \
+        (root)[FC("icon")] = (obj)->get_icon_ref();                                 \
+        (root)[FC("entity_category")] = (obj)->get_entity_category();               \
+        (root)[FC("domain")] = sensor;                                              \
         if ((obj)->is_disabled_by_default())                                    \
-            (root)["is_disabled_by_default"] = (obj)->is_disabled_by_default(); \
+            (root)[FC("is_disabled_by_default")] = (obj)->is_disabled_by_default(); \
     }
 
 
 #define set_json_value(root, obj, sensor, value, start_config) \
     set_json_id((root), (obj), sensor, start_config);          \
-    (root)["value"] = value;
+    (root)[FC("value")] = value;
 
 #define set_json_icon_state_value(root, obj, sensor, state, value, start_config) \
     set_json_value(root, obj, sensor, value, start_config);                      \
-    (root)["state"] = state;
+    (root)[FC("state")] = state;
 
 #ifdef USE_SENSOR
         void WebServer::on_sensor_update(sensor::Sensor *obj)
@@ -500,12 +541,12 @@ void WebServer::handle_js_request(struct mg_connection *c)
         {
             for (sensor::Sensor *obj : App.get_sensors())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc["detail"].is<JsonVariant>())
+                if (doc[FC("detail")].is<JsonVariant>())
                 {
-                    if (doc["detail"] == "all")
+                    if (doc[FC("detail")] == "all")
                     {
                         detail = DETAIL_ALL;
                     }
@@ -521,24 +562,58 @@ void WebServer::handle_js_request(struct mg_connection *c)
     {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
+
+    const auto uom_ref = obj->get_unit_of_measurement_ref();
+    #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 1, 0)  
     std::string state;
     if (std::isnan(value)) {
       state = "NA";
     } else {
       state = value_accuracy_to_string(value, obj->get_accuracy_decimals());
-      if (!obj->get_unit_of_measurement_ref().empty())
-        state += " " + obj->get_unit_of_measurement_ref();
+      if (!uom_ref.empty())
+        state += " " + uom_ref;
     }
-    //set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config); });
+    #else
 
-    set_json_icon_state_value(root, obj, "sensor-" + obj->get_object_id(), state, value, start_config);
+  char buf[VALUE_ACCURACY_MAX_LEN];
+  const char *state = std::isnan(value)
+                          ? "NA"
+                          : (value_accuracy_with_uom_to_buf(buf, value, obj->get_accuracy_decimals(), uom_ref), buf);
+    #endif
+    set_json_icon_state_value(root, obj, "sensor", state, value, start_config);
     if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
-      if (!obj->get_unit_of_measurement_ref().empty())
-        root["uom"] = obj->get_unit_of_measurement_ref();
+      if (!uom_ref.empty())
+        root["uom"] = uom_ref;
     } });
         }
 #endif
+
+
+
+void WebServer::handle_wifisave(struct mg_connection *c, JsonObject doc) {
+ #ifdef USE_WIFI
+        std::string ssid="";
+        std::string psk="";
+        if (doc["ssid"].is<JsonVariant>()) 
+            ssid=std::string(doc["ssid"]);
+        if (doc["psk"].is<JsonVariant>())
+            psk=std::string(doc["psk"]);
+      ESP_LOGI(TAG,
+           "Requested WiFi Settings Change:\n"
+           "  SSID='%s'\n"
+           "  Password=" LOG_SECRET("'%s'"),
+           ssid.c_str(), psk.c_str());
+
+   if (ssid !="") {
+   wifi::global_wifi_component->save_wifi_sta(ssid, psk); 
+    ws_reply(c, "", true);
+    return;
+   }
+#endif
+ws_reply(c, "", false);
+   //request->redirect(ESPHOME_F("/?save"));
+}
 
 #ifdef USE_TEXT_SENSOR
 
@@ -553,8 +628,8 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
                                         JsonDetail start_config) {
   json::JsonBuilder builder;
   JsonObject root = builder.root();
-  root["id_code"] = obj->get_object_id();
-  set_json_icon_state_value(root, obj, "text_sensor-" + obj->get_object_id(), value, value, start_config);
+  root[FC("id_code")] = get_object_id(obj);
+  set_json_icon_state_value(root, obj, "text_sensor", value, value, start_config);
   if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
   }
@@ -566,10 +641,10 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
         {
             for (text_sensor::TextSensor *obj : App.get_text_sensors())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc["detail"].is<JsonVariant>() && doc["detail"] == "all")
+                if (doc[FC("detail")].is<JsonVariant>() && doc[FC("detail")] == "all")
                 {
                         detail = DETAIL_ALL;
                 }
@@ -598,7 +673,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-        set_json_icon_state_value(root, obj, "switch-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+        set_json_icon_state_value(root, obj, "switch", value ? "ON" : "OFF", value, start_config);
   if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
   } });
@@ -607,14 +682,15 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
         {
             for (switch_::Switch *obj : App.get_switches())
             {
-                if (obj->get_object_id() != doc["oid"])
-                    continue;
-                if (doc["action"] == "get")
+
+                if (get_object_id(obj) != doc[FC("oid")])
+                             continue;
+                if (doc[FC("action")] == "get")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -622,21 +698,21 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
                     std::string data = this->switch_json(obj, obj->state, detail);
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["action"] == "toggle")
+                else if (doc[FC("action")] == "toggle")
                 {
                     this->schedule_([obj]()
                                     { obj->toggle(); });
                     // mg_http_reply(c,200,"","");
                     ws_reply(c, "", true);
                 }
-                else if (doc["action"] == "turn_on")
+                else if (doc[FC("action")] == "turn_on")
                 {
                     this->schedule_([obj]()
                                     { obj->turn_on(); });
                     // mg_http_reply(c,200,"","");
                     ws_reply(c, "", true);
                 }
-                else if (doc["action"] == "turn_off")
+                else if (doc[FC("action")] == "turn_off")
                 {
                     this->schedule_([obj]()
                                     { obj->turn_off(); });
@@ -658,7 +734,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
             return json::build_json(
                 [this, obj, start_config](JsonObject root)
                 {
-                    set_json_id(root, obj, "button-" + obj->get_object_id(), start_config);
+                    set_json_id(root, obj, "button-" + get_object_id(obj), start_config);
                     if (start_config == DETAIL_ALL)
                     {
                     this->add_sorting_info_(root, obj);
@@ -670,14 +746,14 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
         {
             for (button::Button *obj : App.get_buttons())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
                 if (doc["method"] == "GET" && doc["method"] == "")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -685,7 +761,7 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
                     std::string data = this->button_json(obj, detail);
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["method"] == "POST" && doc["action"] == "press")
+                else if (doc["method"] == "POST" && doc[FC("action")] == "press")
                 {
                     this->schedule_([obj]()
                                     { obj->press(); });
@@ -715,8 +791,8 @@ std::string WebServer::text_sensor_json(text_sensor::TextSensor *obj, const std:
 std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool value, JsonDetail start_config) {
   json::JsonBuilder builder;
   JsonObject root = builder.root();
-  root["id_code"] = obj->get_object_id();
-  set_json_icon_state_value(root, obj, "binary_sensor-" + obj->get_object_id(), value ? "ON" : "OFF", value, start_config);
+  root[FC("id_code")] = get_object_id(obj);
+  set_json_icon_state_value(root, obj, "binary_sensor" , value ? "ON" : "OFF", value, start_config);
   if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
   }
@@ -728,12 +804,12 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             for (binary_sensor::BinarySensor *obj : App.get_binary_sensors())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
                 auto detail = DETAIL_STATE;
-                if (doc["detail"].is<JsonVariant>())
+                if (doc[FC("detail")].is<JsonVariant>())
                 {
-                    if (doc["detail"] == "all")
+                    if (doc[FC("detail")] == "all")
                     {
                         detail = DETAIL_ALL;
                     }
@@ -759,7 +835,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    // set_json_state_value(root, obj, "fan-" + obj->get_object_id(), obj->state ? "ON" : "OFF", obj->state, start_config);
+    // set_json_state_value(root, obj, "fan-" + get_object_id(obj), obj->state ? "ON" : "OFF", obj->state, start_config);
     // const auto traits = obj->get_traits();
     // if (traits.supports_speed()) {
     //   root["speed_level"] = obj->speed;
@@ -767,7 +843,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
     // }
     // if (obj->get_traits().supports_oscillation())
     //   root["oscillation"] = obj->oscillating; });
-        set_json_icon_state_value(root, obj, "fan-" + obj->get_object_id(), obj->state ? "ON" : "OFF", obj->state,
+        set_json_icon_state_value(root, obj, "fan", obj->state ? "ON" : "OFF", obj->state,
                               start_config);
     const auto traits = obj->get_traits();
     if (traits.supports_speed()) {
@@ -785,7 +861,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             for (fan::Fan *obj : App.get_fans())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -793,9 +869,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -805,13 +881,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["action"] == "toggle")
+                else if (doc[FC("action")] == "toggle")
                 {
                     this->schedule_([obj]()
                                     { obj->toggle().perform(); });
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["action"] == "turn_on")
+                else if (doc[FC("action")] == "turn_on")
                 {
                     auto call = obj->turn_on();
                     // if (request->hasParam("speed_level")) {
@@ -853,7 +929,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         call.perform(); });
             ws_reply(c,"",true);
                 }
-                else if (doc["action"] == "turn_off")
+                else if (doc[FC("action")] == "turn_off")
                 {
                     this->schedule_([obj]()
                                     { obj->turn_off().perform(); });
@@ -883,7 +959,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             for (light::LightState *obj : App.get_lights())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -891,9 +967,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -903,14 +979,14 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["action"] == "toggle")
+                else if (doc[FC("action")] == "toggle")
                 {
                     this->schedule_([obj]()
                                     { obj->toggle().perform(); });
                     // mg_http_reply(c,200,"","");
                     ws_reply(c, "", true);
                 }
-                else if (doc["action"] == "turn_on")
+                else if (doc[FC("action")] == "turn_on")
                 {
                     auto call = obj->turn_on();
                     // if (request->hasParam("brightness")) {
@@ -1022,7 +1098,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                                     { call.perform(); });
                     ws_reply(c, "", true);
                 } // else if (match.method == "turn_off") {
-                else if (doc["action"] == "turn_off")
+                else if (doc[FC("action")] == "turn_off")
                 {
                     auto call = obj->turn_off();
                     // if (request->hasParam("transition")) {
@@ -1054,7 +1130,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    // set_json_id(root, obj, "light-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "light-" + get_object_id(obj), start_config);
     // root["state"] = obj->remote_values.is_on() ? "ON" : "OFF";
 
     // light::LightJSONSchema::dump_json(*obj, root);
@@ -1065,7 +1141,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
     //     opt.add(option->get_name());
     //   }
     // } });
-        set_json_id(root, obj, "light-" + obj->get_object_id(), start_config);
+        set_json_id(root, obj, "light-" + get_object_id(obj), start_config);
     root["state"] = obj->remote_values.is_on() ? "ON" : "OFF";
 
     light::LightJSONSchema::dump_json(*obj, root);
@@ -1093,7 +1169,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (cover::Cover *obj : App.get_covers())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -1101,9 +1177,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1117,22 +1193,22 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
                 auto call = obj->make_call();
                 // if (match.method == "open") {
-                if (doc["action"] == "open")
+                if (doc[FC("action")] == "open")
                 {
                     call.set_command_open();
                     // } else if (match.method == "close") {
                 }
-                else if (doc["action"] == "close")
+                else if (doc[FC("action")] == "close")
                 {
                     call.set_command_close();
                     //} else if (match.method == "stop") {
                 }
-                else if (doc["action"] == "stop")
+                else if (doc[FC("action")] == "stop")
                 {
                     call.set_command_stop();
                     // } else if (match.method != "set") {
                 }
-                else if (doc["action"] != "set")
+                else if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
@@ -1185,13 +1261,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    // set_json_state_value(root, obj, "cover-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
+    // set_json_state_value(root, obj, "cover-" + get_object_id(obj), obj->is_fully_closed() ? "CLOSED" : "OPEN",
     //                      obj->position, start_config);
     // root["current_operation"] = cover::cover_operation_to_str(obj->current_operation);
 
     // if (obj->get_traits().get_supports_tilt())
     //   root["tilt"] = obj->tilt; });
-      set_json_icon_state_value(root, obj, "cover-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
+      set_json_icon_state_value(root, obj, "cover" , obj->is_fully_closed() ? "CLOSED" : "OPEN",
                               obj->position, start_config);
     root["current_operation"] = cover::cover_operation_to_str(obj->current_operation);
 
@@ -1218,7 +1294,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (auto *obj : App.get_numbers())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -1226,9 +1302,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1238,7 +1314,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
 
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
@@ -1246,9 +1322,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
                 auto call = obj->make_call();
 
-                if (doc["value"].is<JsonVariant>())
+                if (doc[FC("value")].is<JsonVariant>())
                 {
-                    std::string value = doc["value"];
+                    std::string value = doc[FC("value")];
                     auto value = parse_number<float>(value);
                     if (value.has_value())
                         call.set_value(*value);
@@ -1265,7 +1341,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-       set_json_id(root, obj, "number-" + obj->get_object_id(), start_config);
+       set_json_id(root, obj, "number-" + get_object_id(obj), start_config);
+
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 1, 0)  
     if (start_config == DETAIL_ALL) {
       root["min_value"] =
           value_accuracy_to_string(obj->traits.get_min_value(), step_to_accuracy_decimals(obj->traits.get_step()));
@@ -1276,8 +1354,29 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
       root["mode"] = (int) obj->traits.get_mode();
       if (!obj->traits.get_unit_of_measurement_ref().empty())
         root["uom"] = obj->traits.get_unit_of_measurement_ref();
-    this->add_sorting_info_(root, obj);
+            this->add_sorting_info_(root, obj);
     }
+#else 
+ char val_buf[VALUE_ACCURACY_MAX_LEN];
+  char state_buf[VALUE_ACCURACY_MAX_LEN];
+  const char *val_str = std::isnan(value) ? "\"NaN\"" : (value_accuracy_to_buf(val_buf, value, accuracy), val_buf);
+  const char *state_str =
+      std::isnan(value) ? "NA" : (value_accuracy_with_uom_to_buf(state_buf, value, accuracy, uom_ref), state_buf);
+  set_json_icon_state_value(root, obj, "number", state_str, val_str, start_config);
+  if (start_config == DETAIL_ALL) {
+    // ArduinoJson copies the string immediately, so we can reuse val_buf
+    root[ESPHOME_F("min_value")] = (value_accuracy_to_buf(val_buf, obj->traits.get_min_value(), accuracy), val_buf);
+    root[ESPHOME_F("max_value")] = (value_accuracy_to_buf(val_buf, obj->traits.get_max_value(), accuracy), val_buf);
+    root[ESPHOME_F("step")] = (value_accuracy_to_buf(val_buf, obj->traits.get_step(), accuracy), val_buf);
+    root[ESPHOME_F("mode")] = (int) obj->traits.get_mode();
+    if (!uom_ref.empty())
+      root[ESPHOME_F("uom")] = uom_ref;
+          this->add_sorting_info_(root, obj);
+    }
+
+#endif
+
+
     if (std::isnan(value)) {
       root["value"] = "\"NaN\"";
       root["state"] = "NA";
@@ -1305,7 +1404,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             for (auto *obj : App.get_dates())
             {
 
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -1313,9 +1412,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1325,13 +1424,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
 
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
                 }
 
-                // if (obj->get_object_id() != match.id)
+                // if (get_object_id(obj) != match.id)
                 //   continue;
                 // if (request->method() == HTTP_GET && match.method.empty()) {
                 //   auto detail = DETAIL_STATE;
@@ -1349,9 +1448,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 // }
 
                 auto call = obj->make_call();
-                if (doc["value"].is<JsonVariant>())
+                if (doc[FC("value")].is<JsonVariant>())
                 {
-                    std::string value = doc["value"];
+                    std::string value = doc[FC("value")];
                     call.set_date(value);
                 }
                 else
@@ -1384,7 +1483,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    set_json_id(root, obj, "date-" + obj->get_object_id(), start_config);
+    set_json_id(root, obj, "date-" + get_object_id(obj), start_config);
     std::string value = str_sprintf("%d-%02d-%02d", obj->year, obj->month, obj->day);
     root["value"] = value;
     root["state"] = value;
@@ -1407,7 +1506,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             for (auto *obj : App.get_times())
             {
 
-                // if (obj->get_object_id() != match.id)
+                // if (get_object_id(obj) != match.id)
                 //   continue;
                 // if (request->method() == HTTP_GET && match.method.empty()) {
                 //   auto detail = DETAIL_STATE;
@@ -1439,7 +1538,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 // this->schedule_([call]() mutable { call.perform(); });
                 // request->send(200);
                 // return;
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -1447,9 +1546,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1459,16 +1558,16 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
 
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
                 }
 
                 auto call = obj->make_call();
-                if (doc["value"].is<JsonVariant>())
+                if (doc[FC("value")].is<JsonVariant>())
                 {
-                    std::string value = doc["value"];
+                    std::string value = doc[FC("value")];
                     call.set_time(value);
                 }
                 else
@@ -1489,7 +1588,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    set_json_id(root, obj, "time-" + obj->get_object_id(), start_config);
+    set_json_id(root, obj, "time-" + get_object_id(obj), start_config);
     std::string value = str_sprintf("%02d:%02d:%02d", obj->hour, obj->minute, obj->second);
     root["value"] = value;
     root["state"] = value;
@@ -1512,7 +1611,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             for (auto *obj : App.get_datetimes())
             {
 
-                // if (obj->get_object_id() != match.id)
+                // if (get_object_id(obj) != match.id)
                 //   continue;
                 // if (request->method() == HTTP_GET && match.method.empty())
                 // {
@@ -1551,7 +1650,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 // request->send(200);
                 // return;
 
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")]
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -1559,9 +1658,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1571,16 +1670,16 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
 
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
                 }
 
                 auto call = obj->make_call();
-                if (doc["value"].is<JsonVariant>())
+                if (doc[FC("value")].is<JsonVariant>())
                 {
-                    std::string value = doc["value"];
+                    std::string value = doc[FC("value")];
                     call.set_datetime(value);
                 }
                 else
@@ -1602,7 +1701,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    set_json_id(root, obj, "datetime-" + obj->get_object_id(), start_config);
+    set_json_id(root, obj, "datetime-" + get_object_id(obj), start_config);
     std::string value = str_sprintf("%d-%02d-%02d %02d:%02d:%02d", obj->year, obj->month, obj->day, obj->hour,
                                     obj->minute, obj->second);
     root["value"] = value;
@@ -1624,7 +1723,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             for (event::Event *obj : App.get_events())
             {
-                // if (obj->get_object_id() != match.id)
+                // if (get_object_id(obj) != match.id)
                 //   continue;
 
                 // if (request->method() == HTTP_GET && match.method.empty()) {
@@ -1637,15 +1736,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 //   request->send(200, "application/json", data.c_str());
                 //   return;
 
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1662,7 +1761,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, event_type, start_config](JsonObject root)
                                     {
-    set_json_id(root, obj, "event-" + obj->get_object_id(), start_config);
+    set_json_id(root, obj, "event-" + get_object_id(obj), start_config);
     if (!event_type.empty()) {
       root["event_type"] = event_type;
     }
@@ -1689,7 +1788,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             for (update::UpdateEntity *obj : App.get_updates())
             {
 
-                // if (obj->get_object_id() != match.id)
+                // if (get_object_id(obj) != match.id)
                 //   continue;
 
                 // if (request->method() == HTTP_GET && match.method.empty()) {
@@ -1711,15 +1810,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 // this->schedule_([obj]() mutable { obj->perform(); });
                 // request->send(200);
                 // return;
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1729,7 +1828,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
 
-                if (doc["action"] != "install")
+                if (doc[FC("action")] != "install")
                 {
                     ws_reply(c, "", false);
                     return;
@@ -1746,7 +1845,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    set_json_id(root, obj, "update-" + obj->get_object_id(), start_config);
+    set_json_id(root, obj, "update-" + get_object_id(obj), start_config);
     root["value"] = obj->update_info.latest_version;
     switch (obj->state) {
       case update::UPDATE_STATE_NO_UPDATE:
@@ -1785,15 +1884,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             for (valve::Valve *obj : App.get_valves())
             {
 
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1803,23 +1902,23 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     return;
                 }
                 auto call = obj->make_call();
-                if (doc["action"] == "open")
+                if (doc[FC("action")] == "open")
                 {
                     call.set_command_open();
                 }
-                else if (doc["action"] == "close")
+                else if (doc[FC("action")] == "close")
                 {
                     call.set_command_close();
                 }
-                else if (doc["action"] == "stop")
+                else if (doc[FC("action")] == "stop")
                 {
                     call.set_command_stop();
                 }
-                else if (doc["action"] == "toggle")
+                else if (doc[FC("action")] == "toggle")
                 {
                     call.set_command_toggle();
                 }
-                else if (doc["action"] != "set")
+                else if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                 }
@@ -1846,7 +1945,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    set_json_icon_state_value(root, obj, "valve-" + obj->get_object_id(), obj->is_fully_closed() ? "CLOSED" : "OPEN",
+    set_json_icon_state_value(root, obj, "valve" , obj->is_fully_closed() ? "CLOSED" : "OPEN",
                               obj->position, start_config);
     root["current_operation"] = valve::valve_operation_to_str(obj->current_operation);
 
@@ -1872,15 +1971,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             for (auto *obj : App.get_texts())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -1889,15 +1988,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     ws_reply(c, data.c_str(), true);
                     return;
                 }
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
                 }
                 auto call = obj->make_call();
-                if (doc["value"].is<JsonVariant>())
+                if (doc[FC("value")].is<JsonVariant>())
                 {
-                    call.set_value(doc["value"]);
+                    call.set_value(doc[FC("value")]);
                     this->defer([call]() mutable
                                 { call.perform(); });
                 }
@@ -1912,7 +2011,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-    // set_json_id(root, obj, "text-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "text-" + get_object_id(obj), start_config);
     // if (start_config == DETAIL_ALL) {
     //   root["mode"] = (int) obj->traits.get_mode();
     // }
@@ -1925,7 +2024,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
     //   root["state"] = value;
     // }
     // root["value"] = value; });
-        set_json_id(root, obj, "text-" + obj->get_object_id(), start_config);
+        set_json_id(root, obj, "text-" + get_object_id(obj), start_config);
     root["min_length"] = obj->traits.get_min_length();
     root["max_length"] = obj->traits.get_max_length();
     root["pattern"] = obj->traits.get_pattern();
@@ -1954,7 +2053,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         void WebServer::handle_auth_request(mg_connection *c, JsonObject doc)
         {
 
-            if (doc["action"] != "set")
+            if (doc[FC("action")] != "set")
             {
                 ws_reply(c, "", false);
                 return;
@@ -1968,6 +2067,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (cl->id == ul)
                     {
                         cl->is_authenticated=1;
+                        entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
                         ESP_LOGD(TAG, "Set auth conn %d as authenticated", cl->id);
                         break;
                     }
@@ -2007,7 +2107,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             if (doc["method"] == "GET")
             {
 
-                if (doc["action"] == "getconfig")
+                if (doc[FC("action")] == "getconfig")
                 {
                     std::string enc;
                     get_keypad_config(enc);
@@ -2017,7 +2117,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 // ws_reply(c,"",true);
                 // return;
             }
-            if (doc["action"] != "set")
+            if (doc[FC("action")] != "set")
             {
                 ws_reply(c, "", false);
                 return;
@@ -2052,7 +2152,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (auto *obj : App.get_selects())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -2060,9 +2160,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -2075,7 +2175,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 }
 
                 //  if (match.method != "set") {
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
@@ -2103,14 +2203,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-    // set_json_state_value(root, obj, "select-" + obj->get_object_id(), value, value, start_config);
-    // if (start_config == DETAIL_ALL) {
-    //   JsonArray opt = root.createNestedArray("option");
-    //   for (auto &option : obj->traits.get_options()) {
-    //     opt.add(option);
-    //   }
-    // } });
-        set_json_icon_state_value(root, obj, "select-" + obj->get_object_id(), value, value, start_config);
+
+        set_json_icon_state_value(root, obj, "select", value, value, start_config);
     if (start_config == DETAIL_ALL) {
       JsonArray opt = root.createNestedArray("option");
       for (auto &option : obj->traits.get_options()) {
@@ -2123,7 +2217,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 // Longest: HORIZONTAL
 #define PSTR_LOCAL(mode_s) strncpy_P(buf, (PGM_P)((mode_s)), 15)
-#ifdef USE_CLIMATE
+#ifdef USE_CLIMATE_XX //not supported
         void WebServer::on_climate_update(climate::Climate *obj)
         {
             if (!this->include_internal_ && obj->is_internal())
@@ -2137,7 +2231,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (auto *obj : App.get_climates())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -2145,9 +2239,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -2160,7 +2254,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 }
 
                 // if (match.method != "set") {
-                if (doc["action"] != "set")
+                if (doc[FC("action")] != "set")
                 {
                     ws_reply(c, "", false);
                     return;
@@ -2219,7 +2313,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, start_config](JsonObject root)
                                     {
-    // set_json_id(root, obj, "climate-" + obj->get_object_id(), start_config);
+    // set_json_id(root, obj, "climate-" + get_object_id(obj), start_config);
     // const auto traits = obj->get_traits();
     // int8_t target_accuracy = traits.get_target_temperature_accuracy_decimals();
     // int8_t current_accuracy = traits.get_current_temperature_accuracy_decimals();
@@ -2302,7 +2396,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
     //   if (!has_state)
     //     root["state"] = root["target_temperature"];
     // } });
-     set_json_id(root, obj, "climate-" + obj->get_object_id(), start_config);
+     set_json_id(root, obj, "climate-" + get_object_id(obj), start_config);
     const auto traits = obj->get_traits();
     int8_t target_accuracy = traits.get_target_temperature_accuracy_decimals();
     int8_t current_accuracy = traits.get_current_temperature_accuracy_decimals();
@@ -2400,9 +2494,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
-                                //  set_json_icon_state_value(root, obj, "lock-" + obj->get_object_id(), lock::lock_state_to_string(value), value,
-                                //                           start_config); });
-                                    set_json_icon_state_value(root, obj, "lock-" + obj->get_object_id(), lock::lock_state_to_string(value), value,
+                                    set_json_icon_state_value(root, obj, "lock", lock::lock_state_to_string(value), value,
                               start_config);
     if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
@@ -2413,7 +2505,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (lock::Lock *obj : App.get_locks())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
 
                 // if (request->method() == HTTP_GET) {
@@ -2421,9 +2513,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -2433,19 +2525,19 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     // mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "%s", data.c_str());
                     ws_reply(c, data.c_str(), true);
                 }
-                else if (doc["action"] == "lock")
+                else if (doc[FC("action")] == "lock")
                 {
                     this->schedule_([obj]()
                                     { obj->lock(); });
                     ws_reply(c, "", true);
                 }
-                else if (doc["action"] == "unlock")
+                else if (doc[FC("action")] == "unlock")
                 {
                     this->schedule_([obj]()
                                     { obj->unlock(); });
                     ws_reply(c, "", true);
                 }
-                else if (doc["action"] == "open")
+                else if (doc[FC("action")] == "open")
                 {
                     this->schedule_([obj]()
                                     { obj->open(); });
@@ -2477,12 +2569,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             return json::build_json([this, obj, value, start_config](JsonObject root)
                                     {
 
-    //  char buf[16];
-    // set_json_icon_state_value(root, obj, "alarm-control-panel-" + obj->get_object_id(),
-    //                           PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config); });
+
         char buf[16];
-    set_json_icon_state_value(root, obj, "alarm-control-panel-" + obj->get_object_id(),
-                              PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config);
+    set_json_icon_state_value(root, obj, "alarm-control-panel",PSTR_LOCAL(alarm_control_panel_state_to_string(value)), value, start_config);
     if (start_config == DETAIL_ALL) {
     this->add_sorting_info_(root, obj);
     } });
@@ -2492,14 +2581,14 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // struct mg_http_message *hm = (struct mg_http_message *) ev_data;
             for (alarm_control_panel::AlarmControlPanel *obj : App.get_alarm_control_panels())
             {
-                if (obj->get_object_id() != doc["oid"])
+                if (get_object_id(obj) != doc[FC("oid")])
                     continue;
                 if (doc["method"] == "GET")
                 {
                     auto detail = DETAIL_STATE;
-                    if (doc["detail"].is<JsonVariant>())
+                    if (doc[FC("detail")].is<JsonVariant>())
                     {
-                        if (doc["detail"] == "all")
+                        if (doc[FC("detail")] == "all")
                         {
                             detail = DETAIL_ALL;
                         }
@@ -2517,7 +2606,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         {
 
 
-           std::string type;
+           const char * type;
             switch (mt)
             {
             case PING:
@@ -2557,16 +2646,18 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     continue; // not authenticated with encrypted response
 #endif
 
-                if (c->is_event)
+                if (c->is_event && !c->is_closing)
                 {
                     // ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
                     if (id && reconnect)
-                        mg_printf(c, FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), id, reconnect, type.c_str(), data);
+                        mg_printf(c, FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), id, reconnect, type, data);
                     else
-                        mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), type.c_str(), data);
+                        mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), type, data);
 
-                    if (c->send.len > 15000)
+                    if (c->send.len > 15000) {
+                        ESP_LOGD(TAG,"Non responsive event connection. Closing %d",c->id);
                         c->is_closing = 1; // dead connection. kill it.
+                    }
                     continue;
                 }
 #ifdef USE_WEBKEYPAD_WEBSOCKET
@@ -2574,13 +2665,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     continue;
 
                 if (mt == PING)
-                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type.c_str(), "data", id);
+                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type, "data", id);
                 else if ((mt == LOG || mt == OTA) && !get_credentials()->crypt)
-                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type.c_str(), "data", data);
+                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type, "data", data);
                 else
-                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", type.c_str(), "data", data);
+                    mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", type, "data", data);
 
-                if (c->send.len > 15000)
+                if (c->send.len > 5000)
                     c->is_closing = 1; // dead connection. kill it.
 #endif
             }
@@ -2686,48 +2777,56 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 return 0;
             }
-
+            // if (hdr != NULL) {
+            //         std::string s=std::string(hdr->buf,hdr->len);
+            //         Serial.printf("HDR2 is %s\n",s.c_str());
+            //         }
             mg_str realm = mg_str(auth_domain);
             std::string u = std::string(username.buf, username.len);
             std::string r = std::string(response.buf, response.len);
             // if (strcmp(creds->username.c_str(),u.c_str())) {
             // MG_INFO(("password=%s",creds->password.c_str()));
+
             mg_mkmd5resp(
                 hm->method.buf, hm->method.len, hm->uri.buf,
                 hm->uri.len,
-                &username, creds->password.c_str(), &realm, &nonce, &nc, &cnonce,
+                &username, creds->password, &realm, &nonce, &nc, &cnonce,
                 &qop, expected_response);
-            // MG_INFO(("response =%s, expected=%s, cusername=%s,u=%s",r.c_str(),expected_response,creds->username.c_str(),u.c_str()));
+            //Serial.printf("response =%s, expected=%s, cusername=%s,u=%s\n",r.c_str(),expected_response,creds->username.c_str(),u.c_str());
             return mg_casecmp(r.c_str(), expected_response) == 0;
             // }
 
             /* None of the entries in the passwords file matched - return failure */
             return 0;
         }
-#ifdef USE_WEBKEYPAD_ENCRYPTION
-        bool WebServer::encrypt(std::string &data)
-        {
-                    // const char *message="test message";
-            const char * message=data.c_str();
-            int i = strlen(message);
 
-            if (!i)
-                return "";
+#ifdef USE_WEBKEYPAD_ENCRYPTION
+        void WebServer::encrypt(std::string &data)
+        {
+            const char * message=data.c_str();
+            int ml = strlen(message);
+
+            if (!ml)
+                return ;
    
-            int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
-            int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
-            //uint8_t encrypted[length+1];
-           // ESP_LOGE(TAG,"Encrypted len =%d",length+1);
-            uint8_t * encrypted = new uint8_t[length+AES_BLOCKSIZE];
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
-
-            std::string eiv = base64_encode(iv, AES_IV_SIZE );
-
+            std::string eiv = base64_encode(iv, AES_IV_SIZE ); 
             AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
-            aes.process((uint8_t *)message, encrypted, i);
-       // std::string akey=base64_encode(credentials_->token,SHA256_SIZE);
-            std::string em = base64_encode(encrypted, length);
+            int length = aes.calcSizeAndPad(ml);
+            std::string em="";
+            if (length < 1024) {
+                uint8_t encrypted[length+1]; //use stack for small messages
+                aes.padPlaintext((uint8_t *)message, encrypted);
+                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
+                em = base64_encode(encrypted, length);
+            } else {
+                uint8_t * encrypted = new uint8_t[length+1]; //use heap
+                aes.padPlaintext((uint8_t *)message, encrypted);
+                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
+                em = base64_encode(encrypted, length);
+                delete[] encrypted;
+            }
             
             SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
 
@@ -2738,16 +2837,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             uint8_t authCode[SHA256HMAC_SIZE+1];
             hmac.doFinal((char*)authCode);
 
-            // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
-
             data = "{\"iv\":\"" + eiv + "\",\"data\":\"";
             data.append(em);
             data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
-           // ESP_LOGD(TAG,"message size=%d,length=%d,ensize=%d,output=%s",i,length,encrypted_size,enc.c_str());
-          // ESP_LOGD(TAG,"aeskey=%s,message size=%d,encoded=%s",akey.c_str(),enc.length(),enc.c_str());
-           //  ESP_LOGD(TAG,"hmac=%s",ehm.c_str());
-            delete[] encrypted;
-            return 1;
         }
 
         bool WebServer::decrypt(JsonObject doc, uint8_t *err,std::string & out)
@@ -2758,7 +2850,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             unsigned long cid = 0;
 
             std::string token = "";
-            const char *seqstr = "";
+            const char * seqstr = "";
             int seq = 0;
             int *lastseq = NULL;
             // right now we don't force a seq/cid field in the encrypted packet.
@@ -2799,10 +2891,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             uint8_t *key = get_credentials()->token;
             uint8_t *hmackey = get_credentials()->hmackey;
-           // uint8_t data_decoded[strlen(data)];
-            uint8_t * data_decoded= new uint8_t[strlen(data)+1];
-           // uint8_t iv_decoded[strlen(iv)];
-            uint8_t * iv_decoded = new uint8_t[strlen(iv)+1];
+            uint8_t data_decoded[strlen(data)+1];
+            uint8_t iv_decoded[strlen(iv)+1];
 
             SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
@@ -2810,7 +2900,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 hmac.doUpdate(token.c_str(), token.length());
             }
-            if (seqstr != "")
+            if (strlen(seqstr) > 0)
             {
                 hmac.doUpdate(seqstr, strlen(seqstr));
             }
@@ -2823,8 +2913,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
                 *err = 1;
-                delete[] data_decoded;
-                delete[] iv_decoded;
                 return 0;
             }
             if (seq > 0 && lastseq != NULL)
@@ -2837,8 +2925,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             out = std::string((char *)data_decoded);
              //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
-            delete[] data_decoded;
-            delete[] iv_decoded;
             return 1;
         }
 #endif
@@ -2846,17 +2932,18 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #ifdef USE_WEBKEYPAD_OTA
         void WebServer::handle_uploads(struct mg_connection *c, int ev, void *ev_data)
         {
+
             // Catch /update requests early, without buffering whole body
             // When we receive MG_EV_HTTP_HDRS event, that means we've received all
             // HTTP headers but not necessarily full HTTP body
-            struct upload_state *us;
-            if (ev == MG_EV_HTTP_HDRS)
+            if (!c->is_ota && ev == MG_EV_HTTP_HDRS)
             {
                 struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-                if (mg_match(hm->uri, mg_str("/update/*"), NULL))
+                if (hm == nullptr) return;
+                if (mg_match(hm->uri, mg_str("/update*"), NULL))
                 {
 
-                    if (get_credentials()->password != "")
+                    if (strcmp(get_credentials()->password,"") != 0 )
                     {
                         if (!mg_http_check_digest_auth(hm, "webkeypad", get_credentials()))
                         {
@@ -2866,40 +2953,49 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                             return;
                         }
                     }
-                    c->is_ota=1;
-                    char path[100];
-                    mg_snprintf(path, sizeof(path), "%.*s", hm->uri.len - 8,
-                                hm->uri.buf + 8);
-                    MG_INFO(("Performing OTA update..."));
-                    us = (struct upload_state *)c->data;
-                    us->fn = path;
-                    us->expected = hm->body.len;             // Store number of bytes we expect
+                    c->is_ota=true;
+
+                    struct mg_str *fs = mg_http_get_header(hm, "x-filesize");
+                    struct mg_str *fn = mg_http_get_header(hm, "x-filename");
+                    if (fn != nullptr)
+                        upl.filename=PlatformString(std::string(fn->buf,fn->len).c_str());
+                    if (fs != nullptr)
+                        upl.filesize=std::stoi(std::string(fs->buf,fs->len));
+                    if (upl.filesize)
+                        upl.expected = upl.filesize;             // Store number of bytes we expect
+                    else
+                        upl.expected = hm->body.len;             // Store number of bytes we expect
+                   
+
+                    upl.received=0;
                     mg_iobuf_del(&c->recv, 0, hm->head.len); // Delete HTTP headers
                     c->pfn = NULL;                           // Silence HTTP protocol handler, we'll use MG_EV_READ
+                    ESP_LOGI(TAG,"Performing OTA update... file: %s, size: %d,expected: %d",upl.filename.c_str(),upl.filesize,upl.expected);
+                   
                 }
-            }
-            if (!c->is_ota) return;
-            us = (struct upload_state *)c->data;
+             }
+
+
+            if (!c->is_ota) return;  //not an ota update so return
 
             // Catch uploaded file data for both MG_EV_READ and MG_EV_HTTP_HDRS
-            if (us->expected > 0 && c->recv.len > 0)
+            if (upl.filesize > 0 && c->recv.len > 0)
             {
-                // MG_INFO(("Expected bytes: %d, got: %d, received: %d",us->expected,c->recv.len,us->received));
-                if ((us->received + c->recv.len) >= us->expected)
+                // MG_INFO(("Expected bytes: %d, got: %d, received: %d",upl.expected,c->recv.len,upl.received));
+                if ((upl.received + c->recv.len) >= upl.expected)
                 {
                     // Uploaded everything. Send response back
-                    MG_INFO(("OTA uploaded %lu bytes from file %s", us->received + c->recv.len, us->fn.c_str()));
-                    mg_http_reply(c, 200, NULL, "%lu ok\n", us->received);
-                    handleUpload(us->expected,( PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, true);
-                    memset(us, 0, sizeof(*us)); // Cleanup upload state
-                    c->is_draining = 1;         // Close connection when response gets sent
+                    ESP_LOGI(TAG,"OTA uploaded %lu bytes from file %s", upl.received + c->recv.len, ota_filename_.c_str());
+                    mg_http_reply(c, 200, NULL, "%lu ok\n", upl.received);
+                    handleUpload(upl.expected,( PlatformString) upl.filename, upl.received, c->recv.buf, c->recv.len, true);
+                   // memset(us, 0, sizeof(*us)); // Cleanup upload state
+                   upl.expected=0;
+                   c->is_ota=false;
+                   c->is_draining = 1;         // Close connection when response gets sent
                 }
-                else
-                {
-                    handleUpload(us->expected,(PlatformString) us->fn, us->received, c->recv.buf, c->recv.len, false);
-                    us->received += c->recv.len;
-                }
-
+                
+                handleUpload(upl.expected,(PlatformString)upl.filename, upl.received, c->recv.buf, c->recv.len, false);
+                upl.received += c->recv.len;
                 c->recv.len = 0; // Delete received data
             }
         }
@@ -2911,11 +3007,14 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             if (!c->is_sending) handle_uploads(c, ev, ev_data);
             #endif
             if (ev == MG_EV_POLL) {
-                if (c->is_sending ) send_js_include(c); // process pending file send
-                if (c->recv.len == 0) mg_iobuf_resize(&c->recv,0); //keep receive buffer low as we don't get much data in and saves ram
+                if (c->is_sending ) {
+                    //printf("Sending js data to connection %d\n",c->id);
+                    send_js_include(c); // process pending file send
+                }
+                if (c->recv.len == 0 && !c->is_ota) mg_iobuf_resize(&c->recv,0); //keep receive buffer low as we don't get much data in and saves ram
                 if (c->send.len == 0 && c->send.size  > 1024)
                 {
-                    //printf("Resized send buf for id:%d\n",(int)c->id);
+                   //printf("Resized send buf for id:%d size: %d\n",(int)c->id,c->send.size);
                     mg_iobuf_resize(&c->send,1024);
                 }
              }  
@@ -2984,13 +3083,11 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
             } else
 #endif //websocket
-
             if (ev == MG_EV_HTTP_MSG && !c->is_ota)
             {
-
                 struct mg_http_message *hm = (struct mg_http_message *)ev_data;
                // std::string u=std::string(hm->uri.buf, hm->uri.len);
-                if (get_credentials()->password != "" && !get_credentials()->crypt)
+                if (strcmp(get_credentials()->password,"") != 0 && !get_credentials()->crypt)
                 {
                     if (!mg_http_check_digest_auth(hm, FC("webkeypad"), get_credentials()))
                     {
@@ -3000,6 +3097,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         return;
                     }
                 }
+
+
 #ifdef USE_WEBKEYPAD_WEBSOCKET
                 if (mg_match(hm->uri, mg_str("/ws"), NULL) && !c->is_event)
                 {
@@ -3008,7 +3107,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     // Websocket connection, which will receive MG_EV_WS_MSG events.
                     mg_ws_upgrade(c, hm, NULL);
                     c->is_websocket=1;
-                    c->send.c = c;
                     std::string enc;
                     bool crypt = get_credentials()->crypt;
                     get_config_json(c->id,enc);
@@ -3044,6 +3142,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     }
                       entities_iterator_.begin(this->include_internal_);
                       c->pfn = NULL; 
+                      return;
                    
                 } else
 #endif //websocket
@@ -3052,7 +3151,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                   //  mg_str *hdr = mg_http_get_header(hm, "Accept");
                     // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
                     c->is_event=1;
-                    mg_printf(c, FC("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
+                    c->send.c = c;
+                    mg_printf(c, FC("HTTP/2 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                     c->send.c = c;
                     bool crypt = get_credentials()->crypt;
                     std::string enc;
@@ -3061,7 +3161,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (crypt)
                         encrypt(enc);
                     #endif
-
                     mg_printf(c, FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
                     for (auto &group : sorting_groups_)
                     {
@@ -3086,14 +3185,17 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
-                    entities_iterator_.begin(this->include_internal_);
-
+                       if (!crypt) //if we don't need encryption or authentication, we can start the iterator
+                        entities_iterator_.begin(this->include_internal_);
+                    c->pfn = NULL; 
+                    return;
                 }
-                else
+                 else
                 {
-                    if (!mg_match(hm->uri, mg_str("/update/*"), NULL))
+                    if (!mg_match(hm->uri, mg_str("/update*"), NULL))
                     {
                         c->send.c = c;
+                        c->recv.c = c;
                         handleWebRequest(c, hm);
 
                     }
@@ -3101,6 +3203,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 
             } else if (ev == MG_EV_OPEN) {
+
                 ESP_LOGD(TAG,"New connection open with client id %d\n",c->id);
             } else if (ev == MG_EV_READ){
                 // ESP_LOGD(TAG,"reading from client %d,%d\n",c->fd,c->id);
@@ -3113,6 +3216,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
            
            
         }
+
+
 
         void WebServer::handleWebRequest(struct mg_connection *c, mg_http_message *hm)
         {
@@ -3158,17 +3263,17 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             JsonObject obj = doc.to<JsonObject>();
             if (mg_match(hm->uri, mg_str("/api"), NULL))
             {
-
                 doc=json::parse_json((const uint8_t *)hm->body.buf, hm->body.len);
-#ifdef USE_WEBKEYPAD_ENCRYPTION
-                if (obj["iv"].is<JsonVariant>() && get_credentials()->password != "")
+   #ifdef USE_WEBKEYPAD_ENCRYPTION
+                if (obj["iv"].is<JsonVariant>() && strcmp(get_credentials()->password,"") != 0)
                 {
                     uint8_t e = 0;
                     std::string buf="";
                     decrypt(obj, &e,buf);
                     if (buf != "") {
                          doc=json::parse_json((const uint8_t *)buf.c_str(), buf.length());
-                     }  else
+                     }  
+                     else
                         mg_http_reply(c, 403, "", "");
                 }
 #endif
@@ -3187,10 +3292,15 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
         void WebServer::handleRequest(mg_connection *c, JsonObject doc)
         {
-            std::string d = doc["domain"];
+         //   std::string d =doc[FC("domain")];
+          
+             if (doc[FC("domain")] == "wifisave") {
+                this->handle_wifisave(c,doc);
+                return;
+             }
 #ifdef USE_SENSOR
 
-            if (doc["domain"] == "sensor")
+            if (doc[FC("domain")] == "sensor")
             {
                 this->handle_sensor_request(c, doc);
                 return;
@@ -3198,7 +3308,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_SWITCH
-            if (doc["domain"] == "switch")
+            if (doc[FC("domain")] == "switch")
             {
                 this->handle_switch_request(c, doc);
                 return;
@@ -3206,7 +3316,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_BUTTON
-            if (doc["domain"] == "button")
+            if (doc[FC("domain")] == "button")
             {
                 this->handle_button_request(c, doc);
                 return;
@@ -3214,14 +3324,14 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_BINARY_SENSOR
-            if (doc["domain"] == "binary_sensor")
+            if (doc[FC("domain")] == "binary_sensor")
             {
                 this->handle_binary_sensor_request(c, doc);
                 return;
             }
 #endif
 #ifdef USE_FAN
-            if (doc["domain"] == "fan")
+            if (doc[FC("domain")] == "fan")
             {
                 this->handle_fan_request(c, doc);
                 return;
@@ -3229,7 +3339,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_LIGHT
-            if (doc["domain"] == "light")
+            if (doc[FC("domain")] == "light")
             {
                 this->handle_light_request(c, doc);
                 return;
@@ -3237,7 +3347,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_TEXT_SENSOR
-            if (doc["domain"] == "text_sensor")
+            if (doc[FC("domain")] == "text_sensor")
             {
                 this->handle_text_sensor_request(c, doc);
                 return;
@@ -3245,7 +3355,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_COVER
-            if (doc["domain"] == "cover")
+            if (doc[FC("domain")] == "cover")
             {
                 this->handle_cover_request(c, doc);
                 return;
@@ -3253,7 +3363,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_NUMBER
-            if (doc["domain"] == "number")
+            if (doc[FC("domain")] == "number")
             {
                 this->handle_number_request(c, doc);
                 return;
@@ -3261,7 +3371,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_DATETIME_DATE
-            if (doc["domain"] == "date")
+            if (doc[FC("domain")] == "date")
             {
                 this->handle_date_request(c, doc);
                 return;
@@ -3269,7 +3379,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_DATETIME_TIME
-            if (doc["domain"] == "time")
+            if (doc[FC("domain")] == "time")
             {
                 this->handle_time_request(c, doc);
                 return;
@@ -3277,7 +3387,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_DATETIME_DATETIME
-            if (doc["domain"] == "datetime")
+            if (doc[FC("domain")] == "datetime")
             {
                 this->handle_datetime_request(c, doc);
                 return;
@@ -3285,7 +3395,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_VALVE
-            if (doc["domain"] == "valve")
+            if (doc[FC("domain")] == "valve")
             {
                 this->handle_valve_request(c, doc);
                 return;
@@ -3293,7 +3403,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_UPDATE
-            if (doc["domain"] == "update")
+            if (doc[FC("domain")] == "update")
             {
                 this->handle_update_request(c, doc);
                 return;
@@ -3301,7 +3411,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_EVENT
-            if (doc["domain"] == "event")
+            if (doc[FC("domain")] == "event")
             {
                 this->handle_event_request(c, doc);
                 return;
@@ -3309,7 +3419,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_TEXT
-            if (doc["domain"] == "text")
+            if (doc[FC("domain")] == "text")
             {
                 this->handle_text_request(c, doc);
                 return;
@@ -3317,7 +3427,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_SELECT
-            if (doc["domain"] == "select")
+            if (doc[FC("domain")] == "select")
             {
                 this->handle_select_request(c, doc);
                 return;
@@ -3325,7 +3435,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_CLIMATE
-            if (doc["domain"] == "climate")
+            if (doc[FC("domain")] == "climate")
             {
                 this->handle_climate_request(c, doc);
                 return;
@@ -3333,7 +3443,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 #ifdef USE_LOCK
-            if (doc["domain"] == "lock")
+            if (doc[FC("domain")] == "lock")
             {
                 this->handle_lock_request(c, doc);
                 return;
@@ -3341,20 +3451,20 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
 
 
-            if (doc["domain"] == "auth")
+            if (doc[FC("domain")] == "auth")
             {
                 this->handle_auth_request(c, doc);
                 return;
             }
-            if (doc["domain"] == "alarm_panel")
+            if (doc[FC("domain")] == "alarm_panel")
             {
-                this->handle_alarm_panel_request(c, doc);
+                  this->handle_alarm_panel_request(c, doc);
                 return;
             }
 
 
 #ifdef USE_ALARM_CONTROL_PANEL
-            if (doc["domain"] == "alarm_control_panel")
+            if (doc[FC("domain")] == "alarm_control_panel")
             {
                 this->handle_alarm_control_panel_request(c, doc);
                 return;
@@ -3362,7 +3472,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 #endif
             // mg_http_reply(c,404,"","");
             ws_reply(c, "", false);
-            c->is_draining=1;
 
         }
 
@@ -3413,8 +3522,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 //      percentage = (this->ota_read_length_ * 100.0f) / request->contentLength();
 //      ESP_LOGD(TAG, "OTA in progress: %0.1f%%", percentage);
 //    } else {
-      snprintf(buf,100,"OTA in progress: %" PRIu32 " bytes read", this->ota_read_length_);
+
+      snprintf(buf,100,"OTA in progress: %" PRIu32 " bytes written of %d", this->ota_read_length_,upl.filesize);
+     #ifdef ESP8266
+      ESP_LOGD(TAG,"OTA in progress: %" PRIu32 " bytes written of %d", this->ota_read_length_,upl.filesize);
+     #else
       ESP_LOGD(TAG,buf);
+      #endif
       this->push(OTA,buf);
 //    }
 
@@ -3440,9 +3554,11 @@ void WebServer::ota_init_(const char *filename) {
 
 bool WebServer::handleUpload(size_t bodylen, const PlatformString &filename, size_t index, uint8_t *data, size_t len, bool final) {
                                       
-    ota::OTAResponseTypes error_code = ota::OTA_RESPONSE_OK;
+ota::OTAResponseTypes error_code = ota::OTA_RESPONSE_OK;
 char buf[100];
+//ESP_LOGD("test", "before index");
   if (index == 0 && !this->ota_backend_) {
+ //   ESP_LOGD("test", "after index");
     // Initialize OTA on first call
     this->ota_init_(filename.c_str());
 
@@ -3451,9 +3567,9 @@ char buf[100];
 
     // Platform-specific pre-initialization
 #ifdef USE_ARDUINO
-// #ifdef USE_ESP8266
-//     Update.runAsync(false);
-// #endif
+#ifdef USE_ESP8266
+  //  Update.runAsync(false);
+#endif
 #if defined(USE_ESP32) || defined(USE_LIBRETINY)
     if (Update.isRunning()) {
       Update.abort();
@@ -3464,7 +3580,12 @@ char buf[100];
     this->ota_backend_ = ota::make_ota_backend();
     if (!this->ota_backend_) {
       snprintf(buf,100, "Failed to create OTA backend");
+     #ifdef ESP8266
+      ESP_LOGE(TAG,"Failed to create OTA backend");
+     #else
       ESP_LOGE(TAG,buf);
+     #endif
+
       this->push(OTA, buf);
       return false;
     }
@@ -3472,7 +3593,11 @@ char buf[100];
     error_code = this->ota_backend_->begin(bodylen);
     if (error_code != ota::OTA_RESPONSE_OK) {
       snprintf(buf, 100,"OTA begin failed: %d", error_code);
+     #ifdef ESP8266
+      ESP_LOGE(TAG,"OTA begin failed: %d", error_code);
+     #else
       ESP_LOGE(TAG,buf);
+      #endif
       this->push(OTA, buf);
       this->ota_backend_.reset();
       return false;
@@ -3485,10 +3610,15 @@ char buf[100];
 
   // Process data
   if (len > 0) {
+   // ESP_LOGD("test", "in process data");
     error_code = this->ota_backend_->write(data, len);
     if (error_code != ota::OTA_RESPONSE_OK) {
       snprintf(buf,100, "OTA write failed: %d", error_code);
+     #ifdef ESP8266
+      ESP_LOGE(TAG,"OTA write failed: %d", error_code);
+     #else
       ESP_LOGE(TAG,buf);
+      #endif
       this->push(OTA, buf);
       this->ota_backend_->abort();
       this->ota_backend_.reset();
@@ -3497,6 +3627,7 @@ char buf[100];
     this->ota_read_length_ += len;
     this->report_ota_progress_();
   }
+  
 
   // Finalize
   if (final) {
@@ -3514,7 +3645,11 @@ char buf[100];
       this->schedule_ota_reboot_();
     } else {
       snprintf(buf, 100,"OTA end failed: %d", error_code);
+     #ifdef ESP8266
+      ESP_LOGE(TAG,"OTA end failed: %d", error_code);
+     #else
       ESP_LOGE(TAG,buf);
+      #endif
       this->push(OTA, buf);
       this->ota_backend_.reset();
       return false;

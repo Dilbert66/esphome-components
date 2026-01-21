@@ -19,7 +19,6 @@
 
 #include "mongoose.h"
 
-
 #ifdef MG_ENABLE_LINES
 #line 1 "src/base64.c"
 #endif
@@ -2492,6 +2491,7 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_READ || ev == MG_EV_CLOSE ||
       (ev == MG_EV_POLL && c->is_accepted && !c->is_draining &&
        c->recv.len > 0)) {  // see #2796
+          mg_call(c, MG_EV_HTTP_HDRS, NULL);  // Got all HTTP headers
     struct mg_http_message hm;
     size_t ofs = 0;  // Parsing offset
     while (c->is_resp == 0 && ofs < c->recv.len) {
@@ -2556,7 +2556,6 @@ static void http_cb(struct mg_connection *c, int ev, void *ev_data) {
         }
 
       }
-
       if (is_chunked) {
         // For chunked data, strip off prefixes and suffixes from chunks
         // and relocate them right after the headers, then report a message
@@ -2633,7 +2632,7 @@ int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
     mg_free(io->buf);
     io->buf = NULL;
     io->len = io->size = 0;
-    } else if (new_size != io->size) {
+  } else if (new_size != io->size) {
     // NOTE(lsm): do not use realloc here. Use mg_calloc/mg_free only
     void *p = mg_calloc(1, new_size);
     if (p != NULL) {
@@ -2647,13 +2646,12 @@ int mg_iobuf_resize(struct mg_iobuf *io, size_t new_size) {
     } else {
       ok = 0;
       //dilbert66
-      #if defined(ESP32)
+      #if defined(ESP32) 
       MG_ERROR(("OOM resize error: %lld->%lld, maxfree:%5d",(uint64_t) io->size,(uint64_t) new_size, heap_caps_get_largest_free_block(8)));    
-      io->len=0;            
-      io->c->is_closing=1; 
       #else
-       MG_ERROR(("%lld->%lld", (uint64_t) io->size, (uint64_t) new_size));
+      MG_ERROR(("OOM resize error: %lld->%lld", (uint64_t) io->size, (uint64_t) new_size));
       #endif
+      io->c->is_closing=1; 
     }
   }
   return ok;
@@ -9497,16 +9495,9 @@ struct mg_connection *mg_sntp_connect(struct mg_mgr *mgr, const char *url,
 #endif
 
 union usa {
-  //dilbert66
-  #ifdef ESP8266x
-  struct mg_sockaddr sa;
-  struct mg_sockaddr_in sin;
-  #else
   struct sockaddr sa;
   struct sockaddr_in sin;
-  #endif
- // struct sockaddr sa;
-  //struct sockaddr_in sin;
+
 #if MG_ENABLE_IPV6
   struct sockaddr_in6 sin6;
 #endif
@@ -10199,11 +10190,11 @@ void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
       long n = 0;
       mg_call(c, MG_EV_READ, &n);
     }
-    MG_VERBOSE(("%lu %c%c %c%c%c%c%c %lu %lu", c->id,
-                c->is_readable ? 'r' : '-', c->is_writable ? 'w' : '-',
-                c->is_tls ? 'T' : 't', c->is_connecting ? 'C' : 'c',
-                c->is_tls_hs ? 'H' : 'h', c->is_resolving ? 'R' : 'r',
-                c->is_closing ? 'C' : 'c', mg_tls_pending(c), c->rtls.len));
+    // MG_VERBOSE(("%lu %c%c %c%c%c%c%c %lu %lu", c->id,
+    //             c->is_readable ? 'r' : '-', c->is_writable ? 'w' : '-',
+    //             c->is_tls ? 'T' : 't', c->is_connecting ? 'C' : 'c',
+    //             c->is_tls_hs ? 'H' : 'h', c->is_resolving ? 'R' : 'r',
+    //             c->is_closing ? 'C' : 'c', mg_tls_pending(c), c->rtls.len));
     if (c->is_resolving || c->is_closing) {
       // Do nothing
     } else if (c->is_listening && c->is_udp == 0) {
@@ -10215,7 +10206,6 @@ void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
       if (c->is_writable) write_conn(c);
       if (c->is_tls && !c->is_tls_hs && c->send.len == 0) mg_tls_flush(c);
     }
-
     if (c->is_draining && c->send.len == 0) c->is_closing = 1;
     if (c->is_closing) close_conn(c);
   }
