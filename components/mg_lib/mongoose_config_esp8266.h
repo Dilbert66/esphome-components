@@ -172,9 +172,11 @@ long mg_io_send(struct mg_connection *c, const void *buf, size_t len) {
 
 
 void write_conn(struct mg_connection *c) {
-  char *buf = (char *) c->send.buf;
   size_t len = c->send.len;
+  if (!len) return;
+  char *buf = (char *) c->send.buf;
   long n = c->is_tls ? mg_tls_send(c, buf, len) : mg_io_send(c, buf, len);
+ // printf("c=%d, len=%d,  n = %d, size=%d\n",c->id,len,n,c->send.size);
   MG_DEBUG(("%lu %ld snd %ld/%ld rcv %ld/%ld n=%ld", c->id, c->fd,(long) c->send.len, (long) c->send.size, (long) c->recv.len,(long) c->recv.size, n));
   iolog(c,buf,n,false);
 }
@@ -225,10 +227,12 @@ size_t _roundup(size_t size, size_t align) {
   return align == 0 ? size : (size + align - 1) / align * align;
 }
 
+
+
 //PROGMEM safe for esp8266
 bool mg_send(struct mg_connection *c, const void *buf, size_t len) {
 
-   if (c->is_udp){
+   if (c->is_udp ){
     long n = mg_io_send(c, buf, len);
     MG_DEBUG(("%lu %ld %lu:%lu:%lu %ld err %d", c->id, c->fd, c->send.len,
               c->recv.len, c->rtls.len, n, errno));

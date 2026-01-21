@@ -147,7 +147,8 @@ long mg_io_send(struct mg_connection *c, const void *buf, size_t len) {
 
     esphome::socket::Socket * client_= reinterpret_cast<esphome::socket::Socket *> (c->fd);
     if (client_==nullptr) return 0;
-     n=client_->write((const uint8_t*)buf,len);
+    if (len > 0)
+      n=client_->write((const uint8_t*)buf,len);
     if (n < 0) {
       if (errno == ECONNRESET) {
         c->is_closing=1;
@@ -183,8 +184,10 @@ static void iolog(struct mg_connection *c, char *buf, long n, bool r) {
 }
 
 void write_conn(struct mg_connection *c) {
-  char *buf = (char *) c->send.buf;
+
   size_t len = c->send.len;
+  if (!len) return;
+  char *buf = (char *) c->send.buf;
   long n = c->is_tls ? mg_tls_send(c, buf, len) : mg_io_send(c, buf, len);
   MG_DEBUG(("%lu %ld snd %ld/%ld rcv %ld/%ld n=%ld", c->id, c->fd,(long) c->send.len, (long) c->send.size, (long) c->recv.len,(long) c->recv.size, n));
   iolog(c, buf, n, false);
@@ -271,7 +274,8 @@ void read_conn(struct mg_connection *c) {
       } else {
 
          esphome::socket::Socket * client_=reinterpret_cast<esphome::socket::Socket *> (c->fd);
-         if (!client_) return;
+         if (!client_ ) return;
+        if (len > 0)
          n=client_->read((char *)buf,len);
       }
     }
