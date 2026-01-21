@@ -228,7 +228,7 @@ struct upload_state {
 #endif
 
   #ifdef USE_WEBKEYPAD_ENCRYPTION
-  bool encrypt(std::string & data);
+  void encrypt(std::string & data);
   bool decrypt(JsonObject doc,uint8_t* e,std::string & out);
   #endif
 

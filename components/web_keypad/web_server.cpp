@@ -493,7 +493,7 @@ void WebServer::send_js_include(mg_connection *c){
         c->is_resp = 0;
         c->is_sending = 0; 
         *(uint32_t *) c->data = (uint32_t)0;
-        //c->is_draining = 1;
+        c->is_draining = 1;
     }
                 
 }
@@ -2067,7 +2067,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (cl->id == ul)
                     {
                         cl->is_authenticated=1;
-                        entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
+                        if (get_credentials()->crypt)
+                            entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
                         ESP_LOGD(TAG, "Set auth conn %d as authenticated", cl->id);
                         break;
                     }
@@ -2654,7 +2655,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     else
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), type, data);
 
-                    if (c->send.len > 15000) {
+                    if (c->send.len > 10000) {
                         ESP_LOGD(TAG,"Non responsive event connection. Closing %d",c->id);
                         c->is_closing = 1; // dead connection. kill it.
                     }
@@ -2801,30 +2802,29 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         }
 
 #ifdef USE_WEBKEYPAD_ENCRYPTION
-        bool WebServer::encrypt(std::string &data)
+        void WebServer::encrypt(std::string &data)
         {
             const char * message=data.c_str();
-            int i = strlen(message);
+            int ml = strlen(message);
 
-            if (!i)
-                return "";
+            if (!ml)
+                return ;
    
-            int buf = round(i / AES_BLOCKSIZE) * AES_BLOCKSIZE;
-            int length = (buf <= i) ? buf + AES_BLOCKSIZE : buf;
-  
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
             std::string eiv = base64_encode(iv, AES_IV_SIZE ); 
             AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
-
+            int length = aes.calcSizeAndPad(ml);
             std::string em="";
-            if (i <= 512) {
-                uint8_t encrypted[length+AES_BLOCKSIZE]; //use stack for small messages
-                aes.process((uint8_t *)message, encrypted, i);
+            if (length < 1024) {
+                uint8_t encrypted[length+1]; //use stack for small messages
+                aes.padPlaintext((uint8_t *)message, encrypted);
+                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
                 em = base64_encode(encrypted, length);
             } else {
-                uint8_t * encrypted = new uint8_t[length+AES_BLOCKSIZE]; //use heap
-                aes.process((uint8_t *)message, encrypted, i);
+                uint8_t * encrypted = new uint8_t[length+1]; //use heap
+                aes.padPlaintext((uint8_t *)message, encrypted);
+                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
                 em = base64_encode(encrypted, length);
                 delete[] encrypted;
             }
@@ -2838,13 +2838,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             uint8_t authCode[SHA256HMAC_SIZE+1];
             hmac.doFinal((char*)authCode);
 
-            // std::string ehm=base64_encode(authCode,SHA256HMAC_SIZE);
-
             data = "{\"iv\":\"" + eiv + "\",\"data\":\"";
             data.append(em);
             data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
-
-            return 1;
         }
 
         bool WebServer::decrypt(JsonObject doc, uint8_t *err,std::string & out)
@@ -2897,9 +2893,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             uint8_t *key = get_credentials()->token;
             uint8_t *hmackey = get_credentials()->hmackey;
             uint8_t data_decoded[strlen(data)+1];
-            //uint8_t * data_decoded= new uint8_t[strlen(data)+1];
             uint8_t iv_decoded[strlen(iv)+1];
-           //iv_decoded = new uint8_t[strlen(iv)+1];
 
             SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
@@ -2920,8 +2914,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 ESP_LOGD(TAG, "ehm [%s] does not match hash [%s]", ehm.c_str(), hash.c_str());
                 *err = 1;
-                //delete[] data_decoded;
-                //delete[] iv_decoded;
                 return 0;
             }
             if (seq > 0 && lastseq != NULL)
@@ -2934,8 +2926,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             out = std::string((char *)data_decoded);
              //ESP_LOGD(TAG,"decryption: %s,%s,len=%d\r\nhash=%s, data=%s",data,iv,strlen(iv),ehm.c_str(),out.c_str());
             // return std::string((char*)data_decoded);
-           // delete[] data_decoded;
-            //delete[] iv_decoded;
             return 1;
         }
 #endif
@@ -2949,7 +2939,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             // HTTP headers but not necessarily full HTTP body
             if (!c->is_ota && ev == MG_EV_HTTP_HDRS)
             {
-        
                 struct mg_http_message *hm = (struct mg_http_message *)ev_data;
                 if (hm == nullptr) return;
                 if (mg_match(hm->uri, mg_str("/update*"), NULL))
@@ -3110,7 +3099,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     }
                 }
 
-                
+
 #ifdef USE_WEBKEYPAD_WEBSOCKET
                 if (mg_match(hm->uri, mg_str("/ws"), NULL) && !c->is_event)
                 {
@@ -3152,7 +3141,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
                     }
-                      entities_iterator_.begin(this->include_internal_);
+                      if (!crypt)
+                            entities_iterator_.begin(this->include_internal_);
                       c->pfn = NULL; 
                       return;
                    
@@ -3201,7 +3191,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         entities_iterator_.begin(this->include_internal_);
                     c->pfn = NULL; 
                     return;
-
                 }
                  else
                 {
@@ -3216,6 +3205,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 
             } else if (ev == MG_EV_OPEN) {
+
                 ESP_LOGD(TAG,"New connection open with client id %d\n",c->id);
             } else if (ev == MG_EV_READ){
                 // ESP_LOGD(TAG,"reading from client %d,%d\n",c->fd,c->id);

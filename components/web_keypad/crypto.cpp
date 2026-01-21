@@ -709,11 +709,16 @@ void AES::process(const uint8_t *in, uint8_t *out, int length)
     if (_cipherMode == CIPHER_ENCRYPT)
     {
         calcSizeAndPad(length);
-       // uint8_t in_pad[getSize()];
+         if (length > 512) {
         uint8_t * in_pad = new uint8_t[getSize()]; //create array on heap
         padPlaintext(in, in_pad);
         encryptCBC(in_pad, out, getSize());
         delete[] in_pad;
+        } else {
+        uint8_t in_pad[getSize()];
+        padPlaintext(in, in_pad);
+        encryptCBC(in_pad, out, getSize());
+        }
     } 
     else 
     {
