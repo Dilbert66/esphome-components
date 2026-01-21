@@ -32,6 +32,7 @@ import pathlib
 import logging
 from esphome.helpers import copy_file_if_changed
 from esphome.core import CORE, coroutine_with_priority
+from esphome.components.logger import request_log_listener
 
 _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ["network"]
@@ -266,7 +267,9 @@ async def to_code(config):
     cg.add(var.set_allow_ota(config[CONF_OTA]))
     cg.add(var.set_expose_log(config[CONF_LOG]))
     cg.add(var.set_show_keypad(config[CONF_KEYPAD]))   
-
+    
+    if config[CONF_LOG]:
+        request_log_listener()  # Request a log listener slot for web server log streaming
     
     if CONF_PARTITIONS in config:
         cg.add(var.set_partitions(config[CONF_PARTITIONS]))   

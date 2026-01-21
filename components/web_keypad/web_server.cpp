@@ -2067,7 +2067,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (cl->id == ul)
                     {
                         cl->is_authenticated=1;
-                        entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
+                        if (get_credentials()->crypt)
+                            entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
                         ESP_LOGD(TAG, "Set auth conn %d as authenticated", cl->id);
                         break;
                     }
@@ -2654,7 +2655,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     else
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), type, data);
 
-                    if (c->send.len > 15000) {
+                    if (c->send.len > 10000) {
                         ESP_LOGD(TAG,"Non responsive event connection. Closing %d",c->id);
                         c->is_closing = 1; // dead connection. kill it.
                     }
@@ -2671,7 +2672,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 else
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", type, "data", data);
 
-                if (c->send.len > 5000)
+                if (c->send.len > 15000)
                     c->is_closing = 1; // dead connection. kill it.
 #endif
             }
@@ -3140,7 +3141,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     #endif
                         mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", "sorting_group", "data", enc.c_str());
                     }
-                      entities_iterator_.begin(this->include_internal_);
+                      if (!crypt)
+                            entities_iterator_.begin(this->include_internal_);
                       c->pfn = NULL; 
                       return;
                    
