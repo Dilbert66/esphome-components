@@ -444,7 +444,7 @@ void WebServer::handle_index_request(struct mg_connection *c)
     mg_printf(c, FC("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
     mg_send(c, buf, ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
     c->is_resp = 0;
-    c->is_draining=1;
+    //c->is_draining=1;
 
 }
 
@@ -460,7 +460,7 @@ void WebServer::handle_pna_cors_request(struct mg_connection *c)
     std::string mac = get_mac_address_pretty();
     mg_printf(c, FC("HTTP/1.1 200 OK\r\n%s:%s\r\n%s:%s\r\n%s:%s\r\n\r\n"), HEADER_CORS_ALLOW_PNA, "true", HEADER_PNA_NAME, App.get_name().c_str(), HEADER_PNA_ID, mac.c_str());
     c->is_resp = 0;
-    c->is_draining=1;
+   // c->is_draining=1;
 }
 #endif
 
@@ -471,7 +471,7 @@ void WebServer::handle_css_request(struct mg_connection *c)
     mg_printf(c, FC("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE);
     mg_send(c, buf, ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE);
     c->is_resp = 0;
-    c->is_draining=1;
+    //c->is_draining=1;
 }
 #endif
 
@@ -493,7 +493,7 @@ void WebServer::send_js_include(mg_connection *c){
         c->is_resp = 0;
         c->is_sending = 0; 
         *(uint32_t *) c->data = (uint32_t)0;
-        c->is_draining = 1;
+        //c->is_draining = 1;
     }
                 
 }
@@ -2067,18 +2067,17 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (cl->id == ul)
                     {
                         cl->is_authenticated=1;
-                        if (get_credentials()->crypt)
-                            entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
+                        entities_iterator_.begin(this->include_internal_); //ok authenticated so we can start sending data
                         ESP_LOGD(TAG, "Set auth conn %d as authenticated", cl->id);
                         break;
                     }
                 }
                 ws_reply(c, "", true);
-                c->is_draining = 1;
+               // c->is_draining = 1;
                 return;
             }
             ws_reply(c, "", false);
-            c->is_draining=1;
+            //c->is_draining=1;
 
         }
 
@@ -2992,7 +2991,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                    // memset(us, 0, sizeof(*us)); // Cleanup upload state
                    upl.expected=0;
                    c->is_ota=false;
-                   c->is_draining = 1;         // Close connection when response gets sent
+                   //c->is_draining = 1;         // Close connection when response gets sent
                 }
                 
                 handleUpload(upl.expected,(PlatformString)upl.filename, upl.received, c->recv.buf, c->recv.len, false);
@@ -3093,7 +3092,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (!mg_http_check_digest_auth(hm, FC("webkeypad"), get_credentials()))
                     {
                         mg_send_digest_auth_request(c, FC("webkeypad"));
-                        c->is_draining = 1;
+                       // c->is_draining = 1;
                         c->recv.len = 0;
                         return;
                     }
@@ -3172,8 +3171,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                        root["sorting_weight"] = group.second.weight;
                        enc=builder.serialize();
                      #ifdef USE_WEBKEYPAD_ENCRYPTION
-                        if (crypt)
-                            encrypt(enc);
+                        // if (crypt) //no need to encrypt it
+                        //     encrypt(enc);
                      #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
@@ -3182,8 +3181,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (enc.length() > 0)
                     {
                         #ifdef USE_WEBKEYPAD_ENCRYPTION
-                         if (crypt)
-                            encrypt(enc);
+                        //  if (crypt)  //again no need to encrypt this.  Saves some heap hashing
+                        //     encrypt(enc);
                         #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
@@ -3287,7 +3286,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             }
 
             handleRequest(c, obj);
-            c->is_draining=1;
+           // c->is_draining=1;
 
 
         }

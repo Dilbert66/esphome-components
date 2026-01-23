@@ -845,8 +845,6 @@ dscKeybusInterface::dscClockInterrupt()
   #endif
 }
 
-
-   //  void IRAM_ATTR dscKeybusInterface::dscDataInterrupt(void *arg) { //used by esp_timer
   void IRAM_ATTR dscKeybusInterface::dscDataInterrupt() {
    
   #if defined(ESP32)
