@@ -50,8 +50,8 @@ namespace esphome
     void vistaECPHome::stop()
     {
 #if defined(ESP32) 
-      if (xHandle != NULL)
-        vTaskSuspend(xHandle);
+       if (xHandle != nullptr)
+         vTaskSuspend(xHandle);
 #endif
       vista.stop();
     }
@@ -748,13 +748,31 @@ void vistaECPHome::setup()
 
     void vistaECPHome::alarm_keypress_partition(std::string keystring, int32_t partition)
     {
+
+      if (!partition)
+        partition = _defaultPartition;
+        
+
+      if (partition > _maxPartitions || partition < 1)
+        return;
+
+
+      if (_debug > 0)
+#if defined(ARDUINO_MQTT)
+        Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(), partition);
+#else
+    ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(), partition);
+#endif
+
       if (keystring == "R")
       {
         forceRefreshGlobal = true;
         _forceRefresh = true;
         return;
       }
-      if (keystring == "A")
+
+
+      if (keystring == "A" || keystring == "W")
       {
         set_alarm_state("A", "", partition);
         return;
@@ -784,19 +802,7 @@ void vistaECPHome::setup()
         set_alarm_state("Y", "", partition);
         return;
       }
-
-      if (!partition)
-        partition = _defaultPartition;
-      if (_debug > 0)
-#if defined(ARDUINO_MQTT)
-        Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(), partition);
-#else
-    ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(), partition);
-#endif
-      uint8_t addr = 0;
-      if (partition > _maxPartitions || partition < 1)
-        return;
-      addr = _partitionKeypads[partition];
+      uint8_t addr = _partitionKeypads[partition];
       if (addr > 0 and addr < 24)
         vista.write(keystring.c_str(), addr);
     }
@@ -2172,7 +2178,7 @@ void vistaECPHome::update()
               // system status message
               _forceRefresh = partitionStates[partition - 1].refreshStatus || forceRefreshGlobal;
 
-              if (_currentSystemState != partitionStates[partition - 1].previousSystemState || _forceRefresh)
+              if (_currentSystemState != partitionStates[partition - 1].previousSystemState || _forceRefresh || updateSystemState)
                 switch (_currentSystemState)
                 {
                 case striggered:
@@ -2212,13 +2218,13 @@ void vistaECPHome::update()
               _forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
 
               // ESP_LOGD("test","refreshing partition statuse _partitions: %d,force refresh=%d",partition,_forceRefresh);
-              if (currentLightState.fire != previousLightState.fire || _forceRefresh)
+              if (currentLightState.fire != previousLightState.fire || _forceRefresh || updateSystemState)
                 publishStatus(SFIRE, currentLightState.fire, partition);
-              if (currentLightState.alarm != previousLightState.alarm || _forceRefresh)
+              if (currentLightState.alarm != previousLightState.alarm || _forceRefresh || updateSystemState)
                 publishStatus(SALARM, currentLightState.alarm, partition);
-              if ((currentLightState.trouble != previousLightState.trouble || _forceRefresh))
+              if ((currentLightState.trouble != previousLightState.trouble || _forceRefresh || updateSystemState))
                 publishStatus(STROUBLE, currentLightState.trouble, partition);
-              if (currentLightState.chime != previousLightState.chime || _forceRefresh)
+              if (currentLightState.chime != previousLightState.chime || _forceRefresh || updateSystemState)
                 publishStatus(SCHIME, currentLightState.chime, partition);
               // if (currentLightState.check != previousLightState.check || _forceRefresh)
               //   publishStatus(scheck, currentLightState.check, partition);
@@ -2237,9 +2243,10 @@ void vistaECPHome::update()
                   publishStatus(SARMED, currentLightState.armed, partition);
               }
 
-              if (currentLightState.bypass != previousLightState.bypass || _forceRefresh)
+              if (currentLightState.bypass != previousLightState.bypass || _forceRefresh || updateSystemState)
                 publishStatus(SBYPASS, currentLightState.bypass, partition);
-              if (currentLightState.ready != previousLightState.ready || _forceRefresh)
+                
+              if (currentLightState.ready != previousLightState.ready || _forceRefresh || updateSystemState)
                 publishStatus(SREADY, currentLightState.ready, partition);
 
               //  if (currentLightState.canceled != previousLightState.canceled)

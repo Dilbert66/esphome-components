@@ -1707,6 +1707,10 @@ struct mg_connection {
   unsigned long id;               // Auto-incrementing unique connection ID
   struct mg_iobuf recv;           // Incoming data
   struct mg_iobuf send;           // Outgoing data
+  // void * tx_buf; //dilbert66
+  // uint8_t tx_buf_in; //dilbert66
+  // uint8_t tx_buf_out; //dilbert66
+  // uint8_t tx_buf_count; //dilbert66
   struct mg_iobuf prof;           // Profile data enabled by MG_ENABLE_PROFILE
   struct mg_iobuf rtls;           // TLS only. Incoming encrypted data
   mg_event_handler_t fn;          // User-specified event handler function

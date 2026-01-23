@@ -646,7 +646,7 @@ class vistaECPHome : public time::RealTimeClock
  
       struct cmdQueueItem * vistaCmd;
 #ifdef ESP32
-      TaskHandle_t xHandle;
+      TaskHandle_t xHandle{NULL};
       static void cmdQueueTask(void *args);
      // static void setupTask(void *args);
       
