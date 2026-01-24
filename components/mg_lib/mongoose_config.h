@@ -19,7 +19,7 @@
 #endif
 
 #define MG_IO_SIZE  512
-#define MG_ENABLE_CUSTOM_MILLIS 1
+#define MG_ENABLE_CUSTOM_MILLIS 0
 #define MG_PATH_MAX 64
 #define MG_ENABLE_SOCKET 0
 #define MG_ENABLE_DIRLIST 0

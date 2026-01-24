@@ -76,7 +76,7 @@ static void handleNewClient(void* arg, AsyncClient* client) {
     c->is_tls = lsn->is_tls;
     c->fd=S2PTR(client);
     c->is_writable = client->canSend();
-    //c->rem.ip=client->remoteIP();
+    //c->rem.addr.ip=client->remoteIP();
     LIST_ADD_HEAD(struct mg_connection, &lmgr->conns, c);
 	  client->onData(&handleData, c);
 	  client->onError(&handleError, c);

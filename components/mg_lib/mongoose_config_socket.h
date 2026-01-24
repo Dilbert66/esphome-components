@@ -136,7 +136,7 @@ long mg_io_send(struct mg_connection *c, const void *buf, size_t len) {
     // if (n > 0) setlocaddr(FD(c), &c->loc);
      
    //  memcpy(&usa->sin.sin_addr, a->ip, sizeof(uint32_t));
-    if (udp_client_->beginPacketMulticast(c->loc.ip, c->loc.port, iface, 128) != 0) {
+    if (udp_client_->beginPacketMulticast(c->loc.addr.ip, c->loc.port, iface, 128) != 0) {
       // udp_client_->write(buf, len);
       // auto result = udp_client_->endPacket();
       // if (result == 0) 
@@ -340,7 +340,7 @@ void listen_conn(struct mg_connection *lsn) {
       int r=client_->getpeername((struct sockaddr *) &peeraddr, &peeraddrlen);
       if (r==0) {
         char *peeraddrpresn = inet_ntoa(peeraddr.sin_addr);
-        for (int x=0;x<16;x++) c->rem.ip[x]=peeraddrpresn[x];
+        for (int x=0;x<16;x++) c->rem.addr.ip[x]=peeraddrpresn[x];
         c->rem.port=ntohs(peeraddr.sin_port);
       }
       LIST_ADD_HEAD(struct mg_connection, &lmgr->conns, c);

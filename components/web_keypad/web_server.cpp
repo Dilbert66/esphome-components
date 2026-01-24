@@ -444,7 +444,6 @@ void WebServer::handle_index_request(struct mg_connection *c)
     mg_printf(c, FC("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
     mg_send(c, buf, ESPHOME_WEBKEYPAD_INDEX_HTML_SIZE);
     c->is_resp = 0;
-    //c->is_draining=1;
 
 }
 
@@ -460,7 +459,6 @@ void WebServer::handle_pna_cors_request(struct mg_connection *c)
     std::string mac = get_mac_address_pretty();
     mg_printf(c, FC("HTTP/1.1 200 OK\r\n%s:%s\r\n%s:%s\r\n%s:%s\r\n\r\n"), HEADER_CORS_ALLOW_PNA, "true", HEADER_PNA_NAME, App.get_name().c_str(), HEADER_PNA_ID, mac.c_str());
     c->is_resp = 0;
-   // c->is_draining=1;
 }
 #endif
 
@@ -471,8 +469,6 @@ void WebServer::handle_css_request(struct mg_connection *c)
     mg_printf(c, FC("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\nContent-Encoding: gzip\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %d\r\n\r\n"), ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE);
     mg_send(c, buf, ESPHOME_WEBKEYPAD_CSS_INCLUDE_SIZE);
     c->is_resp = 0;
-    //c->is_draining=1;
-}
 #endif
 
 
@@ -493,7 +489,6 @@ void WebServer::send_js_include(mg_connection *c){
         c->is_resp = 0;
         c->is_sending = 0; 
         *(uint32_t *) c->data = (uint32_t)0;
-        //c->is_draining = 1;
     }
                 
 }
@@ -2073,11 +2068,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     }
                 }
                 ws_reply(c, "", true);
-               // c->is_draining = 1;
                 return;
             }
             ws_reply(c, "", false);
-            //c->is_draining=1;
 
         }
 
@@ -2948,8 +2941,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         if (!mg_http_check_digest_auth(hm, "webkeypad", get_credentials()))
                         {
                             mg_send_digest_auth_request(c, "webkeypad");
-                            c->is_draining = 1;
                             c->recv.len = 0;
+                            c->is_resp=0;
                             return;
                         }
                     }
@@ -2991,7 +2984,6 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                    // memset(us, 0, sizeof(*us)); // Cleanup upload state
                    upl.expected=0;
                    c->is_ota=false;
-                   //c->is_draining = 1;         // Close connection when response gets sent
                 }
                 
                 handleUpload(upl.expected,(PlatformString)upl.filename, upl.received, c->recv.buf, c->recv.len, false);
@@ -3011,11 +3003,20 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     //printf("Sending js data to connection %d\n",c->id);
                     send_js_include(c); // process pending file send
                 }
-                if (c->recv.len == 0 && !c->is_ota) mg_iobuf_resize(&c->recv,0); //keep receive buffer low as we don't get much data in and saves ram
-                if (c->send.len == 0 && c->send.size  > 1024)
+                if (c->recv.len == 0 && c->recv.size > MG_IO_SIZE && !c->is_ota && c->is_accepted) {
+                   // printf("Resized recv buf for id:%d size: %d\n",(int)c->id,c->recv.size);
+                   if (c->is_event || c->is_websocket)
+                    mg_iobuf_resize(&c->recv,0);
+                   else
+                    mg_iobuf_resize(&c->recv,MG_IO_SIZE); //keep receive buffer low as we don't get much data in and saves ram
+                }
+                if (c->send.len == 0 && c->send.size  > MG_IO_SIZE && c->is_accepted)
                 {
                    //printf("Resized send buf for id:%d size: %d\n",(int)c->id,c->send.size);
-                    mg_iobuf_resize(&c->send,1024);
+                   if (c->is_event || c->is_websocket)
+                    mg_iobuf_resize(&c->send,MG_IO_SIZE);
+                   else
+                    mg_iobuf_resize(&c->send,0);
                 }
              }  
             else if (ev == MG_EV_CLOSE)
@@ -3092,8 +3093,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (!mg_http_check_digest_auth(hm, FC("webkeypad"), get_credentials()))
                     {
                         mg_send_digest_auth_request(c, FC("webkeypad"));
-                       // c->is_draining = 1;
                         c->recv.len = 0;
+                        c->is_resp=0;
                         return;
                     }
                 }
@@ -3286,7 +3287,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             }
 
             handleRequest(c, obj);
-           // c->is_draining=1;
+            c->is_draining=1;
 
 
         }
