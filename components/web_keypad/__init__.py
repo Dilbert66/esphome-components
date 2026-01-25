@@ -33,6 +33,7 @@ import logging
 from esphome.helpers import copy_file_if_changed
 from esphome.core import CORE, coroutine_with_priority
 from esphome.components.logger import request_log_listener
+from esphome.types import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ["network"]
@@ -112,6 +113,17 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
     }
 )
 
+def _consume_web_server_sockets(config: ConfigType) -> ConfigType:
+    """Register socket needs for web_keypad component."""
+    from esphome.components import socket
+
+    # Web server needs 1 listening socket + typically 2 concurrent client connections
+    # (browser makes 2 connections for page + event stream)
+    sockets_needed = 3
+    socket.consume_sockets(sockets_needed, "web_keypad")(config)
+    return config
+
+
 
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
@@ -167,6 +179,7 @@ CONFIG_SCHEMA = cv.All(
     #cv.only_on([PLATFORM_ESP32]),
     default_url,
     validate_sorting_groups,
+    _consume_web_server_sockets,
 
 )
 
