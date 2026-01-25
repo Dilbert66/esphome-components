@@ -658,7 +658,7 @@ int AES::calcSizeAndPad(int in_size)
 {
     in_size++; // +1 for null terminater on input string
     int buf = round(in_size / AES_BLOCKSIZE) * AES_BLOCKSIZE;
-    _size = (buf <= in_size) ? buf + AES_BLOCKSIZE : buf;
+    _size = (buf < in_size) ? buf + AES_BLOCKSIZE : buf;
     _pad_size = _size - in_size;
     return _size;
 }

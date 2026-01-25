@@ -77,7 +77,7 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
 }
 
 
-        static const char *const TAG = "web_server";
+        static const char *const TAG = "web_keypad";
    
         void WebServer::parseUrlParams(char *queryString, int resultsMaxCt, bool decodeUrl, JsonObject doc)
         {
@@ -2797,8 +2797,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         void WebServer::encrypt(std::string &data)
         {
             const char * message=data.c_str();
-            int ml = strlen(message);
-
+            int ml = data.length();
             if (!ml)
                 return ;
    
@@ -2806,17 +2805,25 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             random_bytes(iv, AES_IV_SIZE );
             std::string eiv = base64_encode(iv, AES_IV_SIZE ); 
             AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
-            int length = aes.calcSizeAndPad(ml);
+           int length = aes.calcSizeAndPad(ml);
             std::string em="";
+
+
             if (length < 1024) {
-                uint8_t encrypted[length+1]; //use stack for small messages
+                uint8_t encrypted[length]; //use stack for small messages
                 aes.padPlaintext((uint8_t *)message, encrypted);
+                                // printf("message: %s\n",message);
+                                // mg_hexdump(encrypted,length);
                 aes.processNoPad((uint8_t *)encrypted, encrypted, length);
                 em = base64_encode(encrypted, length);
+
             } else {
-                uint8_t * encrypted = new uint8_t[length+1]; //use heap
+                uint8_t * encrypted = new uint8_t[length]; //use heap
                 aes.padPlaintext((uint8_t *)message, encrypted);
+                //                                 printf("message: %s\n",message);
+                // mg_hexdump(encrypted,length);
                 aes.processNoPad((uint8_t *)encrypted, encrypted, length);
+
                 em = base64_encode(encrypted, length);
                 delete[] encrypted;
             }
@@ -3164,6 +3171,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                         encrypt(enc);
                     #endif
                     mg_printf(c, FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), millis(), 30000, "ping", enc.c_str());
+    //                                printf(FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\n"), millis(), 30000, "ping", enc.c_str());
                     for (auto &group : sorting_groups_)
                     {
                       json::JsonBuilder builder;
@@ -3172,8 +3180,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                        root["sorting_weight"] = group.second.weight;
                        enc=builder.serialize();
                      #ifdef USE_WEBKEYPAD_ENCRYPTION
-                        // if (crypt) //no need to encrypt it
-                        //     encrypt(enc);
+                         if (crypt) 
+                             encrypt(enc);
                      #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
@@ -3182,8 +3190,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     if (enc.length() > 0)
                     {
                         #ifdef USE_WEBKEYPAD_ENCRYPTION
-                        //  if (crypt)  //again no need to encrypt this.  Saves some heap hashing
-                        //     encrypt(enc);
+                          if (crypt)  
+                             encrypt(enc);
                         #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "key_config", enc.c_str());
                     }
