@@ -20,13 +20,13 @@
 #ifndef dscKeybusInterface_h
 #define dscKeybusInterface_h
 
-// DSC Classic Series
-#if defined dscClassicSeries
-#include "dscClassic.h"
+// // DSC Classic Series
+// #if defined dscClassicSeries
+// #include "dscClassic.h" //not supported
 
 // DSC PowerSeries
-#else
+//#else
 #include "dscKeybus.h"
 
-#endif  // dscClassicSeries, dscKeypadInterface
+//#endif  // dscClassicSeries, dscKeypadInterface
 #endif  // dscKeybusInterface_h

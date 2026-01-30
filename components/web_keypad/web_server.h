@@ -202,27 +202,26 @@ struct upload_state {
   }
 
   void set_auth(const char * auth_username,const char * auth_password,bool use_encryption) { 
-    credentials_->username = auth_username;   
-    credentials_->password = auth_password;
+    credentials_.username = auth_username;   
+    credentials_.password = auth_password;
      #ifdef USE_WEBKEYPAD_ENCRYPTION
     this->crypt_ = use_encryption;  
-    credentials_->crypt=use_encryption;
+    credentials_.crypt=use_encryption;
 
-     std::string aeskeystring=std::string(credentials_->username) + SALT + std::string(credentials_->password);
+     std::string aeskeystring=std::string(credentials_.username) + SALT + std::string(credentials_.password);
     const char * keystr=aeskeystring.c_str();
     SHA256HMAC aeskey(keystr,strlen(keystr));
     aeskey.doUpdate("aeskey");
-    aeskey.doFinal((char*)credentials_->token);
+    aeskey.doFinal((char*)credentials_.token);
     
     SHA256HMAC hmac(keystr,strlen(keystr));
     hmac.doUpdate("hmackey");
-    hmac.doFinal((char*)credentials_->hmackey);
+    hmac.doFinal((char*)credentials_.hmackey);
     #endif
 
 
    }  
    
-  Credentials * get_credentials() { return credentials_;}
 #ifdef USE_WEBKEYPAD_OTA
   bool handleUpload(size_t bodylen,  const PlatformString &filename, size_t index,uint8_t *data, size_t len, bool final);
 #endif
@@ -527,7 +526,8 @@ bool match_object(EntityBase *entity, JsonObject doc);
     int lastseq;
   };
 
-  Credentials * credentials_ ;
+  Credentials  credentials_ ;
+
   bool is_ap_active_{false};
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
   std::map<uint64_t, SortingGroup> sorting_groups_;

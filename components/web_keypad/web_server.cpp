@@ -204,7 +204,7 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
                     else
                     {
                 #ifdef USE_WEBKEYPAD_ENCRYPTION
-                        if (get_credentials()->crypt)
+                        if (credentials_.crypt)
                         {
                             if (c->is_authenticated)
                             {
@@ -247,12 +247,12 @@ std::string WebServer::get_object_id(EntityBase * entity) {
 #ifdef USE_ESP32
             to_schedule_lock_ = xSemaphoreCreateMutex();
 #endif
-            credentials_ = new Credentials;
+           // credentials_ = new Credentials;
         }
 
 
         WebServer::~WebServer() {
-            delete credentials_;
+           // delete credentials_;
         }
 
 // #ifdef USE_WEBKEYPAD_CSS_INCLUDE
@@ -2624,7 +2624,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
 #ifdef USE_WEBKEYPAD_ENCRYPTION
             std::string newdata;
-            if (get_credentials()->crypt && strlen(data) > 0) {
+            if (credentials_.crypt && strlen(data) > 0) {
                 newdata=std::string(data);
                 encrypt(newdata);
                 data=newdata.c_str();
@@ -2635,7 +2635,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                // printf("id %d recv size=%d, send size=%d\n",(int)c->id,c->recv.size,c->send.size);
 #ifdef USE_WEBKEYPAD_ENCRYPTION
-                if (get_credentials()->crypt && !c->is_authenticated)
+                if (credentials_.crypt && !c->is_authenticated)
                     continue; // not authenticated with encrypted response
 #endif
 
@@ -2659,12 +2659,12 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
                 if (mt == PING)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%d\"}"), "type", type, "data", id);
-                else if ((mt == LOG || mt == OTA) && !get_credentials()->crypt)
+                else if ((mt == LOG || mt == OTA) && !credentials_.crypt)
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":\"%s\"}"), "type", type, "data", data);
                 else
                     mg_ws_printf(c, WEBSOCKET_OP_TEXT, FC("{\"%s\":\"%s\",\"%s\":%s}"), "type", type, "data", data);
 
-                if (c->send.len > 15000)
+                if (c->send.len > 10000)
                     c->is_closing = 1; // dead connection. kill it.
 #endif
             }
@@ -2747,14 +2747,13 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
          * Returns 1 if authenticated, 0 otherwise.
          */
         static int mg_http_check_digest_auth(struct mg_http_message *hm,
-                                             const char *auth_domain, Credentials *creds)
+                                             const char *auth_domain, Credentials creds)
         {
             mg_str *hdr;
             char expected_response[33];
             mg_str username, cnonce, response, uri, qop, nc, nonce;
             /* Parse "Authorization:" header, fail fast on parse error */
-            if (hm == NULL || creds == NULL ||
-                (hdr = mg_http_get_header(hm, "Authorization")) == 0 ||
+            if (hm == NULL || (hdr = mg_http_get_header(hm, "Authorization")) == 0 ||
 
                 (username = mg_http_get_header_var(*hdr, mg_str_n("username", 8))).len == 0 ||
                 (cnonce = mg_http_get_header_var(*hdr, mg_str_n("cnonce", 6))).len == 0 ||
@@ -2783,7 +2782,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             mg_mkmd5resp(
                 hm->method.buf, hm->method.len, hm->uri.buf,
                 hm->uri.len,
-                &username, creds->password, &realm, &nonce, &nc, &cnonce,
+                &username, creds.password, &realm, &nonce, &nc, &cnonce,
                 &qop, expected_response);
             //Serial.printf("response =%s, expected=%s, cusername=%s,u=%s\n",r.c_str(),expected_response,creds->username.c_str(),u.c_str());
             return mg_casecmp(r.c_str(), expected_response) == 0;
@@ -2804,34 +2803,26 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             uint8_t iv[AES_IV_SIZE +1];
             random_bytes(iv, AES_IV_SIZE );
             std::string eiv = base64_encode(iv, AES_IV_SIZE ); 
-            AES aes(get_credentials()->token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
+            AES aes(credentials_.token, iv, AES::AES_MODE_256, AES::CIPHER_ENCRYPT);
            int length = aes.calcSizeAndPad(ml);
-            std::string em="";
+           // std::string em="";
 
 
-            if (length < 1024) {
-                uint8_t encrypted[length]; //use stack for small messages
-                aes.padPlaintext((uint8_t *)message, encrypted);
-                                // printf("message: %s\n",message);
-                                // mg_hexdump(encrypted,length);
-                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
-                em = base64_encode(encrypted, length);
+        //  //   if (length < 1024) {
+        //         uint8_t encrypted[length]; //use stack for small messages
+        //         aes.padPlaintext((uint8_t *)message, encrypted);
+        //         aes.processNoPad((uint8_t *)encrypted, encrypted, length);
+        //         em = base64_encode(encrypted, length);
 
-            } else {
-                uint8_t * encrypted = new uint8_t[length]; //use heap
-                aes.padPlaintext((uint8_t *)message, encrypted);
-                //                                 printf("message: %s\n",message);
-                // mg_hexdump(encrypted,length);
-                aes.processNoPad((uint8_t *)encrypted, encrypted, length);
-
-                em = base64_encode(encrypted, length);
-                delete[] encrypted;
-            }
+        //     } else {
+                auto encrypted = std::unique_ptr<uint8_t[]>(new uint8_t[length]);
+                aes.padPlaintext((uint8_t*) message, encrypted.get());
+                aes.processNoPad(encrypted.get(), encrypted.get(), length);
+               std::string em = base64_encode(encrypted.get(), length);
+           // }
             
-            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
-
+            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(eiv.c_str(), eiv.length());
- 
             hmac.doUpdate(em.c_str(), em.length());
   
             uint8_t authCode[SHA256HMAC_SIZE+1];
@@ -2889,12 +2880,12 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 }
             }
 
-            uint8_t *key = get_credentials()->token;
-            uint8_t *hmackey = get_credentials()->hmackey;
+            uint8_t *key = credentials_.token;
+            uint8_t *hmackey = credentials_.hmackey;
             uint8_t data_decoded[strlen(data)+1];
             uint8_t iv_decoded[strlen(iv)+1];
 
-            SHA256HMAC hmac((const char*) get_credentials()->hmackey, SHA256HMAC_SIZE);
+            SHA256HMAC hmac((const char*) credentials_.hmackey, SHA256HMAC_SIZE);
             hmac.doUpdate(iv, strlen(iv));
             if (token != "")
             {
@@ -2943,9 +2934,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (mg_match(hm->uri, mg_str("/update*"), NULL))
                 {
 
-                    if (strcmp(get_credentials()->password,"") != 0 )
+                    if (strcmp(credentials_.password,"") != 0 )
                     {
-                        if (!mg_http_check_digest_auth(hm, "webkeypad", get_credentials()))
+                        if (!mg_http_check_digest_auth(hm, "webkeypad", credentials_))
                         {
                             mg_send_digest_auth_request(c, "webkeypad");
                             c->recv.len = 0;
@@ -3070,7 +3061,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 JsonObject obj = doc.as<JsonObject>();
                 uint8_t err = 0;
 #ifdef USE_WEBKEYPAD_ENCRYPTION
-                if (obj["iv"].is<JsonVariant>() && get_credentials()->crypt)
+                if (obj["iv"].is<JsonVariant>() && credentials_.crypt)
                 {
                     std::string buf="";
                     decrypt(obj, &err,buf);
@@ -3095,9 +3086,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 struct mg_http_message *hm = (struct mg_http_message *)ev_data;
                // std::string u=std::string(hm->uri.buf, hm->uri.len);
-                if (strcmp(get_credentials()->password,"") != 0 && !get_credentials()->crypt)
+                if (strcmp(credentials_.password,"") != 0 && !credentials_.crypt)
                 {
-                    if (!mg_http_check_digest_auth(hm, FC("webkeypad"), get_credentials()))
+                    if (!mg_http_check_digest_auth(hm, FC("webkeypad"), credentials_))
                     {
                         mg_send_digest_auth_request(c, FC("webkeypad"));
                         c->recv.len = 0;
@@ -3116,7 +3107,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                     mg_ws_upgrade(c, hm, NULL);
                     c->is_websocket=1;
                     std::string enc;
-                    bool crypt = get_credentials()->crypt;
+                    bool crypt = credentials_.crypt;
                     get_config_json(c->id,enc);
                     #ifdef USE_WEBKEYPAD_ENCRYPTION
                     if (crypt)
@@ -3160,10 +3151,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                   //  mg_str *hdr = mg_http_get_header(hm, "Accept");
                     // if (hdr != NULL && mg_strstr(*hdr, mg_str("text/event-stream")) != NULL)  {
                     c->is_event=1;
-                    c->send.c = c;
                     mg_printf(c, FC("HTTP/2 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n"));
                     c->send.c = c;
-                    bool crypt = get_credentials()->crypt;
+                    bool crypt = credentials_.crypt;
                     std::string enc;
                     get_config_json(c->id,enc);
                     #ifdef USE_WEBKEYPAD_ENCRYPTION
@@ -3275,7 +3265,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             {
                 doc=json::parse_json((const uint8_t *)hm->body.buf, hm->body.len);
    #ifdef USE_WEBKEYPAD_ENCRYPTION
-                if (obj["iv"].is<JsonVariant>() && strcmp(get_credentials()->password,"") != 0)
+                if (obj["iv"].is<JsonVariant>() && strcmp(credentials_.password,"") != 0)
                 {
                     uint8_t e = 0;
                     std::string buf="";

@@ -26,6 +26,7 @@ from esphome.core import CORE, coroutine_with_priority
 from esphome.components import (
     template,text
 )
+from esphome.types import ConfigType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,6 +82,16 @@ TelegramMessageTrigger = web_notify_ns.class_(
 
 RemoteData= web_notify_ns.namespace(f"RemoteData&")
 
+
+def _consume_telegram_client_sockets(config: ConfigType) -> ConfigType:
+    """Register socket needs for telegram component."""
+    from esphome.components import socket
+
+    # Telegram needs 1 client connections
+    sockets_needed = 1
+    socket.consume_sockets(sockets_needed, "telegram_bot")(config)
+    return config
+
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
@@ -106,6 +117,7 @@ CONFIG_SCHEMA = cv.All(
             ),
         }
     ).extend(cv.COMPONENT_SCHEMA),
+    _consume_telegram_client_sockets,
    # cv.only_on([PLATFORM_ESP32]),
 )
 
