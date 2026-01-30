@@ -77,6 +77,8 @@ dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte s
   processModuleData = false;
   currentDefaultPartition=1;
   pauseStatus = false;
+  running=false;
+  firstrun=true;
 
   // start expander
 
@@ -216,13 +218,14 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
     maxFields11 = 4;
   }
 #endif  
+running=true;
+firstrun=false;
 
 }
 
 void dscKeybusInterface::stop() {
 
-  // Disables Arduino/AVR Timer1 interrupts
-  #if defined(ESP8266)
+   #if defined(ESP8266)
   timer1_disable();
   timer1_detachInterrupt();
   #elif defined(ESP32)
@@ -250,6 +253,7 @@ void dscKeybusInterface::stop() {
 
   // Resets the keypad and module capture data
   for (byte i = 0; i < dscReadSize; i++) isrModuleData[i] = 0;
+  running=false;
 }
 
 bool dscKeybusInterface::loop() {
@@ -288,8 +292,8 @@ bool dscKeybusInterface::loop() {
   // Copies data from the buffer to panelData[]
   static byte panelBufferIndex = 1;
   byte dataIndex = panelBufferIndex - 1;
-  //for (byte i = 0; i < dscReadSize; i++) panelData[i] = panelBuffer[dataIndex][i];
-  memcpy((void*) panelData,(void*) &panelBuffer[dataIndex],dscReadSize);
+  for (byte i = 0; i < dscReadSize; i++) panelData[i] = panelBuffer[dataIndex][i];
+  //memcpy((void*) panelData,(void*) &panelBuffer[dataIndex],dscReadSize);
   panelBitCount = panelBufferBitCount[dataIndex];
   panelByteCount = panelBufferByteCount[dataIndex];
   panelBufferIndex++;
@@ -603,7 +607,8 @@ IRAM_ATTR
 dscKeybusInterface::redundantPanelData(byte  previousCmd[] , volatile byte  currentCmd[], byte checkedBytes) {
   for (byte i = 0; i < checkedBytes; i++) {
     if (previousCmd[i] != currentCmd[i]) {
-      memcpy((void*)previousCmd,(void*)currentCmd,dscReadSize);      
+       for (byte i=0;i<dscReadSize;i++) previousCmd[i]=currentCmd[i];
+      //memcpy((void*)previousCmd,(void*)currentCmd,dscReadSize);      
       return false;
     }
   }
@@ -683,7 +688,7 @@ dscKeybusInterface::dscClockInterrupt()
    static unsigned long previousClockHighTime;
    static bool skipData = false;
    static bool inInputMode=false;
-  skipModuleBit=false;
+   skipModuleBit=false;
   
   // Panel sends data while the clock is high
   #ifdef USE_ESP_IDF
@@ -715,10 +720,12 @@ dscKeybusInterface::dscClockInterrupt()
     #endif
     }
     previousClockHighTime = micros();
+
   }
 
   // Keypads and modules send data while the clock is low
   else {
+  
     // Saves data and resets counters after the clock cycle is complete (high for at least 1ms)
     if (micros() - previousClockHighTime > 1000) { // Tracks the clock high time to find the reset between commands
       keybusTime = millis();
@@ -754,7 +761,8 @@ dscKeybusInterface::dscClockInterrupt()
      if (panelBufferLength == dscBufferSize) 
         bufferOverflow = true;
      else if (!skipData && panelBufferLength < dscBufferSize) {
-        memcpy((void*)&panelBuffer[panelBufferLength],(void*)isrPanelData,dscReadSize);       
+        for (byte i=0;i<dscReadSize;i++) panelBuffer[panelBufferLength][i]=isrPanelData[i]; 
+        //memcpy((void*)&panelBuffer[panelBufferLength],(void*)isrPanelData,dscReadSize);    
         panelBufferBitCount[panelBufferLength] = isrPanelBitTotal;
         panelBufferByteCount[panelBufferLength] = isrPanelByteCount;
         panelBufferLength++;
@@ -768,8 +776,8 @@ dscKeybusInterface::dscClockInterrupt()
           moduleSubCmd = isrPanelData[2];
           moduleDataDetected = false;
           moduleDataCaptured = true; // Sets a flag for handleModule()
-
-          memcpy((void*)moduleData,(void*)isrModuleData,dscReadSize);
+          for (byte i=0;i<dscReadSize;i++) moduleData[i]=isrModuleData[i];
+         // memcpy((void*)moduleData,(void*)isrModuleData,dscReadSize);
           moduleBitCount = isrPanelBitTotal;
           moduleByteCount = isrPanelByteCount;
         }
@@ -947,7 +955,8 @@ IRAM_ATTR
 dscKeybusInterface::writeCharsToQueue(byte * keys,byte partition, byte len, bool alarm) {
   writeQueueType req;
   req.len = len;
-  memcpy(req.data,keys,len);
+ //memcpy(req.data,keys,len);
+  for (byte i=0;i<len;i++) req.data[i]=keys[i];
   req.alarm = alarm;
   req.writeBit = partitionToBits[partition];
   req.partition=partition;

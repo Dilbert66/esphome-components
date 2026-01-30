@@ -644,9 +644,7 @@ void vistaECPHome::setup()
 #endif
       publishSystemStatus(STATUS_ONLINE, 1);
       publishStatus(SAC, true, 1);
-       #if not defined(USE_ESP_IDF) && not defined(ESP32)
-      vista.begin(_rxPin, _txPin, _keypadAddr1, _monitorPin, _invertRx, _invertTx, _invertMon, _inputRx, _inputMon);
-      #endif
+
       vista.lrrSupervisor = _lrrSupervisor; // if we don't have a monitoring lrr supervisor we emulate one if set to true
 
       setDefaultKpAddr(_defaultPartition);
@@ -690,6 +688,8 @@ void vistaECPHome::setup()
   //     core // Core where the task should run. 
   // );
         ESP_LOGD(TAG, "Completed setup. Free heap=%04X (%d)",esp_get_free_heap_size(), esp_get_free_heap_size());
+#else
+      vista.begin(_rxPin, _txPin, _keypadAddr1, _monitorPin, _invertRx, _invertTx, _invertMon, _inputRx, _inputMon);
 #endif
 
     }

@@ -276,6 +276,9 @@ class dscKeybusInterface {
 
       // Timer interrupt function to capture data - declared as public for use by AVR Timer1
     void dscDataInterrupt();
+
+    bool firstrun;
+    bool running;
     
   private:
 
@@ -452,7 +455,7 @@ class dscKeybusInterface {
      bool invertWrite;
     // byte writeByte, writeBit;
      bool virtualKeypad;
-     char writeKey;
+      char writeKey;
 
      volatile bool writeAlarm;
      volatile bool moduleDataDetected, moduleDataCaptured;

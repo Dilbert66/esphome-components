@@ -213,7 +213,9 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 
        if (hash==0) return "";
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [hash](sensorObjType &f)
-                             { return f.hash==hash; });
+                             { 
+                              return f.hash==hash;
+                             });
 
       if (it != zoneStatus.end())
         return (*it).id_type;
@@ -282,30 +284,30 @@ void DSCkeybushome::setup()
       dsc.resetStatus();
       dsc.processModuleData = true;
 
-#ifdef USE_ESP_IDF
-      esp_chip_info_t info;
-      esp_chip_info(&info);
-      ESP_LOGE(TAG, "Cores: %d", info.cores);
-      ESP_LOGE(TAG,"Running on core %d",xPortGetCoreID());
-      uint8_t core = info.cores > 1 ? 1 : 0;
-      TaskHandle_t setupHandle;
-      xTaskCreatePinnedToCore(
-      this->setupTask, // setup task
-      "setupTask",     // Name of the task
-        3000,               // Stack size in words
-      (void *)this,       // Task input parameter
-      10,                 // Priority of the task
-      &setupHandle            // Task handle.
-      ,
-      core // Core where the task should run. If only one core, core will be ignored
-  );
+// #ifdef USE_ESP_IDF
+//       esp_chip_info_t info;
+//       esp_chip_info(&info);
+//       ESP_LOGE(TAG, "Cores: %d", info.cores);
+//       ESP_LOGE(TAG,"Running on core %d",xPortGetCoreID());
+//       uint8_t core = info.cores > 1 ? 1 : 0;
+//       TaskHandle_t setupHandle;
+//       xTaskCreatePinnedToCore(
+//       this->setupTask, // setup task
+//       "setupTask",     // Name of the task
+//         3000,               // Stack size in words
+//       (void *)this,       // Task input parameter
+//       10,                 // Priority of the task
+//       &setupHandle            // Task handle.
+//       ,
+//       core // Core where the task should run. If only one core, core will be ignored
+//   );
 
-#else
-      if (dscClockPin && dscReadPin )
-        dsc.begin(dscClockPin, dscReadPin, dscWritePin, invertWrite);
-      else
-        dsc.begin();
-#endif
+// #else
+//       if (dscClockPin && dscReadPin )
+//         dsc.begin(dscClockPin, dscReadPin, dscWritePin, invertWrite);
+//       else
+//         dsc.begin();
+// #endif
       for (int p = 0; p < dscPartitions; p++)
       {
 
@@ -331,7 +333,7 @@ void DSCkeybushome::setup()
 #ifdef USE_ESP_IDF
     void DSCkeybushome::setupTask(void *args)
     {
-      //ensure we run vista setup on correct core.  This task is only setup to init the interrupts and pins, otherwise it's idle
+      //ensure we run dsc setup on correct core.  This task is only setup to init the interrupts and pins, otherwise it's idle
       DSCkeybushome *_this = (DSCkeybushome *)args;
       if (_this->dscClockPin && _this->dscReadPin )
         dsc.begin(_this->dscClockPin, _this->dscReadPin, _this->dscWritePin, _this->invertWrite);
@@ -1503,65 +1505,7 @@ void DSCkeybushome::setup()
       }
     }
 
-    // bool DSCkeybushome::check051bCmd()
-    // {
-
-    //   cmdCountType *cmdCount;
-    //   static cmdCountType count05;
-    //   static cmdCountType count1b;
-
-
-    //   switch (dsc.panelData[0])
-    //   {
-    //   case 0x05:
-    //     cmdCount = &count05;
-    //     break;
-    //   case 0x1b:
-    //     cmdCount = &count1b;
-    //     break;
-    //   default:
-    //     return true;
-    //   }
-
-    //   if (cmdCount->bcount > 0 && cmdCount->bcount != dsc.panelBitCount)
-    //   {
-    //     dsc.panelData[11] = 0x77;
-    //     cmdCount->ecount = cmdCount->ecount + 1;
-    //     if (cmdCount->ecount > 1)
-    //     {
-    //       cmdCount->ccount = 0; // get a new updated bit count since we have more than 1 error count in a row
-    //       cmdCount->bcount = 0;
-    //       cmdCount->lbcount = 0;
-    //       cmdCount->ecount = 0;
-    //     }
-    //     return false;
-    //   }
-    //   else
-    //   {
-    //     cmdCount->ecount = 0; // matching bit count reset error count
-    //     if (cmdCount->ccount < 3)
-    //     {
-    //       if (cmdCount->lbcount == dsc.panelBitCount || cmdCount->lbcount == 0)
-    //       {
-    //         cmdCount->ccount = cmdCount->ccount + 1;
-    //         if (cmdCount->ccount >= 3)
-    //           cmdCount->bcount = dsc.panelBitCount;
-    //       }
-    //       else
-    //       {
-    //         dsc.panelData[11] = 0x76;
-    //         cmdCount->ccount = 0; // reset since we did not get 3 in a row
-    //         cmdCount->bcount = 0;
-    //         cmdCount->lbcount = 0;
-    //         return false;
-    //       }
-    //       cmdCount->lbcount = dsc.panelBitCount;
-    //     }
-    //   }
-
-    //   return true;
-    // }
-
+    
 #if defined(ARDUINO_MQTT)
 
     void DSCkeybushome::loop()
@@ -1574,11 +1518,6 @@ void DSCkeybushome::update()
       if (forceDisconnect) {
         return;
       }
-        static bool firstRun=false;
-        static bool lastConnectState=false;
-        bool is_connected=network::is_connected();
-        if (is_connected && is_connected != lastConnectState) firstRun=true;
-        lastConnectState=is_connected;
 
 #if defined(ESPHOME_MQTT)
       static bool firstrunmqtt = true;
@@ -1588,6 +1527,37 @@ void DSCkeybushome::update()
         firstrunmqtt = false;
       }
 #endif
+
+
+      if (dsc.firstrun && network::is_connected()) { //wait till network connected before starting dsc isr's
+
+        #ifdef USE_ESP_IDF
+              esp_chip_info_t info;
+              esp_chip_info(&info);
+              ESP_LOGE(TAG, "Cores: %d", info.cores);
+              ESP_LOGE(TAG,"Running on core %d",xPortGetCoreID());
+              uint8_t core = info.cores > 1 ? 1 : 0;
+              TaskHandle_t setupHandle;
+              xTaskCreatePinnedToCore(
+              this->setupTask, // setup task
+              "setupTask",     // Name of the task
+                3000,               // Stack size in words
+              (void *)this,       // Task input parameter
+              10,                 // Priority of the task
+              &setupHandle            // Task handle.
+              ,
+              core // Core where the task should run. If only one core, core will be ignored
+          );
+
+        #else
+              if (dscClockPin && dscReadPin )
+                dsc.begin(dscClockPin, dscReadPin, dscWritePin, invertWrite);
+              else
+                dsc.begin();
+        #endif
+
+      }
+
 
       if (beeps > 0 && millis() - beepTime > 2000)
       {
@@ -1606,7 +1576,7 @@ void DSCkeybushome::update()
       */
 
       static unsigned long refreshTime;
-      if (!firstrun && refreshTimeSetting > 0 && millis() - refreshTime > refreshTimeSetting)
+      if (dsc.running && refreshTimeSetting > 0 && millis() - refreshTime > refreshTimeSetting)
       {
         refreshTime = millis();
         forceRefresh = true;
@@ -1635,14 +1605,16 @@ void DSCkeybushome::update()
         }
 
         static unsigned long errorTime = millis();
-
+    
         // Checks if the interface is connected to the Keybus
         if ((dsc.keybusChanged) || forceRefresh)
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
-          if (dsc.keybusConnected)
+          if (dsc.keybusConnected && millis() - errorTime > 15000)
           {
+            ESP_LOGD(TAG, "Panel keybus connected...");
             publishSystemStatus(FC(STATUS_ONLINE));
+            errorTime=millis();
           }
           else
           {
@@ -1781,13 +1753,13 @@ void DSCkeybushome::update()
         {
 
 
-          if (firstrun)
-          {
-            publishBeeps("0", partition + 1);
-            partitionStatus[partition].chime = 0;
-            for (int x = 1; x <= maxRelays; x++)
-              publishRelayStatus(x, false);
-          }
+          // if (firstrun)
+          // {
+          //   publishBeeps("0", partition + 1);
+          //   partitionStatus[partition].chime = 0;
+          //   for (int x = 1; x <= maxRelays; x++)
+          //     publishRelayStatus(x, false);
+          // }
 
           // setStatus(partition, forceRefresh || dsc.status[partition] == 0xEE || dsc.status[partition] == 0xA0);
 
@@ -2069,7 +2041,7 @@ void DSCkeybushome::update()
 
 
       forceRefresh = false;
-      firstrun = false;
+     // firstrun = false;
 
     } //dsc.loop
 
