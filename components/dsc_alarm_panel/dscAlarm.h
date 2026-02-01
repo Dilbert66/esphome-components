@@ -465,7 +465,22 @@ unsigned long micros() {
         byte chime : 1;
       };
 
-      sensorObjType sensorObjType_INIT = {
+      sensorObjType sensorObjType_INIT = {  //used to init
+          .sensorPtr = NULL,
+          .partition = 0,
+          .zone = 0,
+          .tamper = false,
+          .battery_low = false,
+          .open = false,
+          .alarm = false,
+          .enabled = false,
+          .bypassed = false,
+          .is_binary = false,
+          .hash=0,
+          .id_type ="",
+        };
+
+          sensorObjType sensorObjType_NULL = { //empty return zone
           .sensorPtr = NULL,
           .partition = 0,
           .zone = 0,
@@ -570,6 +585,8 @@ unsigned long micros() {
       void printPacket(const char *label, char cmd, volatile byte cbuf[], int len);
 
       byte getPartitionE6(byte panelByte);
+
+      byte getAlarmZone();
 
       bool getEnabledZonesB1(byte inputByte, byte startZone, byte partition);
 

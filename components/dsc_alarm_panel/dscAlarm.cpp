@@ -114,7 +114,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 #if !defined(ARDUINO_MQTT)
 
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [zone](sensorObjType &f)
-                             { return f.zone == zone + 1; });
+                             { return f.zone == zone; });
       if (it != zoneStatus.end()) {
                 sensorObjType s = (*it);
                 if (s.sensorPtr != nullptr) {
@@ -190,7 +190,8 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
       if (it != zoneStatus.end())
         return &(*it);
       else {
-        return create?createZone(z+1):&sensorObjType_INIT;
+        sensorObjType_NULL=sensorObjType_INIT;
+        return create?createZone(z+1):&sensorObjType_NULL;
       }
 
     }
@@ -1072,6 +1073,25 @@ void DSCkeybushome::setup()
 #endif
     }
 
+    byte DSCkeybushome::getAlarmZone()
+    {
+
+      for (byte zoneGroup =0;zoneGroup < dscZones;zoneGroup++){
+        for (byte bit = 0; bit < 8; bit++)
+        {
+          byte zone=zoneGroup * 8;
+          if (bitRead(dsc.alarmZones[zoneGroup], bit))
+          {
+            return (bit + zone + 1);
+          }
+    
+        }
+      }
+      return 0;
+    }
+
+    
+
     byte DSCkeybushome::getPartitionE6(byte partitionByte)
     {
 
@@ -1102,7 +1122,8 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              getZone(zone,true)->partition = partition;
+              //getZone(zone,true)->partition = partition;
+              getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
              // if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
@@ -1135,7 +1156,8 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              getZone(zone,true)->partition = partition;
+              // getZone(zone,true)->partition = partition;
+              getZone(zone)->partition = partition;
               getZone(zone)->enabled = true;
               if (debug > 2) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
             }
@@ -3589,8 +3611,9 @@ void DSCkeybushome::update()
       {
         lcdLine1 = FCS("Zone alarm on");
         byte zone = dsc.panelData[panelByte] - 8;
+
         if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->alarm = true;
+          getZone(zone-1)->alarm = true;
         decoded = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
@@ -3615,7 +3638,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x56 && dsc.panelData[panelByte] <= 0x75)
       {
         lcdLine1 = FCS("Zone tamper ON");
-        byte zone = dsc.panelData[panelByte] - 0x55;
+        byte zone = dsc.panelData[panelByte] - 0x54;
         // if (zone > 0 && zone < maxZones)
         //   getZone(zone - 1)->tamper = true;
         decoded = true;
@@ -3628,7 +3651,7 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x76 && dsc.panelData[panelByte] <= 0x95)
       {
         lcdLine1 = FCS("Zone tamper OFF");
-        byte zone = dsc.panelData[panelByte] - 0x75;
+        byte zone = dsc.panelData[panelByte] - 0x74;
         // if (zone > 0 && zone < maxZones)
         //   getZone(zone - 1)->tamper = false;
         decoded = true;
@@ -3778,7 +3801,7 @@ void DSCkeybushome::update()
       {
         lcdLine1 = FCS("Zone bat OK");
         byte zone = dsc.panelData[panelByte] - 43;
-        getZone(zone - 1)->battery_low = false;
+        getZone(zone-1)->battery_low = false;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -3789,7 +3812,7 @@ void DSCkeybushome::update()
       {
         lcdLine1 = FCS("Zone bat LOW");
         byte zone = dsc.panelData[panelByte] - 75;
-        getZone(zone - 1)->battery_low = true;
+        getZone(zone-1)->battery_low = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -4279,7 +4302,7 @@ void DSCkeybushome::update()
         lcdLine1 = FCS("Zone alarm on");
         byte zone = dsc.panelData[panelByte] + 33;
         if (zone > 0 && zone < maxZones)
-          getZone(zone - 1)->alarm = true;
+          getZone(zone-1)->alarm = true;
         zonestr = getZoneName(zone, false);
         lcdLine2 = zonestr.c_str();
         decoded = true;
@@ -4444,9 +4467,9 @@ void DSCkeybushome::update()
 
       if (dsc.panelData[panelByte] >= 0x40 && dsc.panelData[panelByte] <= 0x5F)
       {
-        byte dscCode = dsc.panelData[panelByte] - 31;
+        byte zone = dsc.panelData[panelByte] - 31;
         lcdLine1 = FCS("Zone restored");
-        zonestr = getZoneName(dscCode, true);
+        zonestr = getZoneName(zone, true);
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
@@ -4462,8 +4485,8 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x60 && dsc.panelData[panelByte] <= 0x7F)
       {
         lcdLine1 = FCS("Zone fault on");
-        byte dscCode = dsc.panelData[panelByte] - 63;
-        zonestr = getZoneName(dscCode, true);
+        byte zone = dsc.panelData[panelByte] - 63;
+        zonestr = getZoneName(zone, true);
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
@@ -4480,8 +4503,8 @@ void DSCkeybushome::update()
       if (dsc.panelData[panelByte] >= 0x80 && dsc.panelData[panelByte] <= 0x9F)
       {
         lcdLine1 = FCS("Zone bypass on");
-        byte dscCode = dsc.panelData[panelByte] - 95;
-        zonestr = getZoneName(dscCode, true);
+        byte zone = dsc.panelData[panelByte] - 95;
+        zonestr = getZoneName(zone, true);
         lcdLine2 = zonestr.c_str();
         decoded = true;
         eventstr = lcdLine1.c_str();
@@ -4845,7 +4868,7 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
 {
 
   if (!z)
-    return &sensorObjType_INIT;
+    return &sensorObjType_NULL;
   sensorObjType n = sensorObjType_INIT;
   n.zone = z;
   n.enabled = true;
