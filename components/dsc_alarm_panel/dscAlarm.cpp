@@ -1073,24 +1073,7 @@ void DSCkeybushome::setup()
 #endif
     }
 
-    byte DSCkeybushome::getAlarmZone()
-    {
-
-      for (byte zoneGroup =0;zoneGroup < dscZones;zoneGroup++){
-        for (byte bit = 0; bit < 8; bit++)
-        {
-          byte zone=zoneGroup * 8;
-          if (bitRead(dsc.alarmZones[zoneGroup], bit))
-          {
-            return (bit + zone + 1);
-          }
-    
-        }
-      }
-      return 0;
-    }
-
-    
+  
 
     byte DSCkeybushome::getPartitionE6(byte partitionByte)
     {
@@ -1122,15 +1105,14 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              //getZone(zone,true)->partition = partition;
-              getZone(zone)->partition = partition;
+              getZone(zone,true)->partition = partition; //create zone record if it doesnt exist
               getZone(zone)->enabled = true;
              // if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
               getZone(zone)->enabled = false;
-              if (debug > 2) ESP_LOGD(TAG,"B1: Disabled zone %d on partition %d",zone+1,partition);
+              //if (debug > 2) ESP_LOGD(TAG,"B1: Disabled zone %d on partition %d",zone+1,partition);
             }
           }
         }
@@ -1156,8 +1138,7 @@ void DSCkeybushome::setup()
               continue;
             if (bitRead(dsc.panelData[panelByte], zoneBit))
             {
-              // getZone(zone,true)->partition = partition;
-              getZone(zone)->partition = partition;
+              getZone(zone,true)->partition = partition; //create zone record if it doesnt exist
               getZone(zone)->enabled = true;
               if (debug > 2) ESP_LOGD(TAG,"E6: Enabled zone %d on partition %d",zone+1,partition);
             }
@@ -1910,6 +1891,8 @@ void DSCkeybushome::update()
         char s1[7];
         for (auto &x : zoneStatus)
         {
+          if (!x.enabled)
+              continue;
 
           if (x.open)
           {
