@@ -586,8 +586,6 @@ unsigned long micros() {
 
       byte getPartitionE6(byte panelByte);
 
-      byte getAlarmZone();
-
       bool getEnabledZonesB1(byte inputByte, byte startZone, byte partition);
 
       bool getEnabledZonesE6(byte inputByte, byte startZone, byte partitionByte);
