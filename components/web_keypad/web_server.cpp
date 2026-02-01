@@ -397,6 +397,7 @@ void WebServer::loop()
         }
     }
 #endif
+
     if (!this->entities_iterator_.completed())
         this->entities_iterator_.advance();
 
@@ -2598,7 +2599,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         void WebServer::push(msgType mt, const char *data, uint32_t id, uint32_t reconnect)
         {
 
-
+         //  const char * old = data;
            const char * type;
             switch (mt)
             {
@@ -2641,6 +2642,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
 
                 if (c->is_event && !c->is_closing)
                 {
+                   // printf("writing id:%d, size:%d, data: %s\n",c->id,c->send.len,old);
                     // ESP_LOGD(TAG,"type=%s,len=%d,data=%s",type.c_str(),strlen(data),data);
                     if (id && reconnect)
                         mg_printf(c, FC("id: %d\r\nretry: %d\r\nevent: %s\r\ndata: %s\r\n\r\n"), id, reconnect, type, data);
@@ -2667,6 +2669,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                 if (c->send.len > 10000)
                     c->is_closing = 1; // dead connection. kill it.
 #endif
+
+
             }
         }
 
@@ -2793,6 +2797,8 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
         }
 
 #ifdef USE_WEBKEYPAD_ENCRYPTION
+
+
         void WebServer::encrypt(std::string &data)
         {
             const char * message=data.c_str();
@@ -2828,9 +2834,9 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             uint8_t authCode[SHA256HMAC_SIZE+1];
             hmac.doFinal((char*)authCode);
 
-            data = "{\"iv\":\"" + eiv + "\",\"data\":\"";
-            data.append(em);
-            data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
+            data = "{\"iv\":\"" + eiv + "\",\"data\":\"" + em + "\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}";
+            //data.append(em);
+            //data.append("\",\"hash\":\"" + base64_encode(authCode, SHA256HMAC_SIZE) + "\"}");
         }
 
         bool WebServer::decrypt(JsonObject doc, uint8_t *err,std::string & out)
@@ -3169,17 +3175,17 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
                        root["name"] = group.second.name;
                        root["sorting_weight"] = group.second.weight;
                        enc=builder.serialize();
-                     #ifdef USE_WEBKEYPAD_ENCRYPTION
+                        #if defined(USE_WEBKEYPAD_ENCRYPTION) && !defined(USE_ESP8266)
                          if (crypt) 
                              encrypt(enc);
-                     #endif
+                        #endif
                         mg_printf(c, FC("event: %s\r\ndata: %s\r\n\r\n"), "sorting_group", enc.c_str());
                     }
                     mg_mgr_poll(&mgr,0);
                     get_keypad_config(enc);
                     if (enc.length() > 0)
                     {
-                        #ifdef USE_WEBKEYPAD_ENCRYPTION
+                        #if defined(USE_WEBKEYPAD_ENCRYPTION) && !defined(USE_ESP8266)
                           if (crypt)  
                              encrypt(enc);
                         #endif
@@ -3285,7 +3291,7 @@ std::string WebServer::binary_sensor_json(binary_sensor::BinarySensor *obj, bool
             }
 
             handleRequest(c, obj);
-            c->is_draining=1;
+            //c->is_draining=1;
 
 
         }
