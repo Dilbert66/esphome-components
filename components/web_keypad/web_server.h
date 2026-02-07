@@ -544,14 +544,6 @@ bool match_object(EntityBase *entity, JsonObject doc);
 #endif
 
 
-struct qtype {
- msgType mt;
- std::string data;
- uint32_t id;
- uint32_t reconnect;
-} qrec;
-std::queue<qtype> pushQueue;
-void processQueue(msgType mt, const char *data,uint32_t id = 0,uint32_t reconnect = 0);
 
 };
 
