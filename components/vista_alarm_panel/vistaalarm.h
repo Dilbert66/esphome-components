@@ -610,6 +610,7 @@ class vistaECPHome : public time::RealTimeClock
       //   zone_t
       // };
 
+
       struct partitionStateType
       {
         sysState previousSystemState;
