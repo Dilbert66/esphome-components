@@ -128,10 +128,15 @@ enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
  * can be found under https://esphome.io/web-api/index.html.
  */
 class WebServer : public Controller, public Component
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+
+#else
 #if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 12, 0)
 #ifdef USE_LOGGER
     ,
                   public logger::LogListener
+#endif
+
 #endif
 #endif
 {
