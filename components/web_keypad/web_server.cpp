@@ -349,8 +349,9 @@ void WebServer::setup()
     ControllerRegistry::register_controller(this);
     mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
     mg_mgr_init(&mgr);
+    #ifdef USE_LOGGER
 #if ESPHOME_VERSION_CODE < VERSION_CODE(2025, 12, 0)
-#ifdef USE_LOGGER
+
     if (logger::global_logger != nullptr && this->expose_log_)
     {
         logger::global_logger->add_on_log_callback(
@@ -362,12 +363,25 @@ void WebServer::setup()
                 this->push(LOG, msg.c_str());
             });
     }
-#endif
+
+    
 #else
-#ifdef USE_LOGGER
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+  if (logger::global_logger != nullptr && this->expose_log_) {
+    logger::global_logger->add_log_callback(
+        this, [](void *self, uint8_t level, const char *tag, const char *message, size_t message_len) {
+          static_cast<WebServer *>(self)->on_log(level, tag, message, message_len);
+        });
+  }
+
+
+
+#else
   if (logger::global_logger != nullptr && this->expose_log_) {
     logger::global_logger->add_log_listener(this);
   }
+
+#endif
 #endif
 #endif
   this->set_interval(10000, [this](){ this->push(PING, "", millis(), 30000); });
