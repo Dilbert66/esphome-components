@@ -1108,7 +1108,6 @@ void vistaECPHome::setup()
                 partitionStates[p - 1].active=true;
             }
             _partitions[p - 1] = 1;
-            
             break;
           }
         }
@@ -1939,7 +1938,7 @@ void vistaECPHome::update()
           if (!vistaCmd->newCmd || vistaCmd->cbuf[0] != 0xf7 || vistaCmd->cbuf[12] == 0x77)
             return;
 
-          _currentSystemState = sunavailable;
+
           currentLightState.stay = false;
           currentLightState.away = false;
           currentLightState.night = false;
@@ -1953,7 +1952,10 @@ void vistaECPHome::update()
           currentLightState.trouble = false;
           currentLightState.bypass = false;
           currentLightState.chime = false;
+
           bool updateSystemState = false;
+          _currentSystemState = sunavailable;
+
 
           // Publishes ready status
 
@@ -2211,7 +2213,6 @@ void vistaECPHome::update()
           {
             if ((_partitions[partition - 1] && _partitionTargets == 1))
             {
-
               // publish status on change only - keeps api traffic down
               previousLightState = partitionStates[partition - 1].previousLightState;
 

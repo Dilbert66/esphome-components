@@ -1195,6 +1195,15 @@ size_t Vista::decodePacket()
 {
   _newExtCmd = false;
   // format 0xFA deviceid subcommand channel on/off
+
+  /*
+[I][CMD:960]: [2026-02-08 08:30] FA 01 80 25 F1 6F                              
+[I][EXT:960]: [2026-02-08 08:30] FA 0D F1 00 00 00                              
+[I][RAW:960]: [2026-02-08 08:30] 0D 31 00 00 C2                                 
+[I][CMD:960]: [2026-02-08 08:30] FA 01 01 02 20 F1 F1                           
+[I][EXT:960]: [2026-02-08 08:30] FA 0E F1 00 00 00                              
+[I][RAW:960]: [2026-02-08 08:30] 0D 34 00 00 BF   
+*/
   if (_extcmd[0] == 0xFA)
   {
 
