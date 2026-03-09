@@ -284,7 +284,7 @@ void Vista::onDisplay(char cbuf[], int *idx)
   statusFlags.acPower = ((cbuf[8] & BIT_MASK_BYTE3_AC_POWER) > 0);
   statusFlags.chime = ((cbuf[8] & BIT_MASK_BYTE3_CHIME_MODE) > 0);
   statusFlags.bypass = ((cbuf[8] & BIT_MASK_BYTE3_BYPASS) > 0);
-  statusFlags.programMode = (cbuf[8] & BIT_MASK_BYTE3_PROGRAM);
+  statusFlags.programMode = ((cbuf[8] & BIT_MASK_BYTE3_PROGRAM) > 0);
 
   statusFlags.instant = ((cbuf[8] & BIT_MASK_BYTE3_INSTANT) > 0);
   statusFlags.armedAway = ((cbuf[8] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);
@@ -1180,11 +1180,12 @@ void IRAM_ATTR Vista::txHandleISR()
 bool Vista::validChksum(char cbuf[], int start, int len)
 {
   uint16_t chksum = 0;
-  for (uint8_t x = start; x < len; x++)
+  for (uint8_t x = start; x < len-1; x++)
   {
     chksum += cbuf[x];
   }
-  if (chksum % 256 == 0)
+   chksum = ((chksum -1) ^ 0xFF) & 0xff;
+  if(chksum == cbuf[len-1])
     return true;
   else
     return false;
@@ -1581,14 +1582,14 @@ bool Vista::handle()
 
       _cbuf[gidx++] = x;
       readChars(F7_MESSAGE_LENGTH - 1, _cbuf, &gidx);
-      readChars(3, _cbuf, &gidx); // clear following zeros
-      if (!validChksum(_cbuf, 0, gidx))
+      if ( !validChksum(_cbuf, 0, gidx) )
         _cbuf[12] = 0x77;
       else
       {
         onDisplay(_cbuf, &gidx);
         _newCmd = true; // new valid cmd, process it
       }
+      readChars(3, _cbuf, &gidx); // clear following zeros
       pushCmdQueueItem(gidx);
       return 1; // return 1 to log packet
     }
