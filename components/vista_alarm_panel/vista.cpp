@@ -1582,7 +1582,7 @@ bool Vista::handle()
 
       _cbuf[gidx++] = x;
       readChars(F7_MESSAGE_LENGTH - 1, _cbuf, &gidx);
-      if ( !validChksum(_cbuf, 0, gidx) )
+      if (gidx < F7_MESSAGE_LENGTH ||  !validChksum(_cbuf, 0, gidx) )
         _cbuf[12] = 0x77;
       else
       {
