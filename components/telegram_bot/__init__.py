@@ -143,6 +143,7 @@ TELEGRAM_PUBLISH_ACTION_SCHEMA = cv.Schema(
 
 @automation.register_action(
     "telegram.publish", TelegramPublishAction, TELEGRAM_PUBLISH_ACTION_SCHEMA
+    # ,synchronous=True
 )
 async def telegram_publish_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -199,6 +200,7 @@ TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA = cv.Schema(
 
 @automation.register_action(
     "telegram.answer_callback", TelegramAnswerCallBackAction, TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA
+    # ,synchronous=True
 )
 async def telegram_answer_callback_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -231,6 +233,7 @@ TELEGRAM_DELETE_MESSAGE_ACTION_SCHEMA = cv.Schema(
 
 @automation.register_action(
     "telegram.delete_message", TelegramDeleteMessageAction, TELEGRAM_DELETE_MESSAGE_ACTION_SCHEMA
+    # ,synchronous=True
 )
 async def telegram_delete_message_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -255,6 +258,7 @@ TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA = cv.Schema(
 
 @automation.register_action(
     "telegram.edit_reply_markup", TelegramEditReplyMarkupAction, TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA
+    # ,synchronous=True
 )
 async def telegram_edit_reply_markup_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])

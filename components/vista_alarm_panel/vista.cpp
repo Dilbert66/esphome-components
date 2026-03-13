@@ -1180,12 +1180,11 @@ void IRAM_ATTR Vista::txHandleISR()
 bool Vista::validChksum(char cbuf[], int start, int len)
 {
   uint16_t chksum = 0;
-  for (uint8_t x = start; x < len-1; x++)
+  for (uint8_t x = start; x < len; x++)
   {
     chksum += cbuf[x];
   }
-   chksum = ((chksum -1) ^ 0xFF) & 0xff;
-  if(chksum == cbuf[len-1])
+  if (chksum % 256 == 0)
     return true;
   else
     return false;
@@ -1582,15 +1581,15 @@ bool Vista::handle()
 
       _cbuf[gidx++] = x;
       readChars(F7_MESSAGE_LENGTH - 1, _cbuf, &gidx);
-      if (gidx < F7_MESSAGE_LENGTH ||  !validChksum(_cbuf, 0, gidx) )
+      if ( !validChksum(_cbuf, 0, gidx) )
         _cbuf[12] = 0x77;
       else
       {
         onDisplay(_cbuf, &gidx);
         _newCmd = true; // new valid cmd, process it
       }
-      readChars(3, _cbuf, &gidx); // clear following zeros
       pushCmdQueueItem(gidx);
+      readChars(3, _cbuf, &gidx); // clear following zeros
       return 1; // return 1 to log packet
     }
 
