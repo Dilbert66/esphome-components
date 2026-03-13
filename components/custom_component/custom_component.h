@@ -8,11 +8,10 @@
 namespace esphome {
 namespace custom_component {
 
-class CustomComponentConstructor {
+class CustomComponentConstructor : public Component {
  public:
   CustomComponentConstructor(const std::function<std::vector<Component *>()> &init) {
     this->components_ = init();
-
     for (auto *comp : this->components_) {
       App.register_component(comp);
     }
