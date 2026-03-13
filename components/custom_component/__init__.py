@@ -5,7 +5,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 custom_component_ns = cg.esphome_ns.namespace("custom_component")
-CustomComponentConstructor = custom_component_ns.class_("CustomComponentConstructor")
+CustomComponentConstructor = custom_component_ns.class_("CustomComponentConstructor",cg.Component)
 
 MULTI_CONF = True
 CONFIG_SCHEMA = cv.Schema(
@@ -25,11 +25,6 @@ async def to_code(config):
     template_ = await cg.process_lambda(
         config[CONF_LAMBDA], [], return_type=cg.std_vector.template(cg.ComponentPtr)
     )
+    var = cg.new_Pvariable(config[CONF_ID],template_)
 
-    rhs = CustomComponentConstructor(template_)
-    var = cg.variable(config[CONF_ID], rhs)
-    _LOGGER.info("in component %s,%s",CONF_COMPONENTS,config.get(CONF_COMPONENTS))
-    for i, conf in enumerate(config.get(CONF_COMPONENTS, [])):
-        _LOGGER.info("got component %s",conf)
-        comp = cg.Pvariable(conf[CONF_ID], var.get_component(i))
-        await cg.register_component(comp, conf)
+
