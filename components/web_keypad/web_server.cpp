@@ -374,8 +374,6 @@ void WebServer::setup()
         });
   }
 
-
-
 #else
   if (logger::global_logger != nullptr && this->expose_log_) {
     logger::global_logger->add_log_listener(this);
@@ -518,6 +516,19 @@ void WebServer::handle_js_request(struct mg_connection *c)
 }
 #endif
 
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)  
+#define set_json_id(root, obj, sensor, start_config)                            \
+    (root)["id"] = std::string(sensor) + "-" + get_object_id(obj);              \
+    if (((start_config) == DETAIL_ALL))                                         \
+    {                                                                           \
+        (root)[FC("name")] = (obj)->get_name();                                     \
+        (root)[FC("icon")] = obj->get_icon_to(icon_buf);                           \
+        (root)[FC("entity_category")] = (obj)->get_entity_category();               \
+        (root)[FC("domain")] = sensor;                                              \
+        if ((obj)->is_disabled_by_default())                                    \
+            (root)[FC("is_disabled_by_default")] = (obj)->is_disabled_by_default(); \
+    }
+#else
 #define set_json_id(root, obj, sensor, start_config)                            \
     (root)["id"] = std::string(sensor) + "-" + get_object_id(obj);              \
     if (((start_config) == DETAIL_ALL))                                         \
@@ -529,7 +540,7 @@ void WebServer::handle_js_request(struct mg_connection *c)
         if ((obj)->is_disabled_by_default())                                    \
             (root)[FC("is_disabled_by_default")] = (obj)->is_disabled_by_default(); \
     }
-
+#endif
 
 #define set_json_value(root, obj, sensor, value, start_config) \
     set_json_id((root), (obj), sensor, start_config);          \

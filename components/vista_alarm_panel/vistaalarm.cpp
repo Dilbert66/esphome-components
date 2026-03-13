@@ -336,8 +336,11 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         s.loopmask=getLoopMask(loop,type);
       }
       extZones.push_back(s);
-      if (!is_binary) publishZoneStatus(&s, "C");
-      ESP_LOGD(TAG, "added  binary zone %d, serial=%d", extZones.back().zone,s.serial);
+      if (!is_binary && z){
+        publishZoneStatus(&s, "C");
+      }
+      if (z)
+        ESP_LOGD(TAG, "added  zone %d, serial=%d", extZones.back().zone,s.serial);
     }
 
 
@@ -1102,6 +1105,7 @@ void vistaECPHome::setup()
           int8_t shift = _partitionKeypads[p] - (8 * i);
           if (shift >= 0 && (vistaCmd->statusFlags.keypad[i] & (0x01 << shift)))
           {
+          //  ESP_LOGD("test","i=%d,p=%d,shift=%02X,and=%02x,active=%d,mask=%02x",i,p,shift,(vistaCmd->statusFlags.keypad[i] & (0x01 << shift)),partitionStates[p - 1].active,vistaCmd->statusFlags.keypad[i]);
             _partitionTargets = _partitionTargets + 1;
             if (!partitionStates[p - 1].active) {
                 forceRefreshGlobal = true;//new partition so we update it's sensors
@@ -1515,7 +1519,7 @@ void vistaECPHome::update()
         {
           dataTime = millis();
           vista.connected = true;
-        }
+        } else
 
         if (millis() - dataTime > 15000)
         {
@@ -1689,6 +1693,7 @@ void vistaECPHome::update()
 
               // snprintf(rf_serial_char, 14, "%03d%04d", device_serial / 10000, device_serial % 10000);
               sensorObjType *zt = getZoneFromSerial(device_serial);
+              if (_debug)
               {
 #if defined(ARDUINO_MQTT)
                 Serial.printf("RFX: %d,%02x\n", device_serial, vistaCmd->cbuf[5]);
@@ -1698,7 +1703,6 @@ void vistaECPHome::update()
               }
               if (zt->active && !(vistaCmd->cbuf[5] & 4) && !(vistaCmd->cbuf[5] & 1))
               {
-
                 zt->time = millis();
                 zt->open = vistaCmd->cbuf[5] & zt->loopmask ? true : false;
                 zt->external = zt->open; //if zone is open we flag it as external so we dont reset it later
@@ -1757,6 +1761,7 @@ void vistaECPHome::update()
             //   printPacket("CMD", vistaCmd->cbuf, vistaCmd->cbuf[1] + 2);
             // else
             //   printPacket("CMD", vistaCmd->cbuf, 13);
+
             printPacket("CMD", vistaCmd->cbuf, vistaCmd->size);
           }
 
@@ -1870,6 +1875,7 @@ void vistaECPHome::update()
           }
           else if (vistaCmd->newCmd && vistaCmd->cbuf[0] == 0xf7)
           {
+
             getPartitionsFromMask();
 
             for (uint8_t partition = 1; partition <= _maxPartitions; partition++)

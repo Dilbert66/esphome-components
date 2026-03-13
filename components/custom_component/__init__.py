@@ -26,5 +26,8 @@ async def to_code(config):
         config[CONF_LAMBDA], [], return_type=cg.std_vector.template(cg.ComponentPtr)
     )
     var = cg.new_Pvariable(config[CONF_ID],template_)
+    for i, conf in enumerate(config.get(CONF_COMPONENTS, [])):
+        comp = cg.Pvariable(conf[CONF_ID], var.get_component(i))
+        await cg.register_component(comp, conf)
 
 
