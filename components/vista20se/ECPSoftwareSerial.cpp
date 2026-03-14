@@ -437,7 +437,9 @@ void SoftwareSerial::rxBits() {
           //  if (!stop2) Serial.printf("Stop: byte=%02X\n",byt);
             //if (checkParity(byt) != parity && byt) Serial.printf("parity: byte=%02X\n",byt);
           // if (!byt || bits > 12) Serial.printf("*** byte=%02X,stop1=%d,stop2=%d,parity=%d,checkParity=%d,bits=%d,level=%d,cycles=%d,m_bitCycles=%d,self=%d\n\n",byt,stop1,stop2,parity,checkParity(byt),bits,level,cycles,m_bitCycles,this);                
-                if (checkParity(byt)==parity && bits < 15  ) {
+            
+          //  if (checkParity(byt)==parity && bits < 15  ) {
+              if (bits < 15  ) {
                     if (next != m_outPos) {
                         m_buffer[m_inPos] = byt;
                         m_inPos = next;
