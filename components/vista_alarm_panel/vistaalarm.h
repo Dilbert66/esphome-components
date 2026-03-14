@@ -36,7 +36,6 @@ typedef char __FlashStringHelper;
 #if defined(USE_API) || defined(USE_API_SERVICES)
 #include "esphome/components/api/custom_api_device.h"
 #endif
-#include "esphome/core/defines.h"
 #endif
 
 #include "vista.h"
