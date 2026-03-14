@@ -373,9 +373,9 @@ void setup() override {
 #endif 
       //use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
       // the system to not miss a response window on commands.  
-#if !defined(ARDUINO_MQTT)     
-      set_update_interval(8); //set looptime to 8ms 
-#endif     
+// #if !defined(ARDUINO_MQTT)     
+//       set_update_interval(8); //set looptime to 8ms 
+// #endif     
 
 #if defined(ESPHOME_MQTT)
 
@@ -452,7 +452,7 @@ void setup() override {
       vista.zoneExpanders[7].expansionAddr = relayAddr3;
       vista.zoneExpanders[8].expansionAddr = relayAddr4;
       
-  ESP_LOGE("vista","Completed vista setup...");
+  ESP_LOGD("vista","Completed vista setup...");
     }
 
     void alarm_disarm(std::string code,int32_t partition) {
@@ -703,7 +703,6 @@ public:
 #if defined(ARDUINO_MQTT)
 void loop()  {
 #else   
-void loop() { update(); }
 void update() override {
 #endif 
         

@@ -19,7 +19,7 @@ class CustomComponentConstructor : public PollingComponent {
     c->setup();
   }
   void update() override{
-   c->loop();
+   c->update();
   }
 
  protected:
