@@ -703,7 +703,7 @@ public:
 #if defined(ARDUINO_MQTT)
 void loop()  {
 #else   
-void setup(){ update();}
+void loop(){ update();}
 void update() override {
 #endif 
         
