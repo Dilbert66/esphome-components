@@ -732,7 +732,7 @@ void update() override {
       sendWaitTime = millis();
       vh = vista.handle();
 
-      while (!firstRun && vista.keybusConnected && vista.sendPending() && !vh) {
+      while (!firstRun && vista.keybusConnected && vista.charAvail() && !vh) {
         if (millis() - sendWaitTime > 5) break;
         vh = vista.handle();
       }
