@@ -1159,10 +1159,10 @@ void IRAM_ATTR Vista::rxHandleISR()
   }
   if (_rxState == sNormal || _highTime == 0)
     vistaSerial->rxRead();
-#ifdef ESP8266
-  else // clear pending interrupts for this pin if any occur during transmission
-    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << _rxPin);
-#endif
+// #ifdef ESP8266
+//   else // clear pending interrupts for this pin if any occur during transmission
+//     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << _rxPin);
+// #endif
 restoreInterrupts();
 }
 
