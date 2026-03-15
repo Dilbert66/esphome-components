@@ -385,13 +385,14 @@ void Vista::onExp(char cbuf[]) {
 }
 
 void Vista::write(const char key, int addr) {
+    
     write(key);
 }
 
 void Vista::write(const char key) {
-
-    if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || (key >= 0x41 && key <= 0x44))
+    if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || (key >= 0x41 && key <= 0x44)) {
         outQueue(key);
+    }
 }
 void Vista::write(const char * receivedKeys,int addr) {
         write(receivedKeys);
@@ -419,14 +420,6 @@ char Vista::getChar() {
     char c = outbuf[outbufIdx];
     outbufIdx = (outbufIdx + 1) % szOutbuf;
     return c;
-}
-
-bool Vista::sendPending() {
-    if (outbufIdx == inbufIdx)
-        return false;
-    else
-        return true;
-
 }
 
 bool Vista::charAvail() {
@@ -492,7 +485,6 @@ void Vista::writeChars() {
                 int t=4000 - (micros() - lowTime);
                 if (t> 0) delayMicroseconds(t);
 
-  
                   vistaSerial -> setConfig(2400, SWSERIAL_5N1);
                   vistaSerial -> write(c);
                   vistaSerial -> write(c);
@@ -637,10 +629,10 @@ void ICACHE_RAM_ATTR Vista::rxHandleISR() {
     if (rxState==sCmdData || highTime==0)
         vistaSerial -> rxRead();
 
-    #ifndef ESP32
-    //clear pending interrupts for this pin if any occur during transmission
-        GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << rxPin);
-    #endif
+    // #ifndef ESP32
+    // //clear pending interrupts for this pin if any occur during transmission
+    //     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << rxPin);
+    // #endif
 }
 
 
@@ -895,7 +887,7 @@ bool Vista::handle() {
     #ifdef MONITORTX
     if (getExtBytes()) return 1;
     #endif
-    
+
     if (rxState==sSyncLow &&  (micros() - lowTime < 5000 ) && okToSend && charAvail()) {
        writeChars();
     }   
