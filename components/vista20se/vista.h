@@ -156,7 +156,6 @@ class Vista {
     expanderType zoneExpanders[MAX_MODULES];
     char b; //used in isr
     bool charAvail();
-    bool sendPending();
     volatile char rxState;
     volatile bool okToSend;
     volatile unsigned long gapTime;
