@@ -2252,9 +2252,11 @@ void vistaECPHome::update()
 
               if (currentLightState.bypass != previousLightState.bypass || _forceRefresh || updateSystemState)
                 publishStatus(SBYPASS, currentLightState.bypass, partition);
-                
-              if (currentLightState.ready != previousLightState.ready || _forceRefresh || updateSystemState)
+ 
+              if (currentLightState.ready != previousLightState.ready || _forceRefresh || updateSystemState) {
+                ESP_LOGD("debug","partition=%d,refresh=%d,update=%d,ready=%d,systemflag=%d",partition,_forceRefresh,updateSystemState,currentLightState.ready,vistaCmd->statusFlags.systemFlag);
                 publishStatus(SREADY, currentLightState.ready, partition);
+              }
 
               //  if (currentLightState.canceled != previousLightState.canceled)
               //   publishStatus(scanceled,currentLightState.canceled,partition);
