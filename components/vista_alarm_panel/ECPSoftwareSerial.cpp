@@ -341,10 +341,11 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     unsigned long start = ticks();
     if (interrupt) disableInterrupts();
     // Start bit;
-    if (m_invert_tx)
-        digitalWritePin(m_txPin, HIGH);
-    else
-        digitalWritePin(m_txPin, LOW);
+    // if (m_invert_tx)
+    //     digitalWritePin(m_txPin, HIGH);
+    // else
+    //     digitalWritePin(m_txPin, LOW);
+    digitalWritePin(m_txPin,m_invert_tx);
     WAIT;
     for (int i = 0; i < m_dataBits; i++)
     {
@@ -390,14 +391,15 @@ size_t IRAM_ATTR SoftwareSerial::write(uint8_t b,bool interrupt)
     }
 
     // restore pin to natural state
-    if (m_invert_tx)
-    {
-        digitalWritePin(m_txPin, LOW);
-    }
-    else
-    {
-        digitalWritePin(m_txPin, HIGH);
-    }
+    // if (m_invert_tx)
+    // {
+    //     digitalWritePin(m_txPin, LOW);
+    // }
+    // else
+    // {
+    //     digitalWritePin(m_txPin, HIGH);
+    // }
+    digitalWritePin(m_txPin, !m_invert_tx);
     WAIT;                // 1st stop bit
     if (m_dataBits != 5) // 1 stop bit for keypad send
         WAIT;
