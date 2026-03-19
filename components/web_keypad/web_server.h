@@ -24,8 +24,13 @@
 #define ESP rp2040
 #endif
 
+
 #ifdef USE_WEBKEYPAD_OTA
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+#include "esphome/components/ota/ota_backend_factory.h"
+#else
 #include "esphome/components/ota/ota_backend.h"
+#endif
 #endif
 
 #ifdef USE_WEBKEYPAD_ENCRYPTION
@@ -545,7 +550,12 @@ bool match_object(EntityBase *entity, JsonObject doc);
   uint32_t last_ota_progress_{0};
   uint32_t ota_read_length_{0};
   bool ota_success_{false};
+
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+  ota::OTABackendPtr  ota_backend_{nullptr};
+#else
   std::unique_ptr<ota::OTABackend> ota_backend_{nullptr};
+#endif
 #endif
 
 

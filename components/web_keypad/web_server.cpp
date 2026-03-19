@@ -33,7 +33,11 @@
 #endif
 
 #ifdef USE_WEBKEYPAD_OTA
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+#include "esphome/components/ota/ota_backend_factory.h"
+#else
 #include "esphome/components/ota/ota_backend.h"
+#endif
 #endif
 
 #ifdef USE_ARDUINO
