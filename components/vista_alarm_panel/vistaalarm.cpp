@@ -162,7 +162,7 @@ void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t num, boo
 
 
   if (s != nullptr && s->sensorPtr != nullptr  && s->is_binary) {
-      // printf("num=%d,id=%s,idtype=%s,open=%d\r\n",num,id.c_str(),s->id_type,open);
+       //printf("num=%d,id=%s,idtype=%s,open=%d\r\n",num,id.c_str(),s->id_type,open);
     binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (s->sensorPtr);
     if (bs->state != open)
        bs->publish_state(open);
@@ -177,6 +177,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   {
     id += "_" + std::to_string(num);
   }
+  if (*text == "") *text=" ";
   auto s=getSensorObj(id.c_str());
   if (s != nullptr && s->sensorPtr != nullptr && !s->is_binary) {
     text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor*>(s->sensorPtr);
@@ -2260,7 +2261,7 @@ void vistaECPHome::update()
                 publishStatus(SBYPASS, currentLightState.bypass, partition);
  
               if (currentLightState.ready != previousLightState.ready || _forceRefresh || updateSystemState) {
-                //ESP_LOGD("debug","partition=%d,refresh=%d,update=%d,ready=%d,systemflag=%d",partition,_forceRefresh,updateSystemState,currentLightState.ready,vistaCmd->statusFlags.systemFlag);
+               // ESP_LOGD("debug","partition=%d,refresh=%d,update=%d,ready=%d,systemflag=%d",partition,_forceRefresh,updateSystemState,currentLightState.ready,vistaCmd->statusFlags.systemFlag);
                publishStatus(SREADY, currentLightState.ready, partition);
               }
 
