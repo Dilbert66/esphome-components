@@ -129,7 +129,7 @@ public:
     void end();
 
     bool m_parity = true;
-    ;
+    
     bool isValidGPIOpin(int pin);
     bool debug;
 

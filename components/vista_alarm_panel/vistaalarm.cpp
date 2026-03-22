@@ -159,9 +159,14 @@ void vistaECPHome::publishBinaryState(const std::string &idstr, uint8_t num, boo
     id += "_" + std::to_string(num);
   }
   auto s=getSensorObj(id.c_str());
+
+
   if (s != nullptr && s->sensorPtr != nullptr  && s->is_binary) {
+      // printf("num=%d,id=%s,idtype=%s,open=%d\r\n",num,id.c_str(),s->id_type,open);
     binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (s->sensorPtr);
-    bs->publish_state(open);
+    if (bs->state != open)
+       bs->publish_state(open);
+    //printf("after binary sensor\r\n");
   }
 }
 
@@ -200,7 +205,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
  
       auto it = std::find_if(extZones.begin(), extZones.end(), [id_type](sensorObjType &f)
                              { return strcmp(f.id_type,id_type) == 0; });
-      if (it != extZones.end())
+      if (it != extZones.end()) 
         return &(*it);
       else {
         return nullptr;
@@ -2225,6 +2230,7 @@ void vistaECPHome::update()
               _forceRefresh = partitionStates[partition - 1].refreshLights || forceRefreshGlobal;
 
               // ESP_LOGD("test","refreshing partition statuse _partitions: %d,force refresh=%d",partition,_forceRefresh);
+
               if (currentLightState.fire != previousLightState.fire || _forceRefresh || updateSystemState)
                 publishStatus(SFIRE, currentLightState.fire, partition);
               if (currentLightState.alarm != previousLightState.alarm || _forceRefresh || updateSystemState)
@@ -2254,8 +2260,8 @@ void vistaECPHome::update()
                 publishStatus(SBYPASS, currentLightState.bypass, partition);
  
               if (currentLightState.ready != previousLightState.ready || _forceRefresh || updateSystemState) {
-                ESP_LOGD("debug","partition=%d,refresh=%d,update=%d,ready=%d,systemflag=%d",partition,_forceRefresh,updateSystemState,currentLightState.ready,vistaCmd->statusFlags.systemFlag);
-                publishStatus(SREADY, currentLightState.ready, partition);
+                //ESP_LOGD("debug","partition=%d,refresh=%d,update=%d,ready=%d,systemflag=%d",partition,_forceRefresh,updateSystemState,currentLightState.ready,vistaCmd->statusFlags.systemFlag);
+               publishStatus(SREADY, currentLightState.ready, partition);
               }
 
               //  if (currentLightState.canceled != previousLightState.canceled)

@@ -74,6 +74,49 @@ BINARY_SENSOR_TYPE_ID_DESCRIPTION = "ac, bat, trbl_<digits>,byp_<digits>, rdy_<d
 TEXT_SENSOR_TYPE_ID_REGEX = r"^(zs|lrr|rf|ss_\d+|ln1_\d+|ln2_\d+|bp_\d+|z\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "zs, lrr, rf, ss_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, z<digits>"
 
+
+VALID_SOFTSERIAL_PINS = {
+    "esp32": {
+        "bidir": {0, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
+        "rx_only": {34, 35, 36, 39},
+    },
+    "esp8266": {
+        "bidir": {0, 1, 2, 3, 4, 5, 12, 13, 14, 15},
+        "rx_only": set(),
+    },
+    "rp2040": {
+        "bidir": set(range(0, 22)) | {26, 27},
+        "rx_only": set(),
+    },
+}
+
+def _validate_softserial_pins_for_chip(rx_pin=False):
+    def validator(value):
+        value = cv.int_(value)
+        if value == -1:
+            return value
+        if CORE.is_esp32:
+            chip = "esp32"
+        elif CORE.is_esp8266:
+            chip = "esp8266"
+        elif CORE.is_rp2040:
+            chip = "rp2040"
+        else:
+            return value
+
+        pins = VALID_SOFTSERIAL_PINS[chip]
+        valid = pins["bidir"] | pins["rx_only"] if rx_pin else pins["bidir"]
+
+        if value not in valid:
+            direction = "input" if rx_pin else "output"
+            raise cv.Invalid(
+                f"GPIO{value} is not a valid {direction} pin for {chip.upper()}. "
+                f"Valid pins: {sorted(valid)}"
+            )
+        return value
+    return validator
+
+
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(AlarmComponent),
@@ -87,9 +130,9 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_KEYPAD2,default=0): cv.int_, 
     cv.Optional(CONF_KEYPAD3,default=0): cv.int_, 
     cv.Optional(CONF_AUIADDR,default=0): cv.int_,
-    cv.Optional(CONF_RXPIN): cv.int_, 
-    cv.Optional(CONF_TXPIN): cv.int_, 
-    cv.Optional(CONF_MONITORPIN): cv.int_, 
+    cv.Optional(CONF_RXPIN): _validate_softserial_pins_for_chip(rx_pin=True),
+    cv.Optional(CONF_TXPIN): _validate_softserial_pins_for_chip(rx_pin=False),
+    cv.Optional(CONF_MONITORPIN): _validate_softserial_pins_for_chip(rx_pin=True),
     cv.Optional(CONF_EXPANDER1): cv.int_, 
     cv.Optional(CONF_EXPANDER2): cv.int_, 
     cv.Optional(CONF_RELAY1): cv.int_, 
@@ -120,13 +163,14 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_DISABLE_RETRY): cv.boolean,
     cv.Optional(CONF_FILTER_OWN_TX,default="true"): cv.boolean,
     }
+    
 )
 
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
 WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
 
-def validate_id_code(value, is_binary_sensor=True):
+def _validate_id_code(value, is_binary_sensor=True):
     """Validate the type_id for binary or text sensors."""
     if is_binary_sensor:
         regex = BINARY_SENSOR_TYPE_ID_REGEX
@@ -139,6 +183,7 @@ def validate_id_code(value, is_binary_sensor=True):
         raise cv.Invalid(f"Invalid type_id '{value}'. Allowed formats: {description}")
 
     return value
+
 
 
 WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
@@ -162,7 +207,7 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
 ALARM_SENSOR_SCHEMA = cv.Schema(
     {
         cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
-        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
+        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, _validate_id_code),
         cv.Optional(CONF_PARTITION,default=0): cv.int_,
         cv.Optional(CONF_DEVICE_SERIAL,default=0):cv.int_,
         cv.Optional(CONF_DEVICE_LOOP,default=0):cv.int_,
@@ -302,7 +347,7 @@ def generate_validate_sensor_config(is_binary_sensor=True):
             if config[CONF_DEVICE_LOOP]==0 or config[CONF_DEVICE_LOOP]>3:
                 raise cv.Invalid(f"Option 'device_loop' required for RF/LOOP zones. Allowed values: 1,2 or 3")
         id_val = config.get(CONF_TYPE_ID) or config[CONF_ID].id
-        validate_id_code(id_val, is_binary_sensor)
+        _validate_id_code(id_val, is_binary_sensor)
         return config
 
 

@@ -41,13 +41,14 @@ SoftwareSerial::SoftwareSerial(
     {
         m_rxPin = receivePin;
         m_bufSize = bufSize;
+        m_rxValid=true;
        
         m_buffer = new uint8_t[m_bufSize];
         // m_buffer = (uint8_t *)malloc(m_bufSize);
         m_isrBufSize = isrBufSize ? isrBufSize : 10 * bufSize;
         m_isrBuffer = new  std::atomic<uint32_t>[m_isrBufSize];
         // m_isrBuffer = static_cast<std::atomic<uint32_t> *>(malloc(m_isrBufSize * sizeof(uint32_t)));
-    }
+    } 
     if (isValidGPIOpin(transmitPin)
 #ifdef ESP8266
         || (!m_oneWire && (transmitPin == 16)))
@@ -76,32 +77,37 @@ SoftwareSerial::~SoftwareSerial()
 
 bool SoftwareSerial::isValidGPIOpin(int pin)
 {
-#ifdef ESP8266
-    return (pin >= 0 && pin <= 5) || (pin >= 12 && pin <= 15);
-#endif
-#ifdef ESP32
-#if CONFIG_IDF_TARGET_ESP32
-	// Datasheet https://documentation.espressif.com/esp32_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/_images/esp32_devkitC_v4_pinlayout.png
-    return pin == 1 || (pin >= 3 && pin <= 5) || (pin >= 12 && pin <= 15) ||
-		(pin >= 18 && pin <= 19) || (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 33);
-#elif CONFIG_IDF_TARGET_ESP32S2
-	// Datasheet https://documentation.espressif.com/esp32-s2_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s2/_images/esp32-s2-devkitm-1-v1-pin-layout.png
-	return (pin >= 1 && pin <= 21) || (pin >= 33 && pin <= 44);
-#elif CONFIG_IDF_TARGET_ESP32S3
-	// Datasheet https://documentation.espressif.com/esp32-s3_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout_v1.1.jpg
-	return (pin >= 1 && pin <= 2) || (pin >= 4 && pin <= 21) || pin == 26 || (pin >= 33 && pin <= 44);
-#elif CONFIG_IDF_TARGET_ESP32C3
-	// Datasheet https://documentation.espressif.com/esp32-c3_datasheet_en.pdf
-	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/_images/esp32-c3-devkitm-1-v1-pinout.png
-    return (pin >= 0 && pin <= 1) || (pin >= 3 && pin <= 7) || pin == 10 || (pin >= 18 && pin <= 21);
-#endif
-#endif
-#ifdef USE_RP2040
-    return (pin >= 0 && pin <= 21) || (pin >=26 && pin <= 27);
-#endif
+
+ return pin >= 0; //validation was done from the python init so we just make sure we don't have a negative pin#
+
+// #ifdef ESP8266
+//     return (pin >= 0 && pin <= 5) || (pin >= 12 && pin <= 15);
+// #endif
+// #ifdef ESP32
+
+//  result = (pin >= 34 && pin <= 36) || pin == 39;
+// #if CONFIG_IDF_TARGET_ESP32
+// 	// Datasheet https://documentation.espressif.com/esp32_datasheet_en.pdf
+// 	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/_images/esp32_devkitC_v4_pinlayout.png
+//     return pin == 1 || (pin >= 3 && pin <= 5) || (pin >= 12 && pin <= 15) ||
+// 		(pin >= 18 && pin <= 19) || (pin >= 21 && pin <= 23) || (pin >= 25 && pin <= 27) || (pin >= 32 && pin <= 33);
+// #elif CONFIG_IDF_TARGET_ESP32S2
+// 	// Datasheet https://documentation.espressif.com/esp32-s2_datasheet_en.pdf
+// 	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s2/_images/esp32-s2-devkitm-1-v1-pin-layout.png
+// 	return (pin >= 1 && pin <= 21) || (pin >= 33 && pin <= 44);
+// #elif CONFIG_IDF_TARGET_ESP32S3
+// 	// Datasheet https://documentation.espressif.com/esp32-s3_datasheet_en.pdf
+// 	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout_v1.1.jpg
+// 	return (pin >= 1 && pin <= 2) || (pin >= 4 && pin <= 21) || pin == 26 || (pin >= 33 && pin <= 44);
+// #elif CONFIG_IDF_TARGET_ESP32C3
+// 	// Datasheet https://documentation.espressif.com/esp32-c3_datasheet_en.pdf
+// 	// Pinout    https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/_images/esp32-c3-devkitm-1-v1-pinout.png
+//     return (pin >= 0 && pin <= 1) || (pin >= 3 && pin <= 7) || pin == 10 || (pin >= 18 && pin <= 21);
+// #endif
+// #endif
+// #ifdef USE_RP2040
+//     return (pin >= 0 && pin <= 21) || (pin >=26 && pin <= 27);
+// #endif
 }
 
 
@@ -148,9 +154,9 @@ void SoftwareSerial::begin(int32_t baud, SoftwareSerialConfig config)
 {
     m_dataBits = 5 + (config % 4);
     setBaud(baud);
-    if (m_buffer != 0 && m_isrBuffer != 0)
+    if (m_rxValid && m_buffer != 0 && m_isrBuffer != 0)
     {
-        m_rxValid = true;
+       
         m_inPos = m_outPos = 0;
         m_isrInPos.store(0);
         m_isrOutPos.store(0);
