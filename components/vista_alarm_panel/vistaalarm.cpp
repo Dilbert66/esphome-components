@@ -177,11 +177,13 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   {
     id += "_" + std::to_string(num);
   }
-  if (*text == "") *text=" ";
   auto s=getSensorObj(id.c_str());
   if (s != nullptr && s->sensorPtr != nullptr && !s->is_binary) {
     text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor*>(s->sensorPtr);
-    ts->publish_state(*text);
+    if (text && *text!="")
+      ts->publish_state(*text);
+    else
+      ts->publish_state(" ");
   }
 
 }
