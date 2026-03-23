@@ -93,6 +93,7 @@ vistaECPHome::~vistaECPHome()
 
     void vistaECPHome::zoneStatusUpdate(sensorObjType *zt)
     {
+      if (!zt->zone) return;
 
       std::string msg, zs1, lb;
       zs1 = zt->check ? "T" : zt->open ? "O"
@@ -103,7 +104,7 @@ vistaECPHome::~vistaECPHome()
       msg.append(zs1).append(lb);
       publishZoneStatus(zt, msg.c_str());
 
-      if (zt->zone <= _maxZones)
+      if (zt->zone <= _maxZones) 
         publishZoneStatus(zt, zt->open || zt->check);
       else
         publishZoneStatus(zt, zt->check || zt->open || zt->alarm || zt->trouble);
@@ -180,10 +181,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
   auto s=getSensorObj(id.c_str());
   if (s != nullptr && s->sensorPtr != nullptr && !s->is_binary) {
     text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor*>(s->sensorPtr);
-    if (text && *text!="")
       ts->publish_state(*text);
-    else
-      ts->publish_state(" ");
   }
 
 }
@@ -1329,6 +1327,7 @@ void vistaECPHome::setup()
 
     void vistaECPHome::updateZoneState(sensorObjType *zt, int p, bool state, unsigned long t)
     {
+      if (!zt->zone) return;
       zt->partition = p;
       zt->time = t;
       if (auiCmd.state == rsopenzones)
@@ -2021,7 +2020,7 @@ void vistaECPHome::update()
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
             // if (promptContains(p1,ALARM,tz) && !vistaCmd->statusFlags.systemFlag) {
             sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
-            if (!zt->alarm && zt->active)
+            if (!zt->alarm && zt->active && zt->zone)
             {
               zt->alarm = true;
               zoneStatusUpdate(zt);
@@ -2042,7 +2041,7 @@ void vistaECPHome::update()
               getZoneFromPrompt(vistaCmd->statusFlags.prompt1);
             sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
             // ESP_LOGD("test", "check found for zone %d,status=%d", vistaCmd->statusFlags.zone, zt->check);
-            if (!zt->check && zt->active)
+            if (!zt->check && zt->active && zt->zone)
             {
               zt->check = true;
               zt->open = false;
@@ -2068,7 +2067,7 @@ void vistaECPHome::update()
             {
               zt->lowbat = vistaCmd->statusFlags.lowBattery;
             }
-            else if (!zt->open && zt->active)
+            else if (!zt->open && zt->active && zt->zone)
             {
               zt->open = true;
               zt->check = false;
@@ -2092,7 +2091,7 @@ void vistaECPHome::update()
 
             sensorObjType *zt = getZone(vistaCmd->statusFlags.zone);
 
-            if (!zt->bypass && zt->active)
+            if (!zt->bypass && zt->active && zt->zone)
             {
               zt->bypass = true;
               zoneStatusUpdate(zt);
@@ -2288,7 +2287,7 @@ void vistaECPHome::update()
           for (auto &x : extZones)
           {
 
-            if (!x.active || !x.partition)
+            if (!x.active || !x.partition || !x.zone)
               continue;
 
             if (!x.bypass && x.open && partitionStates[x.partition - 1].previousLightState.ready && !x.external)

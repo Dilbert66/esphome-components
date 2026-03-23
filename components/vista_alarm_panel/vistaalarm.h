@@ -352,7 +352,7 @@ class vistaECPHome : public time::RealTimeClock
 #if defined(ARDUINO_MQTT)
         publishTextState(SZONE, zt->zone, open);
 #else
-    if (zt->sensorPtr != nullptr && !zt->is_binary) {
+    if (zt->sensorPtr != nullptr && !zt->is_binary && zt->zone) {
       text_sensor::TextSensor * ts = reinterpret_cast<text_sensor::TextSensor *> (zt->sensorPtr);
        ts->publish_state(open);
     }
@@ -367,7 +367,7 @@ class vistaECPHome : public time::RealTimeClock
 #if defined(ARDUINO_MQTT)
         publishBinaryState(SZONE, zt->zone, open);
 #else
-    if (zt->sensorPtr != nullptr && zt->is_binary) {
+    if (zt->sensorPtr != nullptr && zt->is_binary && zt->zone) {
        binary_sensor::BinarySensor * bs = reinterpret_cast<binary_sensor::BinarySensor*> (zt->sensorPtr);
        bs->publish_state(open);
     }
