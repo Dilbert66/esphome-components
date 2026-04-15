@@ -72,7 +72,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_STACK_SIZE):cv.int_, 
     cv.Optional(CONF_USE_ESP_IDF_TIMER,default='true'):cv.boolean, 
     }
-)
+).extend(cv.polling_component_schema("8ms"))
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
 WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
