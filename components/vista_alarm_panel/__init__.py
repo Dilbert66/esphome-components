@@ -164,7 +164,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_FILTER_OWN_TX,default="true"): cv.boolean,
     }
     
-)
+).extend(cv.polling_component_schema("8ms"))
 
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")

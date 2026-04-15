@@ -47,6 +47,48 @@ BINARY_SENSOR_TYPE_ID_DESCRIPTION = "tr, tr_<digits>, bat, ac, rdy_<digits>, arm
 TEXT_SENSOR_TYPE_ID_REGEX = r"^(ss|zs|tr_msg|evt|ps_\d+|msg_\d+|ln1_\d+|ln2_\d+|bp_\d+|za_\d+|user_\d+)$"
 TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits>, ln1_<digits>, ln2_<digits>, bp_<digits>, za_<digits>, user_<digits>"
 
+VALID_PINS = {
+    "esp32": {
+        "bidir": {0, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
+        "rx_only": {34, 35, 36, 39},
+    },
+    "esp8266": {
+        "bidir": {0, 1, 2, 3, 4, 5, 12, 13, 14, 15},
+        "rx_only": set(),
+    },
+    "rp2040": {
+        "bidir": set(range(0, 22)) | {26, 27},
+        "rx_only": set(),
+    },
+}
+
+def _validate_pins_for_chip(rx_pin=False):
+    def validator(value):
+        value = cv.int_(value)
+        if value == -1 or value == 255:
+            return 255
+        if CORE.is_esp32:
+            chip = "esp32"
+        elif CORE.is_esp8266:
+            chip = "esp8266"
+        elif CORE.is_rp2040:
+            chip = "rp2040"
+        else:
+            return value
+
+        pins = VALID_PINS[chip]
+        valid = pins["bidir"] | pins["rx_only"] if rx_pin else pins["bidir"]
+
+        if value not in valid:
+            direction = "input" if rx_pin else "output"
+            raise cv.Invalid(
+                f"GPIO{value} is not a valid {direction} pin for {chip.upper()}. "
+                f"Valid pins: {sorted(valid)}"
+            )
+        return value
+    return validator
+
+
 CONFIG_SCHEMA = cv.Schema(
     {
     cv.GenerateID(): cv.declare_id(AlarmComponent),
@@ -55,9 +97,9 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_USERCODES, default=""): cv.string, 
     cv.Optional(CONF_DEFAULTPARTITION, default=""): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL, default=""): cv.int_, 
-    cv.Optional(CONF_READPIN, default=""): cv.int_, 
-    cv.Optional(CONF_WRITEPIN, default="255"): cv.int_, 
-    cv.Optional(CONF_CLOCKPIN, default=""): cv.int_,
+    cv.Optional(CONF_READPIN, default=""): _validate_pins_for_chip(rx_pin=True),
+    cv.Optional(CONF_WRITEPIN, default="255"): _validate_pins_for_chip(rx_pin=False), 
+    cv.Optional(CONF_CLOCKPIN, default=""):  _validate_pins_for_chip(rx_pin=True),
     cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
@@ -72,7 +114,7 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_STACK_SIZE):cv.int_, 
     cv.Optional(CONF_USE_ESP_IDF_TIMER,default='true'):cv.boolean, 
     }
-)
+).extend(cv.polling_component_schema("16ms"))
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
 WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
@@ -96,7 +138,7 @@ WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
 )
 
 
-def validate_id_code(value, is_binary_sensor=True):
+def _validate_id_code(value, is_binary_sensor=True):
     """Validate the type_id for binary or text sensors."""
     if is_binary_sensor:
         regex = BINARY_SENSOR_TYPE_ID_REGEX
@@ -113,7 +155,7 @@ def validate_id_code(value, is_binary_sensor=True):
 ALARM_SENSOR_SCHEMA = cv.Schema(
     {
         cv.GenerateID(CONF_ALARM_ID): cv.use_id(AlarmComponent),
-        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, validate_id_code),
+        cv.Optional(CONF_TYPE_ID, default=""): cv.Any(cv.string_strict, _validate_id_code),
         cv.Optional(CONF_PARTITION,default=0): cv.int_
     }
 )
@@ -164,6 +206,7 @@ async def to_code(config):
         cg.add(var.set_expanderAddr(config[CONF_EXPANDER2]));
        
     await cg.register_component(var, config)
+    CORE.register_controller()
 
 # def real_clean_build():
 #     import shutil
@@ -192,7 +235,7 @@ def generate_validate_sensor_config(is_binary_sensor=True):
     """Generate a validation function for sensor configuration."""
     def validate_sensor_config(config):
         id_val = config.get(CONF_TYPE_ID) or config[CONF_ID].id
-        validate_id_code(id_val, is_binary_sensor)
+        _validate_id_code(id_val, is_binary_sensor)
         return config
 
     return validate_sensor_config
