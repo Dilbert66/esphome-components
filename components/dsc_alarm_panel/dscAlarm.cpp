@@ -238,7 +238,7 @@ void DSCkeybushome::setup()
        if (debug > 2)
          Serial.begin(115200);
       #endif
-
+ set_update_interval(8); // set looptime to 8ms
 #if defined(ESPHOME_MQTT)
 
       topic_prefix = mqtt::global_mqtt_client->get_topic_prefix();
@@ -251,13 +251,13 @@ void DSCkeybushome::setup()
  #if defined(USE_API_CUSTOM_SERVICES) or defined(USE_API_SERVICES)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
-      #if defined(USE32)
-#if !defined(ARDUINO_MQTT) && defined(USE_TIME)
+#if defined(USE_ESP32)
+  #if !defined(ARDUINO_MQTT) && defined(USE_TIME)
       register_service(&DSCkeybushome::set_panel_time, "set_panel_time", {});
-#else
+  #else
       register_service(&DSCkeybushome::set_panel_time_manual, "set_panel_time_manual", {"year", "month", "day", "hour", "minute"});
-#endif
-#endif
+  #endif
+#endif //usep32
       register_service(&DSCkeybushome::alarm_arm_home, "alarm_arm_home");
       register_service(&DSCkeybushome::alarm_arm_night,"alarm_arm_night", {"code"});
       register_service(&DSCkeybushome::alarm_arm_away, "alarm_arm_away");
@@ -267,10 +267,10 @@ void DSCkeybushome::setup()
       register_service(&DSCkeybushome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&DSCkeybushome::set_zone_fault, "set_zone_fault", {"zone", "fault"});
      // register_service(&DSCkeybushome::set_default_partition, "set_default_partition", {"partition"});
-      #else
-      #error "Missing "custom_services: true" line in the api: section"
-      #endif
-#endif
+#else
+  #error "Missing "custom_services: true" line in the api: section"
+#endif //api_custom_services/api_services
+#endif //use api
 
       publishSystemStatus(FC(STATUS_OFFLINE));
       forceDisconnect = false;
