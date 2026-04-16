@@ -1391,7 +1391,7 @@ void vistaECPHome::setup()
 
       // clear  bypass/open zones for partition p that were not set above
       auto it = std::find_if(extZones.begin(), extZones.end(), [&p, &t](sensorObjType &f)
-                             { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
+                             { return (f.partition == p && f.zone && f.active && f.time != t && (f.open || f.bypass)); });
 
       while (it != extZones.end())
       {
@@ -1399,7 +1399,7 @@ void vistaECPHome::setup()
         updateZoneState(&(*it), p, false, millis());
 
         it = std::find_if(++it, extZones.end(), [&p, &t](sensorObjType &f)
-                          { return (f.partition == p && f.active && f.time != t && (f.open || f.bypass)); });
+                          { return (f.partition == p && f.active && f.zone && f.time != t && (f.open || f.bypass)); });
       }
 
       forceRefreshZones = true;
@@ -1491,6 +1491,7 @@ void vistaECPHome::setup()
 void vistaECPHome::update()
 {
 #endif
+  arch_feed_wdt();
 
         static bool firstRun=false;
         static bool lastConnectState=false;
@@ -1601,7 +1602,10 @@ void vistaECPHome::update()
             // else
             //   printPacket("CHK", vistaCmd->cbuf, 13);
             // return;
-            printPacket("CHK", vistaCmd->cbuf, vistaCmd->size);
+            if (vistaCmd->cbuf[0]==0x78 && vistaCmd->size == 2 )
+              printPacket("ACK", &vistaCmd->cbuf[1], 1);
+            else
+              printPacket("CHK", vistaCmd->cbuf, vistaCmd->size);
           }
 
           static unsigned long refreshLrrTime, refreshRfTime;
