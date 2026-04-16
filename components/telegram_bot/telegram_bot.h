@@ -359,7 +359,7 @@ namespace esphome
       TEMPLATABLE_VALUE(std::string, callback_id)
       TEMPLATABLE_VALUE(bool, show_alert)
       TEMPLATABLE_VALUE(std::string, url)
-      TEMPLATABLE_VALUE(int, cache_time)
+      TEMPLATABLE_VALUE(int32_t, cache_time)
 
 #if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
   void play(const Ts&... x) override
