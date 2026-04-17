@@ -77,7 +77,7 @@ TEXT_SENSOR_TYPE_ID_DESCRIPTION = "zs, lrr, rf, ss_<digits>, ln1_<digits>, ln2_<
 
 VALID_SOFTSERIAL_PINS = {
     "esp32": {
-        "bidir": {0, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
+        "bidir": {0, 2, 3, 6, 7, 8, 12, 13, 14, 15, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
         "rx_only": {34, 35, 36, 39},
     },
     "esp8266": {
@@ -109,7 +109,7 @@ def _validate_softserial_pins_for_chip(rx_pin=False):
 
         if value not in valid:
             direction = "input" if rx_pin else "output"
-            raise cv.Invalid(
+            _LOGGER.warning(
                 f"GPIO{value} is not a valid {direction} pin for {chip.upper()}. "
                 f"Valid pins: {sorted(valid)}"
             )
