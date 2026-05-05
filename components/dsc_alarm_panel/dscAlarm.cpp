@@ -148,7 +148,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 #endif
     }
 
-    void DSCkeybushome::set_panel_time_manual(int year, int month, int day, int hour, int minute)
+    void DSCkeybushome::set_panel_time_manual(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute)
     {
 #if defined(ARDUINO_MQTT)
       Serial.printf("Setting panel time...\n");
