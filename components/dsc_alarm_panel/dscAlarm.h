@@ -397,7 +397,7 @@ unsigned long micros() {
       void publishBinaryState(const std::string &cstr, uint8_t partition, bool open);
       void publishTextState(const std::string &cstr, uint8_t partition, std::string *text);
 
-      void set_panel_time_manual(int year, int month, int day, int hour, int minute);
+      void set_panel_time_manual(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute);
 
       void set_accessCode(const char *ac);
       void set_maxZones(int mz);
