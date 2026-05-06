@@ -251,13 +251,12 @@ void DSCkeybushome::setup()
  #if defined(USE_API_CUSTOM_SERVICES) or defined(USE_API_SERVICES)
       register_service(&DSCkeybushome::set_alarm_state, "set_alarm_state", {"state", "code", "partition"});
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
-#if defined(USE_ESP32)
-  #if !defined(ARDUINO_MQTT) && defined(USE_TIME)
+  #if defined(USE_TIME)
       register_service(&DSCkeybushome::set_panel_time, "set_panel_time", {});
   #else
       register_service(&DSCkeybushome::set_panel_time_manual, "set_panel_time_manual", {"year", "month", "day", "hour", "minute"});
   #endif
-#endif //usep32
+
       register_service(&DSCkeybushome::alarm_arm_home, "alarm_arm_home");
       register_service(&DSCkeybushome::alarm_arm_night,"alarm_arm_night", {"code"});
       register_service(&DSCkeybushome::alarm_arm_away, "alarm_arm_away");
