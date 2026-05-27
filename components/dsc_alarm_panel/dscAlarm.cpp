@@ -274,7 +274,7 @@ void DSCkeybushome::setup()
       publishSystemStatus(FC(STATUS_OFFLINE));
       forceDisconnect = false;
 #ifdef MODULESUPERVISION
-      dsc.enableModuleSupervision = 1;
+      dsc.enableModuleSupervision = true;
 #endif
 #if not defined(DISABLE_EXPANDER)
       dsc.addModule(expanderAddr1);

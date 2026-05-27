@@ -6,7 +6,6 @@
 #include "esphome/core/defines.h"
 #include <WiFiUdp.h>
 
-
 #define S2PTR(s_) ((void *)  (esphome::socket::Socket * ) (s_))
 #define U2PTR(s_) ((void *)  (WiFiUDP * ) (s_))
 extern "C" {
@@ -32,8 +31,7 @@ bool mg_open_listener(struct mg_connection *c, const char *url) {
         //   this->udp_client_.begin(this->listen_port_);
 
   } else {
-        esphome::socket::Socket * socket_;
-        socket_ = esphome::socket::socket_ip_loop_monitored(SOCK_STREAM, 0).release();  // monitored for incoming connections
+          auto socket_ = esphome::socket::socket_ip_loop_monitored(SOCK_STREAM, 0).release();  // monitored for incoming connections
         if (socket_ == nullptr) {
           return false;
         }
@@ -84,8 +82,10 @@ bool mg_open_listener(struct mg_connection *c, const char *url) {
       } 
 
  //if we get here then we couldnt save the socket
-     socket_->close();
-    delete socket_;
+     if (socket_!=nullptr) {
+      socket_->close();
+      delete socket_;
+     }
   }
     return false;
 }
@@ -145,7 +145,7 @@ long mg_io_send(struct mg_connection *c, const void *buf, size_t len) {
        return len;
   } else {
 
-    esphome::socket::Socket * client_= reinterpret_cast<esphome::socket::Socket *> (c->fd);
+    auto client_= reinterpret_cast<esphome::socket::Socket *> (c->fd);
     if (client_==nullptr) return 0;
     if (len > 0)
       n=client_->write((const uint8_t*)buf,len);
@@ -203,8 +203,8 @@ void write_conn(struct mg_connection *c) {
       delete udp_client_;
     }
   } else {
- esphome::socket::Socket * socket_=reinterpret_cast<esphome::socket::Socket *>(c->fd);
-  if (socket_) {
+ auto socket_=reinterpret_cast<esphome::socket::Socket *>(c->fd);
+  if (socket_ != nullptr) {
    socket_->close();
    delete socket_;
   }
@@ -241,7 +241,7 @@ void read_conn(struct mg_connection *c) {
       long m;
       if (c->rtls.len < 16 * 1024 + 40) {  // TLS record, header, MAC, padding
         if (!ioalloc(c, &c->rtls)) return;
-        esphome::socket::Socket * client_=reinterpret_cast<esphome::socket::Socket *> (c->fd);
+        auto client_=reinterpret_cast<esphome::socket::Socket *> (c->fd);
         if (!client_) return;
         n = client_->read((char *) &c->rtls.buf[c->rtls.len], c->rtls.size - c->rtls.len);
         if (n > 0) c->rtls.len += (size_t) n;
@@ -273,7 +273,7 @@ void read_conn(struct mg_connection *c) {
     // if (n > 0) tomgaddr(&usa, &c->rem, slen != sizeof(usa.sin));
       } else {
 
-         esphome::socket::Socket * client_=reinterpret_cast<esphome::socket::Socket *> (c->fd);
+         auto client_=reinterpret_cast<esphome::socket::Socket *> (c->fd);
          if (!client_ ) return;
         if (len > 0)
          n=client_->read((char *)buf,len);
@@ -287,13 +287,13 @@ void read_conn(struct mg_connection *c) {
 
 void listen_conn(struct mg_connection *lsn) {
  //check for new clients
-  esphome::socket::Socket * socket_=reinterpret_cast<esphome::socket::Socket *> (lsn->fd);
+  auto socket_=reinterpret_cast<esphome::socket::Socket *> (lsn->fd);
 
   if (socket_== nullptr || !socket_->ready()) return;
 
         struct sockaddr_storage source_addr;
         socklen_t addr_len = sizeof(source_addr);
-        esphome::socket::Socket * client_ = socket_->accept_loop_monitored((struct sockaddr *) &source_addr, &addr_len).release(); //monitored for client connections
+        auto client_ = socket_->accept_loop_monitored((struct sockaddr *) &source_addr, &addr_len).release(); //monitored for client connections
         //std::unique_ptr<socket::Socket> client_ = socket_->accept_loop_monitored((struct sockaddr *) &source_addr, &addr_len);
       if (client_==nullptr ) return;
 

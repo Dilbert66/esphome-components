@@ -888,7 +888,7 @@ dscKeybusInterface::dscClockInterrupt()
       if (isrPanelBitTotal == 7) {
         processPendingResponses(isrPanelData[0]);
 
-      }  else
+      } else
 
       if (isrPanelBitTotal == 16 && isrPanelData[0] == 0xE6) {
         processPendingResponses_0xE6(isrPanelData[2]); //check subcommand
@@ -925,7 +925,7 @@ dscKeybusInterface::dscClockInterrupt()
       if (isrPanelBitCount < 8) {
         isrModuleData[isrPanelByteCount] <<= 1;
         #ifdef USE_ESP_IDF
-        if (gpio_get_level((gpio_num_t) dscReadPin)==HIGH) {
+        if (gpio_get_level((gpio_num_t) dscReadPin) == HIGH) {
         #else
         if (digitalRead(dscReadPin) == HIGH) {
         #endif
