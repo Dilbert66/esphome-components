@@ -564,7 +564,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         else
           sendAuiTime();
       }
-      if (vistaCmd->statusFlags.programMode || _auiAddr)
+      if (vistaCmd == nullptr || vistaCmd->statusFlags.programMode || _auiAddr)
         return;
       ESPTime rtc = now();
       if (!rtc.is_valid())
