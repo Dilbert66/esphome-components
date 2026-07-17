@@ -524,7 +524,7 @@ init: /* using goto's to optimize tail recursion */
 
 // functions below written by Nick Gammon ...
 
-char MatchState::Match (const char * pattern, unsigned int index)
+char MatchState::Match (const char * volatile pattern, unsigned int volatile index)
 {
   // set up for throwing errors
   char rtn = setjmp (regexp_error_return);

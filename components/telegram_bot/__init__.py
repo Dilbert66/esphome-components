@@ -17,6 +17,7 @@ from esphome.const import (
     PLATFORM_RP2040,
     CONF_ON_MESSAGE,
     CONF_TRIGGER_ID,
+    __version__ as ESPHOME_VERSION,
 )
 import os
 import pathlib
@@ -118,6 +119,7 @@ CONFIG_SCHEMA = cv.All(
         }
     ).extend(cv.COMPONENT_SCHEMA),
     _consume_telegram_client_sockets,
+    cv.require_esphome_version(2026, 3, 0)
    # cv.only_on([PLATFORM_ESP32]),
 )
 
@@ -142,8 +144,7 @@ TELEGRAM_PUBLISH_ACTION_SCHEMA = cv.Schema(
 )
 
 @automation.register_action(
-    "telegram.publish", TelegramPublishAction, TELEGRAM_PUBLISH_ACTION_SCHEMA
-    # ,synchronous=True
+    "telegram.publish", TelegramPublishAction, TELEGRAM_PUBLISH_ACTION_SCHEMA,synchronous=True
 )
 async def telegram_publish_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -199,8 +200,7 @@ TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA = cv.Schema(
 )
 
 @automation.register_action(
-    "telegram.answer_callback", TelegramAnswerCallBackAction, TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA
-    # ,synchronous=True
+"telegram.answer_callback", TelegramAnswerCallBackAction, TELEGRAM_ANSWER_CALLBACK_ACTION_SCHEMA,synchronous=True
 )
 async def telegram_answer_callback_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -232,8 +232,7 @@ TELEGRAM_DELETE_MESSAGE_ACTION_SCHEMA = cv.Schema(
 )
 
 @automation.register_action(
-    "telegram.delete_message", TelegramDeleteMessageAction, TELEGRAM_DELETE_MESSAGE_ACTION_SCHEMA
-    # ,synchronous=True
+    "telegram.delete_message", TelegramDeleteMessageAction, TELEGRAM_DELETE_MESSAGE_ACTION_SCHEMA,synchronous=True
 )
 async def telegram_delete_message_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -257,8 +256,7 @@ TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA = cv.Schema(
 )
 
 @automation.register_action(
-    "telegram.edit_reply_markup", TelegramEditReplyMarkupAction, TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA
-    # ,synchronous=True
+    "telegram.edit_reply_markup", TelegramEditReplyMarkupAction, TELEGRAM_EDIT_REPLY_MARKUP_ACTION_SCHEMA ,synchronous=True
 )
 async def telegram_edit_reply_markup_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -293,7 +291,7 @@ TELEGRAM_EDIT_MESSAGE_ACTION_SCHEMA = cv.Schema(
 )
 
 @automation.register_action(
-    "telegram.edit_message", TelegramEditMessageAction, TELEGRAM_EDIT_MESSAGE_ACTION_SCHEMA
+    "telegram.edit_message", TelegramEditMessageAction, TELEGRAM_EDIT_MESSAGE_ACTION_SCHEMA ,synchronous=True
 )
 async def telegram_edit_message_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
@@ -335,6 +333,7 @@ async def to_code(config):
     #     if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
     #         stack=config[CONF_STACK_SIZE]
     #     CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS][SDK_STACK_SIZE] = stack * 1024
+  
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     if CONF_ALLOWED_IDS in config:

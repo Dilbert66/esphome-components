@@ -81,11 +81,11 @@ namespace esphome
       std::string url;
     };
 
-    #if defined (USE_ESP_IDF)
-    static unsigned long millis() {
-     return esp_timer_get_time() / 1000;
-    }
- #endif
+//     #if defined (USE_ESP_IDF)
+//     static unsigned long millis() {
+//      return esp_timer_get_time() / 1000;
+//     }
+//  #endif
 
     class WebNotify : public Controller, public Component
     {

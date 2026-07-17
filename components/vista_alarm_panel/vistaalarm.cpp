@@ -346,9 +346,8 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         publishZoneStatus(&s, "C");
       }
       if (z)
-        ESP_LOGD(TAG, "added  zone %d, serial=%d", extZones.back().zone,s.serial);
+        ESP_LOGD(TAG, "added  zone %d, serial=%lu", extZones.back().zone,s.serial);
     }
-
 
 #else
 
@@ -564,7 +563,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
         else
           sendAuiTime();
       }
-      if (vistaCmd->statusFlags.programMode || _auiAddr)
+      if (vistaCmd == nullptr || vistaCmd->statusFlags.programMode || _auiAddr)
         return;
       ESPTime rtc = now();
       if (!rtc.is_valid())
@@ -615,7 +614,7 @@ void vistaECPHome::setup()
 {
 #endif
 #ifdef ESP32
-      ESP_LOGD(TAG, "Start setup: Free heap: %04X (%d)", esp_get_free_heap_size(), esp_get_free_heap_size());
+      ESP_LOGD(TAG, "Start setup: Free heap: %lu",  esp_get_free_heap_size());
 #endif
         // tg_timer_init(TIMER_GROUP_0, TIMER_0);
       //  use a pollingcomponent and change the default polling interval from 16ms to 8ms to enable
@@ -696,10 +695,11 @@ void vistaECPHome::setup()
   //     ,
   //     core // Core where the task should run. 
   // );
-        ESP_LOGD(TAG, "Completed setup. Free heap=%04X (%d)",esp_get_free_heap_size(), esp_get_free_heap_size());
+        ESP_LOGD(TAG, "Completed setup. Free heap=%lu", esp_get_free_heap_size());
 #else
       vista.begin(_rxPin, _txPin, _keypadAddr1, _monitorPin, _invertRx, _invertTx, _invertMon, _inputRx, _inputMon);
 #endif
+
 
     }
 
@@ -742,7 +742,7 @@ void vistaECPHome::setup()
     void vistaECPHome::set_zone_fault(int32_t zone, bool fault)
     {
       sensorObjType *z = getZone(zone);
-       ESP_LOGD(TAG,"Setting fault %d to zone %d",fault,zone);
+       ESP_LOGD(TAG,"Setting fault %d to zone %ld",fault,zone);
       if (z->zone > 0 &&  z->serial > 0  && z->emulated) {
         vista.setRFFault(fault?z->loopmask:0,z->serial);
       } else
@@ -770,7 +770,7 @@ void vistaECPHome::setup()
 #if defined(ARDUINO_MQTT)
         Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(), partition);
 #else
-    ESP_LOGD(TAG, "Writing keys: %s to partition %d", keystring.c_str(), partition);
+    ESP_LOGD(TAG, "Writing keys: %s to partition %ld", keystring.c_str(), partition);
 #endif
 
       if (keystring == "R")
@@ -1138,7 +1138,8 @@ void vistaECPHome::setup()
       auiCmd.time = millis();
       auiCmd.pending = true;
       // dateReqStatus=0;
-      snprintf(&bytes[8], 14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100, rtc.month, rtc.day_of_month, rtc.hour, rtc.minute, rtc.second, rtc.day_of_week - 1);
+      int len= snprintf(&bytes[8],14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100u, rtc.month, rtc.day_of_month%10u,  rtc.hour%10u, rtc.minute%10u, rtc.second%10u, (rtc.day_of_week -1)%1);
+      if (len > 13) return false;
       vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
       return true;
     }
@@ -1709,7 +1710,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
                 Serial.printf("RFX: %d,%02x\n", device_serial, vistaCmd->cbuf[5]);
 #else
-          ESP_LOGI(TAG, "RFX: %d,%02x, mask=%02x", device_serial, vistaCmd->cbuf[5], zt->loopmask);
+          ESP_LOGI(TAG, "RFX: %lu,%02x, mask=%02x", device_serial, vistaCmd->cbuf[5], zt->loopmask);
 #endif
               }
               if (zt->active && !(vistaCmd->cbuf[5] & 4) && !(vistaCmd->cbuf[5] & 1))
@@ -1722,7 +1723,7 @@ void vistaECPHome::update()
                 zoneStatusUpdate(zt);
               }
 
-              sprintf(rf_serial_char_out, "%d,%02x", device_serial, vistaCmd->cbuf[5]);
+              sprintf(rf_serial_char_out, "%lu,%02x", device_serial, vistaCmd->cbuf[5]);
               publishRfMsg(rf_serial_char_out);
               refreshRfTime = millis();
             }
@@ -1747,7 +1748,7 @@ void vistaECPHome::update()
 #if defined(ARDUINO_MQTT)
                 Serial.printf("LOOP: %d,%02x\n", device_serial, vistaCmd->cbuf[5]);
 #else
-          ESP_LOGI(TAG, "LOOP: %d,%02x, mask=%02x", device_serial, vistaCmd->cbuf[3], zt->loopmask);
+          ESP_LOGI(TAG, "LOOP: %lu,%02x, mask=%02x", device_serial, vistaCmd->cbuf[3], zt->loopmask);
 #endif
               }
               if (zt->active && !(vistaCmd->cbuf[5] & 4) && !(vistaCmd->cbuf[5] & 1))

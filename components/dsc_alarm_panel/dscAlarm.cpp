@@ -403,7 +403,7 @@ void DSCkeybushome::setup()
     {
 #if not defined(DISABLE_EXPANDER)
 #if !defined(ARDUINO_MQTT)
-      ESP_LOGI(TAG, "Setting Zone Fault: %d,%d", zone, fault);
+      ESP_LOGI(TAG, "Setting Zone Fault: %ld,%d", zone, fault);
 #else
       Serial.printf("Setting Zone Fault: %d,%d\n", zone, fault); 
 #endif
@@ -907,7 +907,7 @@ void DSCkeybushome::setup()
       }
 #if !defined(ARDUINO_MQTT)
       if (debug > 0)
-        ESP_LOGI(TAG, "Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d", keystring.c_str(), partition, dsc.disabled[partition - 1], partitionStatus[partition - 1].locked);
+        ESP_LOGI(TAG, "Writing keys: %s to partition %ld, partition disabled: %d , partition locked: %d", keystring.c_str(), partition, dsc.disabled[partition - 1], partitionStatus[partition - 1].locked);
 #else
   if (debug > 0)
     Serial.printf("Writing keys: %s to partition %d, partition disabled: %d , partition locked: %d\n", keystring.c_str(), partition, dsc.disabled[partition - 1], partitionStatus[partition - 1].locked); 
@@ -989,7 +989,7 @@ void DSCkeybushome::setup()
         partition = defaultPartition;
 
 #if !defined(ARDUINO_MQTT)
-      ESP_LOGI(TAG, "Setting Alarm state: %s to partition %d", state.c_str(), partition);
+      ESP_LOGI(TAG, "Setting Alarm state: %s to partition %ld", state.c_str(), partition);
 #else
   Serial.printf("Setting Alarm state: %s to partition %d\n", state.c_str(), partition);
 #endif
@@ -1219,9 +1219,9 @@ void DSCkeybushome::setup()
       byte option, optionGroup, optionBit;
       byte s = start > 0 ? start : maxZones;
 
-      for (optionGroup = dscZones - 1; optionGroup >= 0 && optionGroup < dscZones; optionGroup--)
+      for (optionGroup = dscZones - 1; optionGroup < dscZones; optionGroup--)
       {
-        for (optionBit = 7; optionBit >= 0 && optionBit < 8; optionBit--)
+        for (optionBit = 7; optionBit < 8; optionBit--)
         {
           option = optionBit + 1 + (optionGroup * 8);
           if (bitRead(programZones[optionGroup], optionBit) && option < s)
@@ -1887,7 +1887,7 @@ void DSCkeybushome::update()
 
         std::string zoneStatusMsg;
         zoneStatusMsg = "";
-        char s1[7];
+        char s1[10];
         for (auto &x : zoneStatus)
         {
           if (!x.enabled)

@@ -108,7 +108,7 @@ public:
   // add target string, with specified length
   void Target (char * s, const unsigned int len);
   // do a match on a supplied pattern and zero-relative starting point
-  char Match (const char * pattern, unsigned int index = 0);
+  char Match (const char * pattern, unsigned int  index = 0);
   // return the matching string
   char * GetMatch (char * s) const;
   // return capture string n
