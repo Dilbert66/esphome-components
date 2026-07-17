@@ -114,7 +114,7 @@ esp32:
 #copy the code to directory "my_components" in your main esphome directory
 # see here for more info: https://esphome.io/components/external_components    
 external_components:
-  - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository
+  - source: github://Dilbert66/esphome-components@main #uncomment to use github repository
   #- source:  my_components #uncomment to use local directory  
     components: [vista_alarm_panel,web_keypad,mg_lib] 
     refresh: 10min
@@ -176,10 +176,6 @@ esphome:
       #- lambda: |-
          #   $panelId->set_panel_time();  
   
-# output sympols to output.map for debugging. you can remove if not needed
-  platformio_options:
-    build_flags: 
-        - "-Wl,-Map,output.map"  
 
 wifi:
   ssid: !secret wifi_ssid

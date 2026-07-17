@@ -55,13 +55,16 @@ dsc_alarm_panel:
   #triggered,armed_home,armed_away,armed_night,pending,arming,disarmed
   #the default is "false"
   detailed_partition_state: false
+
+  # esp32 only. Set this flag to true if you are getting garbage data in your logs
+  use_esp_idf_timer: false
  
   clean_build: "false" #default is false.  set to true if getting duplication errors in linking step.  
 
 esp32: 
   board: nodemcu-32s
   framework: 
-    type: arduino
+    type: esp-idf
     version: recommended
 
 #esp8266:    
@@ -73,7 +76,7 @@ esp32:
 #copy the code to directory "my_components" in your main esphome directory   
 # see here for more info: https://esphome.io/components/external_components       
 external_components:
-  - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository (dev branch selected)
+  - source: github://Dilbert66/esphome-components@main #uncomment to use github repository (dev branch selected)
   #- source:  my_components #uncomment to use local directory 
     components: [dsc_alarm_panel,web_keypad,mg_lib] 
     refresh: 10min
@@ -130,11 +133,6 @@ esphome:
     #then:
       #- lambda: |-
          #   $panelId->set_panel_time();    
-
-#output sympols to output.map for debugging. You can remove if not needed
-  platformio_options:
-    build_flags: 
-        - "-Wl,-Map,output.map"  
 
 #you can remove/disable this section if you don't want your panel time updated automatically. 
 #interval:
