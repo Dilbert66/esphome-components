@@ -44,7 +44,7 @@
 #endif
 
 #if defined(USE_ESP_IDF)
-typedef char byte;
+typedef uint8_t byte;
 typedef char __FlashStringHelper;
 
 #define HIGH 1

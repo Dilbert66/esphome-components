@@ -362,7 +362,7 @@ namespace esphome
         if (mg_url_is_ssl(apiHost_.c_str()))
         {
           #if defined(USE_ESP32)
-          ESP_LOGD(TAG, "TLS init - Before: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+          ESP_LOGD(TAG, "TLS init - Before: freeheap: %5lu,minheap: %5lu,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
          #endif
           struct mg_tls_opts opts = {.name = host};
           mg_tls_init(c, &opts);
@@ -381,7 +381,7 @@ namespace esphome
 
        currentPollTime_ = millis() + (pollTimeout_ * 1000); // set  long poll timeout
         #if defined(USE_ESP32)
-        ESP_LOGD(TAG, "TLS init - After: freeheap: %5d,minheap: %5d,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
+        ESP_LOGD(TAG, "TLS init - After: freeheap: %5lu,minheap: %5lu,maxfree:%5d", esp_get_free_heap_size(), esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(8));
         #endif
         if (messages_.size())
         {
@@ -505,10 +505,11 @@ namespace esphome
         retryDelay_ = millis();
         connectError_ = true;
         connectErrorMessage_= std::string((char *)ev_data);
-        ESP_LOGE(TAG, "MG_EV_ERROR %lu %ld %s. Retrying in %d seconds.", c->id, c->fd, (char *)ev_data, delayTime_ / 1000);
+        ESP_LOGE(TAG, "MG_EV_ERROR %lu %s. Retrying in %d seconds.", c->id, (char *)ev_data, delayTime_ / 1000);
 
       }
     }
+    
 
         #if  defined(USETASK)
 

@@ -779,7 +779,7 @@ void Vista::write(const char key, uint8_t addr)
 
   if ((key >= 0x30 && key <= 0x39) || key == 0x23 || key == 0x2a || key == '|' || (key >= 0x41 && key <= 0x44) || key == 0x46 || key == 0x4d || key == 0x50 || key == 0x47 || key == 0x74)
   {
-    keyType kt;
+    keyType kt ;
     kt.key = key;
     kt.kpaddr = addr;
     kt.direct = false;
@@ -923,7 +923,7 @@ void Vista::writeChars()
   if (_retries == 0)
   {
 
-    keyType kt;
+    keyType kt  = {.key = 0, .kpaddr = 0, .direct = false, .count = 0, .seq = 0};
     char c;
     int sz = 0;
     tmpIdx = 2;
