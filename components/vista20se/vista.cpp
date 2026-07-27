@@ -48,6 +48,26 @@ Vista::~Vista() {
     #endif
     pointerToVistaClass = NULL;
 }
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::disableInterrupts()
+{
+#ifndef ESP32
+   m_savedPS = xt_rsil(15);
+#else
+    taskENTER_CRITICAL(&m_interruptsMux);
+#endif
+}
+
+ALWAYS_INLINE_ATTR inline void IRAM_ATTR Vista::restoreInterrupts()
+{
+#ifndef ESP32
+    xt_wsr_ps(m_savedPS);
+#else
+    taskEXIT_CRITICAL(&m_interruptsMux);
+#endif
+}
+
+
 expanderType Vista::getNextFault() {
     uint8_t currentFaultIdx;
     expanderType currentFault;
@@ -141,48 +161,31 @@ void Vista::keyAckComplete(char data) {
 void Vista::processStatus(char cbuf[], int * idx) {
 
 
-    for (int x = 0; x <= 10; x++) {
-        switch (x) {
-
-        case 0:
-            statusFlags.zone = (uint8_t) toDec(cbuf[x]);
-            break;
-        case 1:
-            statusFlags.beeps = cbuf[x] & BIT_MASK_BYTE1_BEEP;
-            statusFlags.night = ((cbuf[x] & BIT_MASK_BYTE1_NIGHT) > 0);
-
-            break;
-        case 2:
-            statusFlags.fire = ((cbuf[x] & BIT_MASK_BYTE2_FIRE) > 0);
-            statusFlags.systemFlag = ((cbuf[x] & BIT_MASK_BYTE2_SYSTEM_FLAG) > 0);
-            statusFlags.ready = ((cbuf[x] & BIT_MASK_BYTE2_READY) > 0);
+            statusFlags.zone = (uint8_t) toDec(cbuf[0]);
+            statusFlags.beeps = cbuf[1] & BIT_MASK_BYTE1_BEEP;
+            statusFlags.night = ((cbuf[1] & BIT_MASK_BYTE1_NIGHT) > 0);
+            statusFlags.fire = ((cbuf[2] & BIT_MASK_BYTE2_FIRE) > 0);
+            statusFlags.systemFlag = ((cbuf[2] & BIT_MASK_BYTE2_SYSTEM_FLAG) > 0);
+            statusFlags.ready = ((cbuf[2] & BIT_MASK_BYTE2_READY) > 0);
             if (statusFlags.systemFlag) {
-                statusFlags.armedStay = ((cbuf[x] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
-                statusFlags.lowBattery = ((cbuf[x] & BIT_MASK_BYTE2_LOW_BAT) > 0);
-                statusFlags.acLoss = ((cbuf[x] & BIT_MASK_BYTE2_AC_LOSS) > 0);
+                statusFlags.armedStay = ((cbuf[2] & BIT_MASK_BYTE2_ARMED_HOME) > 0);
+                statusFlags.lowBattery = ((cbuf[2] & BIT_MASK_BYTE2_LOW_BAT) > 0);
+                statusFlags.acLoss = ((cbuf[2] & BIT_MASK_BYTE2_AC_LOSS) > 0);
             } else {
-                statusFlags.check = ((cbuf[x] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
-                statusFlags.fireZone = ((cbuf[x] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
+                statusFlags.check = ((cbuf[2] & BIT_MASK_BYTE2_CHECK_FLAG) > 0);
+                statusFlags.fireZone = ((cbuf[2] & BIT_MASK_BYTE2_ALARM_ZONE) > 0);
             }
-
-            break;
-        case 3:
-            statusFlags.inAlarm = ((cbuf[x] & BIT_MASK_BYTE3_IN_ALARM) > 0);
-            statusFlags.acPower = ((cbuf[x] & BIT_MASK_BYTE3_AC_POWER) > 0);
-            statusFlags.chime = ((cbuf[x] & BIT_MASK_BYTE3_CHIME_MODE) > 0);
-            statusFlags.bypass = ((cbuf[x] & BIT_MASK_BYTE3_BYPASS) > 0);
-            statusFlags.programMode = (cbuf[x] & BIT_MASK_BYTE3_PROGRAM);
+            statusFlags.inAlarm = ((cbuf[3] & BIT_MASK_BYTE3_IN_ALARM) > 0);
+            statusFlags.acPower = ((cbuf[3] & BIT_MASK_BYTE3_AC_POWER) > 0);
+            statusFlags.chime = ((cbuf[3] & BIT_MASK_BYTE3_CHIME_MODE) > 0);
+            statusFlags.bypass = ((cbuf[3] & BIT_MASK_BYTE3_BYPASS) > 0);
+            statusFlags.programMode = (cbuf[3] & BIT_MASK_BYTE3_PROGRAM);
             if (statusFlags.systemFlag) {
-                statusFlags.instant = ((cbuf[x] & BIT_MASK_BYTE3_INSTANT) > 0);
-                statusFlags.armedAway = ((cbuf[x] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);
+                statusFlags.instant = ((cbuf[3] & BIT_MASK_BYTE3_INSTANT) > 0);
+                statusFlags.armedAway = ((cbuf[3] & BIT_MASK_BYTE3_ARMED_AWAY) > 0);
             } else {
-                statusFlags.alarm = ((cbuf[x] & BIT_MASK_BYTE3_SYSTEM_ALARM) > 0);
+                statusFlags.alarm = ((cbuf[3] & BIT_MASK_BYTE3_SYSTEM_ALARM) > 0);
             }
-
-            break;
-
-        }
-    }
 
 }
 
@@ -490,6 +493,7 @@ void Vista::writeChars() {
                   vistaSerial -> write(c);
                   vistaSerial -> write(c);
                   vistaSerial -> setConfig(2400, SWSERIAL_8E2);
+  
              }
             okToSend=false;
 }
@@ -497,7 +501,7 @@ void Vista::writeChars() {
 
 void ICACHE_RAM_ATTR Vista::rxHandleISR() {
     static byte b;
-   
+   //  disableInterrupts();
     if (digitalRead(rxPin)) {
         highTime=micros();
         if (lowTime)
@@ -628,7 +632,7 @@ void ICACHE_RAM_ATTR Vista::rxHandleISR() {
     }
     if (rxState==sCmdData || highTime==0)
         vistaSerial -> rxRead();
-
+   // restoreInterrupts();
     // #ifndef ESP32
     // //clear pending interrupts for this pin if any occur during transmission
     //     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << rxPin);
@@ -638,9 +642,10 @@ void ICACHE_RAM_ATTR Vista::rxHandleISR() {
 
 #ifdef MONITORTX
 void ICACHE_RAM_ATTR Vista::txHandleISR() {
+   // disableInterrupts();
     if ((!sending || !filterOwnTx) && rxState!=sSyncLow && (micros() - syncTime > 10000)  )
         vistaSerialMonitor -> rxRead();
-
+  //  restoreInterrupts();
 }
 #endif
 
@@ -862,7 +867,6 @@ bool Vista::getExtBytes() {
 
   while (vistaSerialMonitor -> available()) {
     x = vistaSerialMonitor -> read();
-
     if (extidx < szExt)
       extbuf[extidx++] = x;
     markPulse = 0; //reset pulse flag to wait for next inter msg gap
@@ -888,14 +892,14 @@ bool Vista::handle() {
     if (vistaSerial == NULL)
       return false;
 
-    #ifdef MONITORTX
-    if (getExtBytes()) return 1;
-    #endif
 
     if (rxState==sSyncLow &&  (micros() - lowTime < 5000 ) && okToSend && charAvail()) {
        writeChars();
     }   
 
+    #ifdef MONITORTX
+    if (getExtBytes()) return 1;
+    #endif
 
 
     if (is2400)
@@ -910,9 +914,9 @@ bool Vista::handle() {
 
      memset(cbuf, 0, szCbuf); //clear buffer mem
 
-        if (markPulse==1) return 0;
+        // if (markPulse==1) return 0;
         
-        markPulse=1;
+        // markPulse=1;
         if (expectByte != 0) {
             if (x != expectByte) {
                 onResponseError(x);
@@ -1091,7 +1095,7 @@ bool Vista::handle() {
             return 1;
         }  
         
-         if (x >=0 && x <0xf0 ) { //assume it's a status cmd
+         if (x <0xf0 ) { //assume it's a status cmd
             vistaSerial->setBaud(2400);
             newCmd = true;
             gidx = 0;
