@@ -508,7 +508,7 @@ void setup() override {
           #if defined(ARDUINO_MQTT)
           Serial.printf("Writing keys: %s to partition %d\n", keystring.c_str(),partition);      
           #else
-          ESP_LOGD("Debug", "Writing keys: %s to partition %d", keystring.c_str(),partition);
+          ESP_LOGD("Debug", "Writing keys: %s to partition %ld", keystring.c_str(),partition);
           #endif
       vista.write(keys);
     }
@@ -804,10 +804,10 @@ void update() override {
             }
           } else if (vista.extcmd[0] == 0xFB && vista.extcmd[1] == 4) {
               
-            char rf_serial_char[14];
+            char rf_serial_char[20];
             //FB 04 06 18 98 B0 00 00 00 00 00 00 
             uint32_t device_serial = (vista.extcmd[2] << 16) + (vista.extcmd[3] << 8) + vista.extcmd[4];
-            sprintf(rf_serial_char, "%03d%04d", device_serial / 10000, device_serial % 10000);
+            //sprintf(rf_serial_char, "%03lu%04lu", device_serial / 10000, device_serial % 10000);
             serialType rf=getRfSerialLookup(rf_serial_char);
             int z=rf.zone;            
 
@@ -823,7 +823,7 @@ void update() override {
                 zones[z].open = vista.extcmd[5]&rf.mask?true:false;
                 zoneStatusUpdate(z);
               }
-            sprintf(rf_serial_char,"%s,%02x",rf_serial_char,vista.extcmd[5]);
+            sprintf(rf_serial_char, "%lu,%02x", device_serial, vista.extcmd[5]);
             rfMsgChangeCallback(rf_serial_char);
             refreshRfTime = millis();
 
@@ -1175,7 +1175,7 @@ void update() override {
         std::string zoneStatusMsg = "";
         char s1[7];
         //clears restored zones after timeout
-        for (int x = 1; x < maxZones + 1; x++) {
+        for (uint8_t x = 1; x < maxZones + 1; x++) {
             
            if (zones[x].bypass && !partitionStates[zones[x].partition].previousLightState.bypass) {
             zones[x].bypass=false;  

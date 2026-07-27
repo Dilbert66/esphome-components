@@ -214,6 +214,13 @@ class Vista {
         if (addr < 16) return 0;
         else return 0xFF ^ (0x01 << (addr - 16));
     }
+#ifndef ESP32
+    static uint32_t m_savedPS;
+#else
+    static portMUX_TYPE m_interruptsMux;
+#endif
+    static void disableInterrupts();
+    static void restoreInterrupts();
 
     std:: function < void(char) > expectCallbackComplete;
     std:: function < void(char) > expectCallbackError;
