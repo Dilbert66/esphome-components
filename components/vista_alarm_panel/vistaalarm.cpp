@@ -1138,7 +1138,7 @@ void vistaECPHome::setup()
       auiCmd.time = millis();
       auiCmd.pending = true;
       // dateReqStatus=0;
-      int len= snprintf(&bytes[8],14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100u, rtc.month, rtc.day_of_month%10u,  rtc.hour%10u, rtc.minute%10u, rtc.second%10u, (rtc.day_of_week -1)%1);
+      int len= snprintf(&bytes[8],14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100u, rtc.month, rtc.day_of_month%100u,  rtc.hour%100u, rtc.minute%100u, rtc.second%100u, (rtc.day_of_week -1)%10u);
       if (len > 13) return false;
       vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
       return true;
