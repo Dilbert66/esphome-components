@@ -308,7 +308,6 @@ unsigned long micros() {
         byte enabled : 1;
         byte bypassed : 1;
         byte is_binary: 1;
-        uint32_t hash;
         const char * id_type;
       };
 
@@ -448,7 +447,6 @@ unsigned long micros() {
       {
         unsigned long keyPressTime;
         byte lastStatus;
-        const char *lastPartitionStatus;
         byte status;
         byte digits;
         byte editIdx;
@@ -476,7 +474,6 @@ unsigned long micros() {
           .enabled = false,
           .bypassed = false,
           .is_binary = false,
-          .hash=0,
           .id_type ="",
         };
 
@@ -491,7 +488,6 @@ unsigned long micros() {
           .enabled = false,
           .bypassed = false,
           .is_binary = false,
-          .hash=0,
           .id_type ="",
         };
           

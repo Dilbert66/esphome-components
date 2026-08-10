@@ -186,19 +186,28 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
 
 }
 
+
+
+
     const char * vistaECPHome::getIdType(uint32_t hash)
     {
 
-       if (hash == 0) return "";
+       if (hash==0) return "";
       auto it = std::find_if(extZones.begin(), extZones.end(), [hash](sensorObjType &f)
-                             { return f.hash == hash; });
+      { 
+      if (f.sensorPtr == nullptr) return false;
+        #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
+          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_object_id_hash()==hash;
+        #else
+          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_entity_key()==hash;
+      #endif
+      });
 
-      if (it != extZones.end())
-        return (*it).id_type;
-      else 
-        return "";
+      return it != extZones.end()? (*it).id_type:"";
+
        
     }
+    
 #endif
 
     vistaECPHome::sensorObjType *vistaECPHome::getSensorObj(const char *id_type)
@@ -206,12 +215,8 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
  
       auto it = std::find_if(extZones.begin(), extZones.end(), [id_type](sensorObjType &f)
                              { return strcmp(f.id_type,id_type) == 0; });
-      if (it != extZones.end()) 
-        return &(*it);
-      else {
-        return nullptr;
-      }
-
+       
+      return it != extZones.end()? &(*it):nullptr;                       
     }
 
 
@@ -311,7 +316,7 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
           if (z ) {
             sensorObjType * n = getZone(z);
             if (n->zone == z) {
-              if (n->sensorPtr==NULL)
+              if (n->sensorPtr==nullptr)
                 n->sensorPtr=obj;
               if (!n->partition)
                 n->partition=p;
@@ -328,12 +333,12 @@ void vistaECPHome::publishTextState(const std::string &idstr, uint8_t num, std::
       s.emulated=emulated;
       s.is_binary=is_binary;
       s.id_type=id_type;
-        if (is_binary) 
-        {
-          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
-        } else {
-          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
-        }
+
+        // #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
+        // s.hash = reinterpret_cast<EntityBase  *>(obj)->get_object_id_hash();
+        // #else
+        //  s.hash = reinterpret_cast<EntityBase  *>(obj)->get_entity_key();
+        // #endif
       if (serial == 0 ) 
         getRFSerial(&s);
       else

@@ -115,8 +115,9 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [zone](sensorObjType &f)
                              { return f.zone == zone; });
+
       if (it != zoneStatus.end()) {
-                sensorObjType s = (*it);
+                auto s = (*it);
                 if (s.sensorPtr != nullptr) {
                 const char * name;
                 if (s.is_binary) {
@@ -130,7 +131,6 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
                   else
                   return  std::string(name);
                 }
-            
       }
       
 #endif
@@ -151,9 +151,9 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
     void DSCkeybushome::set_panel_time_manual(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute)
     {
 #if defined(ARDUINO_MQTT)
-      Serial.printf("Setting panel time...\n");
+      Serial.printf("Setting panel time - manual...\n");
 #else
-  ESP_LOGI(TAG, "Setting panel time...");
+  ESP_LOGI(TAG, "Setting panel time - manual...");
 #endif
       dsc.setDateTime(year, month, day, hour, minute);
     }
@@ -201,27 +201,29 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
  
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [id_type](sensorObjType &f)
                              { return strcmp(f.id_type,id_type) == 0; });
-      if (it != zoneStatus.end())
-        return &(*it);
-      else {
-        return nullptr;
-      }
+
+      return it != zoneStatus.end()? &(*it):nullptr;
 
     }
+
+
 
     const char * DSCkeybushome::getIdType(uint32_t hash)
     {
 
        if (hash==0) return "";
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [hash](sensorObjType &f)
-                             { 
-                              return f.hash==hash;
-                             });
+      { 
+      if (f.sensorPtr == nullptr) return false;
+        #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
+          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_object_id_hash()==hash;
+        #else
+          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_entity_key()==hash;
+      #endif
+      });
 
-      if (it != zoneStatus.end())
-        return (*it).id_type;
-      else 
-        return "";
+      return it != zoneStatus.end()?(*it).id_type:"";
+
        
     }
 
@@ -253,9 +255,9 @@ void DSCkeybushome::setup()
       register_service(&DSCkeybushome::alarm_disarm, "alarm_disarm", {"code"});
   #if defined(USE_TIME)
       register_service(&DSCkeybushome::set_panel_time, "set_panel_time", {});
-  #else
+ #endif
       register_service(&DSCkeybushome::set_panel_time_manual, "set_panel_time_manual", {"year", "month", "day", "hour", "minute"});
-  #endif
+
 
       register_service(&DSCkeybushome::alarm_arm_home, "alarm_arm_home");
       register_service(&DSCkeybushome::alarm_arm_night,"alarm_arm_night", {"code"});
@@ -311,7 +313,7 @@ void DSCkeybushome::setup()
       for (int p = 0; p < dscPartitions; p++)
       {
 
-        partitionStatus[p]={0,0,NULL,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+        partitionStatus[p]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         publishBeeps("0", p + 1);
         publishPartitionMsg("No messages", p + 1);
         publishPartitionStatus("No messages", p + 1);
@@ -1842,8 +1844,6 @@ void DSCkeybushome::update()
           if (ps!="")
             publishPartitionStatus(ps.c_str(), partition + 1);
 
-
-         // partitionStatus[partition].lastPartitionStatus = status;
 
         } //for each partition
 
@@ -4819,7 +4819,7 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
           if (z ) {
             sensorObjType * n = getZone(z);
             if (n->zone == z) {
-              if (n->sensorPtr==NULL)
+              if (n->sensorPtr==nullptr)
                 n->sensorPtr=obj;
               if (!n->partition)
                 n->partition=p;
@@ -4833,11 +4833,6 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
         s.partition = p;
         s.is_binary=is_binary;
         s.id_type=id_type;
-        if (is_binary) {
-          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
-        } else {
-          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
-        }
         zoneStatus.push_back(s);
        
         ESP_LOGD(TAG, "CreateSensorFromOjb: added zone %d with id_code: %s", zoneStatus.back().zone,s.id_type);
