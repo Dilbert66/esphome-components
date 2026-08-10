@@ -230,10 +230,12 @@ void ev_handler_cb(struct mg_connection *c, int ev, void *ev_data) {
         }
 
 std::string WebServer::get_object_id(EntityBase * entity) {
-     const StringRef &name = entity->get_name();
  #if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
-  //ESP_LOGD("test","checking  name: %s,hash: %d",entity->get_name().c_str(),entity->get_object_id_hash());
+  #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
   const char *  oid = alarm_panel::alarmPanelPtr->getIdType(entity->get_object_id_hash());
+  #else
+    const char *  oid = alarm_panel::alarmPanelPtr->getIdType(entity->get_entity_key());
+  #endif
   if (strcmp(oid,"") != 0)  return std::string(oid);
  #endif
  
@@ -244,6 +246,8 @@ std::string WebServer::get_object_id(EntityBase * entity) {
   return std::string(entity->get_object_id_to(object_id_buf));
   #endif
  }
+
+
 
 
        WebServer::WebServer()

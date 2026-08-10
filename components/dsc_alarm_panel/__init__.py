@@ -13,6 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('DSCkeybushome', cg.PollingComponent)
 
+
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
 CONF_USERCODES="usercodes"
