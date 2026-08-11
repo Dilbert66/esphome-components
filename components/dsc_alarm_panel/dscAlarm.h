@@ -309,6 +309,7 @@ unsigned long micros() {
         byte bypassed : 1;
         byte is_binary: 1;
         const char * id_type;
+        uint32_t hash;
       };
 
 
@@ -475,21 +476,10 @@ unsigned long micros() {
           .bypassed = false,
           .is_binary = false,
           .id_type ="",
+          .hash=0
         };
 
-          sensorObjType sensorObjType_NULL = { //empty return zone
-          .sensorPtr = NULL,
-          .partition = 0,
-          .zone = 0,
-          .tamper = false,
-          .battery_low = false,
-          .open = false,
-          .alarm = false,
-          .enabled = false,
-          .bypassed = false,
-          .is_binary = false,
-          .id_type ="",
-        };
+      sensorObjType sensorObjType_NULL = sensorObjType_INIT;
           
 
       sensorObjType *getZone(byte z,bool create=false);

@@ -213,14 +213,7 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
 
        if (hash==0) return "";
       auto it = std::find_if(zoneStatus.begin(), zoneStatus.end(), [hash](sensorObjType &f)
-      { 
-      if (f.sensorPtr == nullptr) return false;
-        #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
-          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_object_id_hash()==hash;
-        #else
-          return reinterpret_cast<EntityBase  *>(f.sensorPtr)->get_entity_key()==hash;
-      #endif
-      });
+      { return f.hash == hash; });
 
       return it != zoneStatus.end()?(*it).id_type:"";
 
@@ -4833,6 +4826,24 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
         s.partition = p;
         s.is_binary=is_binary;
         s.id_type=id_type;
+
+         #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
+        if (is_binary) 
+        {
+          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
+        } else {
+          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
+        }
+         #else
+        if (is_binary) 
+        {
+          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_entity_key();
+        } else {
+          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_entity_key();
+        }
+         #endif
+       
+
         zoneStatus.push_back(s);
        
         ESP_LOGD(TAG, "CreateSensorFromOjb: added zone %d with id_code: %s", zoneStatus.back().zone,s.id_type);
@@ -4844,13 +4855,10 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
  DSCkeybushome::sensorObjType * DSCkeybushome::createZone(uint16_t z, uint8_t p)
 {
 
-  if (!z)
-    return &sensorObjType_NULL;
   sensorObjType n = sensorObjType_INIT;
   n.zone = z;
   n.enabled = true;
   n.partition = p;
-
 
   zoneStatus.push_back(n);
   ESP_LOGD(TAG, "createzone: added zone %d", zoneStatus.back().zone);
