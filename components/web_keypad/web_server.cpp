@@ -233,6 +233,7 @@ std::string WebServer::get_object_id(EntityBase * entity) {
  #if defined(USE_DSC_PANEL) || defined(USE_VISTA_PANEL)
   #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
   const char *  oid = alarm_panel::alarmPanelPtr->getIdType(entity->get_object_id_hash());
+
   #else
     const char *  oid = alarm_panel::alarmPanelPtr->getIdType(entity->get_entity_key());
   #endif
@@ -243,7 +244,8 @@ std::string WebServer::get_object_id(EntityBase * entity) {
   return  entity->get_object_id();
   #else
   char object_id_buf[128];
-  return std::string(entity->get_object_id_to(object_id_buf));
+  entity->get_object_id_to(object_id_buf);
+  return std::string(object_id_buf);
   #endif
  }
 

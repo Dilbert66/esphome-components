@@ -328,8 +328,8 @@ class vistaECPHome : public time::RealTimeClock
         uint8_t type; 
         bool emulated;
         bool is_binary;
-      //  uint32_t hash;
         const char * id_type;
+        uint32_t hash;
      };
 
 #if defined(ARDUINO_MQTT)
@@ -542,8 +542,8 @@ class vistaECPHome : public time::RealTimeClock
           .type=0,
           .emulated=0,
           .is_binary=0,
-        //  .hash=0,
           .id_type="",
+          .hash=0
 
         };
 
