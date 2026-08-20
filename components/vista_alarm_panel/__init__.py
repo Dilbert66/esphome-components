@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('vistaECPHome', cg.PollingComponent)
 
+AUTO_LOAD = ["ring_buffer"]
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"

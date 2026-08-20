@@ -4,7 +4,7 @@
 #if !defined(ARDUINO_MQTT)
 #include "esphome/components/network/util.h"
 #endif
-
+#include "esphome/components/ring_buffer/ring_buffer.h"
 #if defined(ESP32) 
 #include <esp_chip_info.h>
 #include <esp_task_wdt.h>
@@ -4827,21 +4827,13 @@ void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type
         s.is_binary=is_binary;
         s.id_type=id_type;
 
-         #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 8, 0)
+
         if (is_binary) 
         {
           s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_object_id_hash();
         } else {
           s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_object_id_hash();
         }
-         #else
-        if (is_binary) 
-        {
-          s.hash = reinterpret_cast<binary_sensor::BinarySensor  *>(obj)->get_entity_key();
-        } else {
-          s.hash = reinterpret_cast<text_sensor::TextSensor *>(obj)->get_entity_key();
-        }
-         #endif
        
 
         zoneStatus.push_back(s);
