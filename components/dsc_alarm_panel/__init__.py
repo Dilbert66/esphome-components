@@ -6,6 +6,7 @@ import re
 import os
 import logging
 from esphome.helpers import sanitize, snake_case
+from esphome.components.esp32 import include_builtin_idf_component
 
 
     
@@ -13,6 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 component_ns = cg.esphome_ns.namespace('alarm_panel')
 AlarmComponent = component_ns.class_('DSCkeybushome', cg.PollingComponent)
 
+AUTO_LOAD = ["ring_buffer"]
 
 CONF_ACCESSCODE="accesscode"
 CONF_MAXZONES="maxzones"
@@ -171,6 +173,8 @@ async def to_code(config):
     #     cg.add_global(cg.RawStatement(stack))
     #     cg.add_global(cg.RawStatement("#define USE_STACK_SIZE"))
     #     cg.add_global(cg.RawStatement("#endif"))
+    if CORE.is_esp32:
+        include_builtin_idf_component("esp_driver_gptimer")
     if config[CONF_EVENTFORMAT]=="json":
         cg.add_define("USE_JSON_EVENT")
     cg.add_define("USE_DSC_PANEL")   
