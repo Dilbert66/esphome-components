@@ -6,6 +6,7 @@ import re
 import os
 import logging
 from esphome.helpers import sanitize, snake_case
+from esphome.components.esp32 import include_builtin_idf_component
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -232,6 +233,10 @@ async def to_code(config):
     #      if CONF_STACK_SIZE in config and config[CONF_STACK_SIZE]:
     #         stack =config[CONF_STACK_SIZE] * 1024
     #      CORE.data[KEY_ESP32][KEY_SDKCONFIG_OPTIONS]["CONFIG_ESP_MAIN_TASK_STACK_SIZE"] = stack
+
+    if CORE.is_esp32:
+        include_builtin_idf_component("esp_driver_gptimer")
+
     cg.add_define("USE_VISTA_PANEL")  
 
     old_dir = CORE.relative_build_path("src")    
