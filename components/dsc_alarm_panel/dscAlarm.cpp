@@ -4,7 +4,7 @@
 #if !defined(ARDUINO_MQTT)
 #include "esphome/components/network/util.h"
 #endif
-#include "esphome/components/ring_buffer/ring_buffer.h"
+
 #if defined(ESP32) 
 #include <esp_chip_info.h>
 #include <esp_task_wdt.h>
