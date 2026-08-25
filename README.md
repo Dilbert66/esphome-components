@@ -71,6 +71,7 @@ The on_message actions will send a RemoteData structure x to lambda's that holds
 ```
 
 Example bot config:
+#NOTE: This example is for a Vista20 alarm panel.  DSC system will use different commands.
 ```
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
