@@ -70,7 +70,8 @@ The on_message actions will send a RemoteData structure x to lambda's that holds
   x.force -> boolean - Force publish even if notify is off
 ```
 
-Example bot config:
+Example bot config: 
+NOTE# this example is for a Vista20 alarm panel.  DSC panels will use different commands.
 ```
 external_components:
   - source: github://Dilbert66/esphome-components@dev #uncomment to use github repository version
@@ -103,7 +104,7 @@ telegram_bot:
     - command: "/disarm,/d"  #cmds/text/callback values and be comma separated to also accept aliases for the cmd.
       then: 
         - lambda: |-
-            $panelId->alarm_keypress_partition("${accesscode}1",1); #uses global value "accesscode"
+            $panelId->alarm_keypress_partition("${accesscode}1",1); #uses global value "accesscode" 
 
     - command: "/help,/h"
       then: 
@@ -183,7 +184,7 @@ telegram_bot:
 
 ```
 
-Sample telegram publish actions.  message=string or !lambda.
+Sample telegram publish actions.  message=string or !lambda. 
 ```
   - platform: template
     id: rdy_1
