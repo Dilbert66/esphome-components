@@ -1607,7 +1607,7 @@ void DSCkeybushome::update()
         if ((dsc.keybusChanged) || forceRefresh)
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
-          if (dsc.keybusConnected && millis() - errorTime > 15000)
+          if (dsc.keybusConnected)
           {
             ESP_LOGD(TAG, "Panel keybus connected...");
             publishSystemStatus(FC(STATUS_ONLINE));
@@ -1808,6 +1808,11 @@ void DSCkeybushome::update()
           if (dsc.exitDelayChanged[partition] || forceRefresh)
           {
             clearZoneAlarms(partition + 1);
+            // A cancelled exit delay never sets armedChanged, but the panel
+            // clears its bypasses when it returns to the disarmed state.
+            if (dsc.exitDelayChanged[partition] && !dsc.exitDelay[partition] &&
+                !dsc.armed[partition] && !dsc.alarm[partition])
+              clearZoneBypass(partition + 1);
             dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
           }
 
