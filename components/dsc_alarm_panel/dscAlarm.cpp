@@ -1607,7 +1607,7 @@ void DSCkeybushome::update()
         if ((dsc.keybusChanged) || forceRefresh)
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
-          if (dsc.keybusConnected && millis() - errorTime > 15000)
+          if (dsc.keybusConnected)
           {
             ESP_LOGD(TAG, "Panel keybus connected...");
             publishSystemStatus(FC(STATUS_ONLINE));
