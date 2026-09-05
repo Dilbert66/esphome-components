@@ -1808,6 +1808,11 @@ void DSCkeybushome::update()
           if (dsc.exitDelayChanged[partition] || forceRefresh)
           {
             clearZoneAlarms(partition + 1);
+            // A cancelled exit delay never sets armedChanged, but the panel
+            // clears its bypasses when it returns to the disarmed state.
+            if (dsc.exitDelayChanged[partition] && !dsc.exitDelay[partition] &&
+                !dsc.armed[partition] && !dsc.alarm[partition])
+              clearZoneBypass(partition + 1);
             dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
           }
 
