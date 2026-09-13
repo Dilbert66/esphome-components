@@ -419,7 +419,11 @@ void WebServer::loop()
 #endif
 
     if (!this->entities_iterator_.completed())
+    #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 8, 1)
+        this->entities_iterator_.try_advance(1);
+    #else
         this->entities_iterator_.advance();
+    #endif
 
    #if defined(USE_WIFI) && !defined(USE_CAPTIVE_PORTAL)
    is_ap_active_ = wifi::global_wifi_component->is_ap_active();

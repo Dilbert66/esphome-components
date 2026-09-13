@@ -212,9 +212,10 @@ struct upload_state {
   }
 
   void set_auth(const char * auth_username,const char * auth_password,bool use_encryption) { 
-    credentials_.username = auth_username;   
-    credentials_.password = auth_password;
-     #ifdef USE_WEBKEYPAD_ENCRYPTION
+    
+   credentials_.username = auth_username; 
+   credentials_.password = auth_password;
+   #ifdef USE_WEBKEYPAD_ENCRYPTION
     this->crypt_ = use_encryption;  
     credentials_.crypt=use_encryption;
 
@@ -527,6 +528,7 @@ bool match_object(EntityBase *entity, JsonObject doc);
   bool crypt_{false};
   void percentDecode(char *src);
   void push_log(const char *message);
+  const char * emptyString_="";
 #ifdef USE_ESP32
   std::deque<std::function<void()>> to_schedule_;
   SemaphoreHandle_t to_schedule_lock_;
@@ -536,7 +538,7 @@ bool match_object(EntityBase *entity, JsonObject doc);
     int lastseq;
   };
 
-  Credentials  credentials_ ;
+  Credentials  credentials_{"",""} ;
 
   bool is_ap_active_{false};
   std::map<EntityBase *, SortingComponents> sorting_entitys_;
