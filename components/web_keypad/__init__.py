@@ -26,12 +26,13 @@ from esphome.const import (
     PLATFORM_BK72XX,
     PLATFORM_RTL87XX,
     CONF_NAME,
+    __version__ as ESPHOME_VERSION,
 )
 import os
 import pathlib
 import logging
 from esphome.helpers import copy_file_if_changed
-from esphome.core import CORE, coroutine_with_priority
+from esphome.core import CORE, coroutine_with_priority, Version
 from esphome.components.logger import request_log_listener
 from esphome.types import ConfigType
 
@@ -58,7 +59,7 @@ CONF_WEB_KEYPAD="web_keypad"
 CONF_STACK_SIZE="stack_size"
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
-WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component)
 
 sorting_groups = {}
 
@@ -254,9 +255,15 @@ def add_resource_as_progmem(
 async def to_code(config):
 
     # Track controller registration for StaticVector sizing
-    CORE.register_controller()
+
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
+
+    if Version.parse(ESPHOME_VERSION) < Version.parse("2026.10.0"):
+        CORE.register_controller()
+    else:
+        CORE.register_controller(var)
+
     version = config[CONF_VERSION]
 
     cg.add(var.set_port(config[CONF_PORT]))

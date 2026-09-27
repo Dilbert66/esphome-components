@@ -77,6 +77,8 @@ namespace esphome
 #ifdef USE_UPDATE
       bool on_update(update::UpdateEntity *update) override;
 #endif
+
+
     bool completed() { return this->state_ == IteratorState::NONE; }
     protected:
       WebServer *web_server_;

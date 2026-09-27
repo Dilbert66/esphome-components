@@ -2,7 +2,6 @@
 #include "list_entities.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/component.h"
-#include "esphome/core/controller.h"
 #include "esphome/core/entity_base.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
@@ -132,7 +131,13 @@ enum JsonDetail { DETAIL_ALL, DETAIL_STATE };
  * under the '/light/...', '/sensor/...', ... URLs. A full documentation for this API
  * can be found under https://esphome.io/web-api/index.html.
  */
+
+ #if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 10, 0)
 class WebServer : public Controller, public Component
+#else
+class WebServer : public Component
+#endif
+
 #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
 
 #else
@@ -286,7 +291,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_SENSOR
-  void on_sensor_update(sensor::Sensor *obj) override;
+  void on_sensor_update(sensor::Sensor *obj) ;
   /// Handle a sensor request under '/sensor/<id>'.
   void handle_sensor_request(struct mg_connection *c, JsonObject doc);
 
@@ -295,7 +300,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_EVENT
-  void on_event(event::Event *obj, const std::string &event_type) override;
+  void on_event(event::Event *obj, const std::string &event_type) ;
 
   /// Handle a event request under '/event<id>'.
   void handle_event_request(struct mg_connection *c, JsonObject doc);
@@ -305,7 +310,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_UPDATE
-  void on_update(update::UpdateEntity *obj) override;
+  void on_update(update::UpdateEntity *obj) ;
 
   /// Handle a update request under '/update/<id>'.
   void handle_update_request(struct mg_connection *c, JsonObject doc);
@@ -315,7 +320,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_VALVE
-  void on_valve_update(valve::Valve *obj) override;
+  void on_valve_update(valve::Valve *obj) ;
 
   /// Handle a valve request under '/valve/<id>/<open/close/stop/set>'.
   void handle_valve_request(struct mg_connection *c, JsonObject doc);
@@ -325,7 +330,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_DATETIME_DATE
-  void on_date_update(datetime::DateEntity *obj) override;
+  void on_date_update(datetime::DateEntity *obj) ;
   /// Handle a date request under '/date/<id>'.
   void handle_date_request(struct mg_connection *c, JsonObject doc);
 
@@ -334,7 +339,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_DATETIME_TIME
-  void on_time_update(datetime::TimeEntity *obj) override;
+  void on_time_update(datetime::TimeEntity *obj) ;
   /// Handle a time request under '/time/<id>'.
   void handle_time_request(struct mg_connection *c, JsonObject doc);
 
@@ -343,7 +348,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_DATETIME_DATETIME
-  void on_datetime_update(datetime::DateTimeEntity *obj) override;
+  void on_datetime_update(datetime::DateTimeEntity *obj) ;
   /// Handle a datetime request under '/datetime/<id>'.
   void handle_datetime_request(struct mg_connection *c, JsonObject doc);
 
@@ -353,7 +358,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 
 
 #ifdef USE_SWITCH
-  void on_switch_update(switch_::Switch *obj) override;
+  void on_switch_update(switch_::Switch *obj) ;
 
   /// Handle a switch request under '/switch/<id>/</turn_on/turn_off/toggle>'.
   void handle_switch_request(struct mg_connection *c, JsonObject doc);
@@ -371,7 +376,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_BINARY_SENSOR
-  void on_binary_sensor_update(binary_sensor::BinarySensor *obj) override;
+  void on_binary_sensor_update(binary_sensor::BinarySensor *obj) ;
 
   /// Handle a binary sensor request under '/binary_sensor/<id>'.
   void handle_binary_sensor_request(struct mg_connection *c, JsonObject doc);
@@ -380,7 +385,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_FAN
-  void on_fan_update(fan::Fan *obj) override;
+  void on_fan_update(fan::Fan *obj) ;
 
   /// Handle a fan request under '/fan/<id>/</turn_on/turn_off/toggle>'.
   void handle_fan_request(struct mg_connection *c, JsonObject doc);
@@ -390,7 +395,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_LIGHT
-  void on_light_update(light::LightState *obj) override;
+  void on_light_update(light::LightState *obj) ;
 
   /// Handle a light request under '/light/<id>/</turn_on/turn_off/toggle>'.
   void handle_light_request(struct mg_connection *c, JsonObject doc);
@@ -400,7 +405,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_TEXT_SENSOR
-  void on_text_sensor_update(text_sensor::TextSensor *obj) override;
+  void on_text_sensor_update(text_sensor::TextSensor *obj) ;
 
   /// Handle a text sensor request under '/text_sensor/<id>'.
   void handle_text_sensor_request(struct mg_connection *c, JsonObject doc);
@@ -410,7 +415,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_COVER
-  void on_cover_update(cover::Cover *obj) override;
+  void on_cover_update(cover::Cover *obj) ;
 
   /// Handle a cover request under '/cover/<id>/<open/close/stop/set>'.
   void handle_cover_request(struct mg_connection *c, JsonObject doc);
@@ -420,7 +425,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_NUMBER
-  void on_number_update(number::Number *obj) override;
+  void on_number_update(number::Number *obj) ;
   /// Handle a number request under '/number/<id>'.
   void handle_number_request(struct mg_connection *c, JsonObject doc);
 
@@ -429,7 +434,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_TEXT
-  void on_text_update(text::Text *obj) override;
+  void on_text_update(text::Text *obj) ;
   /// Handle a text input request under '/text/<id>'.
   void handle_text_request(struct mg_connection *c, JsonObject doc);
 
@@ -438,7 +443,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_SELECT
-  void on_select_update(select::Select *obj) override;
+  void on_select_update(select::Select *obj) ;
   /// Handle a select request under '/select/<id>'.
   void handle_select_request(struct mg_connection *c, JsonObject doc);
 
@@ -447,7 +452,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_CLIMATE
-  void on_climate_update(climate::Climate *obj) override;
+  void on_climate_update(climate::Climate *obj) ;
   /// Handle a climate request under '/climate/<id>'.
   void handle_climate_request(struct mg_connection *c, JsonObject doc);
 
@@ -456,7 +461,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_LOCK
-  void on_lock_update(lock::Lock *obj) override;
+  void on_lock_update(lock::Lock *obj) ;
 
   /// Handle a lock request under '/lock/<id>/</lock/unlock/open>'.
   void handle_lock_request(struct mg_connection *c, JsonObject doc);
@@ -466,7 +471,7 @@ void handle_uploads(struct mg_connection *c, int ev, void *ev_data);
 #endif
 
 #ifdef USE_ALARM_CONTROL_PANEL
-  void on_alarm_control_panel_update(alarm_control_panel::AlarmControlPanel *obj) override;
+  void on_alarm_control_panel_update(alarm_control_panel::AlarmControlPanel *obj) ;
 
   /// Handle a alarm_control_panel request under '/alarm_control_panel/<id>'.
   void handle_alarm_control_panel_request(struct mg_connection *c, JsonObject doc);

@@ -70,7 +70,7 @@ SDK_STACK_SIZE="CONFIG_ESP_MAIN_TASK_STACK_SIZE"
 
 
 web_notify_ns = cg.esphome_ns.namespace("web_notify")
-WebNotify = web_notify_ns.class_("WebNotify", cg.Component, cg.Controller)
+WebNotify = web_notify_ns.class_("WebNotify", cg.Component)
 TelegramPublishAction = web_notify_ns.class_("TelegramPublishAction", automation.Action)
 TelegramEditMessageAction = web_notify_ns.class_("TelegramEditMessageAction", automation.Action)
 TelegramAnswerCallBackAction = web_notify_ns.class_("TelegramAnswerCallBackAction", automation.Action)

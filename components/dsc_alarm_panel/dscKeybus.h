@@ -279,6 +279,7 @@ class dscKeybusInterface {
 
     bool firstrun;
     bool running;
+    bool pendingD0,pending70,pending6E;    
     
   private:
 
@@ -484,7 +485,7 @@ class dscKeybusInterface {
      moduleType modules[maxModules];
      byte moduleSlots[6];
   
-     void processCmd70();
+    void processCmd70();
     unsigned int dec2bcd(unsigned int);
      //end expander
 
@@ -492,7 +493,7 @@ class dscKeybusInterface {
     volatile   byte writePartition;    
      byte * writeBuffer;
      byte cmdD0buffer[6];  
-     bool pendingD0,pending70,pending6E;    
+   
     volatile  byte outIdx,inIdx;     
      void processPendingResponses(byte cmd);
      void processPendingResponses_0xE6(byte cmd);  

@@ -121,7 +121,7 @@ CONFIG_SCHEMA = cv.Schema(
 ).extend(cv.polling_component_schema("16ms"))
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
-WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component)
 
 WEBKEYPAD_SORTING_SCHEMA = cv.Schema(
     {
@@ -212,7 +212,7 @@ async def to_code(config):
         cg.add(var.set_expanderAddr(config[CONF_EXPANDER2]));
        
     await cg.register_component(var, config)
-    CORE.register_controller()
+
 
 # def real_clean_build():
 #     import shutil

@@ -628,6 +628,7 @@ unsigned long micros() {
 
       void processBeeps(byte panelByte,byte partition);
       void processBeeps19(byte panelByte,byte beepbyte);
+      void processBuzzer(byte panelByte,byte partition);
 
       void printPanel_0x6E();
 

@@ -1607,7 +1607,7 @@ void DSCkeybushome::update()
         if ((dsc.keybusChanged) || forceRefresh)
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
-          if (dsc.keybusConnected)
+          if (dsc.keybusConnected && millis() - errorTime > 15000)
           {
             ESP_LOGD(TAG, "Panel keybus connected...");
             publishSystemStatus(FC(STATUS_ONLINE));
@@ -1808,11 +1808,6 @@ void DSCkeybushome::update()
           if (dsc.exitDelayChanged[partition] || forceRefresh)
           {
             clearZoneAlarms(partition + 1);
-            // A cancelled exit delay never sets armedChanged, but the panel
-            // clears its bypasses when it returns to the disarmed state.
-            if (dsc.exitDelayChanged[partition] && !dsc.exitDelay[partition] &&
-                !dsc.armed[partition] && !dsc.alarm[partition])
-              clearZoneBypass(partition + 1);
             dsc.exitDelayChanged[partition] = false; // Resets the exit delay status flag
           }
 
@@ -2901,9 +2896,15 @@ void DSCkeybushome::update()
         processBeeps(2,0); //partition 1
         break;
       case 0x75: // tones 1
-      case 0x7D:
+      case 0x7A:
         // ESP_LOGI(TAG, "Sent tones cmd %02X,%02X", dsc.panelData[0], dsc.panelData[3]);
         break;   // tones 2
+      case 0x7F: //buzzer
+        processBuzzer(2,1);
+        break;
+      case 0x82:
+        processBuzzer(2,2);
+        break;
       case 0x87: // relay cmd
         processRelayCmd();
         break;
@@ -2932,6 +2933,9 @@ void DSCkeybushome::update()
           processBeeps19(4,3);
           break;
         case 0x1A:
+          break;
+        case 0x1F: //buzzer
+          processBuzzer(4,dsc.panelData[3]);
           break;
         case 0x20:
         case 0x21:
@@ -2999,8 +3003,15 @@ void DSCkeybushome::update()
       }
     }
 
+    void  DSCkeybushome::processBuzzer(byte toneByte,byte partition) {
+      uint8_t toneDuration = dsc.panelData[toneByte] < 2?dsc.panelData[toneByte]:2; //not used currently
+      dsc.pending70=false;
+      publishBeeps("6",partition+1);
+    }
+
     void DSCkeybushome::processBeeps(byte beepByte,byte partition)
     {
+      dsc.pending70=false;
       dsc.statusChanged = true;
       beeps = dsc.panelData[beepByte] / 2;
       char s[4];
@@ -3019,6 +3030,7 @@ void DSCkeybushome::update()
 
     void DSCkeybushome::processBeeps19(byte beepByte,byte partitionByte)
     {
+      dsc.pending70=false;
       dsc.statusChanged = true;
       beeps = dsc.panelData[beepByte] / 2;
       char s[4];
