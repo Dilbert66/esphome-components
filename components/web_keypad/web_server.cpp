@@ -3,7 +3,9 @@
 #include "esphome/components/network/util.h"
 #include "esphome/core/application.h"
 #include "esphome/core/entity_base.h"
+#if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 10, 0)
 #include "esphome/core/controller_registry.h"
+#endif
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include "esphome/core/entity_base.h"
@@ -353,8 +355,10 @@ std::string WebServer::get_object_id(EntityBase * entity) {
 
 void WebServer::setup()
 {
-
+#if ESPHOME_VERSION_CODE < VERSION_CODE(2026, 10, 0)
     ControllerRegistry::register_controller(this);
+#endif
+
     mg_log_set(MG_LL_ERROR); //MG_LL_NONE, MG_LL_ERROR, MG_LL_INFO, MG_LL_DEBUG, MG_LL_VERBOSE
     mg_mgr_init(&mgr);
     #ifdef USE_LOGGER

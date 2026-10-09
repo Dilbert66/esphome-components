@@ -1097,9 +1097,10 @@ void dscKeybusInterface::setDateTime(unsigned int year,byte month,byte day,byte 
 
 void
 IRAM_ATTR 
-dscKeybusInterface::processCmd70() {
-  if (pgmBuffer.idx + 5 > pgmBuffer.len) return;
+dscKeybusInterface::processCmd70() {  
+  if (pgmBuffer.idx + 5 > pgmBuffer.len ) return;
   updateWriteBuffer((byte*) &pgmBuffer.data[pgmBuffer.idx], 9,1,5);
+
   pgmBuffer.idx += 5;    
   byte key = 0;
   if (pgmBuffer.sendhash) key=0x2D; //'#' // setup to send final # cmd to complete write update to panel

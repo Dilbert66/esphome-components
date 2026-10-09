@@ -171,7 +171,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 web_keypad_ns = cg.esphome_ns.namespace("web_keypad")
-WebKeypad = web_keypad_ns.class_("WebServer", cg.Component, cg.Controller)
+WebKeypad = web_keypad_ns.class_("WebServer", cg.Component)
 
 def _validate_id_code(value, is_binary_sensor=True):
     """Validate the type_id for binary or text sensors."""

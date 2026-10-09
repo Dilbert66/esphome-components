@@ -2,7 +2,6 @@
 #include "esphome/core/defines.h"
 #include "esphome/core/version.h"
 #include "esphome/core/component.h"
-#include "esphome/core/controller.h"
 #include "esphome/core/automation.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/json/json_util.h"
@@ -87,7 +86,7 @@ namespace esphome
 //     }
 //  #endif
 
-    class WebNotify : public Controller, public Component
+    class WebNotify :  public Component
     {
     public:
       WebNotify();
