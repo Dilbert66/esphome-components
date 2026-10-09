@@ -177,7 +177,7 @@ public:
     void write(const char);
     void write(const char *, uint8_t addr);
     void write(const char, uint8_t addr);
-    void writeDirect(const char *keys, uint8_t addr, size_t len);
+    void writeDirect(const char *keys, uint8_t addr, size_t len,bool auiFlag=false);
     void writeDirect(const char key, uint8_t addr, uint8_t seq = 0);
     statusFlagType statusFlags;
     void setKpAddr(char keypadAddr)

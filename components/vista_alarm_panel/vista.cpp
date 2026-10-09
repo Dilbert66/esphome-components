@@ -821,13 +821,15 @@ void Vista::write(const char *receivedKeys)
   }
 }
 
-void Vista::writeDirect(const char *receivedKeys, uint8_t addr, size_t len)
+void Vista::writeDirect(const char *receivedKeys, uint8_t addr, size_t len, bool auiFlag)
 {
   if (!addr || addr > 23)
     return;
   int x = 0;
 
   uint8_t seq = (((++_writeSeq) << 6) & 0xc0) | (addr & 0x3F); // so that we don't mix cmd sequences
+  if (auiFlag)
+    seq |= 0x20;
   while (x < len)
   {
     writeDirect(receivedKeys[x++], addr, seq);

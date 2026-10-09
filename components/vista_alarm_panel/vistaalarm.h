@@ -272,7 +272,7 @@ class vistaECPHome : public time::RealTimeClock
       void alarm_keypress(std::string keystring);
 
       void alarm_keypress_partition(std::string keystring, int32_t partition);
-      void send_cmd_bytes(int32_t addr, std::string hexbytes);
+      void send_cmd_bytes(int32_t addr, std::string hexbytes, bool isAui=false);
       void setDefaultKpAddr(uint8_t p);
       void set_alarm_state(std::string const &state, std::string code = "", int partition = DEFAULTPARTITION);
 #if defined(ARDUINO_MQTT)

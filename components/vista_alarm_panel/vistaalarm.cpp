@@ -638,7 +638,7 @@ void vistaECPHome::setup()
  #if defined(USE_API_CUSTOM_SERVICES) or defined(USE_API_SERVICES)
       register_service(&vistaECPHome::set_panel_time, "set_panel_time", {});
       register_service(&vistaECPHome::alarm_keypress, "alarm_keypress", {"keys"});
-      register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata"});
+      register_service(&vistaECPHome::send_cmd_bytes, "send_cmd_bytes", {"addr", "hexdata","isaui"});
       register_service(&vistaECPHome::alarm_keypress_partition, "alarm_keypress_partition", {"keys", "partition"});
       register_service(&vistaECPHome::alarm_disarm, "alarm_disarm", {"code", "partition"});
       register_service(&vistaECPHome::alarm_arm_home, "alarm_arm_home", {"partition"});
@@ -817,7 +817,7 @@ void vistaECPHome::setup()
         vista.write(keystring.c_str(), addr);
     }
 
-    void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes)
+    void vistaECPHome::send_cmd_bytes(int32_t addr, std::string hexbytes, bool isAui)
     {
       ESP_LOGD(TAG, "Cmd bytes=%s", hexbytes.c_str());
       std::string::iterator end_pos = std::remove(hexbytes.begin(), hexbytes.end(), ' ');
@@ -829,7 +829,7 @@ void vistaECPHome::setup()
       {
         bytes[i / 2] = toInt(hexbytes.substr(i, 2), 16);
       }
-      vista.writeDirect(bytes, addr, NumberChars / 2);
+      vista.writeDirect(bytes, addr, NumberChars / 2, isAui);
       return;
     }
 
@@ -1141,7 +1141,7 @@ void vistaECPHome::setup()
       // dateReqStatus=0;
       int len= snprintf(&bytes[8],14, "%02d%02d%02d%02d%02d%02d%1d", rtc.year % 100u, rtc.month, rtc.day_of_month%100u,  rtc.hour%100u, rtc.minute%100u, rtc.second%100u, (rtc.day_of_week -1)%10u);
       if (len > 13) return false;
-      vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1);
+      vista.writeDirect(bytes, _auiAddr, sizeof(bytes) - 1,true);
       return true;
     }
 
@@ -1157,7 +1157,7 @@ void vistaECPHome::setup()
       auiCmd.pending = true;
       auiCmd.time = millis();
       ESP_LOGD(TAG, "Sending zone status request %d, header %02X, _auiAddr %d", auiCmd.state, bytes[1], _auiAddr);
-      vista.writeDirect(bytes, _auiAddr, sizeof(bytes));
+      vista.writeDirect(bytes, _auiAddr, sizeof(bytes),true);
     }
 
 #if defined(AUTOPOPULATE)
