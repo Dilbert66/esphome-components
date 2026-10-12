@@ -1,7 +1,11 @@
 #mongoose web server library
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.core import CORE
+from esphome.core import CORE, Version
+from esphome.const import  __version__ as ESPHOME_VERSION
+
+
+
 
 
 KEY_BOARD = "board"
@@ -15,6 +19,13 @@ async def to_code(config):
         cg.add_build_flag("-DMG_ARCH=MG_ARCH_ESP32")
         cg.add_build_flag("-DMG_TLS=MG_TLS_MBED")
         cg.add_build_flag("-DMG_IO_SIZE=512")
+        if Version.parse(ESPHOME_VERSION) >= Version.parse("2026.10.0"):    
+            from esphome.components.esp32 import (
+                require_mbedtls_tls
+            ) 
+            require_mbedtls_tls()
+
+
     elif CORE.is_rp2040:
         cg.add_build_flag("-DMG_ARCH=MG_ARCH_CUSTOM")
         if CORE.data[KEY_RP2040][KEY_BOARD] == "rpipicow":
