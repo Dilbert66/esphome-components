@@ -126,8 +126,8 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
         gpio_pulldown_dis((gpio_num_t)dscReadPin);
         gpio_pullup_en((gpio_num_t)dscReadPin); 
         #elif defined(ESP8266)
-         pinModeCustom(dscClockPin, INPUT_PULLUP); 
-         pinModeCustom(dscReadPin, INPUT_OUTPUT_OPEN_DRAIN); 
+         pinMode8266(dscClockPin, INPUT_PULLUP); 
+         pinMode8266(dscReadPin, INPUT_OUTPUT_OPEN_DRAIN); 
         #else
          pinMode(dscClockPin, INPUT_PULLUP);
          pinMode(dscReadPin, INPUT_PULLUP);
@@ -632,7 +632,7 @@ bool dscKeybusInterface::validCRC() {
 #ifdef ESP8266
 
 //Add open drain input output option
-void pinModeCustom(uint8_t pin, uint8_t mode) {
+void pinMode8266(uint8_t pin, uint8_t mode) {
 if(pin < 16){
     if (mode == INPUT_OUTPUT_OPEN_DRAIN) {
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
@@ -705,13 +705,12 @@ dscKeybusInterface::dscClockInterrupt()
   if (digitalRead(dscClockPin) == HIGH) {
   #endif
     if (virtualKeypad ){
-
+       #if not defined(USE_ESP_IDF) and not defined(ESP32) and not defined(ESP8266)
         if (dscWritePin == dscReadPin && !inInputMode) {
-           #if not defined(USE_ESP_IDF) and not defined(ESP32) and not defined(ESP8266)
             inInputMode=true;
             pinMode(dscWritePin, INPUT_PULLUP);
-          #endif
         }
+      #endif
     #ifdef USE_ESP_IDF
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
     #else
@@ -803,13 +802,12 @@ dscKeybusInterface::dscClockInterrupt()
      // if (isrPanelBitTotal == writeDataBit || (writeStart && isrPanelBitTotal > writeDataBit && isrPanelBitTotal < (writeDataBit + (writeBufferLength * 8)))) {
       if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
-        if (dscWritePin == dscReadPin && inInputMode ) {  //if bi-directional, we need to switch to write mode on the pin
-
-          #if not defined (USE_ESP_IDF) and not defined(ESP32) and not defined(ESP8266)
+        #if not defined (USE_ESP_IDF) and not defined(ESP32) and not defined(ESP8266)
+         if (dscWritePin == dscReadPin && inInputMode ) {  //if bi-directional, we need to switch to write mode on the pin
             inInputMode=false;
             pinMode(dscWritePin, OUTPUT);
-          #endif
-      }
+         }
+        #endif
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) {
             #ifdef USE_ESP_IDF
