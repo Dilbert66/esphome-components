@@ -70,7 +70,7 @@ typedef char __FlashStringHelper;
 
 #if defined(ESP8266)
 #define INPUT_OUTPUT_OPEN_DRAIN 99
-void _pinModeISR(uint8_t pin, uint8_t mode);
+void pinModeCustom(uint8_t pin, uint8_t mode);
 #endif
 
 #if defined(ESP32)
