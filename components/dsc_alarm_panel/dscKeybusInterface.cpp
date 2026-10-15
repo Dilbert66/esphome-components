@@ -115,24 +115,29 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
   }
   if (dscWritePin == dscReadPin) {
 
-       #if defined (USE_ESP_IDF)
+       #if defined (USE_ESP_IDF) or defined(ESP32) 
         gpio_reset_pin((gpio_num_t)dscClockPin);
         gpio_set_direction((gpio_num_t) dscClockPin, GPIO_MODE_INPUT);
         gpio_pulldown_dis((gpio_num_t)dscClockPin);
         gpio_pullup_en((gpio_num_t)dscClockPin);
 
         gpio_reset_pin((gpio_num_t)dscReadPin);
-        gpio_set_direction((gpio_num_t)dscReadPin, GPIO_MODE_INPUT);
+        gpio_set_direction((gpio_num_t)dscReadPin, GPIO_MODE_INPUT_OUTPUT_OD);  //can read and write on gpio open drain with pullup.  Default high input. Only active out when writing 0
         gpio_pulldown_dis((gpio_num_t)dscReadPin);
         gpio_pullup_en((gpio_num_t)dscReadPin); 
         #else
-        pinMode(dscClockPin, INPUT_PULLUP);
-        pinMode(dscReadPin, INPUT_PULLUP);
+         pinMode(dscClockPin, INPUT_PULLUP); 
+         #if defined(ESP8266)
+        _pinModeISR(dscReadPin, INPUT_PULLUP); 
+        //_pinModeISR(dscReadPin, INPUT_OUTPUT_OPEN_DRAIN); 
+         #else
+         pinMode(dscReadPin, INPUT_PULLUP);
+         #endif
         #endif
 
-    invertWrite=false;
+        invertWrite=false;
   } else {
-       #if defined (USE_ESP_IDF)
+       #if defined (USE_ESP_IDF) or defined(ESP32)
         gpio_reset_pin((gpio_num_t)dscClockPin);
         gpio_set_direction((gpio_num_t)dscClockPin, GPIO_MODE_INPUT);
         gpio_pulldown_dis((gpio_num_t)dscClockPin);
@@ -149,7 +154,7 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
 
  
     if (virtualKeypad) {
-        #if defined (USE_ESP_IDF)
+        #if defined (USE_ESP_IDF) or defined(ESP32)
         gpio_reset_pin((gpio_num_t)dscWritePin);
         gpio_pulldown_dis((gpio_num_t)dscWritePin);
         gpio_pullup_dis((gpio_num_t)dscWritePin); 
@@ -627,13 +632,19 @@ bool dscKeybusInterface::validCRC() {
 }
 
 #ifdef ESP8266
+
 //Pinmode is NOT isr compliant due to missing iram_attr so we copy it here
 void IRAM_ATTR _pinModeISR(uint8_t pin, uint8_t mode) {
 if(pin < 16){
-    if(mode == OUTPUT || mode == OUTPUT_OPEN_DRAIN){
+    if (mode == INPUT_OUTPUT_OPEN_DRAIN) {
+      GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
+      GPC(pin) = (GPC(pin) & (0xF << GPCI)) | (1 << GPCD); //SOURCE(GPIO) | DRIVER(OPEN_DRAIN) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
+      GPES = (1 << pin); //Enable output
+      GPF(pin) |= (1 << GPFPU);  // Enable  Pullup
+    } else if(mode == OUTPUT || mode == OUTPUT_OPEN_DRAIN){
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
       GPC(pin) = (GPC(pin) & (0xF << GPCI)); //SOURCE(GPIO) | DRIVER(NORMAL) | INT_TYPE(UNCHANGED) | WAKEUP_ENABLE(DISABLED)
-     // if(mode == OUTPUT_OPEN_DRAIN) GPC(pin) |= (1 << GPCD);
+      if(mode == OUTPUT_OPEN_DRAIN) GPC(pin) |= (1 << GPCD);
       GPES = (1 << pin); //Enable
     } else if(mode == INPUT || mode == INPUT_PULLUP){
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
@@ -699,19 +710,15 @@ dscKeybusInterface::dscClockInterrupt()
     if (virtualKeypad ){
 
         if (dscWritePin == dscReadPin && !inInputMode) {
-          inInputMode=true;
-          #if defined (USE_ESP_IDF) or defined(ESP32)
-          gpio_reset_pin((gpio_num_t)dscWritePin);
-          gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_INPUT);
-          gpio_pulldown_dis((gpio_num_t)dscWritePin);
-          gpio_pullup_en((gpio_num_t)dscWritePin);
-          #else
+
+           #if not defined (USE_ESP_IDF) and not defined(ESP32)
+            inInputMode=true;
             #ifdef ESP8266
-            _pinModeISR(dscWritePin, INPUT_PULLUP);
+             _pinModeISR(dscWritePin, INPUT_PULLUP);
             #else
-            pinMode(dscWritePin, INPUT_PULLUP);
+             pinMode(dscWritePin, INPUT_PULLUP);
             #endif
-            #endif
+          #endif
         }
     #ifdef USE_ESP_IDF
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
@@ -805,20 +812,16 @@ dscKeybusInterface::dscClockInterrupt()
       if (isrPanelBitTotal == writeDataBit || writeStart) {
         writeStart = true;
         if (dscWritePin == dscReadPin && inInputMode ) {  //if bi-directional, we need to switch to write mode on the pin
-          inInputMode=false;
-          #if defined (USE_ESP_IDF) or defined(ESP32)
-          gpio_reset_pin((gpio_num_t)dscWritePin);
-          gpio_pulldown_dis((gpio_num_t)dscWritePin);
-          gpio_pullup_dis((gpio_num_t)dscWritePin); 
-          gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
-          #else
+
+          #if not defined (USE_ESP_IDF) and not defined(ESP32)
+            inInputMode=false;
             #ifdef ESP8266
             _pinModeISR(dscWritePin, OUTPUT);
             #else
             pinMode(dscWritePin, OUTPUT);
             #endif
           #endif
-       }
+      }
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) {
             #ifdef USE_ESP_IDF
@@ -828,9 +831,11 @@ dscKeybusInterface::dscClockInterrupt()
           #endif
         }
         if (isrPanelBitCount == 7) {
-  
+        
+          #if not defined (USE_ESP_IDF) and not defined(ESP32)
           isrModuleData[isrPanelByteCount] = writeBuffer[writeBufferIdx]; //save our sent byte to the module buffer for display
           skipModuleBit=true; // skip reading this byte as we updated it manually in the buffer.  If we don't do this, we will get a 0 showing
+         #endif
           writeBufferIdx++;
 
           if (writeBufferIdx == writeBufferLength ) { //all bits written

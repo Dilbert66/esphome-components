@@ -68,7 +68,10 @@ typedef char __FlashStringHelper;
 #include "esphome/core/defines.h"
 #endif
 
-
+#if defined(ESP8266)
+#define INPUT_OUTPUT_OPEN_DRAIN 99
+void _pinModeISR(uint8_t pin, uint8_t mode);
+#endif
 
 #if defined(ESP32)
 const byte dscPartitions = 8;
