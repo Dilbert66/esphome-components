@@ -70,7 +70,6 @@ typedef char __FlashStringHelper;
 
 #if defined(ESP8266)
 #define INPUT_OUTPUT_OPEN_DRAIN 99
-void pinMode8266(uint8_t pin, uint8_t mode);
 #endif
 
 #if defined(ESP32)
@@ -285,6 +284,14 @@ class dscKeybusInterface {
     bool pendingD0,pending70,pending6E;    
     
   private:
+  
+    #ifdef ESP32
+    void pinModeEsp32(gpio_num_t pin, gpio_mode_t mode, bool enablePullup=false);
+    #endif
+
+    #if defined(ESP8266)
+    void pinMode8266(uint8_t pin, uint8_t mode);
+    #endif
 
     void processPanelStatus();
     void processPanelStatus0(byte partition, byte panelByte);

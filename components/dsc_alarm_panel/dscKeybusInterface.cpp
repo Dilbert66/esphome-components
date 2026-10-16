@@ -101,6 +101,8 @@ timer1Mux = portMUX_INITIALIZER_UNLOCKED;
 
 }
 
+
+
 void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   
   if (setClockPin > 0 && setReadPin > 0 ) {  
@@ -115,19 +117,12 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
   }
   if (dscWritePin == dscReadPin) {
 
-       #if defined (USE_ESP_IDF) or defined(ESP32) 
-        gpio_reset_pin((gpio_num_t)dscClockPin);
-        gpio_set_direction((gpio_num_t) dscClockPin, GPIO_MODE_INPUT);
-        gpio_pulldown_dis((gpio_num_t)dscClockPin);
-        gpio_pullup_en((gpio_num_t)dscClockPin);
-
-        gpio_reset_pin((gpio_num_t)dscReadPin);
-        gpio_set_direction((gpio_num_t)dscReadPin, GPIO_MODE_INPUT_OUTPUT_OD);  //can read and write on gpio open drain with pullup.  Default high input. Only active out when writing 0
-        gpio_pulldown_dis((gpio_num_t)dscReadPin);
-        gpio_pullup_en((gpio_num_t)dscReadPin); 
+        #if defined (USE_ESP_IDF) or defined(ESP32) 
+         pinModeEsp32((gpio_num_t)dscClockPin,GPIO_MODE_INPUT,true); //with pullup
+         pinModeEsp32((gpio_num_t)dscReadPin,GPIO_MODE_INPUT_OUTPUT_OD,true); //with pullup, bi-directional with open-drain
         #elif defined(ESP8266)
          pinMode8266(dscClockPin, INPUT_PULLUP); 
-         pinMode8266(dscReadPin, INPUT_OUTPUT_OPEN_DRAIN); 
+         pinMode8266(dscReadPin, INPUT_OUTPUT_OPEN_DRAIN); //includes pullup
         #else
          pinMode(dscClockPin, INPUT_PULLUP);
          pinMode(dscReadPin, INPUT_PULLUP);
@@ -136,32 +131,21 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
         invertWrite=false;
   } else {
        #if defined (USE_ESP_IDF) or defined(ESP32)
-        gpio_reset_pin((gpio_num_t)dscClockPin);
-        gpio_set_direction((gpio_num_t)dscClockPin, GPIO_MODE_INPUT);
-        gpio_pulldown_dis((gpio_num_t)dscClockPin);
-        gpio_pullup_dis((gpio_num_t)dscClockPin);
-
-        gpio_reset_pin((gpio_num_t)dscReadPin);
-        gpio_set_direction((gpio_num_t)dscReadPin, GPIO_MODE_INPUT);
-        gpio_pulldown_dis((gpio_num_t)dscReadPin);
-        gpio_pullup_dis((gpio_num_t)dscReadPin); 
-        #else
+        pinModeEsp32((gpio_num_t)dscClockPin,GPIO_MODE_INPUT,false); //no pullup
+        pinModeEsp32((gpio_num_t)dscReadPin,GPIO_MODE_INPUT,false); //no pullup
+       #else
          pinMode(dscClockPin, INPUT);
          pinMode(dscReadPin, INPUT); 
         #endif
 
- 
-    if (virtualKeypad) {
+      if (virtualKeypad) {
         #if defined (USE_ESP_IDF) or defined(ESP32)
-        gpio_reset_pin((gpio_num_t)dscWritePin);
-        gpio_pulldown_dis((gpio_num_t)dscWritePin);
-        gpio_pullup_dis((gpio_num_t)dscWritePin); 
-        gpio_set_direction((gpio_num_t)dscWritePin, GPIO_MODE_OUTPUT);
+         pinModeEsp32((gpio_num_t)dscWritePin,GPIO_MODE_OUTPUT,false);
         #else
-           pinMode(dscWritePin, OUTPUT); 
+         pinMode(dscWritePin, OUTPUT); 
         #endif
  
-    }
+      }
   }
   
   // Platform-specific timers trigger a read of the data line 250us after the Keybus clock changes
@@ -629,10 +613,25 @@ bool dscKeybusInterface::validCRC() {
   return false;
 }
 
+#ifdef ESP32
+
+void dscKeybusInterface::pinModeEsp32(gpio_num_t pin, gpio_mode_t mode,bool enablePullup) {
+        gpio_reset_pin((gpio_num_t)pin);
+        gpio_set_direction((gpio_num_t)pin, mode);  
+        gpio_pulldown_dis((gpio_num_t)pin);
+        if (enablePullup)
+          gpio_pullup_en((gpio_num_t)pin);
+        else
+           gpio_pullup_dis((gpio_num_t)pin);
+
+}
+
+#endif
+
 #ifdef ESP8266
 
-//Add open drain input output option
-void pinMode8266(uint8_t pin, uint8_t mode) {
+//Add INPUT_OUTPUT_OPEN_DRAIN mode
+void dscKeybusInterface::pinMode8266(uint8_t pin, uint8_t mode) {
 if(pin < 16){
     if (mode == INPUT_OUTPUT_OPEN_DRAIN) {
       GPF(pin) = GPFFS(GPFFS_GPIO(pin));//Set mode to GPIO
@@ -810,7 +809,7 @@ dscKeybusInterface::dscClockInterrupt()
         #endif
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) {
-            #ifdef USE_ESP_IDF
+          #ifdef USE_ESP_IDF
             gpio_set_level((gpio_num_t) dscWritePin, invertWrite);
           #else
            digitalWrite(dscWritePin, invertWrite);
