@@ -24,9 +24,12 @@
 #define dscKeybus_h
 
 
-
 #if defined(USE_ESP_IDF_TIMER) or defined(USE_ESP_IDF) or defined(ESP32)
-#define USE_ESP_IDF_TIMER
+
+#if not defined(USE_ARDUINO) and not defined(USE_ESP_IDF_TIMER)
+#define USE_ESP_IDF_TIMER //force use of idf_timers if not arduino and using esp32
+#endif
+
 #ifndef ESP32
 #define ESP32
 #endif
@@ -284,7 +287,7 @@ class dscKeybusInterface {
     bool pendingD0,pending70,pending6E;    
     
   private:
-  
+
     #ifdef ESP32
     void pinModeEsp32(gpio_num_t pin, gpio_mode_t mode, bool enablePullup=false);
     #endif

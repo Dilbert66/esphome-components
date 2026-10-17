@@ -115,8 +115,8 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
        virtualKeypad = true;
       
   }
-  if (dscWritePin == dscReadPin) {
 
+  if (dscWritePin == dscReadPin) {
         #if defined (USE_ESP_IDF) or defined(ESP32) 
          pinModeEsp32((gpio_num_t)dscClockPin,GPIO_MODE_INPUT,true); //with pullup
          pinModeEsp32((gpio_num_t)dscReadPin,GPIO_MODE_INPUT_OUTPUT_OD,true); //with pullup, bi-directional with open-drain
@@ -127,7 +127,6 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
          pinMode(dscClockPin, INPUT_PULLUP);
          pinMode(dscReadPin, INPUT_PULLUP);
         #endif
-
         invertWrite=false;
   } else {
        #if defined (USE_ESP_IDF) or defined(ESP32)
@@ -137,14 +136,12 @@ void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWriteP
          pinMode(dscClockPin, INPUT);
          pinMode(dscReadPin, INPUT); 
         #endif
-
       if (virtualKeypad) {
         #if defined (USE_ESP_IDF) or defined(ESP32)
          pinModeEsp32((gpio_num_t)dscWritePin,GPIO_MODE_OUTPUT,false);
         #else
          pinMode(dscWritePin, OUTPUT); 
         #endif
- 
       }
   }
   
@@ -287,9 +284,7 @@ bool dscKeybusInterface::loop() {
 
   // Resets counters when the buffer is cleared
   #if defined(ESP32)
-
   portENTER_CRITICAL( &timer1Mux);
-
   #else
   noInterrupts();
   #endif
@@ -300,9 +295,7 @@ bool dscKeybusInterface::loop() {
   }
 
   #if defined(ESP32)
-
   portEXIT_CRITICAL( &timer1Mux);
-
   #else
   interrupts();
   #endif
@@ -615,15 +608,14 @@ bool dscKeybusInterface::validCRC() {
 
 #ifdef ESP32
 
-void dscKeybusInterface::pinModeEsp32(gpio_num_t pin, gpio_mode_t mode,bool enablePullup) {
+void dscKeybusInterface::pinModeEsp32(gpio_num_t pin, gpio_mode_t mode, bool enablePullup) {
         gpio_reset_pin((gpio_num_t)pin);
         gpio_set_direction((gpio_num_t)pin, mode);  
         gpio_pulldown_dis((gpio_num_t)pin);
         if (enablePullup)
           gpio_pullup_en((gpio_num_t)pin);
         else
-           gpio_pullup_dis((gpio_num_t)pin);
-
+          gpio_pullup_dis((gpio_num_t)pin);
 }
 
 #endif
@@ -709,8 +701,8 @@ dscKeybusInterface::dscClockInterrupt()
             inInputMode=true;
             pinMode(dscWritePin, INPUT_PULLUP);
         }
-      #endif
-    #ifdef USE_ESP_IDF
+       #endif
+    #if defined(USE_ESP_IDF) or defined(ESP32)
         gpio_set_level((gpio_num_t) dscWritePin, !invertWrite);
     #else
        digitalWrite(dscWritePin, !invertWrite ); // Restores the data line after a virtual keypad write
@@ -809,7 +801,7 @@ dscKeybusInterface::dscClockInterrupt()
         #endif
         
         if (!((writeBuffer[writeBufferIdx] >> (7 - isrPanelBitCount)) & 0x01)) {
-          #ifdef USE_ESP_IDF
+          #if defined(USE_ESP_IDF) or defined(ESP32)
             gpio_set_level((gpio_num_t) dscWritePin, invertWrite);
           #else
            digitalWrite(dscWritePin, invertWrite);
