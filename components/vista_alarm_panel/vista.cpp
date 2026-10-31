@@ -454,7 +454,7 @@ void Vista::onLrr(char *cbuf, int *idx)
   //response to a f9 resend. Send back last message
   if (_retriesf9 > 0 && _retriesf9 < 4 && lrrSupervisor)
   {
-    if (peekNextKpAddr() == LRRADDR)
+    if (peekNextChar().kpaddr == LRRADDR)
       getChar(); //remove last request
     sendBuffer(_lcbuf,_lcbuflen);
     _expectByte = _lcbuf[0];
@@ -790,20 +790,6 @@ void Vista::write(const char key, uint8_t addr)
   }
 }
 
-void Vista::writeDirect(const char key, uint8_t addr, uint8_t seq)
-{
-  if (!addr || addr > 23)
-    return;
-
-  keyType kt;
-  kt.key = key;
-  kt.kpaddr = addr;
-  kt.direct = true;
-  kt.count = 0;
-  kt.seq = seq;
-  _outbuf[_inbufIdx] = kt;
-  _inbufIdx = (_inbufIdx + 1) % CMDBUFSIZE;
-}
 
 void Vista::write(const char key)
 {
@@ -827,12 +813,19 @@ void Vista::writeDirect(const char *receivedKeys, uint8_t addr, size_t len, bool
     return;
   int x = 0;
 
-  uint8_t seq = (((++_writeSeq) << 6) & 0xc0) | (addr & 0x3F); // so that we don't mix cmd sequences
+  uint8_t seq = (((++_writeSeq) << 6) & 0xc0) | (addr & 0x3F); // so that we don't mix direct cmd sequences with regular keypad cmds
   if (auiFlag)
     seq |= 0x20;
   while (x < len)
   {
-    writeDirect(receivedKeys[x++], addr, seq);
+    keyType kt;
+    kt.key = receivedKeys[x++];
+    kt.kpaddr = addr;
+    kt.direct = true;
+    kt.count = 0;
+    kt.seq = seq;
+    _outbuf[_inbufIdx] = kt;
+    _inbufIdx = (_inbufIdx + 1) % CMDBUFSIZE;
   }
 }
 
@@ -858,13 +851,12 @@ keyType Vista::getChar()
   return c;
 }
 
-uint8_t Vista::peekNextKpAddr()
-{
-  if (_outbufIdx == _inbufIdx)
-    return 0;
-  keyType c = _outbuf[_outbufIdx];
-  return c.kpaddr;
+keyType Vista::peekNextChar(){
+    if (_outbufIdx == _inbufIdx)
+      return  keyType_INIT;
+    return _outbuf[_outbufIdx];
 }
+
 
 bool Vista::sendPending()
 {
@@ -934,12 +926,12 @@ void Vista::writeChars()
     _retryAddr=0;
     while (charAvail() && sz < OUTBUFSIZE)
     {
-      if (!(lastkpaddr == 0 || lastkpaddr == peekNextKpAddr()))
+      if (!(lastkpaddr == 0 || lastkpaddr == peekNextChar().kpaddr)) //check if next char is for current address otherswise exit and send current buffer.
         break;
-      if (!(lastseq == 0 || lastseq == _outbuf[_outbufIdx].seq))
+      if (!(lastseq == 0 || lastseq == peekNextChar().seq)) //for direct cmds if the next seq is not the same, then exit and send buffer
         break;
       kt = getChar();
-      if (!kt.kpaddr) break; //should not be needed
+      if (!kt.kpaddr) break; //should not be needed - just in case
       c = kt.key;
       if (c == '|' && !kt.direct ) // break sequence and send the previous immediately
         break;
@@ -1521,7 +1513,7 @@ bool Vista::handle()
       else if (_expectCmd == 0xf9)
       {
         //request an F9 resend since we did not get the ack from the panel
-        if (peekNextKpAddr() != LRRADDR) {
+        if (peekNextChar().kpaddr != LRRADDR) {
             keyType kt;
             kt.kpaddr = LRRADDR;
             kt.count = 0;
@@ -1639,7 +1631,7 @@ bool Vista::handle()
       gidx = 0;
       _cbuf[gidx++] = x;
       readChars(1, _cbuf, &gidx);
-      uint8_t kpaddr = _retries ? _retryAddr : peekNextKpAddr();
+      uint8_t kpaddr = _retries ? _retryAddr : peekNextChar().kpaddr;
       if (_cbuf[1] == kpaddr && kpaddr > 0)
       {
         _pendingAck=false;

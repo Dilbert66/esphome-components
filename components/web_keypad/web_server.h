@@ -195,7 +195,8 @@ struct upload_state {
  // std::map<mg_connection *,std::string> sessionTokens;
    using key_service_t = std::function<void(std::string,int)>;
   optional<key_service_t> key_service_func_{}; 
-  
+
+
   void set_partitions(uint8_t partitions) { this->partitions_=partitions;}
   void set_expose_log(bool expose_log) { this->expose_log_ = expose_log; }
   void set_show_keypad(bool show_keypad) { this->show_keypad_ = show_keypad; }  
