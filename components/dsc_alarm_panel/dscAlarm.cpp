@@ -120,12 +120,20 @@ void DSCkeybushome::publishTextState(const std::string &idstr, uint8_t num, std:
                 auto s = (*it);
                 if (s.sensorPtr != nullptr) {
                 const char * name;
+            #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 11, 0)  
+                char name_buf[ENTITY_NAME_BUF_SIZE];   
+                if (s.is_binary) {
+                  name = reinterpret_cast<binary_sensor::BinarySensor *>(s.sensorPtr)->get_name_to(name_buf).c_str();
+                } else {
+                  name = reinterpret_cast<text_sensor::TextSensor *>(s.sensorPtr)->get_name_to(name_buf).c_str();
+                }
+            #else
                 if (s.is_binary) {
                   name = reinterpret_cast<binary_sensor::BinarySensor *>(s.sensorPtr)->get_name().c_str();
                 } else {
                   name = reinterpret_cast<text_sensor::TextSensor *>(s.sensorPtr)->get_name().c_str();
                 }
-
+           #endif
                    if (append)
                   return std::string(name).append(" (").append(std::to_string(zone)).append(")");
                   else
@@ -933,24 +941,24 @@ void DSCkeybushome::setup()
       int p = 0;
       if (topic.find(setalarmcommandtopic) != std::string::npos)
       {
-        if (payload.containsKey("partition"))
+        if (payload["partition"].is<int>())
           p = payload["partition"];
 
-        if (payload.containsKey("state"))
+        if (payload["state"].is<std::string>())
         {
           const char *c = "";
-          if (payload.containsKey("code"))
+          if (payload["code"].is<std::string>())
             c = payload["code"];
           std::string code = c;
           std::string s = payload["state"];
           set_alarm_state(s, code, p);
         }
-        else if (payload.containsKey("keys"))
+        else if (payload["keys"].is<std::string>())
         {
           std::string s = payload["keys"];
           alarm_keypress_partition(s, p);
         }
-        else if (payload.containsKey("fault") && payload.containsKey("zone"))
+        else if (payload["fault"].is<bool>() && payload["cont"].is<int>())
         {
           bool b = false;
           std::string s1 = payload["fault"];
@@ -1604,10 +1612,10 @@ void DSCkeybushome::update()
         static unsigned long errorTime = millis();
     
         // Checks if the interface is connected to the Keybus
-        if ((dsc.keybusChanged) || forceRefresh)
+        if ((dsc.keybusChanged) || forceRefresh )
         {
           dsc.keybusChanged = false; // Resets the Keybus data status flag
-          if (dsc.keybusConnected && millis() - errorTime > 15000)
+          if (dsc.keybusConnected )
           {
             ESP_LOGD(TAG, "Panel keybus connected...");
             publishSystemStatus(FC(STATUS_ONLINE));
@@ -1616,7 +1624,7 @@ void DSCkeybushome::update()
           else
           {
 
-            if (millis() - errorTime > 15000)
+            if (millis() - errorTime > 15000 )
             {
               errorTime = millis();
               ESP_LOGE(TAG, "Panel keybus connect timeout! Is the panel connected?");
@@ -4809,6 +4817,7 @@ void DSCkeybushome::update()
     }
 
 #if !defined(ARDUINO_MQTT)
+
 
 void DSCkeybushome::createSensorFromObj(void *obj, uint8_t p,const char *id_type,  bool is_binary)
     {
