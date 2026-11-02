@@ -187,6 +187,7 @@ public:
     void addModule(uint8_t addr);
     void gpioISRHandler();
     void rxHandleISR();
+    void startPollRequest(uint8_t addr);
 
     void txHandleISR();
     bool areEqual(char *, char *, uint8_t);
@@ -254,6 +255,11 @@ private:
     bool _invertRead;
     uint8_t _outFaultIdx, _inFaultIdx,_outRfSerialIdx,_inRfSerialIdx;
     volatile bool _is2400;
+    // poll window request bytes, one per panel pulse: [0] addresses 0-7 go out at the end of the
+    // sync, [1] 8-15 at the end of the panel's first short low pulse, [2] 16-23 at the end of the second
+    char _pollMask[3];
+    volatile uint8_t _pollBytes = 0;  // how many of _pollMask we send this window
+    volatile uint8_t _pollSlot = 0;   // next _pollMask index to send, 0 = none pending
 
     void setNextFault(uint8_t);
     void setNextRfSerial(uint8_t fault,uint32_t serial);
