@@ -1045,12 +1045,27 @@ void Vista::writeChars()
   
 //   /* push_status = ; */
 //  }
+
+// Request-to-send in the poll window. After the sync the panel sends short (~1 ms) low pulses, and
+// each address group answers on its own pulse: addresses 0-7 at the end of the sync, 8-15 at the end
+// of the first short pulse, 16-23 at the end of the second. Groups before ours get FF (start bit only).
+// Byte 0 goes out now; the others are sent from rxHandleISR() when the matching pulse ends, instead of
+// back to back (back to back only lines up when the panel's pulse spacing matches our 2.29 ms bytes).
+void IRAM_ATTR Vista::startPollRequest(uint8_t addr)
+{
+  _pollMask[0] = addrToBitmask1(addr);
+  _pollMask[1] = addrToBitmask2(addr);
+  _pollMask[2] = addrToBitmask3(addr);
+  _pollBytes = addr < 8 ? 1 : (addr < 16 ? 2 : 3);
+  vistaSerial->write(_pollMask[0], false, 4800);
+  _pollSlot = _pollBytes > 1 ? 1 : 0;
+}
+
  
 
 void IRAM_ATTR Vista::rxHandleISR()
 {
   disableInterrupts();
-  static byte b;
   static uint8_t ackAddr;
   static uint8_t ackCount=0;
     #if defined(USE_ESP_IDF) or defined(ESP32)
@@ -1058,7 +1073,7 @@ void IRAM_ATTR Vista::rxHandleISR()
   #else
   bool level=digitalRead(_rxPin);
   #endif
-    if ( level == _invertRead)
+    if ( level == _invertRead) // we got rising pulse
   {
     if (_lowTime)
      _lowTime = micros() - _lowTime;
@@ -1071,16 +1086,11 @@ void IRAM_ATTR Vista::rxHandleISR()
       _markPulse = 2;
 
       ackAddr = _inFaultIdx == _outFaultIdx ? 0xFF : _zoneExpanders[_faultQueue[_outFaultIdx]].expansionAddr;
-
+      _pollSlot = 0;
+      _pollBytes = 0;
       if (ackAddr > 0 && ackAddr < 24)
       {
-        vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
-        b = addrToBitmask2(ackAddr);
-        if (b)
-          vistaSerial->write(b, false, 4800);
-        b = addrToBitmask3(ackAddr);
-        if (b)
-          vistaSerial->write(b, false, 4800);
+        startPollRequest(ackAddr);
       }
       else if (_outbufIdx != _inbufIdx || _retries)
       {
@@ -1107,13 +1117,7 @@ void IRAM_ATTR Vista::rxHandleISR()
             _outbuf[_outbufIdx].count++;
           
           if (ackAddr > 0 && ackAddr < 24) {
-            vistaSerial->write(addrToBitmask1(ackAddr), false, 4800);
-            b = addrToBitmask2(ackAddr);
-            if (b)
-              vistaSerial->write(b, false, 4800);
-            b = addrToBitmask3(ackAddr);
-            if (b)
-              vistaSerial->write(b, false, 4800);
+            startPollRequest(ackAddr);
             _pendingAck=true;
 
           }
@@ -1121,6 +1125,15 @@ void IRAM_ATTR Vista::rxHandleISR()
         }
       }
       _rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
+    }  
+    else if (_pollSlot && _rxState == sPolling && _lowTime < 1600)
+    { // end of one of the panel's short poll pulses: send the next group's request byte. No lower
+      // bound: edges are not serviced while we write a byte, so a pulse that started during our
+     // write reads short, and one that came and went entirely during it reads 0. Either way the
+      // next byte goes out now, which on a panel with tight pulse spacing is the old back-to-back
+      // timing.
+      vistaSerial->write(_pollMask[_pollSlot], false, 4800);
+      _pollSlot = (_pollSlot + 1 < _pollBytes) ? _pollSlot + 1 : 0;
     }
     else if (_lowTime > 4600 && _rxState == sPolling)
     { // 2400 baud cmd preamble
