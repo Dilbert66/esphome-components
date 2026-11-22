@@ -1590,7 +1590,7 @@ void DSCkeybushome::update()
         {
           partitionStatus[defaultPartition - 1].keyPressTime = millis();
           ESP_LOGD(TAG, "Periodic trouble flag fetch...");
-          dsc.write("*2##", defaultPartition); // fetch panel troubles /zone module low battery
+          dsc.write("*2##", defaultPartition); // fetch panel troubles 
         }
 
       }
@@ -2682,6 +2682,7 @@ void DSCkeybushome::update()
         { // bypass
           if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
             *currentSelection = getNextEnabledZone(0, partition + 1);
+            
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
             char s[51];
@@ -2743,8 +2744,12 @@ void DSCkeybushome::update()
         }
         else if (dsc.status[partition] == 0xBA)
         { // low battery zones
-          if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
-            *currentSelection = getNextOption(0);
+
+          if (dsc.status[partition] != partitionStatus[partition].lastStatus)
+              *currentSelection = 0;
+          else
+              *currentSelection = getNextOption(0);
+
 
           if (*currentSelection < maxZones && *currentSelection > 0)
           {
@@ -2800,6 +2805,7 @@ void DSCkeybushome::update()
           {
             lcdLine2 = FC(troubleMenu[*currentSelection]);
           }
+
         }
         else if (dsc.status[partition] == 0xC8)
         { // service
@@ -2842,6 +2848,7 @@ void DSCkeybushome::update()
         {
           lcdLine2 = getOptionsString();
         }
+        
 
       } // if skip
 
@@ -3084,8 +3091,9 @@ void DSCkeybushome::update()
           {
             getZone(zone)->battery_low = true;
           }
-          else
+          else {
             getZone(zone)->battery_low = false;
+          }
         }
       }
     }
