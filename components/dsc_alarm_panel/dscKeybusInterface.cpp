@@ -65,13 +65,16 @@ void IRAM_ATTR dscDataInterrupt_cb() {
 
 dscKeybusInterface::dscKeybusInterface(byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   dscKeybusInterfacePtr=this; 
-
+ if (setClockPin != 255 && setReadPin != 255 ) {  
   dscClockPin = setClockPin;
   dscReadPin = setReadPin;
   dscWritePin = setWritePin;
   invertWrite=setInvertWrite;
-  if (dscWritePin != 255 && dscWritePin > 0) virtualKeypad = true;
-  if (dscWritePin == dscReadPin) invertWrite=false;
+  if (dscWritePin != 255 ) 
+    virtualKeypad = true;
+ }
+  if (dscWritePin == dscReadPin) 
+      invertWrite=false;
   processRedundantData = true;
   displayTrailingBits = false;
   processModuleData = false;
@@ -105,13 +108,13 @@ timer1Mux = portMUX_INITIALIZER_UNLOCKED;
 
 void dscKeybusInterface::begin(byte setClockPin, byte setReadPin, byte setWritePin,bool setInvertWrite) {
   
-  if (setClockPin > 0 && setReadPin > 0 ) {  
+  if (setClockPin != 255 && setReadPin != 255 ) {  
     dscClockPin = setClockPin;
     dscReadPin = setReadPin;
     dscWritePin = setWritePin;
     invertWrite=setInvertWrite;
     virtualKeypad = false;
-    if (dscWritePin != 255 && dscWritePin > 0) 
+    if (dscWritePin != 255 ) 
        virtualKeypad = true;
       
   }

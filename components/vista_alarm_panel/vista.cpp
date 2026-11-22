@@ -1045,7 +1045,6 @@ void Vista::writeChars()
   
 //   /* push_status = ; */
 //  }
- 
 
 // Request-to-send in the poll window. After the sync the panel sends short (~1 ms) low pulses, and
 // each address group answers on its own pulse: addresses 0-7 at the end of the sync, 8-15 at the end
@@ -1062,6 +1061,8 @@ void IRAM_ATTR Vista::startPollRequest(uint8_t addr)
   _pollSlot = _pollBytes > 1 ? 1 : 0;
 }
 
+ 
+
 void IRAM_ATTR Vista::rxHandleISR()
 {
   disableInterrupts();
@@ -1072,7 +1073,7 @@ void IRAM_ATTR Vista::rxHandleISR()
   #else
   bool level=digitalRead(_rxPin);
   #endif
-    if ( level == _invertRead)
+    if ( level == _invertRead) // we got rising pulse
   {
     if (_lowTime)
      _lowTime = micros() - _lowTime;
@@ -1085,7 +1086,6 @@ void IRAM_ATTR Vista::rxHandleISR()
       _markPulse = 2;
 
       ackAddr = _inFaultIdx == _outFaultIdx ? 0xFF : _zoneExpanders[_faultQueue[_outFaultIdx]].expansionAddr;
-
       _pollSlot = 0;
       _pollBytes = 0;
       if (ackAddr > 0 && ackAddr < 24)
@@ -1125,11 +1125,11 @@ void IRAM_ATTR Vista::rxHandleISR()
         }
       }
       _rxState = sPolling; // set flag to skip capturing pulses in the receive buffer during polling phase
-    }
+    }  
     else if (_pollSlot && _rxState == sPolling && _lowTime < 1600)
     { // end of one of the panel's short poll pulses: send the next group's request byte. No lower
       // bound: edges are not serviced while we write a byte, so a pulse that started during our
-      // write reads short, and one that came and went entirely during it reads 0. Either way the
+     // write reads short, and one that came and went entirely during it reads 0. Either way the
       // next byte goes out now, which on a panel with tight pulse spacing is the old back-to-back
       // timing.
       vistaSerial->write(_pollMask[_pollSlot], false, 4800);

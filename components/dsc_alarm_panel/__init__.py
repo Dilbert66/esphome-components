@@ -53,7 +53,7 @@ TEXT_SENSOR_TYPE_ID_DESCRIPTION = "ss, zs, tr_msg, evt, ps_<digits>, msg_<digits
 
 VALID_PINS = {
     "esp32": {
-        "bidir": {0, 2, 3, 4, 5 , 6, 7, 8, 12, 13, 14, 15, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
+        "bidir": {0, 1, 2, 3, 4, 5 , 6, 7, 8, 12, 13, 14, 15, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33},
         "rx_only": {34, 35, 36, 39},
     },
     "esp8266": {
@@ -101,9 +101,9 @@ CONFIG_SCHEMA = cv.Schema(
     cv.Optional(CONF_USERCODES, default=""): cv.string, 
     cv.Optional(CONF_DEFAULTPARTITION, default=""): cv.int_, 
     cv.Optional(CONF_DEBUGLEVEL, default=""): cv.int_, 
-    cv.Optional(CONF_READPIN, default=""): _validate_pins_for_chip(rx_pin=True),
+    cv.Optional(CONF_READPIN, default="255"): _validate_pins_for_chip(rx_pin=True),
     cv.Optional(CONF_WRITEPIN, default="255"): _validate_pins_for_chip(rx_pin=False), 
-    cv.Optional(CONF_CLOCKPIN, default=""):  _validate_pins_for_chip(rx_pin=True),
+    cv.Optional(CONF_CLOCKPIN, default="255"):  _validate_pins_for_chip(rx_pin=True),
     cv.Optional(CONF_INVERT_WRITE, default='true'): cv.boolean,
     cv.Optional(CONF_EXPANDER1, default=0): cv.int_, 
     cv.Optional(CONF_EXPANDER2, default=0): cv.int_, 
