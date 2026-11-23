@@ -338,7 +338,7 @@ void DSCkeybushome::setup()
     {
       //ensure we run dsc setup on correct core.  This task is only setup to init the interrupts and pins, otherwise it's idle
       DSCkeybushome *_this = (DSCkeybushome *)args;
-      if (_this->dscClockPin && _this->dscReadPin )
+      if (_this->dscClockPin != 255 && _this->dscReadPin != 255)
         dsc.begin(_this->dscClockPin, _this->dscReadPin, _this->dscWritePin, _this->invertWrite);
       else
         dsc.begin();
@@ -1555,7 +1555,7 @@ void DSCkeybushome::update()
           );
 
         #else
-              if (dscClockPin && dscReadPin )
+              if (dscClockPin != 255 && dscReadPin != 255 )
                 dsc.begin(dscClockPin, dscReadPin, dscWritePin, invertWrite);
               else
                 dsc.begin();
