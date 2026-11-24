@@ -303,6 +303,7 @@ unsigned long micros() {
         byte zone;
         byte tamper : 1;
         byte battery_low : 1;
+        byte fault : 1;
         byte open : 1;
         byte alarm : 1;
         byte enabled : 1;
@@ -427,7 +428,7 @@ unsigned long micros() {
       byte debug;
       const char *laststatus;
       const char *accessCode;
-      const char *fetchCmd = "*21#7##";
+      const char *fetchCmd = "*21#7#5#6##";
       const char *userCodes;
       byte maxZones = maxZonesDefault;
       int defaultPartition = 1;
@@ -470,6 +471,7 @@ unsigned long micros() {
           .zone = 0,
           .tamper = false,
           .battery_low = false,
+          .fault = false,
           .open = false,
           .alarm = false,
           .enabled = false,
@@ -608,7 +610,10 @@ unsigned long micros() {
 
       byte getPreviousAlarmedZone(byte start, byte partition);
 
-      void getBypassZones(byte partition);
+      void getBypassZones(byte partition=0);
+      void getLowBatteryZones(byte partition=0);
+      void getFaultedZones(byte partition=0);
+      
 #if defined(ARDUINO_MQTT)
     public:
       void loop();
@@ -631,8 +636,6 @@ unsigned long micros() {
       void processBuzzer(byte panelByte,byte partition);
 
       void printPanel_0x6E();
-
-      void processLowBatteryZones();
 
       void processRelayCmd();
 
