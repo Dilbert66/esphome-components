@@ -433,6 +433,7 @@ unsigned long micros() {
       const char *userCodes;
       byte maxZones = maxZonesDefault;
       int defaultPartition = 1;
+      bool zonesEnabled=false;
 
       uint8_t expanderAddr1 = 0;
       uint8_t expanderAddr2 = 0;
@@ -449,9 +450,10 @@ unsigned long micros() {
       struct partitionType
       {
         unsigned long keyPressTime;
+        unsigned long menuPressTime;
         byte lastStatus;
         byte status;
-        int zoneStatus;
+        byte responseStatus;
         byte digits;
         byte editIdx;
         byte currentSelection;

@@ -348,7 +348,7 @@ void DSCkeybushome::setup()
             checkTime = _this->millis();
 #if not defined(ARDUINO_MQTT)
             UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-            ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
+           // ESP_LOGD(TAG, "High water stack level: %5d", (uint16_t)uxHighWaterMark);
 #endif
           }
       }
@@ -571,7 +571,7 @@ void DSCkeybushome::setup()
         *selectedZone = 0;
         partitionStatus[partition - 1].eventViewer = false;
         activePartition = defaultPartition;
-        partitionStatus[partition-1].zoneStatus=-1;
+        partitionStatus[partition-1].responseStatus=0xFF;
         dsc.write(key, partition);
 
        // setStatus(partition - 1, true);
@@ -917,6 +917,7 @@ void DSCkeybushome::setup()
      // if (dsc.disabled[partition - 1])
       //  return;
       partitionStatus[partition - 1].keyPressTime = millis();
+      partitionStatus[partition - 1].menuPressTime = millis();
       if (keystring.length() == 1)
       {
         processMenu(keystring.c_str()[0], partition);
@@ -1108,7 +1109,7 @@ void DSCkeybushome::setup()
             {
               getZone(zone,true)->partition = partition; //create zone record if it doesnt exist
               getZone(zone)->enabled = true;
-              if (debug > 1) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
+              if (debug > 2) ESP_LOGD(TAG,"B1: Enabled zone %d on partition %d",zone+1,partition);
             }
             else if (getZone(zone)->partition == partition)
             {
@@ -1644,13 +1645,13 @@ void DSCkeybushome::update()
           forceRefresh = true;
           delayedStart++;
         }
-        else if (delayedStart == 2 && millis() - startWait > 60000)
+        else if (delayedStart == 2 && millis() - startWait > 20000 )
         {
-          delayedStart++;
-          if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && !dsc.armed[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].inprogram && troubleFetch)
+            if (!dsc.disabled[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].locked && !dsc.armed[defaultPartition - 1] && !partitionStatus[defaultPartition - 1].inprogram && troubleFetch && zonesEnabled)
           {
             partitionStatus[defaultPartition - 1].keyPressTime = millis();
             dsc.write(fetchCmd, defaultPartition); // fetch panel troubles /zone module low battery
+            delayedStart++;
           }
         }
 
@@ -1694,6 +1695,15 @@ void DSCkeybushome::update()
 
         processStatus();
 
+        for (byte partition = 0; partition < dscPartitions; partition++) //reset menu display to default after timeout
+        {
+          if (millis() - partitionStatus[partition].menuPressTime > 10000 && dsc.status[partition] < 0x04  && partitionStatus[partition].currentSelection != 1) {
+            partitionStatus[partition].currentSelection=1;
+            partitionStatus[partition].selectedZone=0;
+            partitionStatus[partition].menuPressTime=millis();
+            setStatus(partition,true);
+          }
+        }
 
       if (!forceDisconnect && (dsc.statusChanged || forceRefresh) && dsc.panelData[0])
       {                            // Processes data only when a valid Keybus command has been read and statuses were changed
@@ -1745,7 +1755,6 @@ void DSCkeybushome::update()
         // Publishes status per partition
         for (byte partition = 0; partition < dscPartitions; partition++)
         {
-
 
           // if (firstrun)
           // {
@@ -2648,6 +2657,7 @@ void DSCkeybushome::update()
         if (dsc.status[partition] < 0x04)
         { // status menu/open zones
 
+
           if (dsc.status[partition] != partitionStatus[partition].lastStatus) 
               *currentSelection = 0;
 
@@ -2682,7 +2692,7 @@ void DSCkeybushome::update()
         else if (dsc.status[partition] == 0xA0)
         { // bypass
 
-          if (*currentSelection==0xff || partitionStatus[partition].zoneStatus != 0xA0) return;
+          if (*currentSelection==0xff || partitionStatus[partition].responseStatus != 0xA0) return;
 
 
            if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus) {
@@ -2752,9 +2762,9 @@ void DSCkeybushome::update()
         }
         else if (dsc.status[partition] == 0xBA || dsc.status[partition] == 0xC6) 
         { 
-         // ESP_LOGD("test","laststatus:%02x,status:%02x,currentselection:%02x,zonestatus=%02x",partitionStatus[partition].lastStatus,dsc.status[partition],*currentSelection,partitionStatus[partition].zoneStatus);
+         // ESP_LOGD("test","laststatus:%02x,status:%02x,currentselection:%02x,zonestatus=%02x",partitionStatus[partition].lastStatus,dsc.status[partition],*currentSelection,partitionStatus[partition].responseStatus);
 
-          if (*currentSelection==0xff || ( partitionStatus[partition].zoneStatus != 0xBA &&  partitionStatus[partition].zoneStatus != 0xC6)) return; //if we have not got the bit response yet
+          if (*currentSelection==0xff || ( partitionStatus[partition].responseStatus != 0xBA &&  partitionStatus[partition].responseStatus != 0xC6)) return; //if we have not got the bit response yet
 
            if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus) {
            
@@ -2788,7 +2798,7 @@ void DSCkeybushome::update()
           }
         }
         else if (dsc.status[partition] == 0x9E)
-        { // main menu
+        { // mainmenu
 
           if (*currentSelection == 0 || dsc.status[partition] != partitionStatus[partition].lastStatus)
           {
@@ -2898,12 +2908,12 @@ void DSCkeybushome::update()
       case 0x0F: 
           partition=dsc.panelData[0]==0x0A?1:2;
         
-          if (partitionStatus[partition-1].zoneStatus == -1) { //-1 is flag for # sent so we skip the first response back
+          if (partitionStatus[partition-1].responseStatus == 0xFF) { //0xFF is flag for # sent so we skip the first response back
             status=0;
          } else
             status=dsc.panelData[3];
 
-         partitionStatus[partition-1].zoneStatus=status;
+         partitionStatus[partition-1].responseStatus=status;
          // ESP_LOGD("test","0F partition=%02x,status=%02x,dscstatus=%02x",partition,status,dsc.status[partition-1]);
 
           processProgramZones(4, 0);
@@ -2966,9 +2976,10 @@ void DSCkeybushome::update()
         processRelayCmd();
         break;
       case 0xB1:
-        getEnabledZonesB1(2, 1, 1);
-        getEnabledZonesB1(6, 1, 2);
-        break;
+      zonesEnabled=true;
+      getEnabledZonesB1(2, 1, 1);
+      getEnabledZonesB1(6, 1, 2);
+       break;
       case 0xE6:
         switch (dsc.panelData[2])
         {
@@ -2992,9 +3003,13 @@ void DSCkeybushome::update()
           case 0x20: partition=1;break;
           case 0x21: partition=2;break;
           }
+   
+         if (partitionStatus[partition-1].responseStatus == 0xFF) { //0xFF is flag for # sent so we skip the first response back
+            status=0;
+         } else
+            status=dsc.panelData[4];
 
-          status=dsc.panelData[4];
-          partitionStatus[partition-1].zoneStatus=status;
+          partitionStatus[partition-1].responseStatus=status;
           if (!(dsc.panelData[9] & 0x80))
             processProgramZones(5, 0);
           else
@@ -3026,9 +3041,11 @@ void DSCkeybushome::update()
             processProgramZones(5, 4);
           break; // Alarm memory zones 33-64
         case 0x2B:
+          zonesEnabled=true;
           getEnabledZonesE6(4, 1, 3);
           break;
         case 0x2C:
+          zonesEnabled=true;
           getEnabledZonesE6(4, 33, 3);
           break;
         };
