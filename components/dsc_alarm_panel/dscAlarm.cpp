@@ -917,7 +917,6 @@ void DSCkeybushome::setup()
      // if (dsc.disabled[partition - 1])
       //  return;
       partitionStatus[partition - 1].keyPressTime = millis();
-      partitionStatus[partition - 1].menuPressTime = millis();
       if (keystring.length() == 1)
       {
         processMenu(keystring.c_str()[0], partition);
@@ -1697,10 +1696,10 @@ void DSCkeybushome::update()
 
         for (byte partition = 0; partition < dscPartitions; partition++) //reset menu display to default after timeout
         {
-          if (millis() - partitionStatus[partition].menuPressTime > 10000 && dsc.status[partition] < 0x04  && partitionStatus[partition].currentSelection != 1) {
+          if (millis() - partitionStatus[partition].keyPressTime > 10000 && dsc.status[partition] < 0x04  && partitionStatus[partition].currentSelection != 1) {
             partitionStatus[partition].currentSelection=1;
             partitionStatus[partition].selectedZone=0;
-            partitionStatus[partition].menuPressTime=millis();
+            partitionStatus[partition].keyPressTime=millis();
             setStatus(partition,true);
           }
         }

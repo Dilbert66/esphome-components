@@ -450,7 +450,6 @@ unsigned long micros() {
       struct partitionType
       {
         unsigned long keyPressTime;
-        unsigned long menuPressTime;
         byte lastStatus;
         byte status;
         byte responseStatus;
