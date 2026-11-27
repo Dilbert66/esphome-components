@@ -421,6 +421,7 @@ unsigned long micros() {
       int activePartition = 1;
       unsigned long cmdWaitTime;
       bool extendedBufferFlag = false;
+      byte subStatus=0;
 
       uint32_t refreshTimeSetting = 10 * 60 * 1000; // milliseconds - 10 minutes
       unsigned long lastTroubleLightTime;
@@ -450,6 +451,7 @@ unsigned long micros() {
         unsigned long keyPressTime;
         byte lastStatus;
         byte status;
+        int zoneStatus;
         byte digits;
         byte editIdx;
         byte currentSelection;
@@ -482,7 +484,6 @@ unsigned long micros() {
         };
 
       sensorObjType sensorObjType_NULL = sensorObjType_INIT;
-          
 
       sensorObjType *getZone(byte z,bool create=false);
       sensorObjType *getSensorObj(const char * id_type);
